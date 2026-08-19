@@ -5,7 +5,17 @@ import {
   trackProfessionalDuration,
   trackProfessionalProductivity,
 } from "../lib/product-events";
-import type { Agendamento, Avaliacao, Cliente, Comanda, ComissaoLancamento, ItemComanda, Notificacao, ProfissionalResumo, Servico } from "../types/database";
+import type {
+  Agendamento,
+  Avaliacao,
+  Cliente,
+  Comanda,
+  ComissaoLancamento,
+  ItemComanda,
+  Notificacao,
+  ProfissionalResumo,
+  Servico,
+} from "../types/database";
 
 type DataState = {
   agendamentos: Agendamento[];
@@ -30,7 +40,7 @@ const emptyState: DataState = {
   notificacoes: [],
   comissoes: [],
   avaliacoes: [],
-  profissionais: []
+  profissionais: [],
 };
 
 function uniqueById<T extends { id: string }>(items: T[] = []) {
@@ -41,6 +51,16 @@ function uniqueServices(items: Servico[] = []) {
   return Array.from(
     new Map(items.map((item) => [`${item.profissional_id}:${item.id}`, item])).values()
   );
+}
+
+function monthRange(monthsForward = 3) {
+  const start = new Date();
+  start.setDate(1);
+  const end = new Date(start.getFullYear(), start.getMonth() + monthsForward, 0);
+  return {
+    start: start.toISOString().slice(0, 10),
+    end: end.toISOString().slice(0, 10),
+  };
 }
 
 async function protectedMutation<T = Record<string, unknown>>(
@@ -63,7 +83,8 @@ async function protectedMutation<T = Record<string, unknown>>(
 
 export function useProfissionalData(
   profissionalId?: string,
-  podeVerAgendaTodos = false
+  podeVerAgendaTodos = false,
+  activeView = "inicio"
 ) {
   const cacheKey = profissionalId
     ? `data.v2.${profissionalId}.${podeVerAgendaTodos ? "todos" : "proprio"}`
@@ -72,20 +93,29 @@ export function useProfissionalData(
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(() => getCacheSavedAt(cacheKey));
-  const [isOnline, setIsOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
+  const [isOnline, setIsOnline] = useState(
+    () => typeof navigator === "undefined" || navigator.onLine
+  );
+
+  const mergeState = useCallback(
+    (patch: Partial<DataState>) => {
+      setState((current) => {
+        const next = { ...current, ...patch };
+        writeCache(cacheKey, next);
+        return next;
+      });
+      setLastSyncedAt(new Date().toISOString());
+    },
+    [cacheKey]
+  );
 
   const refresh = useCallback(async () => {
     if (!profissionalId) return;
     setLoading(true);
     setError(null);
 
-    const start = new Date();
-    start.setDate(1);
-    const end = new Date(start.getFullYear(), start.getMonth() + 3, 0);
-    const params = new URLSearchParams({
-      start: start.toISOString().slice(0, 10),
-      end: end.toISOString().slice(0, 10),
-    });
+    const range = monthRange(3);
+    const params = new URLSearchParams(range);
     const response = await fetch(`/api/app-profissional/data?${params.toString()}`, {
       credentials: "same-origin",
       cache: "no-store",
@@ -102,8 +132,7 @@ export function useProfissionalData(
     }
 
     const payload = (data || {}) as Partial<DataState>;
-
-    const nextState: DataState = {
+    mergeState({
       agendamentos: uniqueById([
         ...((payload.agendamentos ?? []) as Agendamento[]),
         ...((payload.bloqueios ?? []) as Agendamento[]),
@@ -111,43 +140,118 @@ export function useProfissionalData(
       bloqueios: uniqueById((payload.bloqueios ?? []) as Agendamento[]),
       clientes: uniqueById((payload.clientes ?? []) as Cliente[]),
       servicos: uniqueServices((payload.servicos ?? []) as Servico[]),
-      comandas: uniqueById((payload.comandas ?? []) as Comanda[]),
-      itensComanda: uniqueById((payload.itensComanda ?? []) as ItemComanda[]),
       notificacoes: uniqueById((payload.notificacoes ?? []) as Notificacao[]),
-      comissoes: uniqueById((payload.comissoes ?? []) as ComissaoLancamento[]),
-      avaliacoes: uniqueById((payload.avaliacoes ?? []) as Avaliacao[]),
-      profissionais: uniqueById((payload.profissionais ?? []) as ProfissionalResumo[])
-    };
-
-    setState(nextState);
-    writeCache(cacheKey, nextState);
-    setLastSyncedAt(new Date().toISOString());
+      profissionais: uniqueById((payload.profissionais ?? []) as ProfissionalResumo[]),
+    });
     setLoading(false);
-  }, [profissionalId, cacheKey]);
+  }, [profissionalId, mergeState]);
+
+  const refreshComandas = useCallback(async () => {
+    if (!profissionalId) return;
+    const range = monthRange(3);
+    const response = await fetch(
+      `/api/app-profissional/comandas?${new URLSearchParams(range).toString()}`,
+      { credentials: "same-origin", cache: "no-store" }
+    );
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.ok) {
+      throw new Error(String(payload.error || "Não foi possível carregar as comandas."));
+    }
+    mergeState({
+      comandas: uniqueById((payload.comandas || []) as Comanda[]),
+      itensComanda: uniqueById((payload.itensComanda || []) as ItemComanda[]),
+    });
+  }, [profissionalId, mergeState]);
+
+  const refreshComissoes = useCallback(async () => {
+    if (!profissionalId) return;
+    const range = monthRange(3);
+    const response = await fetch(
+      `/api/app-profissional/comissoes?${new URLSearchParams(range).toString()}`,
+      { credentials: "same-origin", cache: "no-store" }
+    );
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.ok) {
+      throw new Error(String(payload.error || "Não foi possível carregar as comissões."));
+    }
+    mergeState({
+      comissoes: uniqueById((payload.comissoes || []) as ComissaoLancamento[]),
+    });
+  }, [profissionalId, mergeState]);
+
+  const refreshAvaliacoes = useCallback(async () => {
+    if (!profissionalId) return;
+    const response = await fetch("/api/app-profissional/avaliacoes", {
+      credentials: "same-origin",
+      cache: "no-store",
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok || !payload.ok) {
+      throw new Error(String(payload.error || "Não foi possível carregar as avaliações."));
+    }
+    mergeState({
+      avaliacoes: uniqueById((payload.avaliacoes || []) as Avaliacao[]),
+    });
+  }, [profissionalId, mergeState]);
+
+  const refreshActiveResource = useCallback(async () => {
+    if (activeView === "inicio" || activeView === "comandas") {
+      await refreshComandas();
+      return;
+    }
+    if (activeView === "comissao") {
+      await refreshComissoes();
+      return;
+    }
+    if (activeView === "avaliacoes") {
+      await refreshAvaliacoes();
+    }
+  }, [activeView, refreshAvaliacoes, refreshComandas, refreshComissoes]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
   useEffect(() => {
+    void refreshActiveResource().catch((resourceError) => {
+      setError(
+        resourceError instanceof Error
+          ? resourceError.message
+          : "Não foi possível atualizar esta área."
+      );
+    });
+  }, [refreshActiveResource]);
+
+  useEffect(() => {
     if (!profissionalId) return;
 
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
-    const scheduleRefresh = () => {
+    const scheduleAgendaRefresh = () => {
       if (document.visibilityState === "hidden") return;
       if (refreshTimer) clearTimeout(refreshTimer);
       refreshTimer = setTimeout(() => void refresh(), 1800);
     };
     const channel = supabase.channel(
-      `salaopremium-${profissionalId}-${podeVerAgendaTodos ? "todos" : "proprio"}`
+      `salaopremium-agenda-${profissionalId}-${podeVerAgendaTodos ? "todos" : "proprio"}`
     );
+
     if (podeVerAgendaTodos) {
-      channel
-        .on("postgres_changes", { event: "*", schema: "public", table: "agendamentos" }, scheduleRefresh)
-        .on("postgres_changes", { event: "*", schema: "public", table: "comandas" }, scheduleRefresh);
+      channel.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "agendamentos" },
+        scheduleAgendaRefresh
+      );
     } else {
-      channel
-        .on("postgres_changes", { event: "*", schema: "public", table: "agendamentos", filter: `profissional_id=eq.${profissionalId}` }, scheduleRefresh);
+      channel.on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "agendamentos",
+          filter: `profissional_id=eq.${profissionalId}`,
+        },
+        scheduleAgendaRefresh
+      );
     }
     channel.subscribe();
 
@@ -162,13 +266,17 @@ export function useProfissionalData(
       setIsOnline(true);
       trackProfessionalProductivity("modo_online_restaurado");
       void refresh();
+      void refreshActiveResource().catch(() => undefined);
     };
     const onOffline = () => {
       setIsOnline(false);
       trackProfessionalProductivity("modo_offline_ativado");
     };
     const onVisible = () => {
-      if (document.visibilityState === "visible") void refresh();
+      if (document.visibilityState === "visible") {
+        void refresh();
+        void refreshActiveResource().catch(() => undefined);
+      }
     };
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
@@ -178,7 +286,7 @@ export function useProfissionalData(
       window.removeEventListener("offline", onOffline);
       document.removeEventListener("visibilitychange", onVisible);
     };
-  }, [refresh]);
+  }, [refresh, refreshActiveResource]);
 
   const actions = useMemo(() => {
     async function confirmarAgendamento(id: string) {
@@ -218,6 +326,9 @@ export function useProfissionalData(
         { entityId: id }
       );
       await refresh();
+      if (activeView === "inicio" || activeView === "comandas") {
+        await refreshComandas();
+      }
     }
 
     async function bloquearHorario(
@@ -249,7 +360,13 @@ export function useProfissionalData(
       await refresh();
     }
 
-    async function criarAgendamento(payload: { clienteId: string; servicoId: string; data: string; horaInicio: string; profissionalId?: string }) {
+    async function criarAgendamento(payload: {
+      clienteId: string;
+      servicoId: string;
+      data: string;
+      horaInicio: string;
+      profissionalId?: string;
+    }) {
       if (!profissionalId) return;
       const targetProfissionalId = payload.profissionalId || profissionalId;
       await protectedMutation("criar_agendamento", {
@@ -262,12 +379,8 @@ export function useProfissionalData(
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...payload,
-            profissionalId: targetProfissionalId,
-          }),
+          body: JSON.stringify({ ...payload, profissionalId: targetProfissionalId }),
         });
-
         if (!auditResponse.ok) {
           console.warn("Não foi possível registrar a autoria do agendamento.");
         }
@@ -278,7 +391,13 @@ export function useProfissionalData(
       await refresh();
     }
 
-    async function reagendarAgendamento(payload: { agendamentoId: string; data: string; horaInicio: string; horaFim: string; status: string }) {
+    async function reagendarAgendamento(payload: {
+      agendamentoId: string;
+      data: string;
+      horaInicio: string;
+      horaFim: string;
+      status: string;
+    }) {
       if (!profissionalId) return;
       const response = await fetch("/api/app-profissional/agenda/acao", {
         method: "POST",
@@ -309,16 +428,18 @@ export function useProfissionalData(
       await refresh();
     }
 
-    async function editarCliente(id: string, payload: Pick<Cliente, "nome" | "telefone" | "observacoes">) {
+    async function editarCliente(
+      id: string,
+      payload: Pick<Cliente, "nome" | "telefone" | "observacoes">
+    ) {
       if (!profissionalId) return;
-      await protectedMutation("editar_cliente", {
-        clienteId: id,
-        ...payload,
-      });
+      await protectedMutation("editar_cliente", { clienteId: id, ...payload });
       await refresh();
     }
 
-    async function salvarServico(payload: Pick<Servico, "nome" | "preco" | "duracao_minutos" | "descricao">) {
+    async function salvarServico(
+      payload: Pick<Servico, "nome" | "preco" | "duracao_minutos" | "descricao">
+    ) {
       if (!profissionalId) return;
       await protectedMutation("criar_servico", {
         nome: payload.nome,
@@ -329,7 +450,10 @@ export function useProfissionalData(
       await refresh();
     }
 
-    async function editarServico(id: string, payload: Pick<Servico, "nome" | "preco" | "duracao_minutos" | "descricao">) {
+    async function editarServico(
+      id: string,
+      payload: Pick<Servico, "nome" | "preco" | "duracao_minutos" | "descricao">
+    ) {
       if (!profissionalId) return;
       await protectedMutation("editar_servico", {
         servicoId: id,
@@ -347,10 +471,7 @@ export function useProfissionalData(
         method: "POST",
         credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "confirmar_pix",
-          agendamentoId: id,
-        }),
+        body: JSON.stringify({ action: "confirmar_pix", agendamentoId: id }),
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.ok) {
@@ -372,7 +493,7 @@ export function useProfissionalData(
 
     async function excluirAvaliacao(id: string) {
       await protectedMutation("excluir_avaliacao", { avaliacaoId: id });
-      await refresh();
+      await refreshAvaliacoes();
     }
 
     async function abrirComanda(clienteId: string | null, clienteNome: string) {
@@ -380,13 +501,20 @@ export function useProfissionalData(
       const startedAt = performance.now();
       await protectedMutation("abrir_comanda", { clienteId, clienteNome });
       trackProfessionalDuration("abrir_comanda", performance.now() - startedAt);
-      trackProfessionalProductivity("comanda_aberta", {
-        details: { clienteId, clienteNome },
-      });
-      await refresh();
+      trackProfessionalProductivity("comanda_aberta", { details: { clienteId, clienteNome } });
+      await refreshComandas();
     }
 
-    async function adicionarItemComanda(comandaId: string, item: { servico_id?: string | null; nome: string; quantidade: number; valor_unitario: number; tipo?: "servico" | "produto" }) {
+    async function adicionarItemComanda(
+      comandaId: string,
+      item: {
+        servico_id?: string | null;
+        nome: string;
+        quantidade: number;
+        valor_unitario: number;
+        tipo?: "servico" | "produto";
+      }
+    ) {
       if (!profissionalId) return;
       await protectedMutation("adicionar_item_comanda", {
         comandaId,
@@ -396,7 +524,7 @@ export function useProfissionalData(
         valorUnitario: item.valor_unitario,
         tipo: item.tipo ?? "servico",
       });
-      await refresh();
+      await refreshComandas();
     }
 
     async function fecharComanda(id: string) {
@@ -407,7 +535,7 @@ export function useProfissionalData(
         entityId: id,
       });
       trackProfessionalProductivity("comanda_finalizada", { entityId: id });
-      await refresh();
+      await Promise.all([refreshComandas(), refreshComissoes()]);
     }
 
     async function marcarNotificacaoLida(id: string) {
@@ -440,9 +568,24 @@ export function useProfissionalData(
       abrirComanda,
       adicionarItemComanda,
       fecharComanda,
-      marcarNotificacaoLida
+      marcarNotificacaoLida,
     };
-  }, [profissionalId, refresh]);
+  }, [
+    activeView,
+    profissionalId,
+    refresh,
+    refreshAvaliacoes,
+    refreshComandas,
+    refreshComissoes,
+  ]);
 
-  return { ...state, loading, error, refresh, actions, lastSyncedAt, isOnline };
+  return {
+    ...state,
+    loading,
+    error,
+    refresh,
+    actions,
+    lastSyncedAt,
+    isOnline,
+  };
 }
