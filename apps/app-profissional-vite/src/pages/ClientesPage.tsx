@@ -1,4 +1,4 @@
-﻿import { FormEvent, useMemo, useState } from "react";
+﻿import { FormEvent, useState } from "react";
 import { ArrowLeft, CalendarPlus2, Edit3, Phone, Plus, Receipt, Search } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
@@ -9,6 +9,26 @@ import type { Agendamento, Cliente, Comanda } from "../types/database";
 
 type Payload = Pick<Cliente, "nome" | "telefone" | "observacoes">;
 const PAGE_SIZE = 10;
+
+function whatsappDigits(value?: string | null) {
+  return String(value || "").replace(/\D/g, "").slice(0, 11);
+}
+
+function formatWhatsApp(value?: string | null) {
+  const digits = whatsappDigits(value);
+  if (!digits) return "";
+  if (digits.length <= 2) return `(${digits}`;
+
+  const ddd = digits.slice(0, 2);
+  const number = digits.slice(2);
+  if (number.length <= 4) return `(${ddd}) ${number}`;
+  if (number.length <= 8) return `(${ddd}) ${number.slice(0, 4)}-${number.slice(4)}`;
+  return `(${ddd}) ${number.slice(0, 5)}-${number.slice(5, 9)}`;
+}
+
+function clienteWhatsApp(cliente: Cliente) {
+  return cliente.whatsapp || cliente.telefone || "";
+}
 
 export function ClientesPage({
   clientes,
@@ -29,7 +49,15 @@ export function ClientesPage({
   const [query, setQuery] = useState("");
   const [page, setPage] = useState(1);
 
-  const filtered = clientes.filter((cliente) => `${cliente.nome} ${cliente.telefone || ""} ${cliente.whatsapp || ""}`.toLowerCase().includes(query.toLowerCase()));
+  const normalizedQuery = query.trim().toLowerCase();
+  const queryDigits = whatsappDigits(query);
+  const filtered = clientes.filter((cliente) => {
+    const whatsapp = clienteWhatsApp(cliente);
+    return (
+      cliente.nome.toLowerCase().includes(normalizedQuery) ||
+      (!!queryDigits && whatsappDigits(whatsapp).includes(queryDigits))
+    );
+  });
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
@@ -68,7 +96,7 @@ export function ClientesPage({
           <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={19} />
           <Input
             className="h-12 rounded-[1.15rem] border-zinc-200 bg-zinc-50 pl-11 shadow-inner shadow-zinc-100/60 focus:bg-white"
-            placeholder="Buscar por nome ou telefone"
+            placeholder="Buscar por nome ou WhatsApp"
             value={query}
             onChange={(event) => { setQuery(event.target.value); setPage(1); }}
           />
@@ -78,6 +106,7 @@ export function ClientesPage({
       <div className="space-y-3.5">
         {pageItems.map((cliente) => {
           const historico = agendamentos.filter((item) => item.cliente_id === cliente.id);
+          const whatsapp = formatWhatsApp(clienteWhatsApp(cliente));
           return (
             <Card key={cliente.id} className="overflow-hidden rounded-[1.55rem] !p-0 shadow-[0_8px_24px_rgba(15,23,42,0.055)]">
               <button className="block w-full px-5 pb-4 pt-5 text-left transition active:bg-zinc-50" onClick={() => setSelected(cliente)}>
@@ -88,7 +117,7 @@ export function ClientesPage({
                     </span>
                     <div className="min-w-0">
                       <h3 className="truncate text-[1.08rem] font-black tracking-[-0.035em] text-zinc-950">{cliente.nome}</h3>
-                      <p className="mt-1 truncate text-sm font-semibold text-zinc-500">{cliente.telefone || cliente.whatsapp || "Sem telefone"}</p>
+                      <p className="mt-1 truncate text-sm font-semibold text-zinc-500">{whatsapp || "Sem WhatsApp"}</p>
                     </div>
                   </div>
                   <span className="shrink-0 rounded-full bg-zinc-100 px-3 py-1.5 text-[11px] font-black text-zinc-600">{historico.length} ag.</span>
@@ -139,6 +168,7 @@ export function ClientesPage({
 function ClienteDetail({ cliente, agendamentos, comandas, onBack, onEdit }: { cliente: Cliente; agendamentos: Agendamento[]; comandas: Comanda[]; onBack: () => void; onEdit: () => void }) {
   const creditoGerado = Number(cliente.credito_total || 0);
   const totalFechado = comandas.filter((item) => item.status === "fechada").reduce((acc, item) => acc + Number(item.total || 0), 0);
+  const whatsapp = formatWhatsApp(clienteWhatsApp(cliente));
 
   return (
     <div className="space-y-4 pb-6">
@@ -155,7 +185,7 @@ function ClienteDetail({ cliente, agendamentos, comandas, onBack, onEdit }: { cl
               Cadastro
             </div>
             <h2 className="mt-3 text-2xl font-black tracking-[-0.05em]">{cliente.nome}</h2>
-            <p className="mt-2 text-sm font-semibold text-zinc-300">{cliente.telefone || cliente.whatsapp || "Sem telefone"}</p>
+            <p className="mt-2 text-sm font-semibold text-zinc-300">{whatsapp || "Sem WhatsApp"}</p>
           </div>
           <Button variant="secondary" className="h-10 px-3" onClick={onEdit}>
             <Edit3 size={15} />
@@ -181,7 +211,7 @@ function ClienteDetail({ cliente, agendamentos, comandas, onBack, onEdit }: { cl
         <h2 className="text-xl font-black tracking-[-0.04em]">Informacoes</h2>
         <div className="mt-3 grid gap-2 text-sm font-bold text-zinc-600">
           <div>Email: {cliente.email || "Sem email"}</div>
-          <div>WhatsApp: {cliente.whatsapp || cliente.telefone || "Sem WhatsApp"}</div>
+          <div>WhatsApp: {whatsapp || "Sem WhatsApp"}</div>
           <div>Status: {cliente.status || "Ativo"}</div>
         </div>
         {cliente.observacoes ? <p className="mt-3 rounded-2xl bg-zinc-50 p-3 text-sm font-semibold leading-6 text-zinc-600">{cliente.observacoes}</p> : null}
@@ -213,21 +243,21 @@ function ClienteDetail({ cliente, agendamentos, comandas, onBack, onEdit }: { cl
 
 function ClienteForm({ initial, onSubmit }: { initial?: Cliente; onSubmit: (payload: Payload) => Promise<void> }) {
   const [nome, setNome] = useState(initial?.nome || "");
-  const [telefone, setTelefone] = useState(initial?.telefone || "");
+  const [whatsapp, setWhatsapp] = useState(formatWhatsApp(initial?.whatsapp || initial?.telefone || ""));
   const [observacoes, setObservacoes] = useState(initial?.observacoes || "");
   const [loading, setLoading] = useState(false);
 
   async function submit(event: FormEvent) {
     event.preventDefault();
     setLoading(true);
-    await onSubmit({ nome, telefone, observacoes });
+    await onSubmit({ nome, telefone: whatsappDigits(whatsapp), observacoes });
     setLoading(false);
   }
 
   return (
     <form onSubmit={submit} className="grid gap-3">
       <Field label="Nome"><Input required value={nome} onChange={(event) => setNome(event.target.value)} /></Field>
-      <Field label="Telefone"><Input inputMode="tel" value={telefone} onChange={(event) => setTelefone(event.target.value)} /></Field>
+      <Field label="WhatsApp"><Input inputMode="tel" autoComplete="tel" maxLength={15} value={whatsapp} onChange={(event) => setWhatsapp(formatWhatsApp(event.target.value))} placeholder="(67) 99999-9999" /></Field>
       <Field label="Observacoes"><Textarea value={observacoes} onChange={(event) => setObservacoes(event.target.value)} /></Field>
       <Button loading={loading}>Salvar cliente</Button>
     </form>
