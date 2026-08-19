@@ -94,7 +94,7 @@ export function App() {
       {view === "comissao" ? <ComissaoPage comissoes={data.comissoes} /> : null}
       {view === "avaliacoes" ? <AvaliacoesPage avaliacoes={data.avaliacoes} onDelete={data.actions.excluirAvaliacao} /> : null}
       {view === "notificacoes" ? <NotificacoesPage notificacoes={data.notificacoes} onRead={data.actions.marcarNotificacaoLida} /> : null}
-      {view === "perfil" ? <PerfilPage profissional={profissional} goTo={setView} onChangePassword={data.actions.trocarSenha} /> : null}
+      {view === "perfil" ? <PerfilPage profissional={profissional} goTo={setView} /> : null}
       {view === "configuracoes" ? <ConfiguracoesPage /> : null}
       {view === "suporte" ? <SuportePage /> : null}
       {view === "duvidas" ? <DuvidasPage /> : null}
