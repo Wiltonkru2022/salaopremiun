@@ -19,20 +19,26 @@ type PasswordOverlay = {
   visible: boolean;
 };
 
-function getDirectLabel(input: HTMLInputElement) {
+function getInputLabel(input: HTMLInputElement) {
+  const associatedLabel = input.labels?.[0]?.textContent?.trim();
+  if (associatedLabel) return associatedLabel;
+
+  const wrappingLabel = input.closest("label")?.textContent?.trim();
+  if (wrappingLabel) return wrappingLabel;
+
   const parent = input.parentElement;
   if (!parent) return "";
   const sibling = Array.from(parent.children).find(
     (child) => child instanceof HTMLLabelElement
   );
-  return sibling?.textContent || "";
+  return sibling?.textContent?.trim() || "";
 }
 
 function getMaskKind(input: HTMLInputElement): InputMaskKind | null {
   return detectInputMask({
     name: input.name,
     id: input.id,
-    label: getDirectLabel(input),
+    label: getInputLabel(input),
     placeholder: input.placeholder,
     autoComplete: input.autocomplete,
     type: input.type,
