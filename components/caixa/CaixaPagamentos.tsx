@@ -14,11 +14,11 @@ const FORMAS_PAGAMENTO = [
   { value: "dinheiro", label: "Dinheiro" },
   { value: "pix", label: "Pix" },
   { value: "debito", label: "Debito" },
-  { value: "credito", label: "Credito" },
+  { value: "credito", label: "Crédito" },
   { value: "transferencia", label: "Transferencia" },
   { value: "boleto", label: "Boleto" },
   { value: "outro", label: "Outro" },
-  { value: "credito_cliente", label: "Credito da cliente" },
+  { value: "credito_cliente", label: "Crédito da cliente" },
 ];
 
 type Props = {
@@ -252,11 +252,11 @@ export default function CaixaPagamentos({
                 </Field>
               ) : null}
 
-              <Field label="Observacao opcional">
+              <Field label="Observação opcional">
                 <input
                   value={observacaoPagamento}
                   onChange={(e) => setObservacaoPagamento(e.target.value)}
-                  placeholder="Ex.: observacoes sobre o pagamento"
+                  placeholder="Ex.: observações sobre o pagamento"
                   className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-slate-900"
                 />
               </Field>
@@ -271,10 +271,10 @@ export default function CaixaPagamentos({
             <div className="grid gap-3 rounded-2xl border border-sky-100 bg-sky-50/60 px-4 py-3 text-sm text-slate-600 sm:grid-cols-2">
               <div className="flex items-center gap-2">
                 <Info size={15} className="text-sky-600" />
-                <span>Credito disponivel: {formatCurrency(creditoClienteDisponivel)}</span>
+                <span>Crédito disponivel: {formatCurrency(creditoClienteDisponivel)}</span>
               </div>
               <div className="text-right text-slate-700">
-                Credito do cliente: {formatCurrency(totalCreditoGerado)}
+                Crédito do cliente: {formatCurrency(totalCreditoGerado)}
               </div>
             </div>
           </div>
@@ -317,7 +317,7 @@ export default function CaixaPagamentos({
               Faltam {formatCurrency(faltaReceber)} e voce esta lancando{" "}
               {formatCurrency(valorCobradoCliente)}. O excedente de{" "}
               {formatCurrency(Math.max(valorBaseDigitado - faltaReceber, 0))} vai
-              sair como troco ou ficar salvo como credito para {clienteNome}.
+              sair como troco ou ficar salvo como crédito para {clienteNome}.
             </p>
 
             <div className="mt-5 grid gap-3">

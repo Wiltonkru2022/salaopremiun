@@ -643,7 +643,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
 
                   <div className="md:col-span-2">
                     <label className="mb-1 block text-sm font-semibold text-zinc-700">
-                      Observacoes
+                      Observações
                     </label>
                     <textarea
                       rows={3}

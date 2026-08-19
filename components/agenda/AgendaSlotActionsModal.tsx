@@ -69,13 +69,13 @@ export default function AgendaSlotActionsModal({
         <div className="mt-3 grid gap-3 md:grid-cols-3">
           <ActionCard
             icon={<Coffee size={18} />}
-            title="Almoco 30 min"
+            title="Almoço 30 min"
             description="Bloqueia rápido meia hora a partir do horário clicado."
             onClick={onQuickLunch30}
           />
           <ActionCard
             icon={<Clock3 size={18} />}
-            title="Almoco 1 hora"
+            title="Almoço 1 hora"
             description="Bloqueia rápido uma hora a partir do horário clicado."
             onClick={onQuickLunch60}
           />

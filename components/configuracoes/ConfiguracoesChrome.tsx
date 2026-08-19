@@ -144,6 +144,13 @@ export function ConfiguracoesTopNav({ activeHref }: { activeHref: string }) {
   );
 }
 
+function normalizeVisualValue(value: ReactNode) {
+  if (typeof value !== "string") return value;
+  return value
+    .replaceAll("SalãoPremium", "Salão Premium")
+    .replaceAll("Salão Premiun", "Salão Premium");
+}
+
 export function ConfigMetricCard({
   label,
   value,
@@ -164,7 +171,7 @@ export function ConfigMetricCard({
         <div className="text-zinc-500">{icon}</div>
       </div>
       <div className="mt-2 text-2xl font-black tracking-[-0.04em] text-zinc-950">
-        {value}
+        {normalizeVisualValue(value)}
       </div>
       <div className="mt-1 text-xs leading-5 text-zinc-500">{detail}</div>
     </div>

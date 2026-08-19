@@ -34,7 +34,9 @@ function firstParam(value?: string | string[]) {
 }
 
 function siteUrl() {
-  return String(process.env.NEXT_PUBLIC_SITE_URL || "https://app.salaopremiun.com.br").replace(/\/$/, "");
+  return String(
+    process.env.NEXT_PUBLIC_SITE_URL || "https://app.salaopremiun.com.br"
+  ).replace(/\/$/, "");
 }
 
 function money(value: number) {
@@ -81,6 +83,13 @@ function campanhaWhatsAppMessage(cupom: Record<string, unknown>, link: string) {
   return `${mensagem}\n\nAgende pelo link:\n${link}`;
 }
 
+function throwQueryError(...results: Array<{ error?: { message?: string } | null }>) {
+  const error = results.find((result) => result?.error)?.error;
+  if (error) {
+    throw new Error(error.message || "Falha ao consultar os dados das campanhas.");
+  }
+}
+
 async function loadCampanhasData(idSalao: string, page: number, pageSize: number) {
   const supabase = getSupabaseAdmin();
   const hoje = new Date();
@@ -98,7 +107,10 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
   ] = await Promise.all([
     (supabase as any)
       .from("cupons_salao")
-      .select("id, codigo, nome, descricao, descricao_interna, mensagem_cliente, tipo_campanha, publico_alvo, publico_tipo, valor_desconto, tipo_desconto, valido_de, valido_ate, ativo, status_campanha, resgate_token, slug, limite_uso_total, limite_uso_cliente, limite_uso_dia, created_at", { count: "exact" })
+      .select(
+        "id, codigo, nome, descricao, descricao_interna, mensagem_cliente, tipo_campanha, publico_alvo, publico_tipo, valor_desconto, tipo_desconto, valido_de, valido_ate, ativo, status_campanha, resgate_token, slug, limite_uso_total, limite_uso_cliente, limite_uso_dia, created_at",
+        { count: "exact" }
+      )
       .eq("id_salao", idSalao)
       .or("automatico_recuperacao.is.null,automatico_recuperacao.eq.false")
       .order("created_at", { ascending: false })
@@ -125,6 +137,13 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
       .limit(500),
   ]);
 
+  throwQueryError(
+    cuponsResult,
+    aniversariantesResult,
+    clientesResult,
+    agendamentosRecentesResult
+  );
+
   const cupomIds = ((cuponsResult.data || []) as Array<Record<string, unknown>>)
     .map((cupom) => String(cupom.id || ""))
     .filter(Boolean);
@@ -133,7 +152,9 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
     ? await Promise.all([
         (supabase as any)
           .from("cupom_salao_servicos")
-          .select("id_cupom, id_servico, tipo_beneficio, valor_beneficio, brinde_descricao, limite_uso_servico, servicos(nome)")
+          .select(
+            "id_cupom, id_servico, tipo_beneficio, valor_beneficio, brinde_descricao, limite_uso_servico, servicos(nome)"
+          )
           .eq("id_salao", idSalao)
           .in("id_cupom", cupomIds)
           .limit(pageSize * 40),
@@ -152,12 +173,17 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
           .limit(pageSize * 100),
       ])
     : [
-        { data: [] },
-        { data: [] },
-        { data: [] },
+        { data: [], error: null },
+        { data: [], error: null },
+        { data: [], error: null },
       ];
 
-  const metricasPorCupom = new Map<string, { usos: number; cliques: number; resgates: number; agendamentos: number }>();
+  throwQueryError(vinculosResult, usosResult, eventosResult);
+
+  const metricasPorCupom = new Map<
+    string,
+    { usos: number; cliques: number; resgates: number; agendamentos: number }
+  >();
   if (cupomIds.length) {
     const metricas = await Promise.all(
       cupomIds.map(async (idCupom) => {
@@ -180,6 +206,7 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
             .eq("id_salao", idSalao)
             .eq("id_cupom", idCupom),
         ]);
+        throwQueryError(cliquesCount, agendamentosCount, resgatesCount);
         return [
           idCupom,
           {
@@ -197,7 +224,7 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
   }
 
   const usosPorCupom = new Map<string, Array<Record<string, unknown>>>();
-  for (const uso of ((usosResult.data || []) as Array<Record<string, unknown>>)) {
+  for (const uso of (usosResult.data || []) as Array<Record<string, unknown>>) {
     const id = String(uso.id_cupom || "");
     usosPorCupom.set(id, [...(usosPorCupom.get(id) || []), uso]);
   }
@@ -211,68 +238,95 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
   ).slice(0, pageSize * 100);
   const comandasFechadas = new Set<string>();
   if (comandaIds.length) {
-    const { data: comandasData } = await (supabase as any)
+    const comandasResult = await (supabase as any)
       .from("comandas")
       .select("id, status")
       .eq("id_salao", idSalao)
       .in("id", comandaIds)
       .eq("status", "fechada")
       .limit(comandaIds.length);
-    for (const comanda of ((comandasData || []) as Array<Record<string, unknown>>)) {
+    throwQueryError(comandasResult);
+    for (const comanda of (comandasResult.data || []) as Array<Record<string, unknown>>) {
       const idComanda = String(comanda.id || "");
       if (idComanda) comandasFechadas.add(idComanda);
     }
   }
 
   const eventosPorCupom = new Map<string, Array<Record<string, unknown>>>();
-  for (const evento of ((eventosResult.data || []) as Array<Record<string, unknown>>)) {
+  for (const evento of (eventosResult.data || []) as Array<Record<string, unknown>>) {
     const id = String(evento.id_cupom || "");
     eventosPorCupom.set(id, [...(eventosPorCupom.get(id) || []), evento]);
   }
 
   const servicosPorCupom = new Map<string, Array<Record<string, unknown>>>();
-  for (const vinculo of ((vinculosResult.data || []) as Array<Record<string, unknown>>)) {
+  for (const vinculo of (vinculosResult.data || []) as Array<Record<string, unknown>>) {
     const id = String(vinculo.id_cupom || "");
     servicosPorCupom.set(id, [...(servicosPorCupom.get(id) || []), vinculo]);
   }
 
-  const cupons = ((cuponsResult.data || []) as Array<Record<string, unknown>>).map((cupom) => {
-    const id = String(cupom.id || "");
-    const usos = usosPorCupom.get(id) || [];
-    const usosEfetivos = usos.filter((uso) => {
-      const status = String(uso.status || "").trim().toLowerCase();
-      const idComanda = String(uso.id_comanda || "");
-      return status !== "cancelado" && status !== "cancelada" && idComanda && comandasFechadas.has(idComanda);
-    });
-    const metricas = metricasPorCupom.get(id);
-    const servicos = servicosPorCupom.get(id) || [];
-    return {
-      ...cupom,
-      usos: usosEfetivos.length,
-      cliques: metricas?.cliques ?? 0,
-      resgates: metricas?.resgates ?? 0,
-      agendamentos: metricas?.agendamentos ?? 0,
-      descontos: usosEfetivos.reduce((sum, uso) => sum + Number(uso.valor_desconto || 0), 0),
-      servicos,
-    };
-  });
+  const cupons = ((cuponsResult.data || []) as Array<Record<string, unknown>>).map(
+    (cupom) => {
+      const id = String(cupom.id || "");
+      const usos = usosPorCupom.get(id) || [];
+      const usosEfetivos = usos.filter((uso) => {
+        const status = String(uso.status || "").trim().toLowerCase();
+        const idComanda = String(uso.id_comanda || "");
+        return (
+          status !== "cancelado" &&
+          status !== "cancelada" &&
+          idComanda &&
+          comandasFechadas.has(idComanda)
+        );
+      });
+      const metricas = metricasPorCupom.get(id);
+      const servicos = servicosPorCupom.get(id) || [];
+      return {
+        ...cupom,
+        usos: usosEfetivos.length,
+        cliques: metricas?.cliques ?? 0,
+        resgates: metricas?.resgates ?? 0,
+        agendamentos: metricas?.agendamentos ?? 0,
+        descontos: usosEfetivos.reduce(
+          (sum, uso) => sum + Number(uso.valor_desconto || 0),
+          0
+        ),
+        servicos,
+      };
+    }
+  );
 
   const clientesComAtendimentoRecente = new Set(
-    ((agendamentosRecentesResult.data || []) as Array<Record<string, unknown>>).map((item) =>
-      String(item.cliente_id || "")
+    ((agendamentosRecentesResult.data || []) as Array<Record<string, unknown>>).map(
+      (item) => String(item.cliente_id || "")
     )
   );
   const inativos = ((clientesResult.data || []) as Array<Record<string, unknown>>)
-    .filter((cliente) => !clientesComAtendimentoRecente.has(String(cliente.id || "")))
+    .filter((cliente) =>
+      !clientesComAtendimentoRecente.has(String(cliente.id || ""))
+    )
     .slice(0, 8);
-  const aniversariantes = ((aniversariantesResult.data || []) as Array<Record<string, unknown>>)
-    .filter((cliente) => String(cliente.data_nascimento || "").slice(5, 7) === mesAtual)
+  const aniversariantes = (
+    (aniversariantesResult.data || []) as Array<Record<string, unknown>>
+  )
+    .filter(
+      (cliente) => String(cliente.data_nascimento || "").slice(5, 7) === mesAtual
+    )
     .slice(0, 8);
 
-  const totalUsos = cupons.reduce((sum, cupom) => sum + Number(cupom.usos || 0), 0);
-  const totalAgendamentos = cupons.reduce((sum, cupom) => sum + Number(cupom.agendamentos || 0), 0);
-  const totalCliques = cupons.reduce((sum, cupom) => sum + Number(cupom.cliques || 0), 0);
-  const conversao = totalCliques > 0 ? Math.round((totalAgendamentos / totalCliques) * 100) : 0;
+  const totalUsos = cupons.reduce(
+    (sum, cupom) => sum + Number(cupom.usos || 0),
+    0
+  );
+  const totalAgendamentos = cupons.reduce(
+    (sum, cupom) => sum + Number(cupom.agendamentos || 0),
+    0
+  );
+  const totalCliques = cupons.reduce(
+    (sum, cupom) => sum + Number(cupom.cliques || 0),
+    0
+  );
+  const conversao =
+    totalCliques > 0 ? Math.round((totalAgendamentos / totalCliques) * 100) : 0;
 
   return {
     cupons,
@@ -286,7 +340,9 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
       cliques: totalCliques,
       conversao,
     },
-    eventosRecentes: ((eventosResult.data || []) as Array<Record<string, unknown>>).slice(0, 6),
+    eventosRecentes: (
+      (eventosResult.data || []) as Array<Record<string, unknown>>
+    ).slice(0, 6),
   };
 }
 
@@ -297,7 +353,9 @@ export default async function CampanhasPage({
 }) {
   const { user, usuario } = await getPainelUserContext();
   if (!user || !usuario?.id_salao) redirect("/login");
-  if (String(usuario.nivel || "").toLowerCase() !== "admin") redirect("/dashboard");
+  if (String(usuario.nivel || "").toLowerCase() !== "admin") {
+    redirect("/dashboard");
+  }
 
   const featureAccess = await canUsePlanFeature(usuario.id_salao, "campanhas");
   if (!featureAccess.allowed) {
@@ -311,14 +369,30 @@ export default async function CampanhasPage({
   const params = await searchParams;
   const paginaAtual = Math.max(0, Number(firstParam(params.pagina) || 1) - 1);
   const pageSize = 10;
-  const data = await loadCampanhasData(usuario.id_salao, paginaAtual, pageSize).catch(() => ({
-    cupons: [],
-    totalCupons: 0,
-    aniversariantes: [],
-    inativos: [],
-    eventosRecentes: [],
-    kpis: { ativas: 0, usos: 0, agendamentos: 0, cliques: 0, conversao: 0 },
-  }));
+
+  let data: Awaited<ReturnType<typeof loadCampanhasData>>;
+  try {
+    data = await loadCampanhasData(usuario.id_salao, paginaAtual, pageSize);
+  } catch (error) {
+    console.error("[CAMPANHAS_LOAD_ERROR]", error);
+    return (
+      <main className="space-y-5">
+        <div className="rounded-[28px] border border-red-200 bg-red-50 p-6 text-red-800 shadow-sm">
+          <h1 className="text-xl font-black">Não foi possível carregar as campanhas</h1>
+          <p className="mt-2 text-sm leading-6">
+            Os dados não foram substituídos por uma lista vazia. Atualize a página e tente novamente.
+          </p>
+          <a
+            href="/campanhas"
+            className="mt-4 inline-flex h-11 items-center rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white"
+          >
+            Tentar novamente
+          </a>
+        </div>
+      </main>
+    );
+  }
+
   const baseUrl = siteUrl();
   const campanhas = data.cupons as Array<Record<string, any>>;
   const getPageHref = (page: number) => {
@@ -362,7 +436,10 @@ export default async function CampanhasPage({
               Criar campanha
             </a>
             <form action={auditarCampanhasAction} className="mt-3">
-              <button className="inline-flex h-11 items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-4 text-sm font-black text-white transition hover:bg-white/15" type="submit">
+              <button
+                className="inline-flex h-11 items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-4 text-sm font-black text-white transition hover:bg-white/15"
+                type="submit"
+              >
                 Auditar campanhas antigas
               </button>
             </form>
@@ -406,10 +483,15 @@ export default async function CampanhasPage({
 
       <section className="grid gap-4 md:grid-cols-4">
         {kpiCards.map(({ label, value, icon: Icon }) => (
-          <div key={label} className="rounded-[1.5rem] border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg">
+          <div
+            key={label}
+            className="rounded-[1.5rem] border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-lg"
+          >
             <Icon className="text-amber-700" size={20} />
             <p className="mt-4 text-sm font-bold text-zinc-500">{String(label)}</p>
-            <strong className="mt-1 block text-3xl font-black text-zinc-950">{String(value)}</strong>
+            <strong className="mt-1 block text-3xl font-black text-zinc-950">
+              {String(value)}
+            </strong>
           </div>
         ))}
       </section>
@@ -419,7 +501,9 @@ export default async function CampanhasPage({
           <div className="flex items-center justify-between gap-4">
             <div>
               <h2 className="text-2xl font-black text-zinc-950">Lista de campanhas</h2>
-              <p className="text-sm text-zinc-500">Cards com status, link, validade, uso e serviços.</p>
+              <p className="text-sm text-zinc-500">
+                Cards com status, link, validade, uso e serviços.
+              </p>
             </div>
           </div>
 
@@ -428,71 +512,110 @@ export default async function CampanhasPage({
               const label = statusLabel(cupom);
               const usados = Number(cupom.usos || 0);
               const limite = Number(cupom.limite_uso_total || 0);
-              const progresso = limite > 0 ? Math.min(100, Math.round((usados / limite) * 100)) : 0;
+              const progresso =
+                limite > 0 ? Math.min(100, Math.round((usados / limite) * 100)) : 0;
               const link = cupom.slug
                 ? `${baseUrl}/campanha/${cupom.slug}`
                 : cupom.resgate_token
                   ? `${baseUrl}/resgatar-cupom/${cupom.resgate_token}`
                   : "";
               const whatsappUrl = link
-                ? `https://wa.me/?text=${encodeURIComponent(campanhaWhatsAppMessage(cupom, link))}`
+                ? `https://wa.me/?text=${encodeURIComponent(
+                    campanhaWhatsAppMessage(cupom, link)
+                  )}`
                 : "";
-              const servicos = (cupom.servicos as Array<Record<string, any>> | undefined) || [];
+              const servicos =
+                (cupom.servicos as Array<Record<string, any>> | undefined) || [];
               const statusAtual = String(cupom.status_campanha || "ativa");
               return (
-                <article key={String(cupom.id)} className="group overflow-hidden rounded-[1.75rem] border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl">
+                <article
+                  key={String(cupom.id)}
+                  className="group overflow-hidden rounded-[1.75rem] border border-zinc-200 bg-white p-5 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+                >
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(label)}`}>
+                        <span
+                          className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(label)}`}
+                        >
                           {label}
                         </span>
                         <span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-black text-zinc-600">
                           Somente por link
                         </span>
                       </div>
-                      <h3 className="mt-3 text-2xl font-black text-zinc-950">{String(cupom.nome || "Campanha")}</h3>
+                      <h3 className="mt-3 text-2xl font-black text-zinc-950">
+                        {String(cupom.nome || "Campanha")}
+                      </h3>
                       <p className="mt-1 text-sm leading-6 text-zinc-500">
-                        {String(cupom.mensagem_cliente || cupom.descricao || "Campanha privada para clientes com link.")}
+                        {String(
+                          cupom.mensagem_cliente ||
+                            cupom.descricao ||
+                            "Campanha privada para clientes com link."
+                        )}
                       </p>
                     </div>
                     <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-right">
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">Usos finalizados</p>
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">
+                        Usos finalizados
+                      </p>
                       <strong className="text-2xl font-black text-zinc-950">
-                        {usados}{limite ? `/${limite}` : ""}
+                        {usados}
+                        {limite ? `/${limite}` : ""}
                       </strong>
                     </div>
                   </div>
 
                   <div className="mt-5 grid gap-3 md:grid-cols-3">
                     <div className="rounded-2xl bg-zinc-50 p-4">
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">Validade</p>
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">
+                        Validade
+                      </p>
                       <p className="mt-1 text-sm font-bold text-zinc-800">
                         {formatDate(cupom.valido_de)} até {formatDate(cupom.valido_ate)}
                       </p>
                     </div>
                     <div className="rounded-2xl bg-zinc-50 p-4">
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">Resultado</p>
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">
+                        Resultado
+                      </p>
                       <p className="mt-1 text-sm font-bold text-zinc-800">
-                        {Number(cupom.cliques || 0)} cliques · {Number(cupom.agendamentos || 0)} agendamentos
+                        {Number(cupom.cliques || 0)} cliques ·{" "}
+                        {Number(cupom.agendamentos || 0)} agendamentos
                       </p>
                     </div>
                     <div className="rounded-2xl bg-zinc-50 p-4">
-                      <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">Desconto aplicado</p>
-                      <p className="mt-1 text-sm font-bold text-zinc-800">{money(Number(cupom.descontos || 0))}</p>
+                      <p className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">
+                        Desconto aplicado
+                      </p>
+                      <p className="mt-1 text-sm font-bold text-zinc-800">
+                        {money(Number(cupom.descontos || 0))}
+                      </p>
                     </div>
                   </div>
 
                   <div className="mt-4">
                     <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
-                      <div className="h-full rounded-full bg-gradient-to-r from-zinc-950 to-amber-500 transition-all" style={{ width: `${limite ? progresso : Math.min(100, usados * 8)}%` }} />
+                      <div
+                        className="h-full rounded-full bg-gradient-to-r from-zinc-950 to-amber-500 transition-all"
+                        style={{
+                          width: `${
+                            limite ? progresso : Math.min(100, usados * 8)
+                          }%`,
+                        }}
+                      />
                     </div>
                     <div className="mt-3 flex flex-wrap gap-2">
                       {servicos.length ? (
                         servicos.slice(0, 5).map((servico) => {
-                          const rel = Array.isArray(servico.servicos) ? servico.servicos[0] : servico.servicos;
+                          const rel = Array.isArray(servico.servicos)
+                            ? servico.servicos[0]
+                            : servico.servicos;
                           return (
-                            <span key={String(servico.id_servico)} className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-800">
+                            <span
+                              key={String(servico.id_servico)}
+                              className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-800"
+                            >
                               {String(rel?.nome || "Serviço")}
                             </span>
                           );
@@ -511,23 +634,45 @@ export default async function CampanhasPage({
                         {link}
                       </code>
                     ) : null}
-                    <a href={link || "#"} target="_blank" className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-950">
+                    <a
+                      href={link || "#"}
+                      target="_blank"
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-950"
+                    >
                       <Copy size={16} /> Ver link
                     </a>
                     {whatsappUrl ? (
-                      <a href={whatsappUrl} target="_blank" className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-black text-emerald-800 transition hover:-translate-y-0.5 hover:bg-emerald-100">
+                      <a
+                        href={whatsappUrl}
+                        target="_blank"
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 text-sm font-black text-emerald-800 transition hover:-translate-y-0.5 hover:bg-emerald-100"
+                      >
                         <MessageCircle size={16} /> Enviar WhatsApp
                       </a>
                     ) : null}
                     <form action={atualizarStatusCampanhaAction}>
                       <input type="hidden" name="id" value={String(cupom.id)} />
-                      <input type="hidden" name="status" value={statusAtual === "ativa" ? "pausada" : "ativa"} />
-                      <button type="submit" className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-black text-white">
-                        {statusAtual === "ativa" ? <Pause size={16} /> : <Play size={16} />}
+                      <input
+                        type="hidden"
+                        name="status"
+                        value={statusAtual === "ativa" ? "pausada" : "ativa"}
+                      />
+                      <button
+                        type="submit"
+                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-black text-white"
+                      >
+                        {statusAtual === "ativa" ? (
+                          <Pause size={16} />
+                        ) : (
+                          <Play size={16} />
+                        )}
                         {statusAtual === "ativa" ? "Pausar" : "Ativar"}
                       </button>
                     </form>
-                    <a href={`/campanhas/${cupom.id}`} className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-950">
+                    <a
+                      href={`/campanhas/${cupom.id}`}
+                      className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-950"
+                    >
                       <BarChart3 size={16} /> Relatório
                     </a>
                   </div>
@@ -537,9 +682,16 @@ export default async function CampanhasPage({
             {!campanhas.length ? (
               <div className="rounded-[1.75rem] border border-dashed border-zinc-300 bg-white p-8 text-center shadow-sm">
                 <Sparkles className="mx-auto text-amber-700" size={34} />
-                <h3 className="mt-3 text-2xl font-black text-zinc-950">Crie sua primeira campanha</h3>
-                <p className="mt-2 text-sm text-zinc-500">Monte um link privado, escolha os serviços e acompanhe o resultado.</p>
-                <a href="/campanhas/nova" className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white">
+                <h3 className="mt-3 text-2xl font-black text-zinc-950">
+                  Crie sua primeira campanha
+                </h3>
+                <p className="mt-2 text-sm text-zinc-500">
+                  Monte um link privado, escolha os serviços e acompanhe o resultado.
+                </p>
+                <a
+                  href="/campanhas/nova"
+                  className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white"
+                >
                   Criar campanha
                 </a>
               </div>
@@ -559,12 +711,19 @@ export default async function CampanhasPage({
             <h2 className="flex items-center gap-2 text-lg font-black text-zinc-950">
               <Clock3 size={18} /> Clientes inativos
             </h2>
-            <p className="mt-1 text-sm text-zinc-500">{data.inativos.length} cliente(s) sem atendimento recente.</p>
+            <p className="mt-1 text-sm text-zinc-500">
+              {data.inativos.length} cliente(s) sem atendimento recente.
+            </p>
             <div className="mt-4 space-y-2">
               {data.inativos.slice(0, 5).map((cliente) => (
-                <div key={String(cliente.id)} className="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3 text-sm">
+                <div
+                  key={String(cliente.id)}
+                  className="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3 text-sm"
+                >
                   <strong>{String(cliente.nome || "Cliente")}</strong>
-                  <span className="ml-2 text-zinc-500">{String(cliente.whatsapp || cliente.telefone || "")}</span>
+                  <span className="ml-2 text-zinc-500">
+                    {String(cliente.whatsapp || cliente.telefone || "")}
+                  </span>
                 </div>
               ))}
             </div>
@@ -574,7 +733,9 @@ export default async function CampanhasPage({
             <h2 className="flex items-center gap-2 text-lg font-black text-zinc-950">
               <Cake size={18} /> Aniversariantes
             </h2>
-            <p className="mt-1 text-sm text-zinc-500">{data.aniversariantes.length} cliente(s) neste mês.</p>
+            <p className="mt-1 text-sm text-zinc-500">
+              {data.aniversariantes.length} cliente(s) neste mês.
+            </p>
             <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4">
               <p className="text-sm font-bold leading-6 text-amber-950">
                 Use o modelo de aniversário para criar um cupom de 10% para os clientes ativos deste mês.
@@ -592,16 +753,20 @@ export default async function CampanhasPage({
             </div>
             <div className="mt-4 space-y-2">
               {data.aniversariantes.slice(0, 5).map((cliente) => (
-                <div key={String(cliente.id)} className="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3 text-sm">
+                <div
+                  key={String(cliente.id)}
+                  className="rounded-2xl border border-zinc-100 bg-zinc-50 px-4 py-3 text-sm"
+                >
                   <strong>{String(cliente.nome || "Cliente")}</strong>
-                  <span className="ml-2 text-zinc-500">{formatDate(cliente.data_nascimento)}</span>
+                  <span className="ml-2 text-zinc-500">
+                    {formatDate(cliente.data_nascimento)}
+                  </span>
                 </div>
               ))}
             </div>
           </section>
         </aside>
       </section>
-
     </main>
   );
 }

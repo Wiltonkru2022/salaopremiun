@@ -132,7 +132,7 @@ export default function CaixaSidebar({
             <div className="flex items-center justify-between gap-3">
               <div>
                 <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-slate-400">
-                  Operacao
+                  Operação
                 </div>
                 <div className="mt-1 text-2xl font-bold tracking-[-0.03em] text-slate-950">
                   Caixa

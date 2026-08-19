@@ -469,10 +469,10 @@ export default function ComandaItemModal({
               {servicoSelecionado?.eh_combo && comboItensSelecionados.length > 0 ? (
                 <div className="md:col-span-2 rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
                   <div className="text-sm font-bold text-zinc-900">
-                    Servicos do combo
+                    Serviços do combo
                   </div>
                   <div className="mt-1 text-sm text-zinc-500">
-                    Selecione o profissional de cada servico. O valor fica rateado pelo combo.
+                    Selecione o profissional de cada serviço. O valor fica rateado pelo combo.
                   </div>
 
                   <div className="mt-4 space-y-3">

@@ -608,7 +608,7 @@ async function bootstrap() {
               </div>
             </Card>
 
-            <Card title="2. Cuidados e ficha tecnica" subtitle="Informações importantes para um atendimento seguro.">
+            <Card title="2. Cuidados e ficha técnica" subtitle="Informações importantes para um atendimento seguro.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                 <Textarea label="Alergias" value={ficha.alergias} onChange={(v) => setFichaField("alergias", v)} />
                 <Textarea

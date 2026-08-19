@@ -38,7 +38,6 @@ export type PainelNavItem = {
 const NAV_PLAN_FEATURE_MAP: Record<string, string> = {
   "/agenda": "agenda",
   "/clientes": "clientes",
-  "/clientes/migracao-acesso": "clientes",
   "/profissionais": "profissionais",
   "/servicos": "servicos",
   "/produtos": "produtos",
@@ -55,8 +54,8 @@ const NAV_PLAN_FEATURE_MAP: Record<string, string> = {
 export const painelNavigationItems: PainelNavItem[] = [
   {
     href: "/dashboard",
-    label: "Dashboard",
-    shortLabel: "Dashboard",
+    label: "Visão geral",
+    shortLabel: "Visão geral",
     description: "Panorama do salão em tempo real.",
     icon: LayoutDashboard,
     permissionKey: "dashboard_ver",
@@ -77,15 +76,6 @@ export const painelNavigationItems: PainelNavItem[] = [
     description: "Cadastro, histórico e relacionamento.",
     icon: Users,
     permissionKey: "clientes_ver",
-  },
-  {
-    href: "/clientes/migracao-acesso",
-    label: "Atualizar App Cliente",
-    shortLabel: "Migração",
-    description: "Links seguros para migrar clientes para CPF e nascimento.",
-    icon: Sparkles,
-    permissionKey: "clientes_ver",
-    niveis: ["admin", "gerente"],
   },
   {
     href: "/profissionais",

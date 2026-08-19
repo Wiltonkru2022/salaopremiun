@@ -134,7 +134,7 @@ export default function AgendaModalFormAgendamento({
           <div>
             <label className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-zinc-700">
               <Clock3 size={13} />
-              Hora de inicio
+              Hora de início
             </label>
 
             <input
@@ -199,10 +199,10 @@ export default function AgendaModalFormAgendamento({
         </div>
       </Section>
 
-      <Section eyebrow="Detalhes" title="Observacoes da recepção e do atendimento">
+      <Section eyebrow="Detalhes" title="Observações da recepção e do atendimento">
         <label className="mb-1.5 flex items-center gap-2 text-xs font-semibold text-zinc-700">
           <StickyNote size={13} />
-          Observacoes
+          Observações
         </label>
 
         <textarea
