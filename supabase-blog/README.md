@@ -13,12 +13,12 @@ BLOG_SUPABASE_SERVICE_ROLE_KEY=
 O sistema principal continua usando `NEXT_PUBLIC_SUPABASE_URL`,
 `NEXT_PUBLIC_SUPABASE_ANON_KEY` e `SUPABASE_SERVICE_ROLE_KEY`.
 
-## Automacao de novo post com Resend
+## Automacao de novo post com Brevo
 
-Depois de verificar o dominio no Resend, configure tambem:
+Depois de autenticar o dominio na Brevo, configure tambem:
 
 ```env
-RESEND_API_KEY=
+BREVO_API_KEY=
 BLOG_WEBHOOK_SECRET=
 BLOG_PUBLIC_URL=https://blog.salaopremiun.com.br
 BLOG_EMAIL_FROM=Blog SalaoPremium <novidades@salaopremiun.com.br>
