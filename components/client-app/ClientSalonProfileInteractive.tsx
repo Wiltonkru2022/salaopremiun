@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronLeft, ChevronRight, Copy, MapPin, Share2, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, MapPin, Share2, X } from "lucide-react";
 
 type PortfolioPhoto = {
   id: string;
