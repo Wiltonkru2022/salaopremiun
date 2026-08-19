@@ -44,6 +44,9 @@ jobs:
       - name: Install App Profissional PWA
         run: npm --prefix apps/app-profissional-vite ci
 
+      - name: Guard public repository secrets
+        run: node scripts/audit/public-secret-scan.mjs
+
       - name: Lint
         run: npm run lint
 
