@@ -32,7 +32,9 @@ export default async function ClientePerfilEditarPage() {
         <ClientProfileForm
           nome={profile.nome || session.nome}
           email={profile.email || session.email}
-          telefone={profile.telefone}
+          telefone={profile.telefone || session.whatsapp || session.telefone}
+          cpf={session.cpf}
+          dataNascimento={session.dataNascimento}
           preferenciasGerais={profile.preferenciasGerais}
         />
       </section>
