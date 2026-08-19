@@ -1,5 +1,5 @@
-import { Loader2, Search, X } from "lucide-react";
-import type { ReactNode } from "react";
+import { Eye, EyeOff, Loader2, Search, X } from "lucide-react";
+import { useState, type ReactNode } from "react";
 
 export function Button({
   children,
@@ -60,11 +60,27 @@ export function Field({
 }
 
 export function Input(props: React.InputHTMLAttributes<HTMLInputElement>) {
+  const [visible, setVisible] = useState(false);
+  const isPassword = props.type === "password";
+  const className = `h-11 w-full rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 ${isPassword ? "pr-12" : ""} ${props.className || ""}`;
+
+  if (!isPassword) {
+    return <input {...props} className={className} />;
+  }
+
   return (
-    <input
-      {...props}
-      className={`h-11 w-full rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 ${props.className || ""}`}
-    />
+    <div className="relative w-full">
+      <input {...props} type={visible ? "text" : "password"} className={className} />
+      <button
+        type="button"
+        aria-label={visible ? "Ocultar senha" : "Mostrar senha"}
+        title={visible ? "Ocultar senha" : "Mostrar senha"}
+        onClick={() => setVisible((value) => !value)}
+        className="absolute inset-y-0 right-0 flex w-12 items-center justify-center text-zinc-500 hover:text-zinc-950"
+      >
+        {visible ? <EyeOff size={18} /> : <Eye size={18} />}
+      </button>
+    </div>
   );
 }
 
