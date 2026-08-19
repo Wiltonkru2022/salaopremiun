@@ -6,6 +6,8 @@ import {
   hasClienteLogoutMarker,
   parseClienteSessionRestoreToken,
 } from "@/lib/cliente-auth.server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getSecurityAccessDecision } from "@/lib/security/user-security";
 
 async function readRestoreToken(request: Request) {
   try {
@@ -16,12 +18,19 @@ async function readRestoreToken(request: Request) {
   }
 }
 
+function unauthorized(message: string) {
+  return NextResponse.json(
+    { ok: false, message },
+    {
+      status: 401,
+      headers: { "Cache-Control": "no-store, max-age=0" },
+    }
+  );
+}
+
 export async function POST(request: Request) {
   if (await hasClienteLogoutMarker()) {
-    return NextResponse.json(
-      { ok: false, message: "Sessão encerrada neste aparelho." },
-      { status: 401 }
-    );
+    return unauthorized("Sessão encerrada neste aparelho.");
   }
 
   const cookieSession = await getClienteSessionFromCookie();
@@ -32,10 +41,32 @@ export async function POST(request: Request) {
   const session = cookieSession || restoredSession;
 
   if (!session?.idConta) {
-    return NextResponse.json(
-      { ok: false, message: "Sessão do cliente indisponível." },
-      { status: 401 }
-    );
+    return unauthorized("Sessão do cliente indisponível.");
+  }
+
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data: account, error } = await supabaseAdmin
+    .from("clientes_app_auth")
+    .select("id, ativo, auth_version")
+    .eq("id", session.idConta)
+    .limit(1)
+    .maybeSingle();
+
+  if (
+    error ||
+    !account?.id ||
+    account.ativo === false ||
+    Number(account.auth_version || 1) !== Number(session.authVersion || 1)
+  ) {
+    return unauthorized("Sua sessão precisa ser autenticada novamente.");
+  }
+
+  const securityDecision = await getSecurityAccessDecision({
+    tipoUsuario: "cliente",
+    userId: session.idConta,
+  });
+  if (!securityDecision.allowed) {
+    return unauthorized("Seu acesso está temporariamente indisponível.");
   }
 
   await createClienteSession(session);
@@ -43,9 +74,7 @@ export async function POST(request: Request) {
   return NextResponse.json(
     { ok: true, restoreToken: createClienteSessionRestoreToken(session) },
     {
-      headers: {
-        "Cache-Control": "no-store, max-age=0",
-      },
+      headers: { "Cache-Control": "no-store, max-age=0" },
     }
   );
 }
