@@ -62,7 +62,7 @@ self.addEventListener("activate", (event) => {
 
 self.addEventListener("push", (event) => {
   const fallback: PushPayload = {
-    title: "SalãoPremium",
+    title: "Salão Premium",
     body: "Você tem uma nova atualização.",
     url: "/app-profissional/",
   };
