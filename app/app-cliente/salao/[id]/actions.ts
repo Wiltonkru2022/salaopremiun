@@ -21,10 +21,7 @@ export async function createClienteBookingAction(
   const session = await requireClienteAppContext();
   const idSalao = String(formData.get("salao") || "").trim();
   const idServico = String(formData.get("servico") || "").trim();
-  const idsServicos = formData
-    .getAll("servicos")
-    .map((item) => String(item || "").trim())
-    .filter(Boolean);
+  const idsServicos = formData.getAll("servicos").map((item) => String(item || "").trim()).filter(Boolean);
   const idProfissional = String(formData.get("profissional") || "").trim();
   const data = String(formData.get("data") || "");
   const horaInicio = String(formData.get("hora_inicio") || "");
@@ -34,10 +31,7 @@ export async function createClienteBookingAction(
   const pessoaAgendadaWhatsapp = String(formData.get("pessoa_whatsapp") || "");
   const pessoaAgendadaObservacao = String(formData.get("pessoa_observacao") || "");
   const codigoCupom = String(formData.get("cupom") || "");
-  const adicionaisIds = formData
-    .getAll("adicionais")
-    .map((item) => String(item || "").trim())
-    .filter(Boolean);
+  const adicionaisIds = formData.getAll("adicionais").map((item) => String(item || "").trim()).filter(Boolean);
 
   const result = await createClienteAppAppointment({
     idSalao,
@@ -56,9 +50,7 @@ export async function createClienteBookingAction(
     codigoCupom,
   });
 
-  if (!result.ok) {
-    return { error: result.error };
-  }
+  if (!result.ok) return { error: result.error };
 
   await captureSystemEvent({
     module: "cliente_app",
@@ -73,28 +65,17 @@ export async function createClienteBookingAction(
     actorType: "anonimo",
     severity: "info",
     success: true,
-    details: {
-      requiresSignal: Boolean(result.requiresSignal),
-      serviceId: idServico,
-    },
+    details: { requiresSignal: Boolean(result.requiresSignal), serviceId: idServico },
   });
 
   revalidatePath(`/app-cliente/salao/${idSalao}`);
   revalidatePath("/app-cliente/agendamentos");
 
   if (result.requiresSignal && result.idAgendamento) {
-    redirect(
-      `/app-cliente/agendamentos/${result.idAgendamento}/sinal?salao=${encodeURIComponent(
-        idSalao
-      )}`
-    );
+    redirect(`/app-cliente/agendamentos/${result.idAgendamento}/sinal?salao=${encodeURIComponent(idSalao)}`);
   }
 
-  redirect(
-    `/app-cliente/agendamentos?status=agendado&salao=${encodeURIComponent(
-      idSalao
-    )}`
-  );
+  redirect(`/app-cliente/agendamentos?status=agendado&salao=${encodeURIComponent(idSalao)}`);
 }
 
 export async function joinClienteWaitlistAction(formData: FormData) {
@@ -113,31 +94,24 @@ export async function joinClienteWaitlistAction(formData: FormData) {
   });
 
   if (!result.ok) {
-    redirect(`/app-cliente/salao/${idSalao}status=lista_espera_erro`);
+    redirect(`/app-cliente/salao/${idSalao}?status=lista_espera_erro`);
   }
 
   revalidatePath(`/app-cliente/salao/${idSalao}`);
-  redirect(`/app-cliente/salao/${idSalao}status=lista_espera`);
+  redirect(`/app-cliente/salao/${idSalao}?status=lista_espera`);
 }
 
 export async function toggleClienteSalonFavoriteAction(formData: FormData) {
   const session = await requireClienteAppContext();
   const idSalao = String(formData.get("salao") || "").trim();
   const nextFavorite = String(formData.get("next_favorite") || "") === "true";
-
   if (!idSalao) return;
 
   const supabaseAdmin = getSupabaseAdmin();
-
   if (nextFavorite) {
     await (supabaseAdmin as any).from("clientes_app_favoritos").upsert(
-      {
-        cliente_app_conta_id: session.idConta,
-        id_salao: idSalao,
-      },
-      {
-        onConflict: "cliente_app_conta_id,id_salao",
-      }
+      { cliente_app_conta_id: session.idConta, id_salao: idSalao },
+      { onConflict: "cliente_app_conta_id,id_salao" }
     );
   } else {
     await (supabaseAdmin as any)
