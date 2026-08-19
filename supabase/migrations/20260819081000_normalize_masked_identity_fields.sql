@@ -16,60 +16,61 @@ returns trigger
 language plpgsql
 set search_path = pg_catalog, public
 as $$
-declare
-  payload jsonb := to_jsonb(new);
-  field_name text;
-  raw_value text;
-  normalized_value text;
 begin
-  foreach field_name in array array[
-    'cpf',
-    'cpf_cnpj',
-    'telefone',
-    'whatsapp',
-    'cep',
-    'sinal_whatsapp',
-    'fornecedor_telefone',
-    'fornecedor_whatsapp'
-  ]
-  loop
-    if payload ? field_name then
-      raw_value := payload ->> field_name;
-      if raw_value is not null then
-        normalized_value := public.fn_ui_digits_only(raw_value);
-        payload := jsonb_set(
-          payload,
-          array[field_name],
-          to_jsonb(normalized_value),
-          true
-        );
+  case tg_table_name
+    when 'clientes' then
+      new.cpf := public.fn_ui_digits_only(new.cpf);
+      new.telefone := public.fn_ui_digits_only(new.telefone);
+      new.whatsapp := public.fn_ui_digits_only(new.whatsapp);
+      new.cep := public.fn_ui_digits_only(new.cep);
+      if new.data_nascimento ~ '^\d{2}/\d{2}/\d{4}$' then
+        new.data_nascimento :=
+          substring(new.data_nascimento from 7 for 4) || '-' ||
+          substring(new.data_nascimento from 4 for 2) || '-' ||
+          substring(new.data_nascimento from 1 for 2);
       end if;
-    end if;
-  end loop;
 
-  if payload ? 'data_nascimento' then
-    raw_value := payload ->> 'data_nascimento';
-    if raw_value ~ '^\d{2}/\d{2}/\d{4}$' then
-      normalized_value :=
-        substring(raw_value from 7 for 4) || '-' ||
-        substring(raw_value from 4 for 2) || '-' ||
-        substring(raw_value from 1 for 2);
-      payload := jsonb_set(
-        payload,
-        array['data_nascimento'],
-        to_jsonb(normalized_value),
-        true
-      );
-    end if;
-  end if;
+    when 'clientes_app_auth' then
+      new.cpf := public.fn_ui_digits_only(new.cpf);
+      new.telefone := public.fn_ui_digits_only(new.telefone);
+      new.whatsapp := public.fn_ui_digits_only(new.whatsapp);
 
-  new := jsonb_populate_record(new, payload);
+    when 'profissionais' then
+      new.cpf := public.fn_ui_digits_only(new.cpf);
+      new.telefone := public.fn_ui_digits_only(new.telefone);
+      new.whatsapp := public.fn_ui_digits_only(new.whatsapp);
+      new.cep := public.fn_ui_digits_only(new.cep);
+      new.sinal_whatsapp := public.fn_ui_digits_only(new.sinal_whatsapp);
+
+    when 'profissionais_acessos' then
+      new.cpf := public.fn_ui_digits_only(new.cpf);
+
+    when 'saloes' then
+      new.cpf_cnpj := public.fn_ui_digits_only(new.cpf_cnpj);
+      new.telefone := public.fn_ui_digits_only(new.telefone);
+      new.whatsapp := public.fn_ui_digits_only(new.whatsapp);
+      new.cep := public.fn_ui_digits_only(new.cep);
+
+    when 'reativar_salao' then
+      new.cpf_cnpj := public.fn_ui_digits_only(new.cpf_cnpj);
+      new.telefone := public.fn_ui_digits_only(new.telefone);
+      new.whatsapp := public.fn_ui_digits_only(new.whatsapp);
+      new.cep := public.fn_ui_digits_only(new.cep);
+
+    when 'produtos' then
+      new.fornecedor_telefone := public.fn_ui_digits_only(new.fornecedor_telefone);
+      new.fornecedor_whatsapp := public.fn_ui_digits_only(new.fornecedor_whatsapp);
+
+    when 'configuracoes_salao' then
+      new.sinal_whatsapp := public.fn_ui_digits_only(new.sinal_whatsapp);
+
+    when 'agendamentos' then
+      new.sinal_whatsapp := public.fn_ui_digits_only(new.sinal_whatsapp);
+  end case;
+
   return new;
 end;
 $$;
-
-revoke all on function public.fn_ui_digits_only(text) from public, anon, authenticated;
-revoke all on function public.fn_normalize_masked_identity_fields() from public, anon, authenticated;
 
 drop trigger if exists trg_normalize_masked_fields_clientes on public.clientes;
 create trigger trg_normalize_masked_fields_clientes
