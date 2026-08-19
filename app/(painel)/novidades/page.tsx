@@ -84,7 +84,7 @@ export default async function NovidadesPage() {
           <div className="bg-zinc-950 px-4 py-5 text-white sm:px-5 sm:py-6">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">
               <Sparkles size={14} />
-              Roadmap do SalãoPremium
+              Roadmap do Salão Premiun
             </div>
             <h1 className="mt-3 max-w-3xl font-display text-3xl font-bold tracking-[-0.04em] sm:text-[2.15rem]">
               O que está entrando no produto

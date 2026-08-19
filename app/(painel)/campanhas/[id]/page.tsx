@@ -17,6 +17,7 @@ import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { canUsePlanFeature } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import PaginationLinks from "@/components/ui/PaginationLinks";
+import PendingActionButton from "@/components/ui/PendingActionButton";
 import {
   adicionarClienteCampanhaAction,
   atualizarCampanhaAction,
@@ -484,9 +485,11 @@ export default async function CampanhaDetalhePage({
           <form action={atualizarStatusCampanhaAction}>
             <input type="hidden" name="id" value={String(campanha.id)} />
             <input type="hidden" name="status" value={statusAtual === "ativa" ? "pausada" : "ativa"} />
-            <button className="h-11 rounded-2xl bg-white px-5 text-sm font-black text-zinc-950">
-              {statusAtual === "ativa" ? "Pausar campanha" : "Ativar campanha"}
-            </button>
+            <PendingActionButton
+              label={statusAtual === "ativa" ? "Pausar campanha" : "Ativar campanha"}
+              pendingLabel={statusAtual === "ativa" ? "Pausando..." : "Ativando..."}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-black text-zinc-950"
+            />
           </form>
         </div>
       </section>

@@ -2,15 +2,16 @@ import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
 import { Suspense } from "react";
 import ClientInstallOnboardingGate from "@/components/client-app/ClientInstallOnboardingGate";
+import ClientMaintenanceNotice from "@/components/client-app/ClientMaintenanceNotice";
 import ClientMobileAppLayout from "@/components/client-app/ClientMobileAppLayout";
 import ClientSessionKeepAlive from "@/components/client-app/ClientSessionKeepAlive";
 import MobileViewportRuntime from "@/components/pwa/MobileViewportRuntime";
 
 export const metadata: Metadata = {
   title: "App Cliente",
-  applicationName: "Salão Premium Cliente",
+  applicationName: "Salão Premiun Cliente",
   description:
-    "Agende horários, acompanhe visitas e avalie atendimentos no app cliente do SalãoPremium.",
+    "Agende horários, acompanhe visitas e avalie atendimentos no app cliente do Salão Premiun.",
   manifest: "/app-cliente/manifest.webmanifest",
   icons: {
     icon: "/app-brand-icon.svg",
@@ -39,6 +40,7 @@ export default function AppClienteLayout({
 }) {
   return (
     <>
+      <ClientMaintenanceNotice />
       <Suspense fallback={null}>
         <ClientInstallOnboardingGate />
       </Suspense>

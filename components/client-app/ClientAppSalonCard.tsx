@@ -1,4 +1,4 @@
-import { Heart, MapPin, Star } from "lucide-react";
+import { MapPin, Star } from "lucide-react";
 import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 import type { ClientAppSalonListItem } from "@/lib/client-app/queries";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
@@ -25,13 +25,6 @@ export default function ClientAppSalonCard({
             alt={`Capa do salão ${salao.nome}`}
             className="h-full w-full object-cover"
           />
-          <button
-            type="button"
-            className="absolute left-5 top-5 flex h-12 w-12 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur"
-            aria-label="Favoritar"
-          >
-            <Heart size={26} />
-          </button>
           <div className="absolute right-5 top-5 rounded-2xl bg-white px-4 py-3 text-lg font-black text-zinc-950">
             {salao.notaMedia ? "5,0" : "Novo"}
           </div>

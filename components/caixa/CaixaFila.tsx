@@ -6,7 +6,6 @@ import {
   CheckCircle2,
   ChevronRight,
   Search,
-  SlidersHorizontal,
   XCircle,
 } from "lucide-react";
 import { AbaCaixa, AgendamentoFila, ComandaDetalhe, ComandaFila } from "./types";
@@ -56,7 +55,7 @@ export default function CaixaFila({
             Triagem
           </h2>
           <p className="mt-1 text-[12px] text-slate-500">
-            Abra rapido a comanda certa e siga sem ruido.
+            Abra rápido a comanda certa e siga sem ruido.
           </p>
         </div>
 
@@ -66,18 +65,11 @@ export default function CaixaFila({
             <input
               value={busca}
               onChange={(e) => setBusca(e.target.value)}
-              placeholder="Buscar por numero, cliente ou servico..."
+              placeholder="Buscar por numero, cliente ou serviço..."
               className="w-full bg-transparent text-sm text-slate-700 outline-none placeholder:text-slate-400"
             />
           </label>
 
-          <button
-            type="button"
-            className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50"
-            aria-label="Filtros"
-          >
-            <SlidersHorizontal size={18} />
-          </button>
         </div>
 
         <div className="grid grid-cols-3 gap-2">

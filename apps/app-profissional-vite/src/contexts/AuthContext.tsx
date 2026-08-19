@@ -10,6 +10,7 @@ type AuthContextValue = {
 };
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [profissional, setProfissional] = useState<Profissional | null>(null);
   const [loading, setLoading] = useState(true);
@@ -53,10 +54,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   async function logout() {
-    await fetch("/api/app-profissional/auth/logout", {
+    const response = await fetch("/api/app-profissional/auth/logout", {
       method: "POST",
       credentials: "same-origin",
     });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(String(payload?.error || "Não foi possível sair da conta."));
+    }
     setProfissional(null);
   }
 
@@ -79,4 +84,3 @@ export function useAuth() {
   if (!value) throw new Error("useAuth precisa estar dentro de AuthProvider");
   return value;
 }
-

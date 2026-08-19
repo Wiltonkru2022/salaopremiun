@@ -38,10 +38,10 @@ const nav = [
 function BrandLogo({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-3">
-      <img src="/app-profissional/icons/icon-192.png" alt="Salão Premiun" className="h-11 w-11 rounded-2xl shadow-sm" />
+      <img src="/app-profissional/icons/icon-192.png" alt={ptBR.brand.name} className="h-11 w-11 rounded-2xl shadow-sm" />
       {!compact ? (
         <div className="min-w-0">
-          <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-amber-700">Salão Premiun</div>
+          <div className="text-[0.65rem] font-black uppercase tracking-[0.22em] text-amber-700">{ptBR.brand.name}</div>
           <div className="truncate text-lg font-black tracking-[-0.04em] text-zinc-950">Profissional</div>
         </div>
       ) : null}
@@ -51,7 +51,22 @@ function BrandLogo({ compact = false }: { compact?: boolean }) {
 
 export function AppShell({ view, setView, title, subtitle, children }: { view: View; setView: (view: View) => void; title: string; subtitle: string; children: React.ReactNode }) {
   const [open, setOpen] = useState(false);
+  const [logoutLoading, setLogoutLoading] = useState(false);
+  const [logoutError, setLogoutError] = useState("");
   const { profissional, logout } = useAuth();
+
+  async function handleLogout() {
+    if (logoutLoading) return;
+    setLogoutLoading(true);
+    setLogoutError("");
+    try {
+      await logout();
+    } catch (error) {
+      setLogoutError(error instanceof Error ? error.message : "Não foi possível sair da conta.");
+    } finally {
+      setLogoutLoading(false);
+    }
+  }
 
   const menu = (
     <aside className="flex h-full w-[19rem] max-w-[82vw] flex-col bg-white p-5 shadow-soft">
@@ -60,7 +75,7 @@ export function AppShell({ view, setView, title, subtitle, children }: { view: V
           <BrandLogo />
           <div className="mt-1 text-sm font-bold text-zinc-500">{profissional?.nome}</div>
         </div>
-        <button className="grid h-11 w-11 place-items-center rounded-full bg-zinc-100" onClick={() => setOpen(false)} aria-label="Fechar menu">
+        <button type="button" className="grid h-11 w-11 place-items-center rounded-full bg-zinc-100" onClick={() => setOpen(false)} aria-label="Fechar menu">
           <X size={22} />
         </button>
       </div>
@@ -71,11 +86,13 @@ export function AppShell({ view, setView, title, subtitle, children }: { view: V
           const active = view === item.id;
           return (
             <button
+              type="button"
               key={item.id}
               onClick={() => {
                 setView(item.id);
                 setOpen(false);
               }}
+              aria-current={active ? "page" : undefined}
               className={`flex h-12 items-center gap-3 rounded-2xl px-4 text-left text-sm font-black ${active ? "bg-zinc-950 text-white" : "text-zinc-700 active:bg-zinc-100"}`}
             >
               <Icon size={20} />
@@ -85,7 +102,8 @@ export function AppShell({ view, setView, title, subtitle, children }: { view: V
         })}
       </nav>
 
-      <Button className="mt-auto" variant="secondary" onClick={logout}>
+      {logoutError ? <div role="alert" className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-xs font-bold text-red-700">{logoutError}</div> : null}
+      <Button type="button" className="mt-auto" variant="secondary" loading={logoutLoading} onClick={() => void handleLogout()}>
         Sair
       </Button>
     </aside>
@@ -102,14 +120,14 @@ export function AppShell({ view, setView, title, subtitle, children }: { view: V
               <div className="flex min-w-0 items-center gap-3">
                 <BrandLogo compact />
                 <div className="min-w-0">
-                  <div className="text-[0.68rem] font-black uppercase tracking-[0.22em] text-amber-700">Salão Premiun</div>
+                  <div className="text-[0.68rem] font-black uppercase tracking-[0.22em] text-amber-700">{ptBR.brand.name}</div>
                   <h1 className="mt-1 truncate text-3xl font-black tracking-[-0.05em] text-zinc-950">{title}</h1>
                   {subtitle ? <p className="mt-0.5 truncate text-sm font-bold text-zinc-500">{subtitle}</p> : null}
                 </div>
               </div>
               <div className="flex shrink-0 items-center gap-2">
                 <PushPermissionButton />
-                <button className="grid h-12 w-12 place-items-center rounded-full border border-zinc-200 bg-white shadow-sm md:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu">
+                <button type="button" className="grid h-12 w-12 place-items-center rounded-full border border-zinc-200 bg-white shadow-sm md:hidden" onClick={() => setOpen(true)} aria-label="Abrir menu">
                   <Menu size={24} />
                 </button>
               </div>
@@ -122,7 +140,7 @@ export function AppShell({ view, setView, title, subtitle, children }: { view: V
 
       {open ? (
         <div className="fixed inset-0 z-50 flex md:hidden">
-          <button className="absolute inset-0 bg-black/45" onClick={() => setOpen(false)} aria-label="Fechar menu" />
+          <button type="button" className="absolute inset-0 bg-black/45" onClick={() => setOpen(false)} aria-label="Fechar menu" />
           <div className="relative z-10">{menu}</div>
         </div>
       ) : null}

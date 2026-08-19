@@ -54,7 +54,7 @@ export default function LoginClienteForm({
 
         <h2 className="text-[1.55rem] font-semibold text-zinc-950">Entre no App Cliente</h2>
         <p className="mt-2 text-sm leading-6 text-zinc-500">
-          Use seu CPF e sua data de nascimento. A mesma conta funciona nos salões publicados no SalãoPremium.
+          Use seu CPF e sua data de nascimento. A mesma conta funciona nos salões publicados no Salão Premiun.
         </p>
 
         {salaoNome ? (

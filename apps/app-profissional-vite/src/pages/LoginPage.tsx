@@ -14,12 +14,13 @@ export function LoginPage() {
 
   async function submit(event: FormEvent) {
     event.preventDefault();
+    if (loading) return;
     setLoading(true);
     setError("");
     try {
       await login(cpf, senha);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Nao foi possivel entrar.");
+      setError(err instanceof Error ? err.message : "Não foi possível entrar.");
     } finally {
       setLoading(false);
     }
@@ -42,13 +43,13 @@ export function LoginPage() {
           <Field label="CPF">
             <div className="relative">
               <UserRound className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={19} />
-              <Input className="w-full bg-white pl-11 text-zinc-950" inputMode="numeric" placeholder="000.000.000-00" value={cpf} onChange={(event) => setCpf(event.target.value)} />
+              <Input required autoComplete="username" className="w-full bg-white pl-11 text-zinc-950" inputMode="numeric" placeholder="000.000.000-00" value={cpf} onChange={(event) => setCpf(event.target.value)} />
             </div>
           </Field>
           <Field label="Senha">
             <div className="relative">
               <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={19} />
-              <Input className="w-full bg-white pl-11 pr-12 text-zinc-950" type={showPassword ? "text" : "password"} placeholder="Sua senha" value={senha} onChange={(event) => setSenha(event.target.value)} />
+              <Input required autoComplete="current-password" className="w-full bg-white pl-11 pr-12 text-zinc-950" type={showPassword ? "text" : "password"} placeholder="Sua senha" value={senha} onChange={(event) => setSenha(event.target.value)} />
               <button type="button" className="absolute right-2 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full text-zinc-500" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? "Ocultar senha" : "Ver senha"}>
                 {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
               </button>
@@ -56,9 +57,10 @@ export function LoginPage() {
           </Field>
         </div>
 
-        {error ? <div className="mt-4 rounded-2xl border border-red-400/30 bg-red-500/15 px-4 py-3 text-sm font-bold text-red-100">{error}</div> : null}
+        {error ? <div role="alert" className="mt-4 rounded-2xl border border-red-400/30 bg-red-500/15 px-4 py-3 text-sm font-bold text-red-100">{error}</div> : null}
 
         <Button
+          type="submit"
           loading={loading}
           variant="secondary"
           className="mt-6 w-full !border-amber-300 !bg-amber-400 !text-zinc-950 active:!bg-amber-300"

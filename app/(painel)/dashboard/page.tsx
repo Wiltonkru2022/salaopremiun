@@ -24,6 +24,7 @@ import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import AppLoading from "@/components/ui/AppLoading";
 import { getPlanoMinimoParaRecurso, type PlanoCobravelCodigo } from "@/lib/plans/catalog";
 import { getAssinaturaUrl } from "@/lib/site-urls";
+import { statusPtBR } from "@/core/i18n/pt-BR";
 
 type DashboardPeriodo = "hoje" | "7d" | "mes" | "ano";
 
@@ -297,7 +298,7 @@ function LockedPanel({ plan }: { plan: PlanoCobravelCodigo }) {
           <Crown size={22} />
         </div>
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-100">Dashboard avançado</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-100">Visão geral avançado</p>
           <h3 className="mt-2 text-2xl font-black tracking-[-0.04em]">
             Liberado no {plan === "premium" ? "Premium" : "Pro"}
           </h3>
@@ -532,7 +533,7 @@ export default function DashboardPage() {
               <Sparkles size={13} />
               Comando do salão
             </div>
-            <h1 className="mt-3 text-[2.35rem] font-black tracking-[-0.05em] text-zinc-950">Dashboard</h1>
+            <h1 className="mt-3 text-[2.35rem] font-black tracking-[-0.05em] text-zinc-950">Visão geral</h1>
             <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
               Visão executiva do salão: agenda, faturamento, clientes sem retorno, profissionais em destaque e
               serviços com mais procura.
@@ -628,7 +629,7 @@ export default function DashboardPage() {
                     <p className="truncate text-xs text-zinc-400">{item.profissional}</p>
                   </div>
                   <span className={`shrink-0 rounded-full px-3 py-1 text-[11px] font-black ${statusBadgeClass(item.status)}`}>
-                    {item.status}
+                    {statusPtBR(item.status)}
                   </span>
                 </div>
               </div>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, Bell, CalendarDays, CheckCircle2 } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
+import ClientNotificationSubmitButton from "@/components/client-app/ClientNotificationSubmitButton";
 import {
   markAllClienteNotificationsReadAction,
   markClienteNotificationReadAction,
@@ -50,6 +51,7 @@ function FilterLink({
   return (
     <Link
       href={href}
+      aria-current={active ? "page" : undefined}
       className={`inline-flex h-11 items-center gap-2 rounded-full px-4 text-sm font-black transition ${
         active
           ? "bg-zinc-950 text-white"
@@ -123,9 +125,10 @@ export default async function ClienteNotificationsPage({
           </div>
           {activeTab === "nao-lidas" && unreadCounter.total > 0 ? (
             <form action={markAllClienteNotificationsReadAction}>
-              <button className="h-11 rounded-full border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-800">
-                Marcar todas como lidas
-              </button>
+              <ClientNotificationSubmitButton
+                label="Marcar todas como lidas"
+                pendingLabel="Marcando..."
+              />
             </form>
           ) : null}
         </div>
@@ -207,9 +210,11 @@ export default async function ClienteNotificationsPage({
                           name="notificacao"
                           value={notification.id}
                         />
-                        <button className="h-10 rounded-xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-800">
-                          Marcar como não lida
-                        </button>
+                        <ClientNotificationSubmitButton
+                          compact
+                          label="Marcar como não lida"
+                          pendingLabel="Marcando..."
+                        />
                       </form>
                     ) : (
                       <form action={markClienteNotificationReadAction}>
@@ -218,9 +223,11 @@ export default async function ClienteNotificationsPage({
                           name="notificacao"
                           value={notification.id}
                         />
-                        <button className="h-10 rounded-xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-800">
-                          Marcar como lida
-                        </button>
+                        <ClientNotificationSubmitButton
+                          compact
+                          label="Marcar como lida"
+                          pendingLabel="Marcando..."
+                        />
                       </form>
                     )}
                   </div>
