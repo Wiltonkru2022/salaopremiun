@@ -2,8 +2,11 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-
-const RESTORE_TOKEN_KEY = "salaopremium:cliente:restore-token";
+import {
+  clearClienteRestoreToken,
+  readClienteRestoreToken,
+  writeClienteRestoreToken,
+} from "@/lib/client-app/restore-token.client";
 
 export default function ClientSessionAutoRestore({
   next,
@@ -17,11 +20,11 @@ export default function ClientSessionAutoRestore({
 
   useEffect(() => {
     if (clearOnLoad) {
-      window.localStorage.removeItem(RESTORE_TOKEN_KEY);
+      clearClienteRestoreToken();
       return;
     }
 
-    const restoreToken = window.localStorage.getItem(RESTORE_TOKEN_KEY);
+    const restoreToken = readClienteRestoreToken();
     if (!restoreToken) return;
 
     let active = true;
@@ -31,14 +34,12 @@ export default function ClientSessionAutoRestore({
       method: "POST",
       cache: "no-store",
       credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-      },
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ restoreToken }),
     })
       .then(async (response) => {
         if (!response.ok) {
-          window.localStorage.removeItem(RESTORE_TOKEN_KEY);
+          clearClienteRestoreToken();
           return;
         }
 
@@ -46,12 +47,13 @@ export default function ClientSessionAutoRestore({
           restoreToken?: string;
         } | null;
 
-        if (payload?.restoreToken) {
-          window.localStorage.setItem(RESTORE_TOKEN_KEY, payload.restoreToken);
-        }
+        if (payload?.restoreToken) writeClienteRestoreToken(payload.restoreToken);
 
         router.replace(next || "/app-cliente/inicio");
         router.refresh();
+      })
+      .catch(() => {
+        // Falha de rede nao apaga o token; uma nova tentativa pode funcionar depois.
       })
       .finally(() => {
         if (active) setRestoring(false);
