@@ -2,7 +2,10 @@
 
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
+import { createClienteSession } from "@/lib/cliente-auth.server";
 import { requireClienteAppContext } from "@/lib/client-context.server";
+import { normalizeCpf, parseClienteBirthDate } from "@/lib/client-app/identity";
+import { completeClienteIdentityMigration } from "@/app/services/cliente-app/identity-migration";
 import {
   deleteClienteAppAccount,
   updateClienteAppProfile,
@@ -20,7 +23,33 @@ export async function updateClienteProfileAction(
   const nome = String(formData.get("nome") || "");
   const email = String(formData.get("email") || "");
   const telefone = String(formData.get("telefone") || "");
+  const cpf = String(formData.get("cpf") || "");
+  const dataNascimento = String(formData.get("dataNascimento") || "");
   const preferencias = String(formData.get("preferencias") || "");
+
+  const normalizedCpf = normalizeCpf(cpf);
+  const normalizedBirth = parseClienteBirthDate(dataNascimento);
+  const currentCpf = normalizeCpf(session.cpf);
+  const currentBirth = parseClienteBirthDate(session.dataNascimento);
+  const identityChanged =
+    !session.migracaoIdentidadeConcluida ||
+    normalizedCpf !== currentCpf ||
+    normalizedBirth !== currentBirth;
+
+  if (identityChanged) {
+    const migrationResult = await completeClienteIdentityMigration({
+      idConta: session.idConta,
+      cpf,
+      dataNascimento,
+      whatsapp: telefone,
+    });
+
+    if (!migrationResult.ok) {
+      return { error: migrationResult.error };
+    }
+
+    await createClienteSession(migrationResult.session);
+  }
 
   const result = await updateClienteAppProfile({
     idConta: session.idConta,
@@ -35,6 +64,7 @@ export async function updateClienteProfileAction(
   }
 
   revalidatePath("/app-cliente/perfil");
+  revalidatePath("/app-cliente/perfil/editar");
   redirect("/app-cliente/perfil?status=salvo");
 }
 
