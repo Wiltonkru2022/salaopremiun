@@ -25,6 +25,13 @@ function formatPhone(value: string) {
   return `(${ddd}) ${number.slice(0, 5)}-${number.slice(5, 9)}`;
 }
 
+function displayDescription(value: string | null | undefined, kind: InlineCreateKind) {
+  const text = String(value || "");
+  if (kind !== "cliente") return text;
+  const digits = text.replace(/\D/g, "");
+  return digits.length >= 10 ? formatPhone(digits) : text;
+}
+
 function parseMoney(value: string) {
   const normalized = String(value || "").trim().replace(/\./g, "").replace(",", ".");
   const number = Number(normalized);
@@ -50,7 +57,7 @@ export function SearchPicker({
   onChange,
   emptyText = "Nada encontrado.",
   allowClear = true,
-  hideInputWhenSelected = true,
+  hideInputWhenSelected = false,
   maxResults = 6,
   createKind
 }: {
@@ -88,11 +95,6 @@ export function SearchPicker({
 
   const showResults = query.trim().length > 0;
 
-  function clearSelection() {
-    onChange("");
-    setQuery("");
-  }
-
   function acceptCreated(option: SearchPickerOption) {
     setCreatedOptions((current) => [option, ...current.filter((item) => item.value !== option.value)]);
     onChange(option.value);
@@ -114,10 +116,10 @@ export function SearchPicker({
         <div className="flex items-center justify-between gap-3 rounded-[1.05rem] border border-amber-200 bg-gradient-to-r from-amber-50 to-white px-3.5 py-3 text-zinc-950 shadow-[0_3px_10px_rgba(146,64,14,0.05)]">
           <div className="min-w-0">
             <div className="truncate text-sm font-black">{selected.label}</div>
-            {selected.description ? <div className="mt-0.5 truncate text-xs font-bold text-zinc-500">{selected.description}</div> : null}
+            {selected.description ? <div className="mt-0.5 truncate text-xs font-bold text-zinc-500">{displayDescription(selected.description, inlineCreateKind)}</div> : null}
           </div>
           {allowClear ? (
-            <button type="button" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-zinc-500 shadow-sm ring-1 ring-zinc-200" onClick={clearSelection} aria-label="Alterar seleção">
+            <button type="button" className="grid h-8 w-8 shrink-0 place-items-center rounded-full bg-white text-zinc-500 shadow-sm ring-1 ring-zinc-200" onClick={() => { onChange(""); setQuery(""); }} aria-label="Remover seleção">
               <X size={16} />
             </button>
           ) : null}
@@ -150,7 +152,7 @@ export function SearchPicker({
                 >
                   <div className="truncate text-sm font-black text-zinc-950">{item.label}</div>
                   <div className="mt-1 flex items-center justify-between gap-2 text-xs font-bold text-zinc-500">
-                    <span className="truncate">{item.description || "Sem detalhe"}</span>
+                    <span className="truncate">{displayDescription(item.description || "Sem detalhe", inlineCreateKind)}</span>
                     {item.meta ? <span className="shrink-0 text-zinc-500">{item.meta}</span> : null}
                   </div>
                 </button>
