@@ -21,6 +21,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v5
 
+      - name: Upload main source snapshot
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: salaopremiun-main-${{ github.sha }}
+          path: |
+            .
+            !.git/**
+          include-hidden-files: true
+          retention-days: 1
+
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
@@ -38,6 +49,9 @@ jobs:
 
       - name: Test App Cliente identity
         run: npx vitest run lib/client-app/identity.test.ts
+
+      - name: Test Web Push delivery policies
+        run: npx vitest run lib/push-delivery-utils.test.ts
 
       - name: Audit painel PT-BR
         run: node scripts/audit/painel-ui-text-audit.mjs --check
