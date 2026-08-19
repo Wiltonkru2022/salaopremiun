@@ -104,8 +104,13 @@ function normalizeInstagramUrl(value: string | null | undefined) {
   const raw = String(value || "").trim();
   if (!raw) return null;
   if (/^https?:\/\//i.test(raw)) return raw;
-  const handle = raw.replace(/^@/, "").replace(/^instagram\.com\//i, "").replace(/^www\.instagram\.com\//i, "");
-  return handle ? `https://www.instagram.com/${handle.replace(/^\/+|\/+$/g, "")}` : null;
+  const handle = raw
+    .replace(/^@/, "")
+    .replace(/^instagram\.com\//i, "")
+    .replace(/^www\.instagram\.com\//i, "");
+  return handle
+    ? `https://www.instagram.com/${handle.replace(/^\/+|\/+$/g, "")}`
+    : null;
 }
 
 function stringArray(value: unknown) {
@@ -141,12 +146,17 @@ function getZonedClock(timeZone: string) {
 }
 
 function timeToMinutes(value: string) {
-  const [hour, minute] = String(value || "").slice(0, 5).split(":").map(Number);
+  const [hour, minute] = String(value || "")
+    .slice(0, 5)
+    .split(":")
+    .map(Number);
   if (!Number.isFinite(hour) || !Number.isFinite(minute)) return null;
   return hour * 60 + minute;
 }
 
-function buildOpeningInfo(config: SalonConfigRow | null): ClientSalonOpeningInfo | null {
+function buildOpeningInfo(
+  config: SalonConfigRow | null
+): ClientSalonOpeningInfo | null {
   if (!config?.hora_abertura || !config?.hora_fechamento) return null;
 
   const horaAbertura = String(config.hora_abertura).slice(0, 5);
@@ -194,51 +204,46 @@ async function findNextSlot(params: {
   profissionais: ClientSalonProfileProfessional[];
 }) {
   const professionalIds = new Set(params.profissionais.map((item) => item.id));
-  const candidates = params.servicos
-    .slice(0, 5)
-    .map((servico) => {
-      const allowed = servico.profissionaisPermitidos.find((id) => professionalIds.has(id));
-      const profissionalId = allowed || params.profissionais[0]?.id || "";
-      return profissionalId ? { servico, profissionalId } : null;
-    })
-    .filter(Boolean)
-    .slice(0, 3) as Array<{
-      servico: ClientSalonProfileService;
-      profissionalId: string;
-    }>;
+  const candidate = params.servicos.slice(0, 5).find((servico) => {
+    if (!params.profissionais.length) return false;
+    return (
+      servico.profissionaisPermitidos.length === 0 ||
+      servico.profissionaisPermitidos.some((id) => professionalIds.has(id))
+    );
+  });
 
-  if (!candidates.length) return null;
+  if (!candidate || !params.profissionais.length) return null;
 
-  const results = await Promise.allSettled(
-    candidates.map(async ({ servico, profissionalId }) => {
-      const result = await getClienteAppBookingAvailability({
-        idSalao: params.idSalao,
-        idServico: servico.id,
-        idsServicos: [servico.id],
-        idProfissional: profissionalId,
-        ignoreAgendamentoId: null,
-        startDate: null,
-      });
-      if (!result.ok) return null;
-      const firstDay = Array.isArray(result.dias) ? result.dias[0] : null;
-      const firstTime = Array.isArray(firstDay?.horarios) ? firstDay.horarios[0] : null;
-      const data = String(firstDay?.data || "").slice(0, 10);
-      const hora = String(firstTime || "").slice(0, 5);
-      if (!data || !hora) return null;
-      return {
-        data,
-        hora,
-        label: formatNextSlotLabel(data, hora),
-        servicoId: servico.id,
-        servicoNome: servico.nome,
-        profissionalId,
-      } satisfies ClientSalonNextSlot;
-    })
+  const allowedProfessional = candidate.profissionaisPermitidos.find((id) =>
+    professionalIds.has(id)
   );
+  const profissionalId = allowedProfessional || params.profissionais[0]?.id || "";
+  if (!profissionalId) return null;
 
-  return results
-    .flatMap((result) => (result.status === "fulfilled" && result.value ? [result.value] : []))
-    .sort((left, right) => `${left.data}T${left.hora}`.localeCompare(`${right.data}T${right.hora}`))[0] || null;
+  const result = await getClienteAppBookingAvailability({
+    idSalao: params.idSalao,
+    idServico: candidate.id,
+    idsServicos: [candidate.id],
+    idProfissional: profissionalId,
+    ignoreAgendamentoId: null,
+    startDate: null,
+  });
+
+  if (!result.ok) return null;
+  const firstDay = result.dias[0];
+  const firstTime = firstDay?.horarios[0];
+  const data = String(firstDay?.data || "").slice(0, 10);
+  const hora = String(firstTime?.horaInicio || "").slice(0, 5);
+  if (!data || !hora) return null;
+
+  return {
+    data,
+    hora,
+    label: formatNextSlotLabel(data, hora),
+    servicoId: candidate.id,
+    servicoNome: candidate.nome,
+    profissionalId,
+  } satisfies ClientSalonNextSlot;
 }
 
 export async function getClientSalonProfile(
@@ -251,13 +256,17 @@ export async function getClientSalonProfile(
     await Promise.all([
       (supabaseAdmin as any)
         .from("saloes")
-        .select("plano, instagram_url, acessibilidade, wifi, cafe, ar_condicionado")
+        .select(
+          "plano, instagram_url, acessibilidade, wifi, cafe, ar_condicionado"
+        )
         .eq("id", base.id)
         .limit(1)
         .maybeSingle(),
       (supabaseAdmin as any)
         .from("configuracoes_salao")
-        .select("hora_abertura, hora_fechamento, dias_funcionamento, fuso_horario")
+        .select(
+          "hora_abertura, hora_fechamento, dias_funcionamento, fuso_horario"
+        )
         .eq("id_salao", base.id)
         .limit(1)
         .maybeSingle(),
@@ -266,12 +275,17 @@ export async function getClientSalonProfile(
             .from("servicos")
             .select("id, imagem_url")
             .eq("id_salao", base.id)
-            .in("id", base.servicos.map((item) => item.id))
+            .in(
+              "id",
+              base.servicos.map((item) => item.id)
+            )
             .limit(200)
         : Promise.resolve({ data: [] }),
       (supabaseAdmin as any)
         .from("clientes_avaliacoes")
-        .select("id, id_agendamento, id_profissional, nota, comentario, created_at, imagens_url, clientes(nome)")
+        .select(
+          "id, id_agendamento, id_profissional, nota, comentario, created_at, imagens_url, clientes(nome)"
+        )
         .eq("id_salao", base.id)
         .order("created_at", { ascending: false })
         .limit(500),
@@ -280,10 +294,12 @@ export async function getClientSalonProfile(
   const extras = (extrasResult.data || {}) as SalonExtrasRow;
   const config = (configResult.data || null) as SalonConfigRow | null;
   const imageMap = new Map<string, string>();
-  for (const row of (serviceImagesResult.data || []) as Array<Record<string, unknown>>) {
-    const id = String(row.id || "").trim();
+  for (const row of (serviceImagesResult.data || []) as Array<
+    Record<string, unknown>
+  >) {
+    const serviceId = String(row.id || "").trim();
     const url = String(row.imagem_url || "").trim();
-    if (id && url) imageMap.set(id, url);
+    if (serviceId && url) imageMap.set(serviceId, url);
   }
 
   const rawReviews = ((reviewsResult.data || []) as unknown as RawReview[]).filter(
@@ -335,27 +351,40 @@ export async function getClientSalonProfile(
     5: 0,
   };
   for (const review of avaliacoes) {
-    const rounded = Math.max(1, Math.min(5, Math.round(review.nota))) as 1 | 2 | 3 | 4 | 5;
+    const rounded = Math.max(
+      1,
+      Math.min(5, Math.round(review.nota))
+    ) as 1 | 2 | 3 | 4 | 5;
     distribution[rounded] += 1;
   }
 
-  const professionalMetrics = new Map<string, { sum: number; total: number }>();
+  const professionalMetrics = new Map<
+    string,
+    { sum: number; total: number }
+  >();
   for (const review of avaliacoes) {
     if (!review.idProfissional) continue;
-    const metric = professionalMetrics.get(review.idProfissional) || { sum: 0, total: 0 };
+    const metric = professionalMetrics.get(review.idProfissional) || {
+      sum: 0,
+      total: 0,
+    };
     metric.sum += review.nota;
     metric.total += 1;
     professionalMetrics.set(review.idProfissional, metric);
   }
 
-  const profissionais: ClientSalonProfileProfessional[] = base.profissionais.map((item) => {
-    const metric = professionalMetrics.get(item.id);
-    return {
-      ...item,
-      notaMedia: metric?.total ? Number((metric.sum / metric.total).toFixed(1)) : null,
-      totalAvaliacoes: metric?.total || 0,
-    };
-  });
+  const profissionais: ClientSalonProfileProfessional[] = base.profissionais.map(
+    (item) => {
+      const metric = professionalMetrics.get(item.id);
+      return {
+        ...item,
+        notaMedia: metric?.total
+          ? Number((metric.sum / metric.total).toFixed(1))
+          : null,
+        totalAvaliacoes: metric?.total || 0,
+      };
+    }
+  );
 
   const servicos: ClientSalonProfileService[] = base.servicos.map((item) => ({
     ...item,
@@ -366,7 +395,8 @@ export async function getClientSalonProfile(
   const notaMedia = totalAvaliacoes
     ? Number(
         (
-          avaliacoes.reduce((sum, item) => sum + item.nota, 0) / totalAvaliacoes
+          avaliacoes.reduce((sum, item) => sum + item.nota, 0) /
+          totalAvaliacoes
         ).toFixed(1)
       )
     : null;
