@@ -1,7 +1,10 @@
 import AdminBlogEditor from "@/components/blog/AdminBlogEditor";
 import type { BlogPost } from "@/lib/blog/content";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getAdminBlogPostBySlugOrId, getBlogCategories } from "@/lib/blog/service";
+import {
+  getAdminBlogData,
+  getAdminBlogPostBySlugOrId,
+} from "@/lib/blog/service";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -17,7 +20,10 @@ function isUuid(value?: string | null) {
   );
 }
 
-function preparePostForEditor(post: BlogPost | null, categories: Awaited<ReturnType<typeof getBlogCategories>>) {
+function preparePostForEditor(
+  post: BlogPost | null,
+  categories: Awaited<ReturnType<typeof getAdminBlogData>>["categories"]
+) {
   if (!post) return null;
 
   const category =
@@ -30,6 +36,8 @@ function preparePostForEditor(post: BlogPost | null, categories: Awaited<ReturnT
     ...post,
     id: isUuid(post.id) ? post.id : "",
     categoryId: category?.id || post.categoryId,
+    categorySlug: category?.slug || post.categorySlug,
+    categoryName: category?.name || post.categoryName,
   };
 }
 
@@ -43,7 +51,7 @@ function titleFromSlug(slug: string) {
 
 function createDraftFromMissingSlug(
   slug: string,
-  categories: Awaited<ReturnType<typeof getBlogCategories>>
+  categories: Awaited<ReturnType<typeof getAdminBlogData>>["categories"]
 ): BlogPost {
   const category = categories[0];
 
@@ -53,8 +61,8 @@ function createDraftFromMissingSlug(
     title: titleFromSlug(slug) || "Novo post",
     description: "Revise o conteúdo antes de publicar.",
     excerpt: "Revise o conteúdo antes de publicar.",
-    categorySlug: category?.slug || "gestao",
-    categoryName: category?.name || "Gestão",
+    categorySlug: category?.slug || "agenda-online",
+    categoryName: category?.name || "Agenda online",
     categoryId: category?.id,
     readTime: "5 min",
     publishedAt: new Date().toISOString(),
@@ -74,17 +82,25 @@ export default async function AdminMasterBlogEditorPage({ params }: Props) {
   await requireAdminMasterUser("comunicacao_ver");
 
   const { slug } = await params;
-  const categories = await getBlogCategories();
+  const { categories } = await getAdminBlogData();
   const post = slug === "novo" ? null : await getAdminBlogPostBySlugOrId(slug);
 
   if (slug !== "novo" && !post) {
     return (
       <AdminBlogEditor
-        post={preparePostForEditor(createDraftFromMissingSlug(slug, categories), categories)}
+        post={preparePostForEditor(
+          createDraftFromMissingSlug(slug, categories),
+          categories
+        )}
         categories={categories}
       />
     );
   }
 
-  return <AdminBlogEditor post={preparePostForEditor(post, categories)} categories={categories} />;
+  return (
+    <AdminBlogEditor
+      post={preparePostForEditor(post, categories)}
+      categories={categories}
+    />
+  );
 }
