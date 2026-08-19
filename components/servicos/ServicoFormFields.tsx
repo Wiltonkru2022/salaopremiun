@@ -1,9 +1,30 @@
 "use client";
 
+import { Clock3 } from "lucide-react";
+
 export type SelectOption = {
   value: string;
   label: string;
 };
+
+function compactDuration(value: string) {
+  const minutes = Math.floor(Number(value));
+  if (!Number.isFinite(minutes) || minutes <= 0) return "";
+
+  const hours = Math.floor(minutes / 60);
+  const rest = minutes % 60;
+  if (hours === 0) return `${minutes}min`;
+  if (rest === 0) return `${hours}h`;
+  return `${hours}h${String(rest).padStart(2, "0")}`;
+}
+
+function isDurationLabel(label: string) {
+  return label
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .includes("duracao");
+}
 
 export function Card({
   title,
@@ -53,11 +74,21 @@ export function Input({
   type?: string;
   required?: boolean;
 }) {
+  const duration = isDurationLabel(label) ? compactDuration(value) : "";
+
   return (
     <div>
-      <label className="mb-1 block text-sm font-semibold text-zinc-700">
-        {label} {required ? <span className="text-red-500">*</span> : null}
-      </label>
+      <div className="mb-1 flex min-h-6 items-center justify-between gap-3">
+        <label className="block text-sm font-semibold text-zinc-700">
+          {label} {required ? <span className="text-red-500">*</span> : null}
+        </label>
+        {duration ? (
+          <span className="inline-flex shrink-0 items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[11px] font-black text-amber-800 shadow-sm">
+            <Clock3 size={12} strokeWidth={2.4} />
+            {duration}
+          </span>
+        ) : null}
+      </div>
       <input
         type={type}
         value={value}
