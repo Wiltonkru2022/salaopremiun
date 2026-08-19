@@ -19,10 +19,20 @@ type PasswordOverlay = {
   visible: boolean;
 };
 
+function getDirectLabel(input: HTMLInputElement) {
+  const parent = input.parentElement;
+  if (!parent) return "";
+  const sibling = Array.from(parent.children).find(
+    (child) => child instanceof HTMLLabelElement
+  );
+  return sibling?.textContent || "";
+}
+
 function getMaskKind(input: HTMLInputElement): InputMaskKind | null {
   return detectInputMask({
     name: input.name,
     id: input.id,
+    label: getDirectLabel(input),
     placeholder: input.placeholder,
     autoComplete: input.autocomplete,
     type: input.type,
@@ -62,20 +72,13 @@ function applyMaskToElement(input: HTMLInputElement, notifyReact: boolean) {
 }
 
 function hasExistingPasswordToggle(input: HTMLInputElement) {
-  let container: HTMLElement | null = input.parentElement;
-  for (let depth = 0; container && depth < 3; depth += 1) {
-    const buttons = Array.from(container.querySelectorAll<HTMLButtonElement>("button"));
-    if (
-      buttons.some((button) => {
-        const description = `${button.getAttribute("aria-label") || ""} ${button.title || ""}`.toLowerCase();
-        return /(senha|password)/.test(description) && /(mostrar|ocultar|ver|show|hide)/.test(description);
-      })
-    ) {
-      return true;
-    }
-    container = container.parentElement;
-  }
-  return false;
+  const container = input.parentElement;
+  if (!container) return false;
+  const buttons = Array.from(container.querySelectorAll<HTMLButtonElement>("button"));
+  return buttons.some((button) => {
+    const description = `${button.getAttribute("aria-label") || ""} ${button.title || ""}`.toLowerCase();
+    return /(senha|password)/.test(description) && /(mostrar|ocultar|ver|show|hide)/.test(description);
+  });
 }
 
 export default function GlobalInputEnhancements() {
