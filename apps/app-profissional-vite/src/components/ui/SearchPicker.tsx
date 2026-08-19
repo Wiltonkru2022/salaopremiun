@@ -19,7 +19,7 @@ export function SearchPicker({
   hideInputWhenSelected = false,
   maxResults = 6
 }: {
-  label: string;
+  label?: string;
   placeholder?: string;
   options: SearchPickerOption[];
   value: string;
@@ -31,6 +31,7 @@ export function SearchPicker({
 }) {
   const [query, setQuery] = useState("");
   const selected = options.find((item) => item.value === value) || null;
+  const visibleLabel = label?.trim() || "";
 
   const filtered = useMemo(() => {
     const normalized = query.trim().toLowerCase();
@@ -44,14 +45,16 @@ export function SearchPicker({
 
   return (
     <div className="grid gap-2">
-      <div className="flex items-center justify-between gap-3">
-        <span className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-zinc-400">{label}</span>
-        {selected && allowClear ? (
-          <button type="button" className="text-xs font-black text-zinc-500" onClick={() => { onChange(""); setQuery(""); }}>
-            Trocar
-          </button>
-        ) : null}
-      </div>
+      {visibleLabel || (selected && allowClear) ? (
+        <div className="flex items-center justify-between gap-3">
+          {visibleLabel ? <span className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-zinc-400">{visibleLabel}</span> : <span />}
+          {selected && allowClear ? (
+            <button type="button" className="text-xs font-black text-zinc-500" onClick={() => { onChange(""); setQuery(""); }}>
+              Trocar
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
       {selected ? (
         <div className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 py-2.5 text-zinc-950">
@@ -73,7 +76,7 @@ export function SearchPicker({
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            placeholder={placeholder || `Buscar ${label.toLowerCase()}`}
+            placeholder={placeholder || (visibleLabel ? `Buscar ${visibleLabel.toLowerCase()}` : "Buscar")}
             className="h-12 w-full rounded-2xl border border-zinc-200 bg-white pl-11 pr-4 font-bold outline-none focus:border-zinc-950"
           />
         </div>
