@@ -3,7 +3,7 @@ import { Clock3, Edit3, Plus, Search } from "lucide-react";
 import { Button } from "../components/ui/Button";
 import { Card } from "../components/ui/Card";
 import { Field, Input, Textarea } from "../components/ui/Input";
-import { Modal } from "../components/ui/Modal";
+import { Modal, ModalActionBar } from "../components/ui/Modal";
 import { durationLabel, money } from "../lib/date";
 import type { Servico } from "../types/database";
 
@@ -16,179 +16,25 @@ function sanitizeMoneyInput(value: string) {
   const decimalPart = decimalParts.join("").slice(0, 2);
   return decimalParts.length ? `${integerPart},${decimalPart}` : integerPart;
 }
-
-function parseMoneyInput(value: string) {
-  const normalized = String(value || "").trim().replace(/\./g, "").replace(",", ".");
-  const parsed = Number(normalized);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
-function formatMoneyInput(value: string) {
-  const parsed = parseMoneyInput(value);
-  if (!String(value || "").trim() || !Number.isFinite(parsed)) return "";
-  return parsed.toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  });
-}
+function parseMoneyInput(value: string) { const normalized = String(value || "").trim().replace(/\./g, "").replace(",", "."); const parsed = Number(normalized); return Number.isFinite(parsed) ? parsed : 0; }
+function formatMoneyInput(value: string) { const parsed = parseMoneyInput(value); if (!String(value || "").trim() || !Number.isFinite(parsed)) return ""; return parsed.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 
 export function ServicosPage({ servicos, onSave, onEdit }: { servicos: Servico[]; onSave: (payload: Payload) => Promise<void>; onEdit: (id: string, payload: Payload) => Promise<void> }) {
-  const [creating, setCreating] = useState(false);
-  const [editing, setEditing] = useState<Servico | null>(null);
-  const [query, setQuery] = useState("");
-  const [page, setPage] = useState(1);
-
+  const [creating, setCreating] = useState(false); const [editing, setEditing] = useState<Servico | null>(null); const [query, setQuery] = useState(""); const [page, setPage] = useState(1);
   const filtered = servicos.filter((servico) => `${servico.nome} ${servico.descricao || ""}`.toLowerCase().includes(query.toLowerCase()));
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
-
-  return (
-    <div className="space-y-5 pb-6">
-      <Button
-        className="h-14 w-full rounded-[1.35rem] text-[15px] shadow-[0_14px_30px_rgba(9,9,11,0.16)] active:scale-[0.99]"
-        onClick={() => setCreating(true)}
-      >
-        <Plus size={19} />
-        Novo serviço
-      </Button>
-
-      <Card className="rounded-[1.6rem] !p-5 shadow-[0_10px_30px_rgba(15,23,42,0.06)]">
-        <div className="flex items-start justify-between gap-4">
-          <div className="min-w-0">
-            <div className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-700">Catálogo profissional</div>
-            <h2 className="mt-1 text-2xl font-black tracking-[-0.05em] text-zinc-950">Meus serviços</h2>
-            <p className="mt-1 text-sm font-semibold leading-5 text-zinc-500">Gerencie nomes, preços, duração e descrição dos seus serviços.</p>
-          </div>
-          <span className="shrink-0 rounded-full bg-zinc-950 px-3.5 py-1.5 text-xs font-black text-white shadow-sm">{filtered.length}</span>
-        </div>
-        <div className="relative mt-5">
-          <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={19} />
-          <Input
-            className="h-12 rounded-[1.15rem] border-zinc-200 bg-zinc-50 pl-11 shadow-inner shadow-zinc-100/60 focus:bg-white"
-            placeholder="Buscar serviço"
-            value={query}
-            onChange={(event) => { setQuery(event.target.value); setPage(1); }}
-          />
-        </div>
-      </Card>
-
-      <div className="space-y-3.5">
-        {pageItems.map((servico) => (
-          <Card key={servico.id} className="overflow-hidden rounded-[1.55rem] !p-0 shadow-[0_8px_24px_rgba(15,23,42,0.055)]">
-            <div className="px-5 pb-4 pt-5">
-              <div className="flex items-start justify-between gap-4">
-                <div className="min-w-0">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.13em] text-amber-800">
-                    <Clock3 size={14} />
-                    {Number(servico.duracao_minutos || 0)} min · {durationLabel(servico.duracao_minutos)}
-                  </div>
-                  <h3 className="mt-3 text-[1.12rem] font-black leading-6 tracking-[-0.035em] text-zinc-950">{servico.nome}</h3>
-                </div>
-                <div className="shrink-0 rounded-2xl bg-zinc-950 px-3.5 py-2 text-base font-black text-white shadow-sm">{money(servico.preco)}</div>
-              </div>
-
-              <div className="mt-4 rounded-2xl bg-zinc-50 px-3.5 py-3">
-                <p className="text-[11px] font-black uppercase tracking-[0.16em] text-zinc-400">Descrição</p>
-                <p className="mt-1 text-sm font-semibold leading-5 text-zinc-600">{servico.descricao || "Sem descrição cadastrada."}</p>
-              </div>
-            </div>
-
-            <div className="border-t border-zinc-100 px-4 py-3">
-              <Button className="h-10 w-full rounded-xl text-sm" variant="secondary" onClick={() => setEditing(servico)}>
-                <Edit3 size={15} />
-                Editar serviço
-              </Button>
-            </div>
-          </Card>
-        ))}
-      </div>
-
-      {filtered.length > PAGE_SIZE ? (
-        <div className="grid grid-cols-2 gap-2 rounded-[1.25rem] bg-white p-2 shadow-sm ring-1 ring-zinc-200">
-          <Button className="rounded-xl" variant="secondary" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>Anterior</Button>
-          <Button className="rounded-xl" variant="secondary" disabled={page === totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>Próxima</Button>
-        </div>
-      ) : null}
-
-      <Modal title="Novo serviço" open={creating} onClose={() => setCreating(false)}>
-        <ServicoForm onSubmit={async (payload) => { await onSave(payload); setCreating(false); }} />
-      </Modal>
-
-      <Modal title="Editar serviço" open={Boolean(editing)} onClose={() => setEditing(null)}>
-        {editing ? (
-          <ServicoForm
-            initial={editing}
-            onSubmit={async (payload) => {
-              await onEdit?.(editing.id, payload);
-              setEditing(null);
-            }}
-          />
-        ) : null}
-      </Modal>
-    </div>
-  );
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)); const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  return <div className="space-y-5 pb-6">
+    <Button className="h-14 w-full rounded-[1.35rem] text-[15px] shadow-[0_14px_30px_rgba(9,9,11,0.16)] active:scale-[0.99]" onClick={() => setCreating(true)}><Plus size={19} />Novo serviço</Button>
+    <Card className="rounded-[1.6rem] !p-5 shadow-[0_10px_30px_rgba(15,23,42,0.06)]"><div className="flex items-start justify-between gap-4"><div className="min-w-0"><div className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-700">Catálogo profissional</div><h2 className="mt-1 text-2xl font-black tracking-[-0.05em] text-zinc-950">Meus serviços</h2><p className="mt-1 text-sm font-semibold leading-5 text-zinc-500">Gerencie nomes, preços, duração e descrição dos seus serviços.</p></div><span className="shrink-0 rounded-full bg-zinc-950 px-3.5 py-1.5 text-xs font-black text-white shadow-sm">{filtered.length}</span></div><div className="relative mt-5"><Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={19} /><Input className="h-12 rounded-[1.15rem] border-zinc-200 bg-zinc-50 pl-11 shadow-inner shadow-zinc-100/60 focus:bg-white" placeholder="Buscar serviço" value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} /></div></Card>
+    <div className="space-y-3.5">{pageItems.map((servico) => <Card key={servico.id} className="overflow-hidden rounded-[1.55rem] !p-0 shadow-[0_8px_24px_rgba(15,23,42,0.055)]"><div className="px-5 pb-4 pt-5"><div className="flex items-start justify-between gap-4"><div className="min-w-0"><div className="inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.13em] text-amber-800"><Clock3 size={14} />{Number(servico.duracao_minutos || 0)} min · {durationLabel(servico.duracao_minutos)}</div><h3 className="mt-3 text-[1.12rem] font-black leading-6 tracking-[-0.035em] text-zinc-950">{servico.nome}</h3></div><div className="shrink-0 rounded-2xl bg-zinc-950 px-3.5 py-2 text-base font-black text-white shadow-sm">{money(servico.preco)}</div></div><div className="mt-4 rounded-2xl bg-zinc-50 px-3.5 py-3"><p className="text-[11px] font-black uppercase tracking-[0.16em] text-zinc-400">Descrição</p><p className="mt-1 text-sm font-semibold leading-5 text-zinc-600">{servico.descricao || "Sem descrição cadastrada."}</p></div></div><div className="border-t border-zinc-100 px-4 py-3"><Button className="h-10 w-full rounded-xl text-sm" variant="secondary" onClick={() => setEditing(servico)}><Edit3 size={15} />Editar serviço</Button></div></Card>)}</div>
+    {filtered.length > PAGE_SIZE ? <div className="grid grid-cols-2 gap-2 rounded-[1.25rem] bg-white p-2 shadow-sm ring-1 ring-zinc-200"><Button className="rounded-xl" variant="secondary" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>Anterior</Button><Button className="rounded-xl" variant="secondary" disabled={page === totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>Próxima</Button></div> : null}
+    <Modal title="Novo serviço" subtitle="Cadastre preço, duração e descrição do serviço." open={creating} onClose={() => setCreating(false)}><ServicoForm onSubmit={async (payload) => { await onSave(payload); setCreating(false); }} /></Modal>
+    <Modal title="Editar serviço" subtitle="Ajuste os dados do serviço mantendo o cadastro organizado." open={Boolean(editing)} onClose={() => setEditing(null)}>{editing ? <ServicoForm initial={editing} onSubmit={async (payload) => { await onEdit?.(editing.id, payload); setEditing(null); }} /> : null}</Modal>
+  </div>;
 }
 
 function ServicoForm({ initial, onSubmit }: { initial?: Servico; onSubmit: (payload: Payload) => Promise<void> }) {
-  const [nome, setNome] = useState(initial?.nome || "");
-  const [preco, setPreco] = useState(initial?.preco != null ? formatMoneyInput(String(initial.preco)) : "");
-  const [duracao, setDuracao] = useState(initial?.duracao_minutos ? String(initial.duracao_minutos) : "");
-  const [descricao, setDescricao] = useState(initial?.descricao || "");
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    const valor = parseMoneyInput(preco);
-    const minutos = Number(duracao);
-    if (!nome.trim() || !Number.isFinite(valor) || valor < 0 || !Number.isInteger(minutos) || minutos < 1) {
-      setError("Informe nome, preço válido e tempo em minutos maior que zero.");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-    try {
-      await onSubmit({
-        nome: nome.trim(),
-        preco: valor,
-        duracao_minutos: minutos,
-        descricao: descricao.trim() || null,
-      });
-    } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : "Não foi possível salvar o serviço.");
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <form onSubmit={submit} className="grid gap-3">
-      <Field label="Nome"><Input required value={nome} onChange={(event) => setNome(event.target.value)} /></Field>
-      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
-        <Field label="Preço">
-          <Input
-            inputMode="decimal"
-            value={preco}
-            onChange={(event) => setPreco(sanitizeMoneyInput(event.target.value))}
-            onBlur={() => setPreco(preco ? formatMoneyInput(preco) : "")}
-            placeholder="0,00"
-          />
-        </Field>
-        <Field label="Tempo em minutos">
-          <Input
-            type="number"
-            min={1}
-            step={1}
-            value={duracao}
-            onChange={(event) => setDuracao(event.target.value)}
-            placeholder="Ex.: 60"
-          />
-        </Field>
-      </div>
-      <Field label="Descrição"><Textarea value={descricao} onChange={(event) => setDescricao(event.target.value)} placeholder="Opcional" /></Field>
-      {error ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{error}</div> : null}
-      <Button loading={loading}>Salvar serviço</Button>
-    </form>
-  );
+  const [nome, setNome] = useState(initial?.nome || ""); const [preco, setPreco] = useState(initial?.preco != null ? formatMoneyInput(String(initial.preco)) : ""); const [duracao, setDuracao] = useState(initial?.duracao_minutos ? String(initial.duracao_minutos) : ""); const [descricao, setDescricao] = useState(initial?.descricao || ""); const [loading, setLoading] = useState(false); const [error, setError] = useState<string | null>(null);
+  async function submit(event: FormEvent) { event.preventDefault(); const valor = parseMoneyInput(preco); const minutos = Number(duracao); if (!nome.trim() || !Number.isFinite(valor) || valor < 0 || !Number.isInteger(minutos) || minutos < 1) { setError("Informe nome, preço válido e tempo em minutos maior que zero."); return; } setLoading(true); setError(null); try { await onSubmit({ nome: nome.trim(), preco: valor, duracao_minutos: minutos, descricao: descricao.trim() || null }); } catch (submitError) { setError(submitError instanceof Error ? submitError.message : "Não foi possível salvar o serviço."); } finally { setLoading(false); } }
+  return <form onSubmit={submit} className="grid gap-3"><div className="grid gap-3 rounded-[1.15rem] border border-zinc-200 bg-white p-3.5"><Field label="Nome"><Input required value={nome} onChange={(event) => setNome(event.target.value)} /></Field><div className="grid min-w-0 gap-3 sm:grid-cols-2"><Field label="Preço"><Input inputMode="decimal" value={preco} onChange={(event) => setPreco(sanitizeMoneyInput(event.target.value))} onBlur={() => setPreco(preco ? formatMoneyInput(preco) : "")} placeholder="0,00" /></Field><Field label="Tempo em minutos"><Input type="number" min={1} step={1} value={duracao} onChange={(event) => setDuracao(event.target.value)} placeholder="Ex.: 60" /></Field></div><Field label="Descrição"><Textarea value={descricao} onChange={(event) => setDescricao(event.target.value)} placeholder="Opcional" /></Field></div>{error ? <div role="alert" className="rounded-[1rem] border border-red-200 bg-red-50 px-3 py-2.5 text-sm font-bold text-red-700">{error}</div> : null}<ModalActionBar><Button className="h-12 rounded-[1rem]" loading={loading}>Salvar serviço</Button></ModalActionBar></form>;
 }
