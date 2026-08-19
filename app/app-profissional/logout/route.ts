@@ -1,19 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { clearProfissionalSession } from "@/lib/profissional-auth.server";
-
-function normalizeDestino(value: string | null) {
-  if (!value || !value.startsWith("/")) {
-    return "/app-profissional/login";
-  }
-
-  return value;
-}
+import { normalizeSafeInternalPath } from "@/lib/security/safe-next-path";
 
 export async function GET(request: NextRequest) {
   await clearProfissionalSession();
 
-  const destino = normalizeDestino(
-    request.nextUrl.searchParams.get("destino")
+  const destino = normalizeSafeInternalPath(
+    request.nextUrl.searchParams.get("destino"),
+    "/app-profissional",
+    "/app-profissional/login"
   );
 
   return NextResponse.redirect(new URL(destino, request.url));
