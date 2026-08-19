@@ -10,6 +10,7 @@ export type InputMaskKind =
 export type InputMaskMetadata = {
   name?: string | null;
   id?: string | null;
+  label?: string | null;
   placeholder?: string | null;
   autoComplete?: string | null;
   type?: string | null;
@@ -43,22 +44,21 @@ export function maskPhoneBr(value: string | null | undefined) {
 export function maskCpfCnpj(value: string | null | undefined) {
   const digits = onlyDigits(String(value || "")).slice(0, 14);
   if (digits.length <= 11) return maskCPF(digits);
-  if (digits.length <= 2) return digits;
-  if (digits.length <= 5) return `${digits.slice(0, 2)}.${digits.slice(2)}`;
-  if (digits.length <= 8) {
-    return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5)}`;
-  }
   if (digits.length <= 12) {
     return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8)}`;
   }
   return `${digits.slice(0, 2)}.${digits.slice(2, 5)}.${digits.slice(5, 8)}/${digits.slice(8, 12)}-${digits.slice(12, 14)}`;
 }
 
-export function maskBirthDateValue(value: string | null | undefined) {
-  const raw = String(value || "").trim();
-  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
-  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
-  return maskDate(raw);
+function detectFromKey(value: string): InputMaskKind | null {
+  if (/cpf[_-]?cnpj|cnpj[_-]?cpf|cpfcnpj/.test(value)) return "cpf_cnpj";
+  if (/(^|[^a-z])cpf([^a-z]|$)/.test(value)) return "cpf";
+  if (/(^|[^a-z])cep([^a-z]|$)|postal/.test(value)) return "cep";
+  if (/data[_-]?nascimento|datanascimento|nascimento|birth|bday/.test(value)) {
+    return "birthdate";
+  }
+  if (/telefone|whatsapp|celular|phone|mobile/.test(value)) return "phone";
+  return null;
 }
 
 export function detectInputMask(meta: InputMaskMetadata): InputMaskKind | null {
@@ -67,19 +67,25 @@ export function detectInputMask(meta: InputMaskMetadata): InputMaskKind | null {
     return null;
   }
 
-  const strongKey = `${normalizeKey(meta.name)} ${normalizeKey(meta.id)}`.trim();
+  const structuralKey = `${normalizeKey(meta.name)} ${normalizeKey(meta.id)}`.trim();
+  const label = normalizeKey(meta.label);
   const placeholder = normalizeKey(meta.placeholder);
   const autoComplete = normalizeKey(meta.autoComplete);
 
-  if (/cpf[_-]?cnpj|cnpj[_-]?cpf|cpfcnpj/.test(strongKey)) return "cpf_cnpj";
-  if (/(^|[^a-z])cpf([^a-z]|$)/.test(strongKey)) return "cpf";
-  if (/(^|[^a-z])cep([^a-z]|$)|postal/.test(strongKey) || autoComplete === "postal-code") {
-    return "cep";
-  }
-  if (/data[_-]?nascimento|datanascimento|nascimento|birth|bday/.test(strongKey) || autoComplete === "bday") {
-    return "birthdate";
-  }
-  if (/telefone|whatsapp|celular|phone|mobile/.test(strongKey) || autoComplete === "tel") {
+  const structuralKind = detectFromKey(structuralKey);
+  if (structuralKind) return structuralKind;
+  if (autoComplete === "postal-code") return "cep";
+  if (autoComplete === "bday") return "birthdate";
+  if (autoComplete === "tel") return "phone";
+
+  if (label.includes("cpf") && label.includes("cnpj")) return "cpf_cnpj";
+  if (/(^|[^a-z])cpf([^a-z]|$)/.test(label)) return "cpf";
+  if (/(^|[^a-z])cep([^a-z]|$)|postal/.test(label)) return "cep";
+  if (/data de nascimento|nascimento|birth|bday/.test(label)) return "birthdate";
+  if (
+    /telefone|whatsapp|celular|phone|mobile/.test(label) &&
+    !/e-?mail|email/.test(label)
+  ) {
     return "phone";
   }
 
@@ -107,6 +113,13 @@ export function applyInputMask(kind: InputMaskKind, value: string) {
     case "birthdate":
       return maskBirthDateValue(value);
   }
+}
+
+export function maskBirthDateValue(value: string | null | undefined) {
+  const raw = String(value || "").trim();
+  const iso = /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw);
+  if (iso) return `${iso[3]}/${iso[2]}/${iso[1]}`;
+  return maskDate(raw);
 }
 
 export function normalizeMaskedValue(kind: InputMaskKind, value: string) {
