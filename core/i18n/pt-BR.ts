@@ -1,4 +1,4 @@
-export const BRAND_NAME_PT_BR = "SalãoPremium";
+export const BRAND_NAME_PT_BR = "Salão Premium";
 
 export const ptBR = {
   brand: {
