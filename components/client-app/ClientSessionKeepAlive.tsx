@@ -22,6 +22,35 @@ const PUBLIC_ROUTES = [
   "/app-cliente/privacidade",
 ];
 
+function migrateLegacyRestoreToken() {
+  try {
+    const legacy = window.localStorage.getItem(RESTORE_TOKEN_KEY) || "";
+    window.localStorage.removeItem(RESTORE_TOKEN_KEY);
+    if (legacy && !window.sessionStorage.getItem(RESTORE_TOKEN_KEY)) {
+      window.sessionStorage.setItem(RESTORE_TOKEN_KEY, legacy);
+    }
+  } catch {
+    // O cookie HTTP-only continua sendo a fonte principal da sessão.
+  }
+}
+
+function getRestoreToken() {
+  try {
+    return window.sessionStorage.getItem(RESTORE_TOKEN_KEY) || "";
+  } catch {
+    return "";
+  }
+}
+
+function setRestoreToken(value: string) {
+  try {
+    if (value) window.sessionStorage.setItem(RESTORE_TOKEN_KEY, value);
+    else window.sessionStorage.removeItem(RESTORE_TOKEN_KEY);
+  } catch {
+    // Falha de storage não deve derrubar a sessão baseada em cookie.
+  }
+}
+
 export default function ClientSessionKeepAlive() {
   const pathname = usePathname();
   const lastRefreshRef = useRef(0);
@@ -35,6 +64,8 @@ export default function ClientSessionKeepAlive() {
   const shouldRefresh = pathname.startsWith("/app-cliente") && !isAuthRoute;
 
   useEffect(() => {
+    migrateLegacyRestoreToken();
+
     async function refreshSession(force = false) {
       if (!shouldRefresh) {
         return;
@@ -47,8 +78,7 @@ export default function ClientSessionKeepAlive() {
 
       lastRefreshRef.current = now;
 
-      const restoreToken =
-        window.localStorage.getItem(RESTORE_TOKEN_KEY) || "";
+      const restoreToken = getRestoreToken();
       if (isPublicRoute && !restoreToken) {
         return;
       }
@@ -64,6 +94,9 @@ export default function ClientSessionKeepAlive() {
       }).catch(() => null);
 
       if (!response?.ok) {
+        if (response?.status === 401 || response?.status === 403) {
+          setRestoreToken("");
+        }
         return;
       }
 
@@ -72,7 +105,7 @@ export default function ClientSessionKeepAlive() {
       } | null;
 
       if (payload?.restoreToken) {
-        window.localStorage.setItem(RESTORE_TOKEN_KEY, payload.restoreToken);
+        setRestoreToken(payload.restoreToken);
       }
     }
 
