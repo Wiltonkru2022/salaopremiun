@@ -113,11 +113,11 @@ export async function joinClienteWaitlistAction(formData: FormData) {
   });
 
   if (!result.ok) {
-    redirect(`/app-cliente/salao/${idSalao}status=lista_espera_erro`);
+    redirect(`/app-cliente/salao/${idSalao}?status=lista_espera_erro`);
   }
 
   revalidatePath(`/app-cliente/salao/${idSalao}`);
-  redirect(`/app-cliente/salao/${idSalao}status=lista_espera`);
+  redirect(`/app-cliente/salao/${idSalao}?status=lista_espera`);
 }
 
 export async function toggleClienteSalonFavoriteAction(formData: FormData) {
