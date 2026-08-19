@@ -16,6 +16,13 @@ export type ProfissionalServerContext = {
   podeVerAgendaTodos: boolean;
 };
 
+type ProfissionalAccessVersionRow = {
+  id: string;
+  id_profissional: string;
+  ativo: boolean | null;
+  auth_version: number | null;
+};
+
 function isUnauthorizedError(error: unknown) {
   return error instanceof Error && error.message === "UNAUTHORIZED";
 }
@@ -26,7 +33,7 @@ async function loadProfissionalServerContext(): Promise<ProfissionalServerContex
 
   const supabaseAdmin = getSupabaseAdmin();
   const [acessoResult, profissionalResult, salaoResult] = await Promise.all([
-    supabaseAdmin
+    (supabaseAdmin as any)
       .from("profissionais_acessos")
       .select("id, id_profissional, ativo, auth_version")
       .eq("id", session.acessoId)
@@ -48,7 +55,7 @@ async function loadProfissionalServerContext(): Promise<ProfissionalServerContex
       .maybeSingle(),
   ]);
 
-  const acesso = acessoResult.data;
+  const acesso = acessoResult.data as ProfissionalAccessVersionRow | null;
   if (
     acessoResult.error ||
     !acesso?.id ||
@@ -63,18 +70,13 @@ async function loadProfissionalServerContext(): Promise<ProfissionalServerContex
     profissionalResult.error ||
     !profissional?.id ||
     profissional.ativo === false ||
-    String(profissional.tipo_profissional || "profissional").toLowerCase() ===
-      "assistente"
+    String(profissional.tipo_profissional || "profissional").toLowerCase() === "assistente"
   ) {
     throw new Error("UNAUTHORIZED");
   }
 
   const salao = salaoResult.data;
-  if (
-    salaoResult.error ||
-    !salao?.id ||
-    !isSalaoStatusOperational(salao.status)
-  ) {
+  if (salaoResult.error || !salao?.id || !isSalaoStatusOperational(salao.status)) {
     throw new Error("UNAUTHORIZED");
   }
 
@@ -83,7 +85,6 @@ async function loadProfissionalServerContext(): Promise<ProfissionalServerContex
     userId: profissional.id,
     idSalao: session.idSalao,
   });
-
   if (!securityDecision.allowed) throw new Error("SECURITY_BLOCKED");
 
   const nivelAcesso = String(profissional.nivel_acesso || "proprio").toLowerCase();
