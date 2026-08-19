@@ -62,10 +62,11 @@ async function findAcessoByProfissionalCpf(params: {
   const idsProfissionais = profissionais
     .map((item) => String(item.id || "").trim())
     .filter(Boolean);
-
   if (!idsProfissionais.length) return null;
 
-  const { data: acessos, error: acessosError } = await params.supabaseAdmin
+  // auth_version acabou de ser introduzido por migration. O cast evita depender
+  // do arquivo de tipos gerado antes da migration, sem perder o escopo da query.
+  const { data: acessos, error: acessosError } = await (params.supabaseAdmin as any)
     .from("profissionais_acessos")
     .select("id, cpf, senha_hash, ativo, id_profissional, auth_version")
     .eq("ativo", true)
@@ -101,21 +102,14 @@ async function buildProfissionalSession(params: {
   if (!profissional) return { ok: false, error: "Profissional não encontrado." };
   if (!profissional.ativo) return { ok: false, error: "Profissional inativo." };
 
-  if (
-    String(profissional.tipo_profissional || "profissional").toLowerCase() ===
-    "assistente"
-  ) {
-    return {
-      ok: false,
-      error: "Assistente do salão não possui acesso ao App Profissional.",
-    };
+  if (String(profissional.tipo_profissional || "profissional").toLowerCase() === "assistente") {
+    return { ok: false, error: "Assistente do salão não possui acesso ao App Profissional." };
   }
 
   const nivelAcesso = String(profissional.nivel_acesso || "proprio").toLowerCase();
   if (profissional.pode_usar_sistema === false || nivelAcesso === "sem_acesso") {
     return { ok: false, error: "Profissional sem acesso liberado para o app." };
   }
-
   if (!profissional.id_salao) {
     return { ok: false, error: "Profissional sem salão vinculado." };
   }
@@ -173,10 +167,7 @@ async function buildProfissionalSession(params: {
   };
 }
 
-export async function loginProfissionalByCpfSenha(
-  cpf: string,
-  senha: string
-): Promise<LoginResult> {
+export async function loginProfissionalByCpfSenha(cpf: string, senha: string): Promise<LoginResult> {
   const cpfLimpo = normalizeCpf(cpf);
   const senhaLimpa = String(senha || "").trim();
 
@@ -191,7 +182,7 @@ export async function loginProfissionalByCpfSenha(
       });
 
       if (!acesso) {
-        const { data: acessoPorCpf, error: acessoError } = await supabaseAdmin
+        const { data: acessoPorCpf, error: acessoError } = await (supabaseAdmin as any)
           .from("profissionais_acessos")
           .select("id, cpf, senha_hash, ativo, id_profissional, auth_version")
           .eq("cpf", cpfLimpo)
@@ -199,10 +190,7 @@ export async function loginProfissionalByCpfSenha(
           .limit(1)
           .maybeSingle();
 
-        if (acessoError) {
-          return { ok: false, error: "Erro ao buscar acesso do profissional." };
-        }
-
+        if (acessoError) return { ok: false, error: "Erro ao buscar acesso do profissional." };
         acesso = (acessoPorCpf as ProfissionalAcessoLoginRow | null) || null;
       }
 
