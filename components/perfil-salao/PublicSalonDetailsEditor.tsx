@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { CheckCircle2, Globe, Loader2, PencilLine, Sparkles } from "lucide-react";
+import { CheckCircle2, ChevronRight, Globe, Loader2, PencilLine, Sparkles } from "lucide-react";
 import AppModal from "@/components/ui/AppModal";
 import { Field, TextInput } from "@/components/configuracoes/ui";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
@@ -234,23 +234,38 @@ export default function PublicSalonDetailsEditor() {
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-5 z-30 inline-flex min-h-12 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-950 shadow-[0_14px_40px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5 hover:bg-zinc-50 md:bottom-8 md:right-8"
-      >
-        <PencilLine size={17} />
-        Informações públicas
-      </button>
+      <section className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="flex w-full items-center justify-between gap-4 p-4 text-left transition hover:bg-zinc-50 sm:p-5"
+        >
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-amber-50 text-amber-700 ring-1 ring-amber-100">
+              <Globe size={19} />
+            </div>
+            <div className="min-w-0">
+              <div className="text-sm font-black text-zinc-950">Informações da vitrine</div>
+              <div className="mt-1 text-xs leading-5 text-zinc-500">
+                Instagram, pagamentos e comodidades exibidas no App Cliente.
+              </div>
+            </div>
+          </div>
+          <div className="flex shrink-0 items-center gap-2 text-sm font-bold text-zinc-700">
+            <span className="hidden sm:inline">Editar</span>
+            <ChevronRight size={18} />
+          </div>
+        </button>
+      </section>
 
       <AppModal
         open={open}
         onClose={() => {
           if (!saving) setOpen(false);
         }}
-        title="Informações públicas do salão"
-        description="Cadastre apenas o que realmente existe no salão. Esses dados aparecem no perfil público do app cliente."
-        eyebrow="Perfil do salão"
+        title="Informações da vitrine"
+        description="Cadastre somente o que realmente existe no salão. Esses dados aparecem no perfil público do App Cliente."
+        eyebrow="Vitrine e portfólio"
         maxWidthClassName="max-w-3xl"
         footer={
           <>
@@ -341,51 +356,16 @@ export default function PublicSalonDetailsEditor() {
                 Marque somente itens que o salão realmente oferece. Itens desmarcados não aparecem para o cliente.
               </p>
               <div className="mt-3 grid gap-3 md:grid-cols-2">
-                <ToggleField
-                  label="Estacionamento"
-                  description="O salão possui estacionamento disponível para clientes."
-                  checked={form.estacionamento}
-                  onChange={(checked) =>
-                    setForm((current) => ({ ...current, estacionamento: checked }))
-                  }
-                />
-                <ToggleField
-                  label="Acessibilidade"
-                  description="O espaço possui recursos de acesso para pessoas com mobilidade reduzida."
-                  checked={form.acessibilidade}
-                  onChange={(checked) =>
-                    setForm((current) => ({ ...current, acessibilidade: checked }))
-                  }
-                />
-                <ToggleField
-                  label="Wi-Fi"
-                  description="Há Wi-Fi disponível para clientes durante o atendimento."
-                  checked={form.wifi}
-                  onChange={(checked) =>
-                    setForm((current) => ({ ...current, wifi: checked }))
-                  }
-                />
-                <ToggleField
-                  label="Café"
-                  description="O salão oferece café ou cortesia equivalente aos clientes."
-                  checked={form.cafe}
-                  onChange={(checked) =>
-                    setForm((current) => ({ ...current, cafe: checked }))
-                  }
-                />
-                <ToggleField
-                  label="Ar-condicionado"
-                  description="O ambiente de atendimento possui climatização por ar-condicionado."
-                  checked={form.ar_condicionado}
-                  onChange={(checked) =>
-                    setForm((current) => ({ ...current, ar_condicionado: checked }))
-                  }
-                />
+                <ToggleField label="Estacionamento" description="O salão possui estacionamento disponível para clientes." checked={form.estacionamento} onChange={(checked) => setForm((current) => ({ ...current, estacionamento: checked }))} />
+                <ToggleField label="Acessibilidade" description="O espaço possui recursos de acesso para pessoas com mobilidade reduzida." checked={form.acessibilidade} onChange={(checked) => setForm((current) => ({ ...current, acessibilidade: checked }))} />
+                <ToggleField label="Wi-Fi" description="Há Wi-Fi disponível para clientes durante o atendimento." checked={form.wifi} onChange={(checked) => setForm((current) => ({ ...current, wifi: checked }))} />
+                <ToggleField label="Café" description="O salão oferece café ou cortesia equivalente aos clientes." checked={form.cafe} onChange={(checked) => setForm((current) => ({ ...current, cafe: checked }))} />
+                <ToggleField label="Ar-condicionado" description="O ambiente de atendimento possui climatização por ar-condicionado." checked={form.ar_condicionado} onChange={(checked) => setForm((current) => ({ ...current, ar_condicionado: checked }))} />
               </div>
             </div>
 
             <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs leading-5 text-amber-800">
-              Nenhuma comodidade é criada automaticamente. O app cliente mostra somente o que estiver marcado e salvo aqui.
+              O App Cliente mostra somente os dados marcados e salvos aqui.
             </div>
           </div>
         )}
