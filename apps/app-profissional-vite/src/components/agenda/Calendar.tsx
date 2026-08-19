@@ -136,7 +136,6 @@ export function Calendar({
 
   const canChooseProfessional = ["todos", "geral", "admin", "administrador"].includes(String(profissionalAtual.nivel_acesso || "").toLowerCase()) && profissionais.length > 1;
   const days = useMemo(() => buildMonthDays(cursor, agendamentos), [cursor, agendamentos]);
-  const selectedMonthDates = useMemo(() => days.filter((day) => day.currentMonth && day.date).map((day) => day.date), [days]);
   const selectedItems = agendamentos.filter((item) => item.data === selectedDate).sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio));
 
   const clienteOptions = clientes.map((cliente) => ({ value: cliente.id, label: cliente.nome, description: cliente.telefone || cliente.whatsapp || "Sem telefone" }));
@@ -248,25 +247,32 @@ export function Calendar({
         </div>
       </Card>
 
-      <Modal title="Detalhes do agendamento" subtitle="Informações principais deste atendimento." open={Boolean(details)} onClose={() => setDetails(null)}>
+      <Modal title={details?.status === "bloqueado" ? "Detalhes do bloqueio" : "Detalhes do agendamento"} subtitle={details?.status === "bloqueado" ? "Informações deste período indisponível." : "Informações principais deste atendimento."} open={Boolean(details)} onClose={() => setDetails(null)}>
         {details ? (
           <div className="space-y-3">
             {actionError ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-bold text-red-700">{actionError}</div> : null}
             {actionSuccess ? <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-3 py-3 text-sm font-bold text-emerald-700">{actionSuccess}</div> : null}
             <div className="rounded-[1.3rem] border border-amber-100 bg-gradient-to-br from-amber-50 to-white p-4">
-              <div className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-amber-700">Atendimento</div>
+              <div className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-amber-700">{details.status === "bloqueado" ? "Bloqueio de agenda" : "Atendimento"}</div>
               <div className="mt-2 text-2xl font-black tracking-[-0.05em] text-zinc-950">{details.status === "bloqueado" ? "Horário bloqueado" : details.clientes?.nome || "Cliente"}</div>
               <div className="mt-1 text-sm font-bold text-zinc-500">{details.servicos?.nome || details.observacoes || "Atendimento"}</div>
             </div>
             <Info label="Profissional" value={details.profissional_nome || profissionais.find((item) => item.id === details.profissional_id)?.nome || profissionalAtual.nome} />
             <Info label="Horário" value={`${details.data} · ${details.hora_inicio.slice(0, 5)} às ${details.hora_fim.slice(0, 5)}`} />
             <Info label="Status" value={details.status.replaceAll("_", " ")} />
-            {details.status !== "bloqueado" ? <><Info label="Agendado por" value={`${details.agendado_por_nome || "Não identificado"} • ${bookingSourceLabel(details.origem)}`} /><Info label="Agendado em" value={formatCreatedAt(details.agendado_em || details.created_at) || "Não informado"} /></> : null}
-            <Info label="Confirmação da cliente" value={details.cliente_confirmacao_status === "confirmado" ? `Confirmada${details.cliente_confirmou_em ? ` em ${formatCreatedAt(details.cliente_confirmou_em) || ""}` : ""}` : "Aguardando confirmação da cliente"} />
-            {details.observacoes ? <Info label="Observações" value={details.observacoes} /> : null}
-            <Info label="Caixa" value={details.id_comanda ? "Comanda vinculada" : "Sem comanda vinculada"} />
-            <Info label="Sinal Pix" value={details.sinal_valor ? `${details.sinal_status || "Sem status"} • R$ ${Number(details.sinal_valor).toFixed(2).replace(".", ",")}` : "Sem sinal"} />
-            {details.sinal_comprovante_path ? <div className="rounded-[1.15rem] border border-amber-100 bg-amber-50/70 p-4"><div className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-amber-700">Comprovante enviado</div><div className="mt-1 break-all text-sm font-bold text-zinc-700">{details.sinal_comprovante_nome || details.sinal_comprovante_path}</div><Button variant="secondary" className="mt-3 h-10 px-3" onClick={() => openComprovante(details)}>Ver comprovante</Button>{String(details.sinal_confirmacao_responsavel || "").toLowerCase() === "profissional" ? <Button className="mt-3 h-10 px-3" loading={busyId === `pix-${details.id}`} disabled={Boolean(busyId) && busyId !== `pix-${details.id}`} onClick={() => void run(`pix-${details.id}`, async () => { await (onConfirmPix?.(details.id) ?? Promise.resolve()); setDetails(null); })}>Confirmar Pix</Button> : <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">A confirmação deste Pix deve ser feita pelo salão.</div>}</div> : null}
+            {details.status === "bloqueado" ? (
+              details.observacoes ? <Info label="Motivo" value={details.observacoes} /> : null
+            ) : (
+              <>
+                <Info label="Agendado por" value={`${details.agendado_por_nome || "Não identificado"} • ${bookingSourceLabel(details.origem)}`} />
+                <Info label="Agendado em" value={formatCreatedAt(details.agendado_em || details.created_at) || "Não informado"} />
+                <Info label="Confirmação da cliente" value={details.cliente_confirmacao_status === "confirmado" ? `Confirmada${details.cliente_confirmou_em ? ` em ${formatCreatedAt(details.cliente_confirmou_em) || ""}` : ""}` : "Aguardando confirmação da cliente"} />
+                {details.observacoes ? <Info label="Observações" value={details.observacoes} /> : null}
+                <Info label="Caixa" value={details.id_comanda ? "Comanda vinculada" : "Sem comanda vinculada"} />
+                <Info label="Sinal Pix" value={details.sinal_valor ? `${details.sinal_status || "Sem status"} • R$ ${Number(details.sinal_valor).toFixed(2).replace(".", ",")}` : "Sem sinal"} />
+                {details.sinal_comprovante_path ? <div className="rounded-[1.15rem] border border-amber-100 bg-amber-50/70 p-4"><div className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-amber-700">Comprovante enviado</div><div className="mt-1 break-all text-sm font-bold text-zinc-700">{details.sinal_comprovante_nome || details.sinal_comprovante_path}</div><Button variant="secondary" className="mt-3 h-10 px-3" onClick={() => openComprovante(details)}>Ver comprovante</Button>{String(details.sinal_confirmacao_responsavel || "").toLowerCase() === "profissional" ? <Button className="mt-3 h-10 px-3" loading={busyId === `pix-${details.id}`} disabled={Boolean(busyId) && busyId !== `pix-${details.id}`} onClick={() => void run(`pix-${details.id}`, async () => { await (onConfirmPix?.(details.id) ?? Promise.resolve()); setDetails(null); })}>Confirmar Pix</Button> : <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-bold text-amber-800">A confirmação deste Pix deve ser feita pelo salão.</div>}</div> : null}
+              </>
+            )}
           </div>
         ) : null}
       </Modal>
@@ -277,9 +283,9 @@ export function Calendar({
 
       <Modal title="Novo agendamento" subtitle="Escolha cliente, serviço e horário." open={newOpen} onClose={() => !newSubmitting && setNewOpen(false)}>
         <div className="space-y-4">
-          {canChooseProfessional ? <Field label="Profissional"><SearchPicker value={newProfissional} onChange={setNewProfissional} options={profissionalOptions} placeholder="Selecione o profissional" /></Field> : null}
-          <Field label="Cliente"><SearchPicker value={newCliente} onChange={setNewCliente} options={clienteOptions} placeholder="Selecione a cliente" /></Field>
-          <Field label="Serviço"><SearchPicker value={newServico} onChange={setNewServico} options={servicoOptions} placeholder="Selecione o serviço" /></Field>
+          {canChooseProfessional ? <Field label="Profissional"><SearchPicker value={newProfissional} onChange={setNewProfissional} options={profissionalOptions} placeholder="Selecione o profissional" hideInputWhenSelected /></Field> : null}
+          <Field label="Cliente"><SearchPicker value={newCliente} onChange={setNewCliente} options={clienteOptions} placeholder="Selecione a cliente" hideInputWhenSelected /></Field>
+          <Field label="Serviço"><SearchPicker value={newServico} onChange={setNewServico} options={servicoOptions} placeholder="Selecione o serviço" hideInputWhenSelected /></Field>
           <Field label="Horário"><Input type="time" value={newHora} onChange={(event) => setNewHora(event.target.value)} /></Field>
           {newError ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-bold text-red-700">{newError}</div> : null}
           <ModalActionBar><Button loading={newSubmitting} onClick={async () => { if (!onCreate) return; if (!newCliente || !newServico || !newHora || (canChooseProfessional && !newProfissional)) { setNewError("Preencha todos os campos."); return; } setNewSubmitting(true); setNewError(null); try { await onCreate({ clienteId: newCliente, servicoId: newServico, data: selectedDate, horaInicio: newHora, profissionalId: canChooseProfessional ? newProfissional : profissionalAtual.id }); setNewOpen(false); setNewCliente(""); setNewServico(""); setNewProfissional(""); } catch (error) { setNewError(error instanceof Error ? error.message : "Não foi possível criar o agendamento."); } finally { setNewSubmitting(false); } }}>Salvar agendamento</Button></ModalActionBar>
@@ -303,64 +309,17 @@ export function Calendar({
 
           <Field label="Motivo"><Input value={blockReason} onChange={(event) => setBlockReason(event.target.value)} placeholder="Ex.: almoço, folga, compromisso" /></Field>
 
-          <button
-            type="button"
-            onClick={() => {
-              const checked = !blockAllDay;
-              setBlockAllDay(checked);
-              if (checked) {
-                const schedule = getHorarioDiaTodo(selectedDate);
-                setBlockHour(schedule.inicio);
-                setBlockEndHour(schedule.fim);
-              }
-            }}
-            className={`flex w-full items-center justify-between rounded-[1.05rem] border px-4 py-3.5 text-left transition ${blockAllDay ? "border-amber-300 bg-amber-50" : "border-zinc-200 bg-zinc-50"}`}
-          >
-            <div className="flex items-center gap-3">
-              <div className={`grid h-10 w-10 place-items-center rounded-[0.85rem] ${blockAllDay ? "bg-amber-100 text-amber-800" : "bg-white text-zinc-600"}`}><CalendarDays size={19} /></div>
-              <div>
-                <div className="text-sm font-black text-zinc-950">Dia todo</div>
-                <div className="mt-0.5 text-xs font-semibold text-zinc-500">Bloquear o expediente completo.</div>
-              </div>
-            </div>
-            <span className={`relative h-7 w-12 rounded-full transition ${blockAllDay ? "bg-amber-500" : "bg-zinc-300"}`}>
-              <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition ${blockAllDay ? "left-6" : "left-1"}`} />
-            </span>
+          <button type="button" onClick={() => { const checked = !blockAllDay; setBlockAllDay(checked); if (checked) { const schedule = getHorarioDiaTodo(selectedDate); setBlockHour(schedule.inicio); setBlockEndHour(schedule.fim); } }} className={`flex w-full items-center justify-between rounded-[1.05rem] border px-4 py-3.5 text-left transition ${blockAllDay ? "border-amber-300 bg-amber-50" : "border-zinc-200 bg-zinc-50"}`}>
+            <div className="flex items-center gap-3"><div className={`grid h-10 w-10 place-items-center rounded-[0.85rem] ${blockAllDay ? "bg-amber-100 text-amber-800" : "bg-white text-zinc-600"}`}><CalendarDays size={19} /></div><div><div className="text-sm font-black text-zinc-950">Dia todo</div><div className="mt-0.5 text-xs font-semibold text-zinc-500">Bloquear o expediente completo.</div></div></div>
+            <span className={`relative h-7 w-12 rounded-full transition ${blockAllDay ? "bg-amber-500" : "bg-zinc-300"}`}><span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition ${blockAllDay ? "left-6" : "left-1"}`} /></span>
           </button>
 
-          {!blockAllDay ? (
-            <div className="rounded-[1.05rem] border border-zinc-200 bg-zinc-50/70 p-3">
-              <div className="mb-3 flex items-center gap-2 text-[0.68rem] font-black uppercase tracking-[0.16em] text-zinc-400"><Clock3 size={15} /> Período</div>
-              <div className="grid grid-cols-2 gap-3">
-                <Field label="Início"><Input type="time" value={blockHour} onChange={(event) => setBlockHour(event.target.value)} /></Field>
-                <Field label="Fim"><Input type="time" value={blockEndHour} onChange={(event) => setBlockEndHour(event.target.value)} /></Field>
-              </div>
-            </div>
-          ) : null}
+          {!blockAllDay ? <div className="rounded-[1.05rem] border border-zinc-200 bg-zinc-50/70 p-3"><div className="mb-3 flex items-center gap-2 text-[0.68rem] font-black uppercase tracking-[0.16em] text-zinc-400"><Clock3 size={15} /> Período</div><div className="grid grid-cols-2 gap-3"><Field label="Início"><Input type="time" value={blockHour} onChange={(event) => setBlockHour(event.target.value)} /></Field><Field label="Fim"><Input type="time" value={blockEndHour} onChange={(event) => setBlockEndHour(event.target.value)} /></Field></div></div> : null}
 
           <div className="rounded-[1.1rem] border border-zinc-200 bg-white p-3.5">
-            <div className="mb-3 flex items-center justify-between gap-3">
-              <div>
-                <div className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-zinc-400">Dias de</div>
-                <div className="mt-0.5 text-lg font-black capitalize tracking-[-0.03em] text-zinc-950">{monthLabel(cursor)}</div>
-              </div>
-              <span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-black text-amber-800">{blockSelectedDates.length} selecionado{blockSelectedDates.length === 1 ? "" : "s"}</span>
-            </div>
-            <div className="grid grid-cols-7 gap-1 text-center text-[0.62rem] font-black uppercase tracking-wide text-zinc-400">
-              {["D", "S", "T", "Q", "Q", "S", "S"].map((day, index) => <span key={`${day}-${index}`} className="py-1">{day}</span>)}
-            </div>
-            <div className="mt-1 grid grid-cols-7 gap-1.5">
-              {days.map((day) => day.currentMonth ? (
-                <button
-                  key={`block-${day.key}`}
-                  type="button"
-                  onClick={() => toggleBlockDate(day.date)}
-                  className={`aspect-square rounded-[0.8rem] border text-xs font-black transition ${blockSelectedDates.includes(day.date) ? "border-zinc-950 bg-zinc-950 text-white shadow-sm" : "border-zinc-200 bg-white text-zinc-700 active:bg-zinc-50"}`}
-                >
-                  {day.label}
-                </button>
-              ) : <span key={`block-${day.key}`} />)}
-            </div>
+            <div className="mb-3 flex items-center justify-between gap-3"><div><div className="text-[0.68rem] font-black uppercase tracking-[0.18em] text-zinc-400">Dias de</div><div className="mt-0.5 text-lg font-black capitalize tracking-[-0.03em] text-zinc-950">{monthLabel(cursor)}</div></div><span className="rounded-full bg-amber-50 px-3 py-1.5 text-xs font-black text-amber-800">{blockSelectedDates.length} selecionado{blockSelectedDates.length === 1 ? "" : "s"}</span></div>
+            <div className="grid grid-cols-7 gap-1 text-center text-[0.62rem] font-black uppercase tracking-wide text-zinc-400">{["D", "S", "T", "Q", "Q", "S", "S"].map((day, index) => <span key={`${day}-${index}`} className="py-1">{day}</span>)}</div>
+            <div className="mt-1 grid grid-cols-7 gap-1.5">{days.map((day) => day.currentMonth ? <button key={`block-${day.key}`} type="button" onClick={() => toggleBlockDate(day.date)} className={`aspect-square rounded-[0.8rem] border text-xs font-black transition ${blockSelectedDates.includes(day.date) ? "border-zinc-950 bg-zinc-950 text-white shadow-sm" : "border-zinc-200 bg-white text-zinc-700 active:bg-zinc-50"}`}>{day.label}</button> : <span key={`block-${day.key}`} />)}</div>
           </div>
 
           {blockError ? <div role="alert" className="rounded-[1rem] border border-red-200 bg-red-50 px-3 py-3 text-sm font-bold text-red-700">{blockError}</div> : null}
