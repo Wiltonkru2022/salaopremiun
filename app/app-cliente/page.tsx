@@ -95,10 +95,15 @@ export default async function AppClienteIndexPage() {
           </Link>
 
           <div className="relative mt-6 h-[356px] overflow-hidden rounded-[1.45rem] bg-zinc-900">
-            <img
-              src="/app-cliente-hero-woman.jpeg"
-              alt="Modelo com cabelo produzido"
-              className="absolute inset-0 h-full w-full object-cover object-[64%_center]"
+            <video
+              src="/app-cliente-hero-video.mp4"
+              autoPlay
+              muted
+              playsInline
+              preload="auto"
+              poster="/app-cliente-hero-woman.jpeg"
+              aria-hidden="true"
+              className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
             />
             <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/35 to-transparent" />
             <div className="absolute left-6 top-16 max-w-[210px]">
