@@ -459,7 +459,7 @@ async function sendNotificationWithRetry(params: {
 }) {
   for (let attempt = 1; attempt <= PUSH_MAX_ATTEMPTS; attempt += 1) {
     try {
-      const response = await params.webPush.default.sendNotification(
+      const response = await params.webPush.sendNotification(
         {
           endpoint: params.row.endpoint,
           keys: { p256dh: params.row.p256dh, auth: params.row.auth },
@@ -541,8 +541,12 @@ export async function sendPushToRows(
     throw new Error(message);
   }
 
-  const webPush = await import("web-push");
-  webPush.default.setVapidDetails(config.subject, config.publicKey, config.privateKey);
+  const importedWebPush = await import("web-push");
+  const defaultWebPush = (
+    importedWebPush as unknown as { default?: WebPushModule }
+  ).default;
+  const webPush: WebPushModule = defaultWebPush || importedWebPush;
+  webPush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
 
   let sent = 0;
   let failed = 0;
