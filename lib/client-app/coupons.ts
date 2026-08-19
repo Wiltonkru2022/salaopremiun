@@ -61,6 +61,9 @@ export async function redeemClienteCoupon(params: { token: string; idConta: stri
     if (invite.cliente_app_conta_id && String(invite.cliente_app_conta_id) !== idConta) {
       return { ok: false as const, error: "Este cupom já foi vinculado a outra conta." };
     }
+    if (["cancelado", "expirado"].includes(String(invite.status || ""))) {
+      return { ok: false as const, error: "Este convite de cupom não está mais disponível." };
+    }
   }
 
   const [{ count: usosCliente }, { count: usosTotal }, { data: resgateConta }] = await Promise.all([
@@ -99,6 +102,13 @@ export async function redeemClienteCoupon(params: { token: string; idConta: stri
     resgateError = result.error;
   }
   if (resgateError) return { ok: false as const, error: "Não foi possível resgatar o cupom agora." };
+
+  const { error: walletError } = await supabase
+    .from("cupom_salao_clientes")
+    .upsert({ id_salao: idSalao, id_cupom: cupom.id, id_cliente: vinculo.idCliente }, { onConflict: "id_cupom,id_cliente" });
+  if (walletError) {
+    return { ok: false as const, error: "Cupom resgatado, mas não foi possível adicioná-lo à sua carteira agora." };
+  }
 
   const salaoRel = Array.isArray(cupom.saloes) ? cupom.saloes[0] : cupom.saloes;
   const salaoSlug = String(salaoRel?.app_cliente_slug || idSalao).trim();
