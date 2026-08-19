@@ -53,4 +53,17 @@ describe("input masks", () => {
       })
     ).toBeNull();
   });
+
+  it("detecta inputs reutilizaveis pelo label visivel", () => {
+    expect(detectInputMask({ label: "CPF", type: "text" })).toBe("cpf");
+    expect(detectInputMask({ label: "Telefone", type: "text" })).toBe("phone");
+    expect(detectInputMask({ label: "WhatsApp", type: "text" })).toBe("phone");
+    expect(detectInputMask({ label: "CEP", type: "text" })).toBe("cep");
+    expect(detectInputMask({ label: "Data de nascimento", type: "text" })).toBe(
+      "birthdate"
+    );
+    expect(
+      detectInputMask({ label: "Telefone ou e-mail antigo", type: "text" })
+    ).toBeNull();
+  });
 });
