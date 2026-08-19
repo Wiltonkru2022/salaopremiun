@@ -162,7 +162,7 @@ export default function PerfilSalaoOrganizer({ children }: { children: ReactNode
 
   return (
     <div className="space-y-4">
-      <section className="sticky top-0 z-30 -mx-1 rounded-[24px] border border-zinc-200 bg-white/95 p-2 shadow-sm backdrop-blur-xl">
+      <section className="sticky top-0 z-[1] -mx-1 rounded-[24px] border border-zinc-200 bg-white/95 p-2 shadow-sm backdrop-blur-xl">
         <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
           {tabs.map((tab) => {
             const active = tab.key === activeTab;
