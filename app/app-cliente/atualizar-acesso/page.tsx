@@ -27,7 +27,11 @@ export default async function AtualizarAcessoPage({
           </p>
         </div>
         <CompleteIdentityForm whatsapp={context.whatsapp || context.telefone} next={params?.next || null} />
-        <Link href="/app-cliente/logout?destino=/app-cliente/login" className="block text-center text-sm font-semibold text-zinc-500 underline underline-offset-4">
+        <Link
+          href="/app-cliente/logout?destino=/app-cliente/login"
+          prefetch={false}
+          className="block text-center text-sm font-semibold text-zinc-500 underline underline-offset-4"
+        >
           Sair e voltar depois
         </Link>
       </div>
