@@ -2,13 +2,22 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { AdminDataTable } from "@/components/admin-master/AdminMasterViews";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
+import {
+  formatSaoPauloDateTimeLocal,
+  parseClientVisualNoticeConfig,
+} from "@/lib/client-app/visual-notifications";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import {
+  atualizarAvisoVisualClienteAction,
+  encerrarAvisoVisualClienteAction,
+} from "../actions";
 
 function dateTime(value?: string | null) {
   if (!value) return "-";
   return new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
     timeStyle: "short",
+    timeZone: "America/Sao_Paulo",
   }).format(new Date(value));
 }
 
@@ -26,20 +35,29 @@ function MetricCard(props: { label: string; value: string; hint?: string }) {
 
 export const dynamic = "force-dynamic";
 
+type SearchParams = Promise<{ ok?: string; erro?: string }>;
+
 export default async function AdminMasterNotificacaoDetailPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ id: string }>;
+  searchParams?: SearchParams;
 }) {
   await requireAdminMasterUser("comunicacao_ver");
   const { id } = await params;
-  const supabase = getSupabaseAdmin();
+  const query = searchParams ? await searchParams : {};
+  const supabase = getSupabaseAdmin() as any;
 
-  const [{ data: notificacao }, { data: destinos }] = await Promise.all([
+  const [
+    { data: notificacao },
+    { data: destinos },
+    { data: clientStates },
+  ] = await Promise.all([
     supabase
       .from("notificacoes_globais")
       .select(
-        "id, titulo, descricao, tipo, publico_tipo, status, agendada_em, enviada_em, criada_em, link_url"
+        "id, titulo, descricao, tipo, publico_tipo, filtros_json, status, agendada_em, enviada_em, criada_em, link_url, imagem_url"
       )
       .eq("id", id)
       .maybeSingle(),
@@ -48,22 +66,49 @@ export default async function AdminMasterNotificacaoDetailPage({
       .select("id, id_salao, status, entregue_em, lida_em, clicada_em")
       .eq("id_notificacao", id)
       .limit(500),
+    supabase
+      .from("notificacoes_cliente_estado")
+      .select(
+        "id, cliente_app_conta_id, exibida_em, lida_em, dispensada_em, clicada_em, atualizado_em"
+      )
+      .eq("id_notificacao", id)
+      .order("atualizado_em", { ascending: false })
+      .limit(500),
   ]);
 
   if (!notificacao?.id) notFound();
 
-  const rows = ((destinos || []) as Array<Record<string, unknown>>).map((item) => ({
+  const visualConfig = parseClientVisualNoticeConfig(notificacao.filtros_json);
+  const isVisual = Boolean(visualConfig);
+
+  const pushRows = ((destinos || []) as Array<Record<string, unknown>>).map((item) => ({
     destino: String(item.id_salao || "-"),
     status: String(item.status || "-"),
     entregue: dateTime(String(item.entregue_em || "")),
     lida: dateTime(String(item.lida_em || "")),
     clique: dateTime(String(item.clicada_em || "")),
   }));
+
+  const visualRows = ((clientStates || []) as Array<Record<string, unknown>>).map(
+    (item) => ({
+      cliente: String(item.cliente_app_conta_id || "-"),
+      exibida: dateTime(String(item.exibida_em || "")),
+      lida: dateTime(String(item.lida_em || "")),
+      dispensada: dateTime(String(item.dispensada_em || "")),
+      clique: dateTime(String(item.clicada_em || "")),
+    })
+  );
+
+  const rows = isVisual ? visualRows : pushRows;
   const total = rows.length;
-  const entregues = rows.filter((row) => row.entregue !== "-").length;
-  const lidas = rows.filter((row) => row.lida !== "-").length;
-  const cliques = rows.filter((row) => row.clique !== "-").length;
-  const falhas = rows.filter((row) => /erro|falha|failed/i.test(row.status)).length;
+  const shown = isVisual
+    ? visualRows.filter((row) => row.exibida !== "-").length
+    : pushRows.filter((row) => row.entregue !== "-").length;
+  const read = rows.filter((row) => row.lida !== "-").length;
+  const clicks = rows.filter((row) => row.clique !== "-").length;
+  const dismissed = isVisual
+    ? visualRows.filter((row) => row.dispensada !== "-").length
+    : pushRows.filter((row) => /erro|falha|failed/i.test(String(row.status))).length;
 
   return (
     <div className="space-y-6">
@@ -71,42 +116,256 @@ export default async function AdminMasterNotificacaoDetailPage({
         <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
           <div>
             <div className="text-xs font-bold uppercase tracking-[0.35em] text-amber-200">
-              Notificação
+              {isVisual ? "Aviso visual · App Cliente" : "Notificação push"}
             </div>
             <h1 className="mt-3 font-display text-4xl font-black">
               {String(notificacao.titulo || "Notificação")}
             </h1>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
-              {String(notificacao.descricao || "Detalhe operacional do disparo, leitura, cliques e falhas.")}
+              {String(
+                notificacao.descricao ||
+                  "Detalhe operacional do disparo, leitura, cliques e falhas."
+              )}
             </p>
           </div>
-          <Link
-            href="/admin-master/notificacoes"
-            className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/20"
-          >
-            Voltar
-          </Link>
+          <div className="flex flex-wrap gap-2">
+            <Link
+              href="/admin-master/notificacoes/nova"
+              className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/20"
+            >
+              Nova comunicação
+            </Link>
+            <Link
+              href="/admin-master/notificacoes"
+              className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/20"
+            >
+              Voltar
+            </Link>
+          </div>
         </div>
       </section>
 
+      {query.ok ? (
+        <div className="rounded-[22px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+          {query.ok}
+        </div>
+      ) : null}
+      {query.erro ? (
+        <div className="rounded-[22px] border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800">
+          {query.erro}
+        </div>
+      ) : null}
+
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <MetricCard label="Destinos" value={String(total)} hint={String(notificacao.publico_tipo || "-")} />
-        <MetricCard label="Entregues" value={String(entregues)} hint={String(notificacao.status || "-")} />
-        <MetricCard label="Lidas" value={String(lidas)} hint={`${total ? Math.round((lidas / total) * 100) : 0}% de leitura`} />
-        <MetricCard label="Cliques" value={String(cliques)} hint={String(notificacao.link_url || "Sem link")} />
-        <MetricCard label="Falhas" value={String(falhas)} hint="Destinos com erro" />
+        <MetricCard
+          label={isVisual ? "Contas alcançadas" : "Destinos"}
+          value={String(total)}
+          hint={String(notificacao.publico_tipo || "-")}
+        />
+        <MetricCard
+          label={isVisual ? "Exibições" : "Entregues"}
+          value={String(shown)}
+          hint={String(notificacao.status || "-")}
+        />
+        <MetricCard
+          label="Lidas"
+          value={String(read)}
+          hint={`${total ? Math.round((read / total) * 100) : 0}% de leitura`}
+        />
+        <MetricCard
+          label="Cliques"
+          value={String(clicks)}
+          hint={String(notificacao.link_url || "Sem link")}
+        />
+        <MetricCard
+          label={isVisual ? "Dispensadas" : "Falhas"}
+          value={String(dismissed)}
+          hint={isVisual ? "Clientes que fecharam" : "Destinos com erro"}
+        />
       </section>
 
       <section className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
-        <div className="grid gap-3 text-sm text-zinc-600 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-3 text-sm text-zinc-600 md:grid-cols-2 xl:grid-cols-5">
           <div><span className="font-bold text-zinc-950">Tipo:</span> {String(notificacao.tipo || "-")}</div>
+          <div><span className="font-bold text-zinc-950">Status:</span> {String(notificacao.status || "-")}</div>
           <div><span className="font-bold text-zinc-950">Criada:</span> {dateTime(notificacao.criada_em)}</div>
-          <div><span className="font-bold text-zinc-950">Agendada:</span> {dateTime(notificacao.agendada_em)}</div>
-          <div><span className="font-bold text-zinc-950">Enviada:</span> {dateTime(notificacao.enviada_em)}</div>
+          <div><span className="font-bold text-zinc-950">Início:</span> {dateTime(notificacao.agendada_em)}</div>
+          <div><span className="font-bold text-zinc-950">Publicada:</span> {dateTime(notificacao.enviada_em)}</div>
         </div>
       </section>
 
-      <AdminDataTable rows={rows} columns={["destino", "status", "entregue", "lida", "clique"]} />
+      {isVisual && visualConfig ? (
+        <section className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <div className="text-xs font-black uppercase tracking-[0.22em] text-zinc-400">
+                Controle do Admin Master
+              </div>
+              <h2 className="mt-2 font-display text-2xl font-black text-zinc-950">
+                Editar aviso visual
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                Alterações passam a valer quando o App Cliente atualizar o aviso,
+                voltar ao foco ou em até cerca de um minuto.
+              </p>
+            </div>
+
+            {String(notificacao.status || "").toLowerCase() !== "encerrada" ? (
+              <form action={encerrarAvisoVisualClienteAction}>
+                <input type="hidden" name="id" value={id} />
+                <button className="rounded-full border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-black text-rose-700 transition hover:bg-rose-100">
+                  Encerrar aviso
+                </button>
+              </form>
+            ) : null}
+          </div>
+
+          <form action={atualizarAvisoVisualClienteAction} className="mt-6 grid gap-4">
+            <input type="hidden" name="id" value={id} />
+
+            <label className="block text-sm font-bold text-zinc-700">
+              Título
+              <input
+                name="visual_title"
+                required
+                maxLength={80}
+                defaultValue={String(notificacao.titulo || "")}
+                className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm outline-none focus:border-zinc-400"
+              />
+            </label>
+
+            <label className="block text-sm font-bold text-zinc-700">
+              Mensagem
+              <textarea
+                name="visual_body"
+                required
+                rows={4}
+                maxLength={500}
+                defaultValue={String(notificacao.descricao || "")}
+                className="mt-2 w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm outline-none focus:border-zinc-400"
+              />
+            </label>
+
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              <label className="block text-sm font-bold text-zinc-700">
+                Tipo
+                <select
+                  name="visual_type"
+                  defaultValue={String(notificacao.tipo || "informacao")}
+                  className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800"
+                >
+                  <option value="manutencao">Manutenção</option>
+                  <option value="informacao">Informação</option>
+                  <option value="aviso">Aviso importante</option>
+                  <option value="promocao">Promoção</option>
+                </select>
+              </label>
+
+              <label className="block text-sm font-bold text-zinc-700">
+                Exibição
+                <select
+                  name="visual_presentation"
+                  defaultValue={visualConfig.apresentacao}
+                  className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800"
+                >
+                  <option value="modal">Modal central</option>
+                  <option value="banner">Banner no topo</option>
+                </select>
+              </label>
+
+              <label className="block text-sm font-bold text-zinc-700">
+                Prioridade
+                <select
+                  name="visual_priority"
+                  defaultValue={String(visualConfig.prioridade)}
+                  className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-semibold text-zinc-800"
+                >
+                  <option value="0">Normal</option>
+                  <option value="50">Alta</option>
+                  <option value="100">Crítica</option>
+                </select>
+              </label>
+
+              <label className="block text-sm font-bold text-zinc-700">
+                Texto do botão
+                <input
+                  name="visual_button_text"
+                  maxLength={40}
+                  defaultValue={visualConfig.botao_texto || ""}
+                  className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm"
+                />
+              </label>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm font-bold text-zinc-700">
+                Início — Brasília
+                <input
+                  type="datetime-local"
+                  name="visual_starts_at"
+                  defaultValue={formatSaoPauloDateTimeLocal(notificacao.agendada_em)}
+                  className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-3 text-sm"
+                />
+              </label>
+              <label className="block text-sm font-bold text-zinc-700">
+                Término — Brasília
+                <input
+                  type="datetime-local"
+                  name="visual_ends_at"
+                  defaultValue={formatSaoPauloDateTimeLocal(visualConfig.fim_em)}
+                  className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-3 text-sm"
+                />
+              </label>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              <label className="block text-sm font-bold text-zinc-700">
+                Link interno
+                <input
+                  name="visual_url"
+                  defaultValue={String(notificacao.link_url || "")}
+                  placeholder="/app-cliente/inicio"
+                  className="mt-2 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-4 text-sm"
+                />
+              </label>
+
+              <div className="grid gap-3 rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
+                <label className="flex items-start gap-3 text-sm font-semibold text-zinc-700">
+                  <input
+                    type="checkbox"
+                    name="visual_dismissible"
+                    defaultChecked={visualConfig.dispensavel}
+                    className="mt-1 h-4 w-4 rounded border-zinc-300"
+                  />
+                  Cliente pode fechar
+                </label>
+                <label className="flex items-start gap-3 text-sm font-semibold text-zinc-700">
+                  <input
+                    type="checkbox"
+                    name="visual_blocking"
+                    defaultChecked={visualConfig.bloqueante}
+                    className="mt-1 h-4 w-4 rounded border-zinc-300"
+                  />
+                  Bloquear uso do app
+                </label>
+              </div>
+            </div>
+
+            <button className="min-h-12 rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white transition hover:bg-zinc-800">
+              Salvar e publicar alterações
+            </button>
+          </form>
+        </section>
+      ) : null}
+
+      <AdminDataTable
+        rows={rows}
+        columns={
+          isVisual
+            ? ["cliente", "exibida", "lida", "dispensada", "clique"]
+            : ["destino", "status", "entregue", "lida", "clique"]
+        }
+      />
     </div>
   );
 }
