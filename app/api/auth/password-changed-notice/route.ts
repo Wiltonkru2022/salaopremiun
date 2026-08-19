@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { htmlEscape, sendResendEmail } from "@/lib/email/resend";
+import { htmlEscape, sendBrevoEmail } from "@/lib/email/brevo";
 import { emitSecurityEvent } from "@/lib/security/security-events";
 import { findSalaoUsuarioByAuthOrEmail } from "@/lib/security/salao-user-lookup";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -95,7 +95,7 @@ export async function POST(request: Request) {
     detalhes: { email },
   });
 
-  await sendResendEmail({
+  await sendBrevoEmail({
     from:
       process.env.PASSWORD_RECOVERY_EMAIL_FROM ||
       "SalãoPremium <recuperar@salaopremiun.com.br>",

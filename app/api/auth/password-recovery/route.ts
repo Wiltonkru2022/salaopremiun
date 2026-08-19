@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPublicAuthUrl } from "@/lib/auth/public-auth-url";
-import { htmlEscape, sendResendEmail } from "@/lib/email/resend";
+import { htmlEscape, sendBrevoEmail } from "@/lib/email/brevo";
 import {
   assertPublicRateLimit,
   getPublicRateLimitIdentity,
@@ -119,7 +119,7 @@ export async function POST(request: Request) {
       throw new Error("Link de recuperação não foi gerado.");
     }
 
-    await sendResendEmail({
+    await sendBrevoEmail({
       from:
         process.env.PASSWORD_RECOVERY_EMAIL_FROM ||
         "SalãoPremium <recuperar@salaopremiun.com.br>",

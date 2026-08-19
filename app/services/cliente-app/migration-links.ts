@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
-import { htmlEscape, sendResendEmail } from "@/lib/email/resend";
+import { htmlEscape, sendBrevoEmail } from "@/lib/email/brevo";
 import { DOMINIO_APP } from "@/lib/proxy/domain-config";
 import type { ClienteAppSession } from "@/lib/cliente-auth.server";
 import {
@@ -113,7 +113,7 @@ export async function sendClienteMigrationEmail(params: {
   if (!generated.ok) return generated;
   if (!generated.email) return { ok: false as const, error: "Este cliente não possui e-mail real cadastrado." };
 
-  await sendResendEmail({
+  await sendBrevoEmail({
     from: process.env.PASSWORD_RECOVERY_EMAIL_FROM || "SalãoPremium <recuperar@salaopremiun.com.br>",
     to: generated.email,
     subject: "Atualize seu acesso ao App Cliente - SalãoPremium",

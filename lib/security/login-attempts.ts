@@ -1,5 +1,5 @@
 import { emitSecurityEvent } from "@/lib/security/security-events";
-import { htmlEscape, sendResendEmail } from "@/lib/email/resend";
+import { htmlEscape, sendBrevoEmail } from "@/lib/email/brevo";
 import {
   buildSecurityBlockPath,
   type SecurityTipoUsuario,
@@ -145,7 +145,7 @@ async function sendTemporaryBlockEmail(params: {
     );
     const blockedUntil = formatDateTimePt(params.blockedUntil);
 
-    await sendResendEmail({
+    await sendBrevoEmail({
       from,
       to,
       subject,

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { htmlEscape, sendResendEmail } from "@/lib/email/resend";
+import { htmlEscape, sendBrevoEmail } from "@/lib/email/brevo";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type TrialAlertType = "3d" | "1d" | "today" | "expired" | "manual";
@@ -216,7 +216,7 @@ export async function sendTrialAlertNow(params: SendTrialAlertParams) {
   }
 
   const copy = alertCopy(type, nomeSalao, context.trialFimEm);
-  const emailId = await sendResendEmail({
+  const emailId = await sendBrevoEmail({
     from:
       process.env.TRIAL_EMAIL_FROM ||
       process.env.CADASTRO_SALAO_EMAIL_FROM ||
@@ -257,7 +257,7 @@ export async function sendTrialAlertNow(params: SendTrialAlertParams) {
 
   return {
     ok: true,
-    provider: "vercel-resend" as const,
+    provider: "vercel-brevo" as const,
     type,
     emailId,
     sentAt,

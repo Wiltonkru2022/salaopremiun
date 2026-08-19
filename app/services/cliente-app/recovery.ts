@@ -1,6 +1,6 @@
 import crypto from "node:crypto";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
-import { htmlEscape, sendResendEmail } from "@/lib/email/resend";
+import { htmlEscape, sendBrevoEmail } from "@/lib/email/brevo";
 import type { ClienteAppSession } from "@/lib/cliente-auth.server";
 import {
   isValidCpf,
@@ -41,7 +41,7 @@ type AccountRow = {
 const GENERIC_REQUEST_MESSAGE =
   "Se os dados estiverem vinculados a uma conta válida, enviaremos um código.";
 const OTP_TTL_MS = 10 * 60 * 1000;
-const OTP_RESEND_MS = 60 * 1000;
+const OTP_BREVO_MS = 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
 
 function secret() {
@@ -107,7 +107,7 @@ function parseIdentityToken(token: string, expectedPurpose: "recover" | "change-
 }
 
 async function sendCodeEmail(params: { to: string; code: string; title: string }) {
-  await sendResendEmail({
+  await sendBrevoEmail({
     from:
       process.env.PASSWORD_RECOVERY_EMAIL_FROM ||
       "SalãoPremium <recuperar@salaopremiun.com.br>",
@@ -141,7 +141,7 @@ async function createOtp(params: {
 
   if (latest?.criado_em) {
     const createdAt = new Date(latest.criado_em).getTime();
-    if (Number.isFinite(createdAt) && now - createdAt < OTP_RESEND_MS) {
+    if (Number.isFinite(createdAt) && now - createdAt < OTP_BREVO_MS) {
       return { ok: false as const, error: "Aguarde um minuto antes de pedir outro código." };
     }
   }
@@ -543,7 +543,7 @@ export async function confirmClienteEmailChange(params: {
         detalhes: { email_hash: hmac(email) },
       });
 
-      await sendResendEmail({
+      await sendBrevoEmail({
         from: process.env.PASSWORD_RECOVERY_EMAIL_FROM || "SalãoPremium <recuperar@salaopremiun.com.br>",
         to: email,
         subject: "Seu e-mail foi atualizado - SalãoPremium",

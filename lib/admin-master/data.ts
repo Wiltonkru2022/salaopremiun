@@ -2433,7 +2433,7 @@ export async function getAdminMasterSection(
       changesByKey.set(item.chave, (changesByKey.get(item.chave) || 0) + 1);
     }
 
-    const sensitiveWords = ["manutencao", "bloqueio", "webhook", "asaas", "resend", "push", "seguranca", "auth"];
+    const sensitiveWords = ["manutencao", "bloqueio", "webhook", "asaas", "brevo", "push", "seguranca", "auth"];
     const rows = ((configs || []) as {
       chave?: string | null;
       descricao?: string | null;

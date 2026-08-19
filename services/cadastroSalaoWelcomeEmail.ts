@@ -1,4 +1,4 @@
-import { htmlEscape, sendResendEmail } from "@/lib/email/resend";
+import { htmlEscape, sendBrevoEmail } from "@/lib/email/brevo";
 
 type WelcomeEmailParams = {
   idSalao: string;
@@ -124,7 +124,7 @@ function buildWelcomeEmailHtml(params: WelcomeEmailParams) {
 }
 
 export async function sendCadastroSalaoWelcomeEmail(params: WelcomeEmailParams) {
-  await sendResendEmail({
+  await sendBrevoEmail({
     from:
       process.env.CADASTRO_SALAO_EMAIL_FROM ||
       "SalãoPremium <boasvindas@salaopremiun.com.br>",
