@@ -43,6 +43,24 @@ function uniqueServices(items: Servico[] = []) {
   );
 }
 
+async function protectedMutation<T = Record<string, unknown>>(
+  action: string,
+  payload: Record<string, unknown> = {}
+): Promise<T> {
+  const response = await fetch("/api/app-profissional/mutacoes", {
+    method: "POST",
+    credentials: "same-origin",
+    cache: "no-store",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ action, ...payload }),
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok || !data.ok) {
+    throw new Error(String(data.error || "Não foi possível concluir a operação."));
+  }
+  return data as T;
+}
+
 export function useProfissionalData(
   profissionalId?: string,
   podeVerAgendaTodos = false
@@ -63,7 +81,7 @@ export function useProfissionalData(
 
     const start = new Date();
     start.setDate(1);
-    const end = new Date(start.getFullYear(), start.getMonth() + 5, 0);
+    const end = new Date(start.getFullYear(), start.getMonth() + 3, 0);
     const params = new URLSearchParams({
       start: start.toISOString().slice(0, 10),
       end: end.toISOString().slice(0, 10),
@@ -75,7 +93,7 @@ export function useProfissionalData(
     const data = await response.json().catch(() => ({}));
 
     if (!response.ok || !data.ok) {
-      setError(String(data.error || "Nao foi possivel sincronizar a agenda."));
+      setError(String(data.error || "Não foi possível sincronizar os dados."));
       trackProfessionalProductivity("sincronizacao_falhou", {
         details: { message: String(data.error || response.status) },
       });
@@ -116,11 +134,12 @@ export function useProfissionalData(
 
     let refreshTimer: ReturnType<typeof setTimeout> | null = null;
     const scheduleRefresh = () => {
+      if (document.visibilityState === "hidden") return;
       if (refreshTimer) clearTimeout(refreshTimer);
-      refreshTimer = setTimeout(() => void refresh(), 350);
+      refreshTimer = setTimeout(() => void refresh(), 1800);
     };
     const channel = supabase.channel(
-      `salaopremiun-${profissionalId}-${podeVerAgendaTodos ? "todos" : "proprio"}`
+      `salaopremium-${profissionalId}-${podeVerAgendaTodos ? "todos" : "proprio"}`
     );
     if (podeVerAgendaTodos) {
       channel
@@ -128,8 +147,7 @@ export function useProfissionalData(
         .on("postgres_changes", { event: "*", schema: "public", table: "comandas" }, scheduleRefresh);
     } else {
       channel
-        .on("postgres_changes", { event: "*", schema: "public", table: "agendamentos", filter: `profissional_id=eq.${profissionalId}` }, scheduleRefresh)
-        .on("postgres_changes", { event: "*", schema: "public", table: "comandas", filter: `profissional_id=eq.${profissionalId}` }, scheduleRefresh);
+        .on("postgres_changes", { event: "*", schema: "public", table: "agendamentos", filter: `profissional_id=eq.${profissionalId}` }, scheduleRefresh);
     }
     channel.subscribe();
 
@@ -149,11 +167,16 @@ export function useProfissionalData(
       setIsOnline(false);
       trackProfessionalProductivity("modo_offline_ativado");
     };
+    const onVisible = () => {
+      if (document.visibilityState === "visible") void refresh();
+    };
     window.addEventListener("online", onOnline);
     window.addEventListener("offline", onOffline);
+    document.addEventListener("visibilitychange", onVisible);
     return () => {
       window.removeEventListener("online", onOnline);
       window.removeEventListener("offline", onOffline);
+      document.removeEventListener("visibilitychange", onVisible);
     };
   }, [refresh]);
 
@@ -169,7 +192,7 @@ export function useProfissionalData(
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.ok) {
-        throw new Error(String(payload.error || "Nao foi possivel confirmar o agendamento."));
+        throw new Error(String(payload.error || "Não foi possível confirmar o agendamento."));
       }
       trackProfessionalDuration("confirmar_agendamento", performance.now() - startedAt, {
         entityId: id,
@@ -188,7 +211,7 @@ export function useProfissionalData(
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.ok) {
-        throw new Error(String(payload.error || "Nao foi possivel cancelar ou excluir o item da agenda."));
+        throw new Error(String(payload.error || "Não foi possível cancelar ou excluir o item da agenda."));
       }
       trackProfessionalProductivity(
         payload.kind === "bloqueio" ? "bloqueio_excluido" : "agendamento_cancelado",
@@ -201,7 +224,7 @@ export function useProfissionalData(
       datas: string[],
       horaInicio: string,
       horaFim: string,
-      titulo = "Horario bloqueado",
+      titulo = "Horário bloqueado",
       targetProfissionalId?: string
     ) {
       const actorId = targetProfissionalId || profissionalId;
@@ -221,7 +244,7 @@ export function useProfissionalData(
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.ok) {
-        throw new Error(String(payload.error || "Nao foi possivel bloquear o horario."));
+        throw new Error(String(payload.error || "Não foi possível bloquear o horário."));
       }
       await refresh();
     }
@@ -229,14 +252,10 @@ export function useProfissionalData(
     async function criarAgendamento(payload: { clienteId: string; servicoId: string; data: string; horaInicio: string; profissionalId?: string }) {
       if (!profissionalId) return;
       const targetProfissionalId = payload.profissionalId || profissionalId;
-      const { error } = await supabase.rpc("app_profissional_criar_agendamento", {
-        p_profissional_id: targetProfissionalId,
-        p_cliente_id: payload.clienteId,
-        p_servico_id: payload.servicoId,
-        p_data: payload.data,
-        p_hora_inicio: payload.horaInicio
+      await protectedMutation("criar_agendamento", {
+        ...payload,
+        profissionalId: targetProfissionalId,
       });
-      if (error) throw new Error(error.message);
 
       try {
         const auditResponse = await fetch("/api/app-profissional/agenda/auditoria-criacao", {
@@ -250,7 +269,7 @@ export function useProfissionalData(
         });
 
         if (!auditResponse.ok) {
-          console.warn("Nao foi possivel registrar a autoria do agendamento.");
+          console.warn("Não foi possível registrar a autoria do agendamento.");
         }
       } catch (auditError) {
         console.warn("Falha ao registrar autoria do agendamento.", auditError);
@@ -275,7 +294,7 @@ export function useProfissionalData(
       });
       const result = await response.json().catch(() => ({}));
       if (!response.ok || !result.ok) {
-        throw new Error(String(result.error || "Nao foi possivel reagendar o agendamento."));
+        throw new Error(String(result.error || "Não foi possível reagendar o agendamento."));
       }
       trackProfessionalProductivity("agendamento_reagendado", {
         entityId: payload.agendamentoId,
@@ -286,51 +305,39 @@ export function useProfissionalData(
 
     async function salvarCliente(payload: Pick<Cliente, "nome" | "telefone" | "observacoes">) {
       if (!profissionalId) return;
-      const { error } = await supabase.rpc("app_profissional_criar_cliente", {
-        p_profissional_id: profissionalId,
-        p_nome: payload.nome,
-        p_telefone: payload.telefone || "",
-        p_observacoes: payload.observacoes || ""
-      });
-      if (error) throw new Error(error.message);
+      await protectedMutation("criar_cliente", payload as unknown as Record<string, unknown>);
       await refresh();
     }
 
     async function editarCliente(id: string, payload: Pick<Cliente, "nome" | "telefone" | "observacoes">) {
       if (!profissionalId) return;
-      const { error } = await supabase.rpc("app_profissional_editar_cliente", {
-        p_profissional_id: profissionalId,
-        p_cliente_id: id,
-        p_nome: payload.nome,
-        p_telefone: payload.telefone || "",
-        p_observacoes: payload.observacoes || ""
+      await protectedMutation("editar_cliente", {
+        clienteId: id,
+        ...payload,
       });
-      if (error) throw new Error(error.message);
       await refresh();
     }
 
-    async function salvarServico(payload: Pick<Servico, "nome" | "preco" | "duracao_minutos">) {
+    async function salvarServico(payload: Pick<Servico, "nome" | "preco" | "duracao_minutos" | "descricao">) {
       if (!profissionalId) return;
-      const { error } = await supabase.rpc("app_profissional_criar_servico", {
-        p_profissional_id: profissionalId,
-        p_nome: payload.nome,
-        p_preco: payload.preco,
-        p_duracao: payload.duracao_minutos
+      await protectedMutation("criar_servico", {
+        nome: payload.nome,
+        preco: payload.preco,
+        duracaoMinutos: payload.duracao_minutos,
+        descricao: payload.descricao || null,
       });
-      if (error) throw new Error(error.message);
       await refresh();
     }
 
-    async function editarServico(id: string, payload: Pick<Servico, "nome" | "preco" | "duracao_minutos">) {
+    async function editarServico(id: string, payload: Pick<Servico, "nome" | "preco" | "duracao_minutos" | "descricao">) {
       if (!profissionalId) return;
-      const { error } = await supabase.rpc("app_profissional_editar_servico", {
-        p_profissional_id: profissionalId,
-        p_servico_id: id,
-        p_nome: payload.nome,
-        p_preco: payload.preco,
-        p_duracao: payload.duracao_minutos
+      await protectedMutation("editar_servico", {
+        servicoId: id,
+        nome: payload.nome,
+        preco: payload.preco,
+        duracaoMinutos: payload.duracao_minutos,
+        descricao: payload.descricao || null,
       });
-      if (error) throw new Error(error.message);
       await refresh();
     }
 
@@ -347,38 +354,31 @@ export function useProfissionalData(
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.ok) {
-        throw new Error(String(payload.error || "Nao foi possivel confirmar o Pix."));
+        throw new Error(String(payload.error || "Não foi possível confirmar o Pix."));
       }
       await refresh();
     }
 
     async function trocarSenha(senha: string) {
       if (!profissionalId) return;
-      const { error } = await supabase.rpc("app_profissional_trocar_senha", {
-        p_profissional_id: profissionalId,
-        p_senha: senha
-      });
-      if (error) throw new Error(error.message);
+      const result = await protectedMutation<{ ok: true; reauthenticate?: boolean }>(
+        "trocar_senha",
+        { senha }
+      );
+      if (result.reauthenticate) {
+        window.location.assign("/app-profissional/");
+      }
     }
 
     async function excluirAvaliacao(id: string) {
-      const { error } = await supabase.rpc("app_profissional_excluir_avaliacao", {
-        p_profissional_id: profissionalId,
-        p_avaliacao_id: id
-      });
-      if (error) throw new Error(error.message);
+      await protectedMutation("excluir_avaliacao", { avaliacaoId: id });
       await refresh();
     }
 
     async function abrirComanda(clienteId: string | null, clienteNome: string) {
       if (!profissionalId) return;
       const startedAt = performance.now();
-      const { error } = await supabase.rpc("app_profissional_abrir_comanda", {
-        p_profissional_id: profissionalId,
-        p_cliente_id: clienteId,
-        p_cliente_nome: clienteNome || "Consumidor Final"
-      });
-      if (error) throw new Error(error.message);
+      await protectedMutation("abrir_comanda", { clienteId, clienteNome });
       trackProfessionalDuration("abrir_comanda", performance.now() - startedAt);
       trackProfessionalProductivity("comanda_aberta", {
         details: { clienteId, clienteNome },
@@ -388,27 +388,21 @@ export function useProfissionalData(
 
     async function adicionarItemComanda(comandaId: string, item: { servico_id?: string | null; nome: string; quantidade: number; valor_unitario: number; tipo?: "servico" | "produto" }) {
       if (!profissionalId) return;
-      const { error } = await supabase.rpc("app_profissional_adicionar_item_comanda", {
-        p_profissional_id: profissionalId,
-        p_comanda_id: comandaId,
-        p_servico_id: item.servico_id ?? null,
-        p_nome: item.nome,
-        p_quantidade: item.quantidade,
-        p_valor_unitario: item.valor_unitario,
-        p_tipo: item.tipo ?? "servico"
+      await protectedMutation("adicionar_item_comanda", {
+        comandaId,
+        servicoId: item.servico_id ?? null,
+        nome: item.nome,
+        quantidade: item.quantidade,
+        valorUnitario: item.valor_unitario,
+        tipo: item.tipo ?? "servico",
       });
-      if (error) throw new Error(error.message);
       await refresh();
     }
 
     async function fecharComanda(id: string) {
       if (!profissionalId) return;
       const startedAt = performance.now();
-      const { error } = await supabase.rpc("app_profissional_fechar_comanda", {
-        p_profissional_id: profissionalId,
-        p_comanda_id: id
-      });
-      if (error) throw new Error(error.message);
+      await protectedMutation("fechar_comanda", { comandaId: id });
       trackProfessionalDuration("fechar_comanda", performance.now() - startedAt, {
         entityId: id,
       });
@@ -425,7 +419,7 @@ export function useProfissionalData(
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok || !payload.ok) {
-        throw new Error(String(payload.error || "Nao foi possivel marcar a notificacao como lida."));
+        throw new Error(String(payload.error || "Não foi possível marcar a notificação como lida."));
       }
       await refresh();
     }
@@ -452,4 +446,3 @@ export function useProfissionalData(
 
   return { ...state, loading, error, refresh, actions, lastSyncedAt, isOnline };
 }
-
