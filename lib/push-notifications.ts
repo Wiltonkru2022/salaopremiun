@@ -1,6 +1,13 @@
-﻿import "server-only";
+import "server-only";
+
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { loadSalonNotificationSettings } from "@/lib/salon-notification-settings";
+import {
+  classifyPushFailure,
+  getPushEndpointHost,
+  getPushRetryDelayMs,
+  type PushFailureCategory,
+} from "@/lib/push-delivery-utils";
 
 export type PushAudience = "cliente_app" | "profissional_app" | "salao_painel";
 
@@ -17,6 +24,7 @@ type PushSubscriptionRow = {
   endpoint: string;
   p256dh: string;
   auth: string;
+  audience?: PushAudience | null;
   cliente_app_conta_id?: string | null;
   id_profissional?: string | null;
 };
@@ -32,6 +40,21 @@ type PushPayload = {
   timestamp?: number;
 };
 
+export type PushDeliveryFailure = {
+  subscriptionId: string;
+  statusCode: number;
+  category: PushFailureCategory;
+  message: string;
+};
+
+export type PushSendResult = {
+  attempted: number;
+  sent: number;
+  failed: number;
+  ignored: number;
+  errors: PushDeliveryFailure[];
+};
+
 export type BroadcastPushTarget =
   | "todos"
   | "clientes"
@@ -43,9 +66,19 @@ type PushBurstState = {
   tagSentAt: Map<string, number>;
 };
 
+type PushProviderError = {
+  statusCode?: unknown;
+  message?: unknown;
+  body?: unknown;
+};
+
+type WebPushModule = typeof import("web-push");
+
 const PUSH_BURST_WINDOW_MS = 25 * 1000;
 const PUSH_SAME_TAG_WINDOW_MS = 10 * 60 * 1000;
 const PUSH_SUBSCRIPTION_REFRESH_MS = 12 * 60 * 60 * 1000;
+const PUSH_MAX_ATTEMPTS = 3;
+const PUSH_ERROR_MESSAGE_MAX_LENGTH = 1000;
 const recentPushByEndpoint = new Map<string, PushBurstState>();
 
 function getPushConfig() {
@@ -55,10 +88,7 @@ function getPushConfig() {
     String(process.env.WEB_PUSH_SUBJECT || "").trim() ||
     "mailto:suporte@salaopremiun.com.br";
 
-  if (!publicKey || !privateKey) {
-    return null;
-  }
-
+  if (!publicKey || !privateKey) return null;
   return { publicKey, privateKey, subject };
 }
 
@@ -138,35 +168,16 @@ export async function upsertPushSubscription(params: {
       { onConflict: "audience,endpoint" }
     );
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   if (params.audience === "cliente_app" && params.clienteAppContaId) {
     await (supabase as any)
       .from("push_subscriptions")
-      .update({
-        ativo: false,
-        updated_at: now,
-      })
+      .update({ ativo: false, updated_at: now })
       .eq("audience", "cliente_app")
       .eq("cliente_app_conta_id", params.clienteAppContaId)
       .neq("endpoint", parsed.endpoint)
       .eq("ativo", true);
-  }
-}
-
-async function markSubscriptionInactive(id: string) {
-  try {
-    await (getSupabaseAdmin() as any)
-      .from("push_subscriptions")
-      .update({
-        ativo: false,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", id);
-  } catch {
-    // Push cleanup is best effort.
   }
 }
 
@@ -205,7 +216,6 @@ async function filterClienteAppSubscriptionsByPreference(
         .filter(Boolean)
     )
   );
-
   if (!ids.length) return [];
 
   const { data, error } = await (getSupabaseAdmin() as any)
@@ -253,7 +263,6 @@ async function filterProfissionalAppSubscriptionsByPreference(
         .filter(Boolean)
     )
   );
-
   if (!ids.length) return [];
 
   const { data, error } = await (getSupabaseAdmin() as any)
@@ -299,9 +308,7 @@ function pruneRecentPushes(now: number) {
     }
 
     for (const [tag, sentAt] of state.tagSentAt.entries()) {
-      if (now - sentAt > PUSH_SAME_TAG_WINDOW_MS) {
-        state.tagSentAt.delete(tag);
-      }
+      if (now - sentAt > PUSH_SAME_TAG_WINDOW_MS) state.tagSentAt.delete(tag);
     }
   }
 }
@@ -309,25 +316,18 @@ function pruneRecentPushes(now: number) {
 function shouldThrottlePush(endpoint: string, payload: PushPayload) {
   const now = Date.now();
   pruneRecentPushes(now);
-
   const tag = payload.tag || "salaopremium-update";
   const state = recentPushByEndpoint.get(endpoint);
   if (!state) return false;
 
   const sameTagAt = state.tagSentAt.get(tag);
-  if (sameTagAt && now - sameTagAt < PUSH_SAME_TAG_WINDOW_MS) {
-    return true;
-  }
+  if (sameTagAt && now - sameTagAt < PUSH_SAME_TAG_WINDOW_MS) return true;
 
-  if (
+  return Boolean(
     !payload.renotify &&
-    !payload.requireInteraction &&
-    now - state.lastSentAt < PUSH_BURST_WINDOW_MS
-  ) {
-    return true;
-  }
-
-  return false;
+      !payload.requireInteraction &&
+      now - state.lastSentAt < PUSH_BURST_WINDOW_MS
+  );
 }
 
 function rememberPushSent(endpoint: string, payload: PushPayload) {
@@ -335,34 +335,185 @@ function rememberPushSent(endpoint: string, payload: PushPayload) {
   const tag = payload.tag || "salaopremium-update";
   const state =
     recentPushByEndpoint.get(endpoint) ||
-    ({
-      lastSentAt: 0,
-      tagSentAt: new Map<string, number>(),
-    } satisfies PushBurstState);
+    ({ lastSentAt: 0, tagSentAt: new Map<string, number>() } satisfies PushBurstState);
 
   state.lastSentAt = now;
   state.tagSentAt.set(tag, now);
   recentPushByEndpoint.set(endpoint, state);
 }
 
+function normalizeErrorMessage(error: unknown) {
+  if (error instanceof Error && error.message) {
+    return error.message.slice(0, PUSH_ERROR_MESSAGE_MAX_LENGTH);
+  }
+  if (typeof error === "object" && error !== null) {
+    const providerError = error as PushProviderError;
+    const message = String(providerError.message || providerError.body || "").trim();
+    if (message) return message.slice(0, PUSH_ERROR_MESSAGE_MAX_LENGTH);
+  }
+  return "Falha desconhecida ao enviar Web Push.";
+}
+
+function getErrorStatusCode(error: unknown) {
+  if (typeof error !== "object" || error === null) return 0;
+  const statusCode = Number((error as PushProviderError).statusCode || 0);
+  return Number.isFinite(statusCode) ? statusCode : 0;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+async function loadSubscriptionMetadata(row: PushSubscriptionRow) {
+  try {
+    const { data } = await (getSupabaseAdmin() as any)
+      .from("push_subscriptions")
+      .select("audience, failure_count")
+      .eq("id", row.id)
+      .maybeSingle();
+
+    const rawAudience = String(row.audience || data?.audience || "");
+    const audience: PushAudience | null =
+      rawAudience === "cliente_app" ||
+      rawAudience === "profissional_app" ||
+      rawAudience === "salao_painel"
+        ? rawAudience
+        : null;
+
+    return {
+      audience,
+      failureCount: Number(data?.failure_count || 0),
+    };
+  } catch {
+    return { audience: row.audience || null, failureCount: 0 };
+  }
+}
+
+async function recordPushDelivery(params: {
+  row: PushSubscriptionRow;
+  payload: PushPayload;
+  status: "enviada" | "falhou" | "ignorada";
+  httpStatus?: number | null;
+  errorMessage?: string | null;
+  deactivateSubscription?: boolean;
+}) {
+  try {
+    const supabase = getSupabaseAdmin() as any;
+    const now = new Date().toISOString();
+    const metadata = await loadSubscriptionMetadata(params.row);
+
+    if (params.status === "enviada") {
+      await supabase
+        .from("push_subscriptions")
+        .update({
+          ativo: true,
+          ultimo_uso_em: now,
+          last_success_at: now,
+          last_error_code: null,
+          last_error_message: null,
+          failure_count: 0,
+          updated_at: now,
+        })
+        .eq("id", params.row.id);
+    } else if (params.status === "falhou") {
+      const failureUpdate: Record<string, unknown> = {
+        last_failure_at: now,
+        last_error_code: params.httpStatus || null,
+        last_error_message: params.errorMessage || "Falha ao enviar Web Push.",
+        failure_count: Math.max(0, metadata.failureCount) + 1,
+        updated_at: now,
+      };
+      if (params.deactivateSubscription) failureUpdate.ativo = false;
+
+      await supabase
+        .from("push_subscriptions")
+        .update(failureUpdate)
+        .eq("id", params.row.id);
+    }
+
+    if (!metadata.audience) return;
+
+    await supabase.from("push_delivery_log").insert({
+      push_subscription_id: params.row.id,
+      audience: metadata.audience,
+      endpoint_host: getPushEndpointHost(params.row.endpoint),
+      notification_tag: params.payload.tag || null,
+      title: params.payload.title || null,
+      status: params.status,
+      http_status: params.httpStatus || null,
+      error_message: params.errorMessage || null,
+      created_at: now,
+    });
+  } catch (diagnosticError) {
+    console.error("[push] falha ao registrar diagnostico", {
+      subscriptionId: params.row.id,
+      message: normalizeErrorMessage(diagnosticError),
+    });
+  }
+}
+
+async function sendNotificationWithRetry(params: {
+  webPush: WebPushModule;
+  row: PushSubscriptionRow;
+  payload: PushPayload;
+}) {
+  for (let attempt = 1; attempt <= PUSH_MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await params.webPush.sendNotification(
+        {
+          endpoint: params.row.endpoint,
+          keys: { p256dh: params.row.p256dh, auth: params.row.auth },
+        },
+        JSON.stringify(params.payload),
+        { TTL: 60 * 60 * 12 }
+      );
+
+      return { ok: true as const, statusCode: Number(response?.statusCode || 201) };
+    } catch (error) {
+      const statusCode = getErrorStatusCode(error);
+      const policy = classifyPushFailure(statusCode);
+
+      if (!policy.retryable || attempt >= PUSH_MAX_ATTEMPTS) {
+        return {
+          ok: false as const,
+          statusCode,
+          message: normalizeErrorMessage(error),
+          policy,
+        };
+      }
+
+      await sleep(getPushRetryDelayMs(attempt));
+    }
+  }
+
+  return {
+    ok: false as const,
+    statusCode: 0,
+    message: "Web Push excedeu o limite de tentativas.",
+    policy: classifyPushFailure(0),
+  };
+}
+
+function buildDeliveryFailure(
+  row: PushSubscriptionRow,
+  statusCode: number,
+  category: PushFailureCategory,
+  message: string
+): PushDeliveryFailure {
+  return { subscriptionId: row.id, statusCode, category, message };
+}
+
 export async function sendPushToRows(
   rows: PushSubscriptionRow[],
   payload: PushPayload
-) {
-  const config = getPushConfig();
-  if (!config || !rows.length) return { sent: 0 };
+): Promise<PushSendResult> {
+  if (!rows.length) {
+    return { attempted: 0, sent: 0, failed: 0, ignored: 0, errors: [] };
+  }
+
   const uniqueRows = Array.from(
     new Map(rows.map((row) => [row.endpoint, row])).values()
   );
-
-  const webPush = await import("web-push");
-  webPush.default.setVapidDetails(
-    config.subject,
-    config.publicKey,
-    config.privateKey
-  );
-
-  let sent = 0;
   const pushPayload: PushPayload = {
     ...payload,
     renotify: payload.renotify ?? false,
@@ -370,38 +521,107 @@ export async function sendPushToRows(
     silent: payload.silent ?? false,
     timestamp: payload.timestamp || Date.now(),
   };
+  const config = getPushConfig();
+
+  if (!config) {
+    const message =
+      "Web Push nao configurado: WEB_PUSH_PUBLIC_KEY e WEB_PUSH_PRIVATE_KEY sao obrigatorias.";
+    await Promise.all(
+      uniqueRows.map((row) =>
+        recordPushDelivery({
+          row,
+          payload: pushPayload,
+          status: "falhou",
+          httpStatus: 0,
+          errorMessage: message,
+          deactivateSubscription: false,
+        })
+      )
+    );
+    throw new Error(message);
+  }
+
+  const importedWebPush = await import("web-push");
+  const defaultWebPush = (
+    importedWebPush as unknown as { default?: WebPushModule }
+  ).default;
+  const webPush: WebPushModule = defaultWebPush || importedWebPush;
+  webPush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
+
+  let sent = 0;
+  let failed = 0;
+  let ignored = 0;
+  const errors: PushDeliveryFailure[] = [];
 
   await Promise.all(
     uniqueRows.map(async (row) => {
-      if (shouldThrottlePush(row.endpoint, pushPayload)) return;
+      if (shouldThrottlePush(row.endpoint, pushPayload)) {
+        ignored += 1;
+        await recordPushDelivery({
+          row,
+          payload: pushPayload,
+          status: "ignorada",
+          errorMessage: "Envio ignorado pelo controle anti-duplicacao.",
+        });
+        return;
+      }
 
-      try {
-        await webPush.default.sendNotification(
-          {
-            endpoint: row.endpoint,
-            keys: {
-              p256dh: row.p256dh,
-              auth: row.auth,
-            },
-          },
-          JSON.stringify(pushPayload),
-          { TTL: 60 * 60 * 12 }
-        );
+      const delivery = await sendNotificationWithRetry({
+        webPush,
+        row,
+        payload: pushPayload,
+      });
+
+      if (delivery.ok) {
         rememberPushSent(row.endpoint, pushPayload);
         sent += 1;
-      } catch (error) {
-        const statusCode =
-          typeof error === "object" && error !== null && "statusCode" in error
-            ? Number((error as { statusCode?: unknown }).statusCode)
-            : 0;
-        if (statusCode === 403 || statusCode === 404 || statusCode === 410) {
-          await markSubscriptionInactive(row.id);
-        }
+        await recordPushDelivery({
+          row,
+          payload: pushPayload,
+          status: "enviada",
+          httpStatus: delivery.statusCode,
+        });
+        return;
       }
+
+      failed += 1;
+      errors.push(
+        buildDeliveryFailure(
+          row,
+          delivery.statusCode,
+          delivery.policy.category,
+          delivery.message
+        )
+      );
+      await recordPushDelivery({
+        row,
+        payload: pushPayload,
+        status: "falhou",
+        httpStatus: delivery.statusCode,
+        errorMessage: delivery.message,
+        deactivateSubscription: delivery.policy.deactivateSubscription,
+      });
     })
   );
 
-  return { sent };
+  const result: PushSendResult = {
+    attempted: uniqueRows.length,
+    sent,
+    failed,
+    ignored,
+    errors,
+  };
+
+  if (sent === 0 && failed > 0) {
+    const first = errors[0];
+    throw new Error(
+      first
+        ? `Web Push falhou (${first.statusCode || "sem HTTP"}, ${first.category}): ${first.message}`
+        : "Web Push falhou em todos os endpoints."
+    );
+  }
+
+  return result;
 }
 
 export async function broadcastPushNotification(params: {
@@ -414,60 +634,48 @@ export async function broadcastPushNotification(params: {
   const supabase = getSupabaseAdmin();
   const title = String(params.title || "").trim();
   const body = String(params.body || "").trim();
-
-  if (!title || !body) {
-    throw new Error("Informe titulo e mensagem.");
-  }
+  if (!title || !body) throw new Error("Informe titulo e mensagem.");
 
   let query = (supabase as any)
     .from("push_subscriptions")
-    .select("id, endpoint, p256dh, auth, cliente_app_conta_id, id_profissional")
+    .select(
+      "id, audience, endpoint, p256dh, auth, cliente_app_conta_id, id_profissional"
+    )
     .eq("ativo", true);
 
-  if (params.target === "clientes") {
-    query = query.eq("audience", "cliente_app");
-  } else if (params.target === "profissionais") {
+  if (params.target === "clientes") query = query.eq("audience", "cliente_app");
+  else if (params.target === "profissionais") {
     query = query.eq("audience", "profissional_app");
   } else if (params.target === "saloes") {
     query = query.eq("audience", "salao_painel");
   }
 
-  if (params.idSalao) {
-    query = query.eq("id_salao", params.idSalao);
-  }
+  if (params.idSalao) query = query.eq("id_salao", params.idSalao);
 
   const { data: rows, error } = await query.limit(2000);
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   let subscriptions = (rows || []) as PushSubscriptionRow[];
   if (params.target === "clientes") {
     subscriptions = await filterClienteAppSubscriptionsByPreference(subscriptions);
   }
   if (params.target === "profissionais") {
-    subscriptions =
-      await filterProfissionalAppSubscriptionsByPreference(subscriptions);
+    subscriptions = await filterProfissionalAppSubscriptionsByPreference(subscriptions);
   }
 
-  const result = await sendPushToRows(subscriptions, {
+  return sendPushToRows(subscriptions, {
     title,
     body,
     url: params.url || "/",
     tag: `admin-master-${params.target}-${params.idSalao || "geral"}`,
   });
-
-  return {
-    sent: result.sent,
-  };
 }
 
 function formatAppointmentDate(date?: string | null, time?: string | null) {
   const dateText = date
-    ? new Intl.DateTimeFormat("pt-BR", {
-        day: "2-digit",
-        month: "2-digit",
-      }).format(new Date(`${date}T12:00:00`))
+    ? new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(
+        new Date(`${date}T12:00:00`)
+      )
     : "data escolhida";
   const timeText = String(time || "").slice(0, 5);
   return timeText ? `${dateText} as ${timeText}` : dateText;
@@ -488,13 +696,13 @@ export async function notifySalonAboutClientBooking(params: {
     const [salaoResult, profissionalResult] = await Promise.all([
       (supabase as any)
         .from("push_subscriptions")
-        .select("id, endpoint, p256dh, auth")
+        .select("id, audience, endpoint, p256dh, auth")
         .eq("audience", "salao_painel")
         .eq("ativo", true)
         .eq("id_salao", params.idSalao),
       (supabase as any)
         .from("push_subscriptions")
-        .select("id, endpoint, p256dh, auth, id_profissional")
+        .select("id, audience, endpoint, p256dh, auth, id_profissional")
         .eq("audience", "profissional_app")
         .eq("ativo", true)
         .eq("id_salao", params.idSalao)
@@ -506,7 +714,11 @@ export async function notifySalonAboutClientBooking(params: {
       params.horaInicio
     )}. Toque para revisar.`;
 
-    if (settings.salaoNovoAgendamentoApp && !salaoResult.error && salaoResult.data?.length) {
+    if (
+      settings.salaoNovoAgendamentoApp &&
+      !salaoResult.error &&
+      salaoResult.data?.length
+    ) {
       await sendPushToRows(salaoResult.data as PushSubscriptionRow[], {
         title: "Pedido de horário recebido",
         body,
@@ -516,10 +728,9 @@ export async function notifySalonAboutClientBooking(params: {
     }
 
     if (!profissionalResult.error && profissionalResult.data?.length) {
-      const profissionais =
-        await filterProfissionalAppSubscriptionsByPreference(
-          profissionalResult.data as PushSubscriptionRow[]
-        );
+      const profissionais = await filterProfissionalAppSubscriptionsByPreference(
+        profissionalResult.data as PushSubscriptionRow[]
+      );
       await sendPushToRows(profissionais, {
         title: "Pedido de horário para confirmar",
         body,
@@ -527,8 +738,12 @@ export async function notifySalonAboutClientBooking(params: {
         tag: `agendamento-${params.idAgendamento}`,
       });
     }
-  } catch {
-    // Notificacao push nunca deve bloquear o agendamento.
+  } catch (error) {
+    console.error("[push] falha ao notificar novo agendamento", {
+      idAgendamento: params.idAgendamento,
+      idSalao: params.idSalao,
+      message: normalizeErrorMessage(error),
+    });
   }
 }
 
@@ -547,7 +762,6 @@ export async function notifyClientAppointmentConfirmed(params: {
       .eq("id", params.idAgendamento)
       .eq("id_salao", params.idSalao)
       .maybeSingle();
-
     if (appointmentError || !agendamento?.cliente_id) return;
 
     const { data: clienteAuth, error: authError } = await (supabase as any)
@@ -559,20 +773,17 @@ export async function notifyClientAppointmentConfirmed(params: {
       .not("app_conta_id", "is", null)
       .limit(1)
       .maybeSingle();
-
     if (authError || !clienteAuth?.app_conta_id) return;
-    const clientePushEnabled = await isClienteAppPushEnabled(
-      clienteAuth.app_conta_id
-    );
+
+    const clientePushEnabled = await isClienteAppPushEnabled(clienteAuth.app_conta_id);
     if (!clientePushEnabled) return;
 
     const { data: rows, error: rowsError } = await (supabase as any)
       .from("push_subscriptions")
-      .select("id, endpoint, p256dh, auth")
+      .select("id, audience, endpoint, p256dh, auth")
       .eq("audience", "cliente_app")
       .eq("ativo", true)
       .eq("cliente_app_conta_id", clienteAuth.app_conta_id);
-
     if (rowsError || !rows?.length) return;
 
     const { data: servico } = agendamento.servico_id
@@ -593,7 +804,11 @@ export async function notifyClientAppointmentConfirmed(params: {
       url: "/app-cliente/agendamentos",
       tag: `agendamento-confirmado-${params.idAgendamento}`,
     });
-  } catch {
-    // Confirmacao da agenda nao pode depender do push.
+  } catch (error) {
+    console.error("[push] falha ao notificar confirmacao do cliente", {
+      idAgendamento: params.idAgendamento,
+      idSalao: params.idSalao,
+      message: normalizeErrorMessage(error),
+    });
   }
 }

@@ -39,6 +39,9 @@ jobs:
       - name: Test App Cliente identity
         run: npx vitest run lib/client-app/identity.test.ts
 
+      - name: Test Web Push delivery policies
+        run: npx vitest run lib/push-delivery-utils.test.ts
+
       - name: Audit
         continue-on-error: true
         run: npm run audit
