@@ -1,15 +1,7 @@
+import { htmlEscape, sendBrevoEmail } from "@/lib/email/brevo";
 import { listarAssinantesNewsletterBlog } from "@/services/blogRouteService";
 
-const RESEND_API_URL = "https://api.resend.com/emails";
 const MAX_BCC_PER_EMAIL = 50;
-
-function htmlEscape(value: string) {
-  return value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;");
-}
 
 function chunk<T>(items: T[], size: number) {
   const chunks: T[][] = [];
@@ -21,55 +13,12 @@ function chunk<T>(items: T[], size: number) {
   return chunks;
 }
 
-async function sendResendEmail(input: {
-  apiKey: string;
-  from: string;
-  to: string;
-  bcc: string[];
-  subject: string;
-  html: string;
-  replyTo?: string;
-}) {
-  const response = await fetch(RESEND_API_URL, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${input.apiKey}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      from: input.from,
-      to: input.to,
-      bcc: input.bcc,
-      subject: input.subject,
-      html: input.html,
-      reply_to: input.replyTo,
-    }),
-  });
-
-  const result = (await response.json().catch(() => ({}))) as {
-    id?: string;
-    message?: string;
-    name?: string;
-  };
-
-  if (!response.ok) {
-    throw new Error(result.message || result.name || "Resend recusou o envio.");
-  }
-
-  return result.id;
-}
-
 export async function enviarNewsletterPostPublicado(input: {
   slug?: string | null;
   titulo?: string | null;
   descricao?: string | null;
   resumo?: string | null;
 }) {
-  const resendApiKey = process.env.RESEND_API_KEY;
-  if (!resendApiKey) {
-    throw new Error("RESEND_API_KEY não configurada.");
-  }
-
   const subscribers = await listarAssinantesNewsletterBlog();
 
   if (subscribers.length === 0) {
@@ -105,14 +54,14 @@ export async function enviarNewsletterPostPublicado(input: {
 
   const emailIds: string[] = [];
   for (const emails of chunk(subscribers, MAX_BCC_PER_EMAIL)) {
-    const emailId = await sendResendEmail({
-      apiKey: resendApiKey,
+    const emailId = await sendBrevoEmail({
       from,
       to,
       bcc: emails,
       subject: `Novo post: ${title}`,
       html,
       replyTo,
+      idempotencyKey: `blog-newsletter-${input.slug || "post"}-${emails.join("|")}`,
     });
 
     if (emailId) emailIds.push(emailId);
