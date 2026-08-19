@@ -47,6 +47,7 @@ jobs:
                   .replace('sendResendEmail', 'sendBrevoEmail')
                   .replace('RESEND_API_KEY', 'BREVO_API_KEY')
                   .replace('vercel-resend', 'vercel-brevo')
+                  .replace('RESEND', 'BREVO')
                   .replace('Resend', 'Brevo')
                   .replace('resend', 'brevo')
               )
