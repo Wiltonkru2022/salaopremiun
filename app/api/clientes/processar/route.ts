@@ -12,9 +12,11 @@ import {
   PlanAccessError,
   createSalaoMutacaoRouteService,
 } from "@/services/salaoMutacaoRouteService";
+import type { PermissionKey } from "@/lib/permissions";
 
 const routeService = createSalaoMutacaoRouteService({
   permission: "clientes_ver",
+  allowedNiveis: ["admin", "gerente", "recepcao"],
   planFeature: "clientes",
   incidentKeyPrefix: "clientes:processar",
   module: "clientes",
@@ -23,6 +25,14 @@ const routeService = createSalaoMutacaoRouteService({
   route: "/api/clientes/processar",
   getAction: (acaoRaw) => acaoRaw || null,
 });
+
+function resolvePermission(input: ReturnType<typeof parseProcessarClienteInput>): PermissionKey {
+  if (input.acao === "excluir") return "clientes_excluir";
+  if (input.acao === "alterar_status") return "clientes_editar";
+  return String(input.cliente?.id || "").trim()
+    ? "clientes_editar"
+    : "clientes_criar";
+}
 
 export async function POST(req: NextRequest) {
   let idSalao = "";
@@ -33,14 +43,14 @@ export async function POST(req: NextRequest) {
     idSalao = input.idSalao;
     acaoRaw = input.acao;
 
-    await routeService.validar(idSalao);
+    await routeService.validar(idSalao, resolvePermission(input));
 
     const service = createClienteService();
     const existingClientId = String(input.cliente?.id || "").trim();
     const birthRaw = String(input.cliente?.data_nascimento || "").trim();
     if (birthRaw && !parseClienteBirthDate(birthRaw)) {
       return NextResponse.json(
-        { error: "Informe uma data de nascimento valida." },
+        { error: "Informe uma data de nascimento válida." },
         { status: 400 }
       );
     }
@@ -83,7 +93,7 @@ export async function POST(req: NextRequest) {
       const firstIssue = error.issues[0];
       return NextResponse.json(
         {
-          error: firstIssue?.message || "Payload invalido.",
+          error: firstIssue?.message || "Payload inválido.",
           issues: error.flatten(),
         },
         { status: 400 }

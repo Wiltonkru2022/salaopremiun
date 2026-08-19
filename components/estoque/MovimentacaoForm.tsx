@@ -263,7 +263,7 @@ export default function MovimentacaoForm() {
             />
 
             <Input
-              label="Valor unitario"
+              label="Valor unitário"
               value={valorUnitario}
               onChange={(value) => setValorUnitario(maskMoneyInput(value))}
               placeholder="0,00"
@@ -271,7 +271,7 @@ export default function MovimentacaoForm() {
           </div>
 
           <Textarea
-            label="Observacoes"
+            label="Observações"
             value={observacoes}
             onChange={setObservacoes}
           />

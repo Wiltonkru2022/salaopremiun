@@ -143,7 +143,7 @@ export default function AssinaturaPage() {
       ) : !mostrarBotaoIniciarTrial && jaUsouTrial ? (
         <section className="rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-3.5 text-sm leading-6 text-amber-900 shadow-sm">
           <strong>O teste grátis já foi usado neste salão.</strong> Agora a
-          contratacao segue pelos planos pagos.
+          contratação segue pelos planos pagos.
         </section>
       ) : null}
 

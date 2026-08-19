@@ -374,7 +374,7 @@ export default function ClientesPage() {
     if (!telefone) return "";
 
     const nome = String(cliente.nome || "").trim() || "tudo bem";
-    const mensagem = `Oi, ${nome}! O salão agora usa o App Cliente do SalãoPremium. Crie seu acesso com este telefone para ver salões e agendar online: https://app.salaopremiun.com.br/app-cliente/cadastro`;
+    const mensagem = `Oi, ${nome}! O salão agora usa o App Cliente do Salão Premium. Crie seu acesso com este telefone para ver salões e agendar online: https://app.salaopremiun.com.br/app-cliente/cadastro`;
     return `https://wa.me/55${telefone.replace(/^55/, "")}?text=${encodeURIComponent(
       mensagem
     )}`;
@@ -621,7 +621,7 @@ export default function ClientesPage() {
                           <AppStatusBadge status={item.appStatus} />
                           {Number(item.cashback || 0) > 0 ? (
                             <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
-                              Credito{" "}
+                              Crédito{" "}
                               {Number(item.cashback || 0).toLocaleString("pt-BR", {
                                 style: "currency",
                                 currency: "BRL",

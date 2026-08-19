@@ -25,6 +25,7 @@ import { parseComboDisplayMeta } from "@/lib/combo/display";
 import { getLocalDayRangeIso } from "@/lib/date/local-day-range";
 import { getPlanoMinimoParaRecurso, type PlanoCobravelCodigo } from "@/lib/plans/catalog";
 import { getAssinaturaUrl } from "@/lib/site-urls";
+import { statusPtBR } from "@/core/i18n/pt-BR";
 
 type ClienteJoin = {
   nome?: string | null;
@@ -2084,7 +2085,7 @@ export default function RelatorioFinanceiroPage() {
                             item.status
                           )}`}
                         >
-                          {item.status}
+                          {statusPtBR(item.status)}
                         </span>
                       </td>
                       <td className="px-3.5 py-4 whitespace-nowrap text-sm text-zinc-700">

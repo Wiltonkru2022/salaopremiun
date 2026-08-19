@@ -66,9 +66,8 @@ async function validarPlanoParaPermissao(
   }
 }
 
-export async function requireSalaoPermission(
+export async function getSalaoPermissionContext(
   idSalao: string,
-  permission: PermissionKey,
   options: RequireSalaoPermissionOptions = {}
 ) {
   const membership = await requireSalaoMembership(idSalao, options);
@@ -79,13 +78,26 @@ export async function requireSalaoPermission(
     ...sanitizePermissoesDb(permissoesDb, {
       idSalao,
       idUsuario: membership.usuario.id,
-      origem: "requireSalaoPermission",
+      origem: "getSalaoPermissionContext",
     }),
   };
 
-  if (!permissoes[permission]) {
+  return {
+    ...membership,
+    permissoes,
+  };
+}
+
+export async function requireSalaoPermission(
+  idSalao: string,
+  permission: PermissionKey,
+  options: RequireSalaoPermissionOptions = {}
+) {
+  const context = await getSalaoPermissionContext(idSalao, options);
+
+  if (!context.permissoes[permission]) {
     throw new AuthzError(
-      "Usuario sem permissao para esta acao.",
+      "Usuário sem permissão para esta ação.",
       403,
       "sem_permissao"
     );
@@ -93,10 +105,7 @@ export async function requireSalaoPermission(
 
   await validarPlanoParaPermissao(idSalao, permission);
 
-  return {
-    ...membership,
-    permissoes,
-  };
+  return context;
 }
 
 export async function requireSalaoAnyPermission(
@@ -105,40 +114,26 @@ export async function requireSalaoAnyPermission(
   options: RequireSalaoPermissionOptions = {}
 ) {
   if (permissions.length === 0) {
-    throw new AuthzError("Nenhuma permissao informada para validacao.", 500, "permissoes_vazias");
+    throw new AuthzError("Nenhuma permissão informada para validação.", 500, "permissoes_vazias");
   }
 
-  const membership = await requireSalaoMembership(idSalao, options);
-  const permissoesDb = await getUserPermissionsRow(idSalao, membership.usuario.id);
-
-  const permissoes = {
-    ...buildPermissoesByNivel(membership.usuario.nivel),
-    ...sanitizePermissoesDb(permissoesDb, {
-      idSalao,
-      idUsuario: membership.usuario.id,
-      origem: "requireSalaoAnyPermission",
-    }),
-  };
-
-  const permitido = permissions.some((permission) => permissoes[permission]);
+  const context = await getSalaoPermissionContext(idSalao, options);
+  const permitido = permissions.some((permission) => context.permissoes[permission]);
 
   if (!permitido) {
     throw new AuthzError(
-      "Usuario sem permissao para esta acao.",
+      "Usuário sem permissão para esta ação.",
       403,
       "sem_permissao"
     );
   }
 
   for (const permission of permissions) {
-    if (permissoes[permission]) {
+    if (context.permissoes[permission]) {
       await validarPlanoParaPermissao(idSalao, permission);
       break;
     }
   }
 
-  return {
-    ...membership,
-    permissoes,
-  };
+  return context;
 }

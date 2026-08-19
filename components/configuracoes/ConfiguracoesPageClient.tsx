@@ -957,7 +957,7 @@ export default function ConfiguracoesPageClient({
           <div className="grid gap-3 md:grid-cols-3">
             <ConfigMetricCard
               label="Salão"
-              value={salaoForm.nome || "SalãoPremium"}
+              value={salaoForm.nome || "Salão Premium"}
               detail={salaoForm.status || "Cadastro ativo"}
               icon={<Building2 size={18} />}
             />

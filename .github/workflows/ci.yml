@@ -53,6 +53,9 @@ jobs:
       - name: Test Web Push delivery policies
         run: npx vitest run lib/push-delivery-utils.test.ts
 
+      - name: Audit painel PT-BR
+        run: node scripts/audit/painel-ui-text-audit.mjs --check
+
       - name: Audit
         continue-on-error: true
         run: npm run audit

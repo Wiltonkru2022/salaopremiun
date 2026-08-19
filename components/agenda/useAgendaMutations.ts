@@ -8,7 +8,6 @@ import type {
 import { useCallback } from "react";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import type { AgendaPageTone } from "@/components/agenda/page-types";
-import { cancelarAgendamentoComComanda } from "@/lib/agenda/cancelarAgendamentoComComanda";
 import { saveAgendaItem } from "@/lib/agenda/saveAgendaItem";
 import { monitorClientOperation } from "@/lib/monitoring/client";
 import { mergeBloqueios } from "@/lib/utils/agenda";
@@ -593,46 +592,27 @@ export function useAgendaMutations({
       if (bloquearSeAssinaturaInvalida()) return;
 
       abrirConfirmacao({
-        title: "Excluir agendamento",
-        message: "Deseja excluir este agendamento? Esta ação não poderá ser desfeita.",
-        confirmLabel: "Excluir",
-        tone: "danger",
+        title: "Cancelar agendamento",
+        message:
+          "Deseja cancelar este agendamento? O atendimento permanecerá no histórico e os itens vinculados serão tratados com segurança.",
+        confirmLabel: "Cancelar agendamento",
+        tone: "warning",
         onConfirm: async () => {
-          await sincronizarAgendamento({
-            idAgendamento: item.id,
-            idComandaNova: null,
-            idServico: item.servico_id,
-            idProfissional: item.profissional_id,
+          const response = await fetch("/api/painel/agendamentos/status", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idAgendamento: item.id, status: "cancelado" }),
           });
-
-          const { error } = await supabase
-            .from("agendamentos")
-            .delete()
-            .eq("id", item.id);
-
-          if (error) {
-            console.error(error);
-            throw new Error("Erro ao excluir agendamento.");
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload.ok) {
+            throw new Error(String(payload.error || "Não foi possível cancelar o agendamento."));
           }
-
-          try {
-            await notifyReleasedSlotToWaitlist({ idSalao, item });
-          } catch {
-            // A exclusao ja foi salva; a fila de espera nao deve travar a operacao.
-          }
-
           await loadAgenda();
         },
       });
     },
-    [
-      bloquearSeAssinaturaInvalida,
-      idSalao,
-      loadAgenda,
-      sincronizarAgendamento,
-      supabase,
-      abrirConfirmacao,
-    ]
+    [bloquearSeAssinaturaInvalida, loadAgenda, abrirConfirmacao]
   );
 
   const handleQuickStatusChange = useCallback(
@@ -646,8 +626,6 @@ export function useAgendaMutations({
         | "cancelado"
     ) => {
       if (bloquearSeAssinaturaInvalida()) return;
-
-      const updatedAt = new Date().toISOString();
 
       const { error } = await monitorClientOperation(
         {
@@ -664,39 +642,22 @@ export function useAgendaMutations({
           successMessage: "Status do agendamento atualizado.",
           errorMessage: "Falha ao atualizar status do agendamento.",
         },
-        async () =>
-          nextStatus === "confirmado"
-            ? await (async () => {
-                const response = await fetch("/api/painel/agendamentos/status", {
-                  method: "POST",
-                  credentials: "same-origin",
-                  headers: { "Content-Type": "application/json" },
-                  body: JSON.stringify({ idAgendamento: item.id, status: nextStatus }),
-                });
-                const payload = await response.json().catch(() => ({}));
-                return {
-                  data: null,
-                  error: response.ok && payload.ok
-                    ? null
-                    : new Error(String(payload.error || "Falha ao confirmar agendamento.")),
-                };
-              })()
-            : await supabase
-            .from("agendamentos")
-            .update({
-              status: nextStatus,
-              ...(item.sinal_status
-                ? {
-                    sinal_status: "confirmado",
-                    sinal_confirmado_em: updatedAt,
-                    sinal_confirmado_por_tipo: "salao",
-                    sinal_confirmado_por_nome: "Recepção do salão",
-                    reserva_expira_em: null,
-                  }
-                : {}),
-              updated_at: updatedAt,
-            })
-            .eq("id", item.id)
+        async () => {
+          const response = await fetch("/api/painel/agendamentos/status", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idAgendamento: item.id, status: nextStatus }),
+          });
+          const payload = await response.json().catch(() => ({}));
+          return {
+            data: null,
+            error:
+              response.ok && payload.ok
+                ? null
+                : new Error(String(payload.error || "Falha ao atualizar status do agendamento.")),
+          };
+        }
       );
 
       if (error) {
@@ -705,21 +666,12 @@ export function useAgendaMutations({
         return;
       }
 
-      if (nextStatus === "cancelado") {
-        try {
-          await notifyReleasedSlotToWaitlist({ idSalao, item });
-        } catch {
-          // O status ja foi salvo; a fila de espera nao deve travar a operacao.
-        }
-      }
-
       await loadAgenda();
     },
     [
       bloquearSeAssinaturaInvalida,
       idSalao,
       loadAgenda,
-      supabase,
       abrirAviso,
     ]
   );
@@ -731,20 +683,19 @@ export function useAgendaMutations({
       abrirConfirmacao({
         title: "Cancelar agendamento",
         message:
-          "Deseja cancelar este agendamento? Os itens vinculados serão removidos da comanda. Se a comanda ficar sem itens, ela será cancelada automaticamente.",
+          "Deseja cancelar este agendamento? Os itens vinculados serão removidos da comanda e o horário poderá ser oferecido novamente.",
         confirmLabel: "Cancelar agendamento",
         tone: "warning",
         onConfirm: async () => {
-          await cancelarAgendamentoComComanda({
-            supabase,
-            idSalao,
-            idAgendamento: item.id,
+          const response = await fetch("/api/painel/agendamentos/status", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ idAgendamento: item.id, status: "cancelado" }),
           });
-
-          try {
-            await notifyReleasedSlotToWaitlist({ idSalao, item });
-          } catch {
-            // O cancelamento ja foi salvo; a fila de espera nao deve travar a operacao.
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok || !payload.ok) {
+            throw new Error(String(payload.error || "Não foi possível cancelar o agendamento."));
           }
 
           setModalOpen(false);
@@ -756,10 +707,8 @@ export function useAgendaMutations({
     [
       bloquearSeAssinaturaInvalida,
       loadAgenda,
-      idSalao,
       setEditingItem,
       setModalOpen,
-      supabase,
       abrirConfirmacao,
     ]
   );

@@ -12,18 +12,29 @@ import {
   PlanAccessError,
   createSalaoMutacaoRouteService,
 } from "@/services/salaoMutacaoRouteService";
+import type { PermissionKey } from "@/lib/permissions";
 
 const routeService = createSalaoMutacaoRouteService({
   permission: "servicos_ver",
   planFeature: "servicos",
   incidentKeyPrefix: "servicos:processar",
   module: "servicos",
-  title: "Processamento de servico falhou",
-  fallbackMessage: "Erro interno ao processar servico.",
+  title: "Processamento de serviço falhou",
+  fallbackMessage: "Erro interno ao processar serviço.",
   route: "/api/servicos/processar",
   getAction: (acaoRaw) =>
     ["salvar", "alterar_status", "excluir"].includes(acaoRaw) ? acaoRaw : null,
 });
+
+function resolvePermission(
+  input: ReturnType<typeof parseProcessarServicoInput>
+): PermissionKey {
+  if (input.acao === "excluir") return "servicos_excluir";
+  if (input.acao === "alterar_status") return "servicos_editar";
+  return String(input.servico?.id || "").trim()
+    ? "servicos_editar"
+    : "servicos_criar";
+}
 
 function revalidateClientAppServiceViews() {
   revalidatePath("/app-cliente", "layout");
@@ -40,7 +51,7 @@ export async function POST(req: NextRequest) {
     idSalao = input.idSalao;
     acaoRaw = input.acao;
 
-    await routeService.validar(idSalao);
+    await routeService.validar(idSalao, resolvePermission(input));
 
     const result = await processarServicoUseCase({
       input,
@@ -57,7 +68,7 @@ export async function POST(req: NextRequest) {
       const firstIssue = error.issues[0];
       return NextResponse.json(
         {
-          error: firstIssue?.message || "Payload invalido.",
+          error: firstIssue?.message || "Payload inválido.",
           issues: error.flatten(),
         },
         { status: 400 }
@@ -93,13 +104,13 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    console.error("Erro geral ao processar servico:", error);
+    console.error("Erro geral ao processar serviço:", error);
     return NextResponse.json(
       {
         error:
           error instanceof Error
             ? error.message
-            : "Erro interno ao processar servico.",
+            : "Erro interno ao processar serviço.",
       },
       { status: 500 }
     );

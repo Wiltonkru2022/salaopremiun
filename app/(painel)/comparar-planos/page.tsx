@@ -105,13 +105,13 @@ export default async function CompararPlanosPage({
           <div className="bg-zinc-950 p-6 text-white sm:p-8">
             <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.20em] text-[var(--app-accent)]">
               <Sparkles size={14} />
-              Planos SalãoPremium
+              Planos Salão Premium
             </div>
             <h1 className="mt-4 max-w-3xl font-display text-[2.45rem] font-black leading-tight tracking-[-0.05em]">
-              Escolha o plano certo sem poluicao.
+              Escolha o plano certo sem poluição.
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300">
-              Agora a comparacao mostra somente o que importa: preço, capacidade
+              Agora a comparação mostra somente o que importa: preço, capacidade
               da equipe e recursos principais para operar melhor.
             </p>
           </div>
@@ -213,7 +213,7 @@ export default async function CompararPlanosPage({
                     destaque ? "text-zinc-300" : "text-zinc-500"
                   }`}
                 >
-                  / mes
+                  / mês
                 </span>
               </div>
 

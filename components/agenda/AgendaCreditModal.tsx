@@ -81,7 +81,7 @@ export default function AgendaCreditModal({
 
         <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-3">
           <label className="mb-2 block text-sm font-semibold text-zinc-900">
-            Observacao
+            Observação
           </label>
           <textarea
             rows={3}

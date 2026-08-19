@@ -9,11 +9,11 @@ import {
 } from "@/lib/plans/access";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import type { PermissionKey } from "@/lib/permissions";
+import type { PermissionKey, UserNivel } from "@/lib/permissions";
 
 export type SalaoMutacaoConfig = {
   permission: PermissionKey;
-  allowedNiveis?: Array<"admin" | "gerente" | "profissional" | "assistente">;
+  allowedNiveis?: UserNivel[];
   planFeature: PlanoRecursoCodigo;
   incidentKeyPrefix: string;
   module: string;
@@ -25,10 +25,14 @@ export type SalaoMutacaoConfig = {
 
 export function createSalaoMutacaoRouteService(config: SalaoMutacaoConfig) {
   return {
-    async validar(idSalao: string) {
-      await requireSalaoPermission(idSalao, config.permission, {
-        allowedNiveis: config.allowedNiveis || ["admin", "gerente"],
-      });
+    async validar(idSalao: string, permissionOverride?: PermissionKey) {
+      await requireSalaoPermission(
+        idSalao,
+        permissionOverride || config.permission,
+        {
+          allowedNiveis: config.allowedNiveis || ["admin", "gerente"],
+        }
+      );
       await assertCanMutatePlanFeature(idSalao, config.planFeature);
     },
 

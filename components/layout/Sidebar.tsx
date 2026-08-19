@@ -110,7 +110,7 @@ export default function Sidebar({
               <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-zinc-950 text-white ring-1 ring-zinc-900/10">
                 <img
                   src="/favicon-preview.png"
-                  alt="SalãoPremium"
+                  alt="Salão Premium"
                   className="h-full w-full object-cover"
                 />
               </div>
@@ -120,7 +120,7 @@ export default function Sidebar({
                   Sistema
                 </div>
                 <div className="mt-0.5 truncate font-display text-[0.98rem] font-black tracking-[-0.03em] text-zinc-950">
-                  SalãoPremium
+                  Salão Premium
                 </div>
               </div>
             </div>
