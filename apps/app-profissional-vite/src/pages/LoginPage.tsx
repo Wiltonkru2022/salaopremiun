@@ -1,14 +1,25 @@
-import { Eye, EyeOff, KeyRound, UserRound } from "lucide-react";
+import { KeyRound, UserRound } from "lucide-react";
 import { FormEvent, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "../components/ui/Button";
 import { Field, Input } from "../components/ui/Input";
 
+function onlyDigits(value: string) {
+  return value.replace(/\D/g, "");
+}
+
+function maskCpf(value: string) {
+  const digits = onlyDigits(value).slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
 export function LoginPage() {
   const { login } = useAuth();
   const [cpf, setCpf] = useState("");
   const [senha, setSenha] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -17,7 +28,7 @@ export function LoginPage() {
     setLoading(true);
     setError("");
     try {
-      await login(cpf, senha);
+      await login(onlyDigits(cpf), senha);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Nao foi possivel entrar.");
     } finally {
@@ -42,16 +53,13 @@ export function LoginPage() {
           <Field label="CPF">
             <div className="relative">
               <UserRound className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={19} />
-              <Input className="w-full bg-white pl-11 text-zinc-950" inputMode="numeric" placeholder="000.000.000-00" value={cpf} onChange={(event) => setCpf(event.target.value)} />
+              <Input className="w-full bg-white pl-11 text-zinc-950" name="cpf" inputMode="numeric" maxLength={14} placeholder="000.000.000-00" value={cpf} onChange={(event) => setCpf(maskCpf(event.target.value))} />
             </div>
           </Field>
           <Field label="Senha">
             <div className="relative">
-              <KeyRound className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={19} />
-              <Input className="w-full bg-white pl-11 pr-12 text-zinc-950" type={showPassword ? "text" : "password"} placeholder="Sua senha" value={senha} onChange={(event) => setSenha(event.target.value)} />
-              <button type="button" className="absolute right-2 top-1/2 grid h-10 w-10 -translate-y-1/2 place-items-center rounded-full text-zinc-500" onClick={() => setShowPassword((current) => !current)} aria-label={showPassword ? "Ocultar senha" : "Ver senha"}>
-                {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
-              </button>
+              <KeyRound className="pointer-events-none absolute left-4 top-1/2 z-10 -translate-y-1/2 text-zinc-400" size={19} />
+              <Input className="w-full bg-white pl-11 text-zinc-950" type="password" placeholder="Sua senha" value={senha} onChange={(event) => setSenha(event.target.value)} />
             </div>
           </Field>
         </div>
