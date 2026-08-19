@@ -1,11 +1,21 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
-import { getCacheSavedAt, readCache, writeCache } from "../lib/cache";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { clearProfessionalCache, getCacheSavedAt, readCache, writeCache } from "../lib/cache";
 import { supabase } from "../lib/supabase";
 import {
   trackProfessionalDuration,
   trackProfessionalProductivity,
 } from "../lib/product-events";
-import type { Agendamento, Avaliacao, Cliente, Comanda, ComissaoLancamento, ItemComanda, Notificacao, ProfissionalResumo, Servico } from "../types/database";
+import type {
+  Agendamento,
+  Avaliacao,
+  Cliente,
+  Comanda,
+  ComissaoLancamento,
+  ItemComanda,
+  Notificacao,
+  ProfissionalResumo,
+  Servico,
+} from "../types/database";
 
 type DataState = {
   agendamentos: Agendamento[];
@@ -30,7 +40,7 @@ const emptyState: DataState = {
   notificacoes: [],
   comissoes: [],
   avaliacoes: [],
-  profissionais: []
+  profissionais: [],
 };
 
 function uniqueById<T extends { id: string }>(items: T[] = []) {
@@ -41,6 +51,19 @@ function uniqueServices(items: Servico[] = []) {
   return Array.from(
     new Map(items.map((item) => [`${item.profissional_id}:${item.id}`, item])).values()
   );
+}
+
+async function requestJson(url: string, options?: RequestInit) {
+  const response = await fetch(url, {
+    credentials: "same-origin",
+    cache: "no-store",
+    ...options,
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok || payload?.ok === false) {
+    throw new Error(String(payload?.error || "Não foi possível sincronizar os dados."));
+  }
+  return payload;
 }
 
 export function useProfissionalData(
@@ -56,36 +79,35 @@ export function useProfissionalData(
   const [lastSyncedAt, setLastSyncedAt] = useState<string | null>(() => getCacheSavedAt(cacheKey));
   const [isOnline, setIsOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine);
 
-  const refresh = useCallback(async () => {
-    if (!profissionalId) return;
-    setLoading(true);
-    setError(null);
+  const commitPartial = useCallback(
+    (partial: Partial<DataState>) => {
+      setState((current) => {
+        const next = { ...current, ...partial };
+        writeCache(cacheKey, next);
+        return next;
+      });
+      setLastSyncedAt(new Date().toISOString());
+    },
+    [cacheKey]
+  );
 
+  useEffect(() => {
+    setState(readCache(cacheKey, emptyState));
+    setLastSyncedAt(getCacheSavedAt(cacheKey));
+  }, [cacheKey]);
+
+  const refreshCore = useCallback(async () => {
+    if (!profissionalId) return;
     const start = new Date();
-    start.setDate(1);
-    const end = new Date(start.getFullYear(), start.getMonth() + 5, 0);
+    start.setDate(start.getDate() - 7);
+    const end = new Date();
+    end.setDate(end.getDate() + 75);
     const params = new URLSearchParams({
       start: start.toISOString().slice(0, 10),
       end: end.toISOString().slice(0, 10),
     });
-    const response = await fetch(`/api/app-profissional/data?${params.toString()}`, {
-      credentials: "same-origin",
-      cache: "no-store",
-    });
-    const data = await response.json().catch(() => ({}));
-
-    if (!response.ok || !data.ok) {
-      setError(String(data.error || "Nao foi possivel sincronizar a agenda."));
-      trackProfessionalProductivity("sincronizacao_falhou", {
-        details: { message: String(data.error || response.status) },
-      });
-      setLoading(false);
-      return;
-    }
-
-    const payload = (data || {}) as Partial<DataState>;
-
-    const nextState: DataState = {
+    const payload = await requestJson(`/api/app-profissional/data?${params.toString()}`);
+    commitPartial({
       agendamentos: uniqueById([
         ...((payload.agendamentos ?? []) as Agendamento[]),
         ...((payload.bloqueios ?? []) as Agendamento[]),
@@ -93,19 +115,54 @@ export function useProfissionalData(
       bloqueios: uniqueById((payload.bloqueios ?? []) as Agendamento[]),
       clientes: uniqueById((payload.clientes ?? []) as Cliente[]),
       servicos: uniqueServices((payload.servicos ?? []) as Servico[]),
+      notificacoes: uniqueById((payload.notificacoes ?? []) as Notificacao[]),
+      profissionais: uniqueById((payload.profissionais ?? []) as ProfissionalResumo[]),
+    });
+  }, [commitPartial, profissionalId]);
+
+  const refreshComandas = useCallback(async () => {
+    if (!profissionalId) return;
+    const payload = await requestJson("/api/app-profissional/comandas");
+    commitPartial({
       comandas: uniqueById((payload.comandas ?? []) as Comanda[]),
       itensComanda: uniqueById((payload.itensComanda ?? []) as ItemComanda[]),
-      notificacoes: uniqueById((payload.notificacoes ?? []) as Notificacao[]),
-      comissoes: uniqueById((payload.comissoes ?? []) as ComissaoLancamento[]),
-      avaliacoes: uniqueById((payload.avaliacoes ?? []) as Avaliacao[]),
-      profissionais: uniqueById((payload.profissionais ?? []) as ProfissionalResumo[])
-    };
+    });
+  }, [commitPartial, profissionalId]);
 
-    setState(nextState);
-    writeCache(cacheKey, nextState);
-    setLastSyncedAt(new Date().toISOString());
+  const refreshComissoes = useCallback(async () => {
+    if (!profissionalId) return;
+    const payload = await requestJson("/api/app-profissional/comissoes");
+    commitPartial({
+      comissoes: uniqueById((payload.comissoes ?? []) as ComissaoLancamento[]),
+    });
+  }, [commitPartial, profissionalId]);
+
+  const refreshAvaliacoes = useCallback(async () => {
+    if (!profissionalId) return;
+    const payload = await requestJson("/api/app-profissional/avaliacoes");
+    commitPartial({
+      avaliacoes: uniqueById((payload.avaliacoes ?? []) as Avaliacao[]),
+    });
+  }, [commitPartial, profissionalId]);
+
+  const refresh = useCallback(async () => {
+    if (!profissionalId) return;
+    setLoading(true);
+    setError(null);
+    const results = await Promise.allSettled([
+      refreshCore(),
+      refreshComandas(),
+      refreshComissoes(),
+      refreshAvaliacoes(),
+    ]);
+    const failure = results.find((item): item is PromiseRejectedResult => item.status === "rejected");
+    if (failure) {
+      const message = failure.reason instanceof Error ? failure.reason.message : "Não foi possível sincronizar os dados.";
+      setError(message);
+      trackProfessionalProductivity("sincronizacao_falhou", { details: { message } });
+    }
     setLoading(false);
-  }, [profissionalId, cacheKey]);
+  }, [profissionalId, refreshAvaliacoes, refreshComandas, refreshComissoes, refreshCore]);
 
   useEffect(() => {
     void refresh();
@@ -114,30 +171,43 @@ export function useProfissionalData(
   useEffect(() => {
     if (!profissionalId) return;
 
-    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
-    const scheduleRefresh = () => {
-      if (refreshTimer) clearTimeout(refreshTimer);
-      refreshTimer = setTimeout(() => void refresh(), 350);
+    let agendaTimer: ReturnType<typeof setTimeout> | null = null;
+    let caixaTimer: ReturnType<typeof setTimeout> | null = null;
+    const refreshAgenda = () => {
+      if (agendaTimer) clearTimeout(agendaTimer);
+      agendaTimer = setTimeout(() => {
+        void refreshCore().catch((err) => setError(err instanceof Error ? err.message : "Falha ao atualizar agenda."));
+      }, 500);
     };
+    const refreshCaixa = () => {
+      if (caixaTimer) clearTimeout(caixaTimer);
+      caixaTimer = setTimeout(() => {
+        void Promise.all([refreshComandas(), refreshComissoes()]).catch((err) =>
+          setError(err instanceof Error ? err.message : "Falha ao atualizar comandas.")
+        );
+      }, 500);
+    };
+
     const channel = supabase.channel(
       `salaopremiun-${profissionalId}-${podeVerAgendaTodos ? "todos" : "proprio"}`
     );
     if (podeVerAgendaTodos) {
       channel
-        .on("postgres_changes", { event: "*", schema: "public", table: "agendamentos" }, scheduleRefresh)
-        .on("postgres_changes", { event: "*", schema: "public", table: "comandas" }, scheduleRefresh);
+        .on("postgres_changes", { event: "*", schema: "public", table: "agendamentos" }, refreshAgenda)
+        .on("postgres_changes", { event: "*", schema: "public", table: "comandas" }, refreshCaixa);
     } else {
       channel
-        .on("postgres_changes", { event: "*", schema: "public", table: "agendamentos", filter: `profissional_id=eq.${profissionalId}` }, scheduleRefresh)
-        .on("postgres_changes", { event: "*", schema: "public", table: "comandas", filter: `profissional_id=eq.${profissionalId}` }, scheduleRefresh);
+        .on("postgres_changes", { event: "*", schema: "public", table: "agendamentos", filter: `profissional_id=eq.${profissionalId}` }, refreshAgenda)
+        .on("postgres_changes", { event: "*", schema: "public", table: "comanda_itens", filter: `id_profissional=eq.${profissionalId}` }, refreshCaixa);
     }
     channel.subscribe();
 
     return () => {
-      if (refreshTimer) clearTimeout(refreshTimer);
+      if (agendaTimer) clearTimeout(agendaTimer);
+      if (caixaTimer) clearTimeout(caixaTimer);
       void supabase.removeChannel(channel);
     };
-  }, [profissionalId, podeVerAgendaTodos, refresh]);
+  }, [podeVerAgendaTodos, profissionalId, refreshComandas, refreshComissoes, refreshCore]);
 
   useEffect(() => {
     const onOnline = () => {
@@ -158,58 +228,52 @@ export function useProfissionalData(
   }, [refresh]);
 
   const actions = useMemo(() => {
+    async function apiAction(action: string, body: Record<string, unknown> = {}) {
+      return requestJson("/api/app-profissional/actions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action, ...body }),
+      });
+    }
+
     async function confirmarAgendamento(id: string) {
       if (!profissionalId) return;
       const startedAt = performance.now();
-      const response = await fetch("/api/app-profissional/agenda/acao", {
+      await requestJson("/api/app-profissional/agenda/acao", {
         method: "POST",
-        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "confirmar", agendamentoId: id }),
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload.ok) {
-        throw new Error(String(payload.error || "Nao foi possivel confirmar o agendamento."));
-      }
-      trackProfessionalDuration("confirmar_agendamento", performance.now() - startedAt, {
-        entityId: id,
-      });
+      trackProfessionalDuration("confirmar_agendamento", performance.now() - startedAt, { entityId: id });
       trackProfessionalProductivity("agendamento_confirmado", { entityId: id });
-      await refresh();
+      await refreshCore();
     }
 
     async function excluirAgendamento(id: string, _targetProfissionalId?: string) {
       if (!profissionalId) return;
-      const response = await fetch("/api/app-profissional/agenda/acao", {
+      const payload = await requestJson("/api/app-profissional/agenda/acao", {
         method: "POST",
-        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ action: "remover", agendamentoId: id }),
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload.ok) {
-        throw new Error(String(payload.error || "Nao foi possivel cancelar ou excluir o item da agenda."));
-      }
       trackProfessionalProductivity(
         payload.kind === "bloqueio" ? "bloqueio_excluido" : "agendamento_cancelado",
         { entityId: id }
       );
-      await refresh();
+      await refreshCore();
     }
 
     async function bloquearHorario(
       datas: string[],
       horaInicio: string,
       horaFim: string,
-      titulo = "Horario bloqueado",
+      titulo = "Horário bloqueado",
       targetProfissionalId?: string
     ) {
       const actorId = targetProfissionalId || profissionalId;
       if (!actorId) return;
-
-      const response = await fetch("/api/app-profissional/agenda/bloquear", {
+      await requestJson("/api/app-profissional/agenda/bloquear", {
         method: "POST",
-        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           datas: Array.from(new Set(datas.filter(Boolean))),
@@ -219,51 +283,41 @@ export function useProfissionalData(
           motivo: titulo,
         }),
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload.ok) {
-        throw new Error(String(payload.error || "Nao foi possivel bloquear o horario."));
-      }
-      await refresh();
+      await refreshCore();
     }
 
-    async function criarAgendamento(payload: { clienteId: string; servicoId: string; data: string; horaInicio: string; profissionalId?: string }) {
+    async function criarAgendamento(payload: {
+      clienteId: string;
+      servicoId: string;
+      data: string;
+      horaInicio: string;
+      profissionalId?: string;
+    }) {
       if (!profissionalId) return;
       const targetProfissionalId = payload.profissionalId || profissionalId;
-      const { error } = await supabase.rpc("app_profissional_criar_agendamento", {
-        p_profissional_id: targetProfissionalId,
-        p_cliente_id: payload.clienteId,
-        p_servico_id: payload.servicoId,
-        p_data: payload.data,
-        p_hora_inicio: payload.horaInicio
-      });
-      if (error) throw new Error(error.message);
-
+      await apiAction("criar_agendamento", { ...payload, profissionalId: targetProfissionalId });
       try {
-        const auditResponse = await fetch("/api/app-profissional/agenda/auditoria-criacao", {
+        await fetch("/api/app-profissional/agenda/auditoria-criacao", {
           method: "POST",
           credentials: "same-origin",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            ...payload,
-            profissionalId: targetProfissionalId,
-          }),
+          body: JSON.stringify({ ...payload, profissionalId: targetProfissionalId }),
         });
-
-        if (!auditResponse.ok) {
-          console.warn("Nao foi possivel registrar a autoria do agendamento.");
-        }
-      } catch (auditError) {
-        console.warn("Falha ao registrar autoria do agendamento.", auditError);
+      } catch {
+        // A criação já foi concluída; auditoria não deve duplicar o agendamento.
       }
-
-      await refresh();
+      await refreshCore();
     }
 
-    async function reagendarAgendamento(payload: { agendamentoId: string; data: string; horaInicio: string; horaFim: string; status: string }) {
-      if (!profissionalId) return;
-      const response = await fetch("/api/app-profissional/agenda/acao", {
+    async function reagendarAgendamento(payload: {
+      agendamentoId: string;
+      data: string;
+      horaInicio: string;
+      horaFim: string;
+      status: string;
+    }) {
+      await requestJson("/api/app-profissional/agenda/acao", {
         method: "POST",
-        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           action: "reagendar",
@@ -273,161 +327,115 @@ export function useProfissionalData(
           horaFim: payload.horaFim,
         }),
       });
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok || !result.ok) {
-        throw new Error(String(result.error || "Nao foi possivel reagendar o agendamento."));
-      }
       trackProfessionalProductivity("agendamento_reagendado", {
         entityId: payload.agendamentoId,
         details: { data: payload.data, horaInicio: payload.horaInicio },
       });
-      await refresh();
+      await refreshCore();
     }
 
     async function salvarCliente(payload: Pick<Cliente, "nome" | "telefone" | "observacoes">) {
-      if (!profissionalId) return;
-      const { error } = await supabase.rpc("app_profissional_criar_cliente", {
-        p_profissional_id: profissionalId,
-        p_nome: payload.nome,
-        p_telefone: payload.telefone || "",
-        p_observacoes: payload.observacoes || ""
-      });
-      if (error) throw new Error(error.message);
-      await refresh();
+      await apiAction("criar_cliente", payload);
+      await refreshCore();
     }
 
     async function editarCliente(id: string, payload: Pick<Cliente, "nome" | "telefone" | "observacoes">) {
-      if (!profissionalId) return;
-      const { error } = await supabase.rpc("app_profissional_editar_cliente", {
-        p_profissional_id: profissionalId,
-        p_cliente_id: id,
-        p_nome: payload.nome,
-        p_telefone: payload.telefone || "",
-        p_observacoes: payload.observacoes || ""
-      });
-      if (error) throw new Error(error.message);
-      await refresh();
+      await apiAction("editar_cliente", { clienteId: id, ...payload });
+      await refreshCore();
     }
 
-    async function salvarServico(payload: Pick<Servico, "nome" | "preco" | "duracao_minutos">) {
-      if (!profissionalId) return;
-      const { error } = await supabase.rpc("app_profissional_criar_servico", {
-        p_profissional_id: profissionalId,
-        p_nome: payload.nome,
-        p_preco: payload.preco,
-        p_duracao: payload.duracao_minutos
+    async function salvarServico(payload: Pick<Servico, "nome" | "preco" | "duracao_minutos" | "descricao">) {
+      await apiAction("criar_servico", {
+        nome: payload.nome,
+        preco: payload.preco,
+        duracaoMinutos: payload.duracao_minutos,
+        descricao: payload.descricao || "",
       });
-      if (error) throw new Error(error.message);
-      await refresh();
+      await refreshCore();
     }
 
-    async function editarServico(id: string, payload: Pick<Servico, "nome" | "preco" | "duracao_minutos">) {
-      if (!profissionalId) return;
-      const { error } = await supabase.rpc("app_profissional_editar_servico", {
-        p_profissional_id: profissionalId,
-        p_servico_id: id,
-        p_nome: payload.nome,
-        p_preco: payload.preco,
-        p_duracao: payload.duracao_minutos
+    async function editarServico(
+      id: string,
+      payload: Pick<Servico, "nome" | "preco" | "duracao_minutos" | "descricao">
+    ) {
+      await apiAction("editar_servico", {
+        servicoId: id,
+        nome: payload.nome,
+        preco: payload.preco,
+        duracaoMinutos: payload.duracao_minutos,
+        descricao: payload.descricao || "",
       });
-      if (error) throw new Error(error.message);
-      await refresh();
+      await refreshCore();
     }
 
     async function confirmarPix(id: string) {
-      if (!profissionalId) return;
-      const response = await fetch("/api/app-profissional/agenda/acao", {
+      await requestJson("/api/app-profissional/agenda/acao", {
         method: "POST",
-        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "confirmar_pix",
-          agendamentoId: id,
-        }),
+        body: JSON.stringify({ action: "confirmar_pix", agendamentoId: id }),
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload.ok) {
-        throw new Error(String(payload.error || "Nao foi possivel confirmar o Pix."));
-      }
-      await refresh();
+      await refreshCore();
     }
 
     async function trocarSenha(senha: string) {
-      if (!profissionalId) return;
-      const { error } = await supabase.rpc("app_profissional_trocar_senha", {
-        p_profissional_id: profissionalId,
-        p_senha: senha
-      });
-      if (error) throw new Error(error.message);
+      await apiAction("trocar_senha", { senha });
+      await fetch("/api/app-profissional/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+      }).catch(() => null);
+      clearProfessionalCache();
+      window.location.assign("/app-profissional/login?senha=alterada");
     }
 
     async function excluirAvaliacao(id: string) {
-      const { error } = await supabase.rpc("app_profissional_excluir_avaliacao", {
-        p_profissional_id: profissionalId,
-        p_avaliacao_id: id
-      });
-      if (error) throw new Error(error.message);
-      await refresh();
+      await apiAction("excluir_avaliacao", { avaliacaoId: id });
+      await refreshAvaliacoes();
     }
 
     async function abrirComanda(clienteId: string | null, clienteNome: string) {
-      if (!profissionalId) return;
       const startedAt = performance.now();
-      const { error } = await supabase.rpc("app_profissional_abrir_comanda", {
-        p_profissional_id: profissionalId,
-        p_cliente_id: clienteId,
-        p_cliente_nome: clienteNome || "Consumidor Final"
-      });
-      if (error) throw new Error(error.message);
+      await apiAction("abrir_comanda", { clienteId, clienteNome });
       trackProfessionalDuration("abrir_comanda", performance.now() - startedAt);
-      trackProfessionalProductivity("comanda_aberta", {
-        details: { clienteId, clienteNome },
-      });
-      await refresh();
+      trackProfessionalProductivity("comanda_aberta", { details: { clienteId, clienteNome } });
+      await refreshComandas();
     }
 
-    async function adicionarItemComanda(comandaId: string, item: { servico_id?: string | null; nome: string; quantidade: number; valor_unitario: number; tipo?: "servico" | "produto" }) {
-      if (!profissionalId) return;
-      const { error } = await supabase.rpc("app_profissional_adicionar_item_comanda", {
-        p_profissional_id: profissionalId,
-        p_comanda_id: comandaId,
-        p_servico_id: item.servico_id ?? null,
-        p_nome: item.nome,
-        p_quantidade: item.quantidade,
-        p_valor_unitario: item.valor_unitario,
-        p_tipo: item.tipo ?? "servico"
+    async function adicionarItemComanda(
+      comandaId: string,
+      item: {
+        servico_id?: string | null;
+        nome: string;
+        quantidade: number;
+        valor_unitario: number;
+        tipo?: "servico" | "produto";
+      }
+    ) {
+      await apiAction("adicionar_item_comanda", {
+        comandaId,
+        servicoId: item.servico_id ?? null,
+        nome: item.nome,
+        quantidade: item.quantidade,
+        valorUnitario: item.valor_unitario,
+        tipo: item.tipo ?? "servico",
       });
-      if (error) throw new Error(error.message);
-      await refresh();
+      await refreshComandas();
     }
 
     async function fecharComanda(id: string) {
-      if (!profissionalId) return;
       const startedAt = performance.now();
-      const { error } = await supabase.rpc("app_profissional_fechar_comanda", {
-        p_profissional_id: profissionalId,
-        p_comanda_id: id
-      });
-      if (error) throw new Error(error.message);
-      trackProfessionalDuration("fechar_comanda", performance.now() - startedAt, {
-        entityId: id,
-      });
+      await apiAction("fechar_comanda", { comandaId: id });
+      trackProfessionalDuration("fechar_comanda", performance.now() - startedAt, { entityId: id });
       trackProfessionalProductivity("comanda_finalizada", { entityId: id });
-      await refresh();
+      await Promise.all([refreshComandas(), refreshComissoes()]);
     }
 
     async function marcarNotificacaoLida(id: string) {
-      const response = await fetch("/api/app-profissional/notificacoes/read", {
+      await requestJson("/api/app-profissional/notificacoes/read", {
         method: "POST",
-        credentials: "same-origin",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
       });
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok || !payload.ok) {
-        throw new Error(String(payload.error || "Nao foi possivel marcar a notificacao como lida."));
-      }
-      await refresh();
+      await refreshCore();
     }
 
     return {
@@ -446,10 +454,15 @@ export function useProfissionalData(
       abrirComanda,
       adicionarItemComanda,
       fecharComanda,
-      marcarNotificacaoLida
+      marcarNotificacaoLida,
     };
-  }, [profissionalId, refresh]);
+  }, [
+    profissionalId,
+    refreshAvaliacoes,
+    refreshComandas,
+    refreshComissoes,
+    refreshCore,
+  ]);
 
   return { ...state, loading, error, refresh, actions, lastSyncedAt, isOnline };
 }
-
