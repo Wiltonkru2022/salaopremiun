@@ -8,9 +8,9 @@ import MobileViewportRuntime from "@/components/pwa/MobileViewportRuntime";
 
 export const metadata: Metadata = {
   title: "App Cliente",
-  applicationName: "Salão Premium Cliente",
+  applicationName: "Salão Premiun Cliente",
   description:
-    "Agende horários, acompanhe visitas e avalie atendimentos no app cliente do SalãoPremium.",
+    "Agende horários, acompanhe visitas e avalie atendimentos no App Cliente do Salão Premiun.",
   manifest: "/app-cliente/manifest.webmanifest",
   icons: {
     icon: "/app-brand-icon.svg",
