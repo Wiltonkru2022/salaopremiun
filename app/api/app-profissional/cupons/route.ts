@@ -135,3 +135,64 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Não foi possível criar o cupom." }, { status: 400 });
   }
 }
+
+export async function PATCH(request: Request) {
+  try {
+    const context = await requireProfissionalAppContext();
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const id = text(body.id);
+    const ativo = body.ativo === true;
+    if (!id) throw new Error("Cupom não informado.");
+
+    await runAdminOperation({
+      action: ativo ? "app_profissional_ativar_cupom" : "app_profissional_desativar_cupom",
+      actorId: context.idProfissional,
+      idSalao: context.idSalao,
+      run: async (supabase) => {
+        const { data, error } = await (supabase as any)
+          .from("cupons_salao")
+          .update({ ativo, status_campanha: ativo ? "ativa" : "pausada", updated_at: new Date().toISOString() })
+          .eq("id", id)
+          .eq("id_salao", context.idSalao)
+          .select("id")
+          .maybeSingle();
+        if (error) throw error;
+        if (!data?.id) throw new Error("Cupom não encontrado.");
+      },
+    });
+
+    return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Não foi possível alterar o cupom." }, { status: 400 });
+  }
+}
+
+export async function DELETE(request: Request) {
+  try {
+    const context = await requireProfissionalAppContext();
+    const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+    const id = text(body.id);
+    if (!id) throw new Error("Cupom não informado.");
+
+    await runAdminOperation({
+      action: "app_profissional_excluir_cupom",
+      actorId: context.idProfissional,
+      idSalao: context.idSalao,
+      run: async (supabase) => {
+        const { data, error } = await (supabase as any)
+          .from("cupons_salao")
+          .delete()
+          .eq("id", id)
+          .eq("id_salao", context.idSalao)
+          .select("id")
+          .maybeSingle();
+        if (error) throw error;
+        if (!data?.id) throw new Error("Cupom não encontrado.");
+      },
+    });
+
+    return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
+  } catch (error) {
+    return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Não foi possível excluir o cupom." }, { status: 400 });
+  }
+}
