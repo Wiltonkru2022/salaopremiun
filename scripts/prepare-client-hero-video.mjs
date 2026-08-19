@@ -14,7 +14,8 @@ const partNames = [
   "part-05.txt",
   "part-06.txt",
   "part-07.txt",
-  "part-08.txt",
+  "part-08a.txt",
+  "part-08b.txt",
 ];
 
 const parts = await Promise.all(
