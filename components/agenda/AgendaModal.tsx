@@ -105,7 +105,6 @@ export default function AgendaModal(props: Props) {
     { value: "confirmado", label: "Confirmado" },
     { value: "pendente", label: "Pendente" },
     { value: "atendido", label: "Atendido" },
-    { value: "cancelado", label: "Cancelado" },
     { value: "aguardando_pagamento", label: "Aguardando pagamento" },
   ] as const;
 
@@ -211,7 +210,7 @@ export default function AgendaModal(props: Props) {
       <div className="space-y-3">
         <PlanoLimiteNotice
           titulo="Agendamentos mensais controlados pelo plano"
-          descricao="A agenda continua disponível para consulta e edição. O limite vale para novos horários criados no mes."
+          descricao="A agenda continua disponível para consulta e edição. O limite vale para novos horários criados no mês."
           usado={usoAgendamentosMensais}
           limite={limiteAgendamentosMensais}
           planoNome={planoAccess?.planoNome}

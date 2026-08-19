@@ -26,7 +26,6 @@ const STATUS_PERMITIDOS = new Set([
   "aguardando_confirmacao_salao",
   "aguardando_confirmacao_profissional",
   "reservado_aguardando_pagamento",
-  "cancelado",
   "faltou",
 ]);
 
