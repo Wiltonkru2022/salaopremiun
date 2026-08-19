@@ -1,4 +1,5 @@
 ﻿import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { clearOtherProfessionalCaches, clearProfessionalCache } from "../lib/cache";
 import type { Profissional } from "../types/database";
 
 type AuthContextValue = {
@@ -20,13 +21,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       cache: "no-store",
     });
     if (!response.ok) {
+      clearProfessionalCache();
       setProfissional(null);
       return;
     }
     const payload = (await response.json().catch(() => ({}))) as {
       profissional: Profissional;
     };
-    setProfissional(payload.profissional || null);
+    const nextProfissional = payload.profissional || null;
+    if (nextProfissional?.id) {
+      clearOtherProfessionalCaches(nextProfissional.id);
+    }
+    setProfissional(nextProfissional);
   }
 
   useEffect(() => {
@@ -46,18 +52,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       profissional: Profissional;
     };
     if (!response.ok || !payload.profissional) {
+      if (response.status === 429) {
+        throw new Error(payload.error || "Muitas tentativas. Aguarde antes de tentar novamente.");
+      }
+      if (response.status === 403) {
+        throw new Error(payload.error || "Seu acesso ao App Profissional está bloqueado.");
+      }
+      if (response.status >= 500) {
+        throw new Error(payload.error || "O sistema está temporariamente indisponível. Tente novamente em instantes.");
+      }
       throw new Error(payload.error || "CPF ou senha inválidos.");
     }
 
+    clearOtherProfessionalCaches(payload.profissional.id);
     setProfissional(payload.profissional);
   }
 
   async function logout() {
-    await fetch("/api/app-profissional/auth/logout", {
-      method: "POST",
-      credentials: "same-origin",
-    });
-    setProfissional(null);
+    try {
+      await fetch("/api/app-profissional/auth/logout", {
+        method: "POST",
+        credentials: "same-origin",
+      });
+    } finally {
+      clearProfessionalCache();
+      setProfissional(null);
+    }
   }
 
   const value = useMemo<AuthContextValue>(
@@ -79,4 +99,3 @@ export function useAuth() {
   if (!value) throw new Error("useAuth precisa estar dentro de AuthProvider");
   return value;
 }
-
