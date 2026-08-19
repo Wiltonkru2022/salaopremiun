@@ -61,6 +61,23 @@ function applyMaskToElement(input: HTMLInputElement, notifyReact: boolean) {
   }
 }
 
+function hasExistingPasswordToggle(input: HTMLInputElement) {
+  let container: HTMLElement | null = input.parentElement;
+  for (let depth = 0; container && depth < 3; depth += 1) {
+    const buttons = Array.from(container.querySelectorAll<HTMLButtonElement>("button"));
+    if (
+      buttons.some((button) => {
+        const description = `${button.getAttribute("aria-label") || ""} ${button.title || ""}`.toLowerCase();
+        return /(senha|password)/.test(description) && /(mostrar|ocultar|ver|show|hide)/.test(description);
+      })
+    ) {
+      return true;
+    }
+    container = container.parentElement;
+  }
+  return false;
+}
+
 export default function GlobalInputEnhancements() {
   const [passwords, setPasswords] = useState<PasswordOverlay[]>([]);
   const sequenceRef = useRef(0);
@@ -78,6 +95,7 @@ export default function GlobalInputEnhancements() {
     const next: PasswordOverlay[] = [];
     for (const input of candidates) {
       if (!input.isConnected || input.type === "hidden") continue;
+      if (!input.dataset.spPassword && hasExistingPasswordToggle(input)) continue;
 
       input.dataset.spPassword = "true";
       if (!input.dataset.spPasswordKey) {
