@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { createClienteSession } from "@/lib/cliente-auth.server";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 import { completeClienteIdentityMigration } from "@/app/services/cliente-app/identity-migration";
+import { normalizeSafeInternalPath } from "@/lib/security/safe-next-path";
 
 export type CompleteIdentityState = { error: string | null };
 
@@ -21,6 +22,10 @@ export async function completeClienteIdentityAction(
   if (!result.ok) return { error: result.error };
 
   await createClienteSession(result.session);
-  const next = String(formData.get("next") || "").trim();
-  redirect(next || "/app-cliente/inicio");
+  const next = normalizeSafeInternalPath(
+    formData.get("next"),
+    "/app-cliente",
+    "/app-cliente/inicio"
+  );
+  redirect(next);
 }
