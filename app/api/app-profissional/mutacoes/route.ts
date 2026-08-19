@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
-import { clearProfissionalSession } from "@/lib/profissional-auth.server";
+import {
+  clearProfissionalSession,
+  verifyPassword,
+} from "@/lib/profissional-auth.server";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
 
@@ -205,9 +208,32 @@ export async function POST(request: Request) {
         }
 
         if (action === "trocar_senha") {
+          const senhaAtual = text(body.senhaAtual);
           const senha = text(body.senha);
+          if (!senhaAtual) {
+            throw new Error("Informe a senha atual.");
+          }
           if (senha.length < 6) {
-            throw new Error("A senha precisa ter pelo menos 6 caracteres.");
+            throw new Error("A nova senha precisa ter pelo menos 6 caracteres.");
+          }
+          if (senhaAtual === senha) {
+            throw new Error("Escolha uma senha diferente da atual.");
+          }
+
+          const { data: acesso, error: acessoError } = await (supabase as any)
+            .from("profissionais_acessos")
+            .select("id, senha_hash")
+            .eq("id_profissional", context.idProfissional)
+            .eq("ativo", true)
+            .limit(1)
+            .maybeSingle();
+          if (acessoError || !acesso?.senha_hash) {
+            throw new Error("Não foi possível validar seu acesso ativo.");
+          }
+
+          const senhaAtualOk = await verifyPassword(senhaAtual, acesso.senha_hash);
+          if (!senhaAtualOk) {
+            throw new Error("Senha atual incorreta.");
           }
 
           const { data, error } = await rpc.rpc("app_profissional_trocar_senha", {
@@ -280,7 +306,10 @@ export async function POST(request: Request) {
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Não foi possível concluir a operação.";
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Não foi possível concluir a operação.";
     const status = message === "FORBIDDEN_PROFISSIONAL" ? 403 : 400;
     return NextResponse.json(
       {
