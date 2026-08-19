@@ -45,7 +45,8 @@ export function App() {
     profissional?.id,
     profissional?.podeVerAgendaTodos ??
       profissional?.pode_ver_agenda_todos ??
-      String(profissional?.nivel_acesso || "").toLowerCase() === "todos"
+      String(profissional?.nivel_acesso || "").toLowerCase() === "todos",
+    view
   );
 
   const subtitle = useMemo(() => {
