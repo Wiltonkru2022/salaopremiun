@@ -71,19 +71,19 @@ export function InicioPage({ nome, agendamentos, clientes, servicos, comandas, g
   const proximo = hojeItens.filter((item) => !["atendido", "faltou", "bloqueado"].includes(item.status)).sort((a, b) => a.hora_inicio.localeCompare(b.hora_inicio))[0];
 
   return (
-    <div className="space-y-4 pb-6">
+    <div className="space-y-4 pb-7">
       <section className="grid grid-cols-[minmax(0,1fr)_auto] items-end gap-3 px-1 pt-1">
         <div className="min-w-0">
-          <h2 className="text-[1.85rem] font-black leading-[1.02] tracking-[-0.055em] text-zinc-950">{saudacao}, {nomeCurto}!</h2>
+          <h2 className="text-[1.9rem] font-black leading-[1.02] tracking-[-0.055em] text-zinc-950">{saudacao}, {nomeCurto}!</h2>
           <p className="mt-2 text-[0.98rem] font-bold text-zinc-500">Veja como está seu dia.</p>
         </div>
-        <div className="shrink-0 rounded-[1rem] border border-zinc-200 bg-white px-3 py-2.5 text-right shadow-[0_4px_14px_rgba(15,23,42,0.04)]">
+        <div className="shrink-0 rounded-[1rem] border border-zinc-200 bg-white px-3.5 py-2.5 text-right shadow-[0_4px_14px_rgba(15,23,42,0.035)]">
           <div className="text-[0.69rem] font-bold text-zinc-500">{dataAtual.weekday}</div>
           <div className="mt-0.5 whitespace-nowrap text-sm font-black text-zinc-950">{dataAtual.dayMonth}</div>
         </div>
       </section>
 
-      <section className="rounded-[1.25rem] border border-zinc-200 bg-white p-4 shadow-[0_6px_18px_rgba(15,23,42,0.04)]">
+      <section className="rounded-[1.3rem] border border-zinc-200 bg-white p-4 shadow-[0_7px_20px_rgba(15,23,42,0.04)]">
         <div className="flex items-center gap-2 text-[0.68rem] font-black uppercase tracking-[0.2em] text-amber-700">
           <Clock3 size={15} /> Próximo atendimento
         </div>
@@ -93,14 +93,24 @@ export function InicioPage({ nome, agendamentos, clientes, servicos, comandas, g
             <div className="mt-3 flex items-start gap-3">
               <div className="grid h-12 w-12 shrink-0 place-items-center rounded-[0.95rem] bg-amber-50 text-amber-800"><Users size={22} /></div>
               <div className="min-w-0 flex-1">
-                <div className="text-[2rem] font-black leading-none tracking-[-0.05em] text-zinc-950">{proximo.hora_inicio.slice(0, 5)}</div>
-                <div className="mt-1 truncate text-[1.05rem] font-black text-zinc-950">{proximo.clientes?.nome || "Cliente"}</div>
+                <div className="text-[2.1rem] font-black leading-none tracking-[-0.055em] text-zinc-950">{proximo.hora_inicio.slice(0, 5)}</div>
+                <div className="mt-1 truncate text-[1.07rem] font-black text-zinc-950">{proximo.clientes?.nome || "Cliente"}</div>
                 <div className="mt-0.5 text-sm font-bold leading-5 text-zinc-500">{proximo.servicos?.nome || "Serviço"}{durationText(proximo) ? ` • ${durationText(proximo)}` : ""}</div>
               </div>
             </div>
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <Button variant="secondary" className="h-11 rounded-[0.95rem] border-amber-200 text-zinc-950" onClick={() => setDetails(proximo)}><Eye size={15} />Ver detalhes</Button>
-              <Button className="h-11 rounded-[0.95rem] bg-amber-500 text-zinc-950 hover:bg-amber-400" onClick={() => goTo("agenda")}><span>Abrir agenda</span><ChevronRight size={15} /></Button>
+            <div className="mt-4 grid grid-cols-2 gap-2.5">
+              <Button variant="secondary" className="h-11 rounded-[0.95rem] border-amber-200 text-zinc-950" onClick={() => setDetails(proximo)}>
+                <Eye size={15} />
+                <span>Ver detalhes</span>
+              </Button>
+              <button
+                type="button"
+                onClick={() => goTo("agenda")}
+                className="inline-flex h-11 items-center justify-center gap-2 rounded-[0.95rem] border border-amber-400 bg-amber-400 px-4 text-sm font-black text-zinc-950 shadow-[0_6px_16px_rgba(217,119,6,0.18)] transition active:scale-[0.99] active:bg-amber-500"
+              >
+                <span>Abrir agenda</span>
+                <ChevronRight size={16} />
+              </button>
             </div>
           </>
         ) : (
@@ -108,10 +118,10 @@ export function InicioPage({ nome, agendamentos, clientes, servicos, comandas, g
         )}
       </section>
 
-      <section className="grid grid-cols-3 overflow-hidden rounded-[1.15rem] border border-zinc-200 bg-white shadow-[0_5px_16px_rgba(15,23,42,0.035)]">
+      <section className="grid grid-cols-3 overflow-hidden rounded-[1.15rem] border border-zinc-200 bg-white shadow-[0_5px_16px_rgba(15,23,42,0.03)]">
         <Metric icon={<CalendarClock size={17} />} value={hojeItens.length} label="Hoje" tone="amber" />
         <Metric icon={<CheckCircle2 size={17} />} value={concluidos} label="Concluídos" tone="emerald" />
-        <Metric icon={<CircleDollarSign size={17} />} value={money(previsto)} label="Previsto" tone="amber" />
+        <Metric icon={<CircleDollarSign size={17} />} value={money(previsto)} label="Previsto" tone="amber" compactMoney />
       </section>
 
       <div className="grid grid-cols-2 gap-2.5">
@@ -128,14 +138,14 @@ export function InicioPage({ nome, agendamentos, clientes, servicos, comandas, g
   );
 }
 
-function Metric({ icon, value, label, tone }: { icon: React.ReactNode; value: string | number; label: string; tone: "amber" | "emerald" }) {
+function Metric({ icon, value, label, tone, compactMoney = false }: { icon: React.ReactNode; value: string | number; label: string; tone: "amber" | "emerald"; compactMoney?: boolean }) {
   const toneClass = tone === "emerald" ? "bg-emerald-50 text-emerald-700" : "bg-amber-50 text-amber-800";
   return (
     <div className="min-w-0 border-r border-zinc-100 px-2.5 py-3 last:border-r-0">
       <div className="flex min-w-0 items-center gap-2">
         <div className={`grid h-8 w-8 shrink-0 place-items-center rounded-[0.8rem] ${toneClass}`}>{icon}</div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[0.96rem] font-black tracking-[-0.035em] text-zinc-950">{value}</div>
+          <div className={`${compactMoney ? "text-[0.84rem]" : "text-[0.96rem]"} whitespace-nowrap font-black tracking-[-0.035em] text-zinc-950`}>{value}</div>
           <div className="mt-0.5 truncate text-[0.64rem] font-black text-zinc-500">{label}</div>
         </div>
       </div>
@@ -146,7 +156,7 @@ function Metric({ icon, value, label, tone }: { icon: React.ReactNode; value: st
 function ActionCard({ icon, title, text, onClick, tone }: { icon: React.ReactNode; title: string; text: string; onClick: () => void; tone: "amber" | "emerald" | "violet" | "rose" }) {
   const tones = { amber: "bg-amber-50 text-amber-800", emerald: "bg-emerald-50 text-emerald-700", violet: "bg-violet-50 text-violet-700", rose: "bg-rose-50 text-rose-700" };
   return (
-    <button onClick={onClick} className="flex min-h-[5rem] items-center gap-3 rounded-[1rem] border border-zinc-200 bg-white px-3 py-3 text-left shadow-[0_4px_14px_rgba(15,23,42,0.035)] transition active:scale-[0.99] active:bg-zinc-50">
+    <button onClick={onClick} className="flex min-h-[5rem] items-center gap-3 rounded-[1rem] border border-zinc-200 bg-white px-3 py-3 text-left shadow-[0_4px_14px_rgba(15,23,42,0.03)] transition active:scale-[0.99] active:bg-zinc-50">
       <div className={`grid h-10 w-10 shrink-0 place-items-center rounded-[0.9rem] ${tones[tone]}`}>{icon}</div>
       <div className="min-w-0 flex-1">
         <div className="truncate text-[0.98rem] font-black tracking-[-0.035em] text-zinc-950">{title}</div>
