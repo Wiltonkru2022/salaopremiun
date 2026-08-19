@@ -8,6 +8,7 @@ import {
   loginClienteAppByEmailSenha,
 } from "@/app/services/cliente-app/auth";
 import { assertClienteCpfLoginAllowed } from "@/lib/client-app/login-rate-limit";
+import { normalizeSafeInternalPath } from "@/lib/security/safe-next-path";
 
 export type LoginClienteState = { error: string | null };
 
@@ -27,7 +28,11 @@ export async function loginClienteAction(
   const cpf = String(formData.get("cpf") || "");
   const dataNascimento = String(formData.get("dataNascimento") || "");
   const idSalao = String(formData.get("salao") || "").trim() || null;
-  const next = String(formData.get("next") || "").trim();
+  const next = normalizeSafeInternalPath(
+    formData.get("next"),
+    "/app-cliente",
+    "/app-cliente/inicio"
+  );
   const metadata = await getRequestMetadata();
 
   try {
@@ -52,7 +57,7 @@ export async function loginClienteAction(
   }
 
   await createClienteSession(result.session);
-  redirect(next || "/app-cliente/inicio");
+  redirect(next);
 }
 
 export async function loginClienteLegacyAction(
@@ -62,7 +67,11 @@ export async function loginClienteLegacyAction(
   const identidade = String(formData.get("identidade") || "");
   const senha = String(formData.get("senha") || "");
   const idSalao = String(formData.get("salao") || "").trim() || null;
-  const next = String(formData.get("next") || "").trim();
+  const next = normalizeSafeInternalPath(
+    formData.get("next"),
+    "/app-cliente",
+    "/app-cliente/inicio"
+  );
 
   const result = await loginClienteAppByEmailSenha({ email: identidade, senha, idSalao });
   if (!result.ok) {
@@ -72,8 +81,7 @@ export async function loginClienteLegacyAction(
 
   await createClienteSession(result.session);
   if (result.migrationRequired) {
-    const returnTo = next ? `?next=${encodeURIComponent(next)}` : "";
-    redirect(`/app-cliente/atualizar-acesso${returnTo}`);
+    redirect(`/app-cliente/atualizar-acesso?next=${encodeURIComponent(next)}`);
   }
-  redirect(next || "/app-cliente/inicio");
+  redirect(next);
 }
