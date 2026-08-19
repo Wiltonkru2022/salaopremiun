@@ -52,7 +52,7 @@ export async function loginClienteAction(
   }
 
   await createClienteSession(result.session);
-  redirect(next || "/app-cliente/agendamentos");
+  redirect(next || "/app-cliente/inicio");
 }
 
 export async function loginClienteLegacyAction(
@@ -75,5 +75,5 @@ export async function loginClienteLegacyAction(
     const returnTo = next ? `?next=${encodeURIComponent(next)}` : "";
     redirect(`/app-cliente/atualizar-acesso${returnTo}`);
   }
-  redirect(next || "/app-cliente/agendamentos");
+  redirect(next || "/app-cliente/inicio");
 }

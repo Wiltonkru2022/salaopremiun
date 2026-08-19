@@ -49,7 +49,7 @@ export default async function LoginClientePage({
   if (session && logout !== "1") {
     const validation = await validateClienteAppSession().catch(() => null);
     if (validation?.context) {
-      redirect(next || "/app-cliente/agendamentos");
+      redirect(next || "/app-cliente/inicio");
     }
 
     if (validation?.reason === "security_blocked") {

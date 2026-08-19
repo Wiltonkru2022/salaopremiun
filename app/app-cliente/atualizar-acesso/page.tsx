@@ -13,7 +13,7 @@ export default async function AtualizarAcessoPage({
   const context = await requireClienteAppContext();
   const params = searchParams ? await searchParams : undefined;
   if (context.migracaoIdentidadeConcluida && context.cpf && context.dataNascimento) {
-    redirect(params?.next || "/app-cliente/agendamentos");
+    redirect(params?.next || "/app-cliente/inicio");
   }
 
   return (
