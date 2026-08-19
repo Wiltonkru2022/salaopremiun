@@ -50,6 +50,9 @@ jobs:
       - name: Test App Cliente identity
         run: npx vitest run lib/client-app/identity.test.ts
 
+      - name: Test App Cliente visual notices
+        run: npx vitest run lib/client-app/visual-notifications.test.ts
+
       - name: Test Web Push delivery policies
         run: npx vitest run lib/push-delivery-utils.test.ts
 
