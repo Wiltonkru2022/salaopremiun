@@ -10,7 +10,6 @@ import {
   Star,
 } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
-import { CLIENT_APP_HERO_VIDEO_SRC } from "@/lib/client-app/hero-video";
 import { validateClienteAppSession } from "@/lib/client-context.server";
 import {
   getClienteAppProfileData,
@@ -97,18 +96,16 @@ export default async function AppClienteIndexPage() {
 
           <div className="relative mt-6 h-[356px] overflow-hidden rounded-[1.45rem] bg-zinc-900">
             <video
-              src={CLIENT_APP_HERO_VIDEO_SRC}
+              src="/app-cliente-hero-video.mp4"
               autoPlay
               muted
               playsInline
               preload="auto"
               poster="/app-cliente-hero-woman.jpeg"
-              disablePictureInPicture
-              tabIndex={-1}
               aria-hidden="true"
-              className="pointer-events-none absolute inset-0 h-full w-full object-cover object-[55%_center]"
+              className="pointer-events-none absolute inset-0 h-full w-full object-cover object-center"
             />
-            <div className="pointer-events-none absolute inset-0 bg-gradient-to-r from-black/85 via-black/35 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/35 to-transparent" />
             <div className="absolute left-6 top-16 max-w-[210px]">
               <h2 className="text-[2.05rem] font-black leading-tight tracking-[-0.04em]">
                 Seu novo visual, sua melhor versão.
