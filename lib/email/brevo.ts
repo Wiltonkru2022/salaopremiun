@@ -1,5 +1,7 @@
 import "server-only";
 
+import { createHash } from "node:crypto";
+
 const BREVO_API_URL = "https://api.brevo.com/v3/smtp/email";
 
 type TransactionalEmailInput = {
@@ -44,6 +46,15 @@ function parseEmailContacts(value?: string | string[]) {
     .filter((item) => Boolean(item.email));
 }
 
+function toIdempotencyUuid(value: string) {
+  const hex = createHash("sha256").update(value).digest("hex").slice(0, 32);
+  const chars = hex.split("");
+  chars[12] = "5";
+  chars[16] = ((parseInt(chars[16], 16) & 0x3) | 0x8).toString(16);
+  const normalized = chars.join("");
+  return `${normalized.slice(0, 8)}-${normalized.slice(8, 12)}-${normalized.slice(12, 16)}-${normalized.slice(16, 20)}-${normalized.slice(20)}`;
+}
+
 export async function sendBrevoEmail(input: TransactionalEmailInput) {
   const apiKey = process.env.BREVO_API_KEY?.trim();
   if (!apiKey) throw new Error("BREVO_API_KEY não configurada.");
@@ -74,7 +85,7 @@ export async function sendBrevoEmail(input: TransactionalEmailInput) {
       htmlContent: input.html,
       ...(input.text ? { textContent: input.text } : {}),
       ...(input.idempotencyKey
-        ? { headers: { idempotencyKey: input.idempotencyKey } }
+        ? { headers: { idempotencyKey: toIdempotencyUuid(input.idempotencyKey) } }
         : {}),
     }),
   });
