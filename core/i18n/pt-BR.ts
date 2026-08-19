@@ -89,4 +89,50 @@ export const ptBR = {
   },
 } as const;
 
+const STATUS_PT_BR: Record<string, string> = {
+  ativo: "Ativo",
+  ativa: "Ativa",
+  inativo: "Inativo",
+  inativa: "Inativa",
+  pendente: "Pendente",
+  confirmado: "Confirmado",
+  confirmada: "Confirmada",
+  atendido: "Atendido",
+  atendida: "Atendida",
+  em_atendimento: "Em atendimento",
+  aguardando_pagamento: "Aguardando pagamento",
+  aguardando_sinal: "Aguardando sinal",
+  aguardando_confirmacao: "Aguardando confirmação",
+  aguardando_confirmacao_salao: "Aguardando confirmação do salão",
+  aguardando_confirmacao_profissional: "Aguardando confirmação do profissional",
+  reservado_aguardando_pagamento: "Reservado aguardando pagamento",
+  cancelado: "Cancelado",
+  cancelada: "Cancelada",
+  cancelado_cliente: "Cancelado pelo cliente",
+  cancelado_salao: "Cancelado pelo salão",
+  faltou: "Faltou",
+  bloqueado: "Bloqueado",
+  aberta: "Aberta",
+  aberto: "Aberto",
+  fechado: "Fechado",
+  fechada: "Fechada",
+  pago: "Pago",
+  paga: "Paga",
+  aprovado: "Aprovado",
+  aprovada: "Aprovada",
+  recusado: "Recusado",
+  recusada: "Recusada",
+  vencido: "Vencido",
+  vencida: "Vencida",
+};
+
+export function statusPtBR(value?: string | null) {
+  const normalized = String(value || "").trim().toLowerCase();
+  if (!normalized) return "Não informado";
+  return (
+    STATUS_PT_BR[normalized] ||
+    normalized.replace(/_/g, " ").replace(/^./, (letter) => letter.toUpperCase())
+  );
+}
+
 export type PtBR = typeof ptBR;

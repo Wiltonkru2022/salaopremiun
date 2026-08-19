@@ -1586,7 +1586,7 @@ export default function AgendaPage() {
                       {
                         label: "Marcar como atendido",
                         description:
-                          "Use quando o atendimento já estiver concluido na agenda.",
+                          "Use quando o atendimento já estiver concluído na agenda.",
                         icon: CheckCircle2,
                         onClick: () => void handleQuickStatusChange(item, "atendido"),
                       },
@@ -1631,7 +1631,7 @@ export default function AgendaPage() {
                   title: "Ausencia do profissional",
                   actions: [
                     {
-                      label: "Almoco 30 min",
+                      label: "Almoço 30 min",
                       description: "Bloqueio rápido para pausa curta do profissional.",
                       icon: Coffee,
                       badge: "30 min",
@@ -1642,7 +1642,7 @@ export default function AgendaPage() {
                         }),
                     },
                     {
-                      label: "Almoco 1 hora",
+                      label: "Almoço 1 hora",
                       description: "Bloqueio pronto para pausa completa.",
                       icon: Coffee,
                       badge: "60 min",
