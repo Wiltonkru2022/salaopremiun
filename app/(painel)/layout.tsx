@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import AppShell from "@/components/layout/AppShell";
 import PanelFormPendingGuard from "@/components/layout/PanelFormPendingGuard";
-import PublicSalonDetailsEditor from "@/components/perfil-salao/PublicSalonDetailsEditor";
 import { loadPainelShellData } from "@/lib/painel/load-painel-shell-data";
 
 export const metadata: Metadata = {
@@ -61,7 +60,6 @@ export default async function PainelLayout({
     >
       <PanelFormPendingGuard />
       {children}
-      <PublicSalonDetailsEditor />
     </AppShell>
   );
 }
