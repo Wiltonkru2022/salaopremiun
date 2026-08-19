@@ -147,8 +147,8 @@ export function ConfiguracoesTopNav({ activeHref }: { activeHref: string }) {
 function normalizeVisualValue(value: ReactNode) {
   if (typeof value !== "string") return value;
   return value
-    .replaceAll("SalãoPremium", "Salão Premium")
-    .replaceAll("Salão Premiun", "Salão Premium");
+    .replaceAll("Salão Premium", "Salão Premium")
+    .replaceAll("Salão Premium", "Salão Premium");
 }
 
 export function ConfigMetricCard({

@@ -462,7 +462,7 @@ export default function Header({
                   Perfil do salão
                 </div>
                 <div className="mt-2 truncate font-display text-xl font-bold">
-                  {salaoNome || "SalãoPremium"}
+                  {salaoNome || "Salão Premium"}
                 </div>
                 <div className="mt-1 truncate text-sm text-zinc-500">
                   {salaoResponsavel || userEmail || "Conta administradora"}

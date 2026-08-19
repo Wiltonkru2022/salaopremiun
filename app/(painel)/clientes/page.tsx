@@ -374,7 +374,7 @@ export default function ClientesPage() {
     if (!telefone) return "";
 
     const nome = String(cliente.nome || "").trim() || "tudo bem";
-    const mensagem = `Oi, ${nome}! O salão agora usa o App Cliente do SalãoPremium. Crie seu acesso com este telefone para ver salões e agendar online: https://app.salaopremiun.com.br/app-cliente/cadastro`;
+    const mensagem = `Oi, ${nome}! O salão agora usa o App Cliente do Salão Premium. Crie seu acesso com este telefone para ver salões e agendar online: https://app.salaopremiun.com.br/app-cliente/cadastro`;
     return `https://wa.me/55${telefone.replace(/^55/, "")}?text=${encodeURIComponent(
       mensagem
     )}`;

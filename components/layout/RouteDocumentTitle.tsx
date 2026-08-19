@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { getPainelPageMeta } from "@/components/layout/navigation";
 
-const SYSTEM_NAME = "SalãoPremium";
+const SYSTEM_NAME = "Salão Premium";
 
 const exactTitles: Record<string, string> = {
   "/": "Início",

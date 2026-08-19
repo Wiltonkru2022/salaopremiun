@@ -298,7 +298,7 @@ function LockedPanel({ plan }: { plan: PlanoCobravelCodigo }) {
           <Crown size={22} />
         </div>
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-100">Visão geral avançado</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-100">Visão geral avançada</p>
           <h3 className="mt-2 text-2xl font-black tracking-[-0.04em]">
             Liberado no {plan === "premium" ? "Premium" : "Pro"}
           </h3>
@@ -566,7 +566,7 @@ export default function DashboardPage() {
             <InfoMetric
               title="Plano"
               value={resumo.planoSalao || "-"}
-              helper={dashboardAvancado ? "Dashboard avançado ativo" : `Avançado no ${dashboardUpgradeLabel}`}
+              helper={dashboardAvancado ? "Visão geral avançada ativo" : `Avançado no ${dashboardUpgradeLabel}`}
             />
             <InfoMetric
               title="Última leitura"

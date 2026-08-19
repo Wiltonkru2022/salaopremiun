@@ -51,7 +51,7 @@ export default function PainelDesktopGuard({ children }: Props) {
         <div className="mx-auto flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl bg-zinc-950">
           <Image
             src="/favicon-preview.png"
-            alt="Salão Premiun"
+            alt="Salão Premium"
             width={64}
             height={64}
             className="h-full w-full object-cover"

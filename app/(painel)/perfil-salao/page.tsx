@@ -1346,7 +1346,7 @@ export default function PerfilSalaoPage() {
 
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: "totp",
-        friendlyName: `Administrador ${perfilForm.nome || "SalãoPremium"}`,
+        friendlyName: `Administrador ${perfilForm.nome || "Salão Premium"}`,
       });
 
       if (error) throw error;
@@ -1651,7 +1651,7 @@ export default function PerfilSalaoPage() {
 
               <div className="rounded-[24px] border border-zinc-200 bg-zinc-50 p-3.5">
                 <div className="font-display text-lg font-bold">
-                  {perfilForm.nome || "SalãoPremium"}
+                  {perfilForm.nome || "Salão Premium"}
                 </div>
                 <div className="text-sm text-zinc-500">
                   {String(perfilForm.plano || "sem plano").toUpperCase()} |{" "}
@@ -2109,10 +2109,10 @@ export default function PerfilSalaoPage() {
                     </div>
                     <div>
                       <div className="text-sm font-bold text-zinc-950">
-                        Fuso horário do salao
+                        Fuso horário do salão
                       </div>
                       <p className="mt-1 text-sm leading-5 text-zinc-600">
-                        Defina o fuso usado na agenda, lembretes, notificacoes
+                        Defina o fuso usado na agenda, lembretes, notificações
                         e Google Calendar.
                       </p>
                     </div>
@@ -2170,7 +2170,7 @@ export default function PerfilSalaoPage() {
                 <div className="rounded-[24px] border border-zinc-200 bg-white p-3">
                   <img
                     src={qrCodeUrl}
-                    alt={`QR Code do salão ${perfilForm.nome || "SalãoPremium"}`}
+                    alt={`QR Code do salão ${perfilForm.nome || "Salão Premium"}`}
                     className="aspect-square w-full rounded-[18px] bg-white object-contain"
                   />
                 </div>
@@ -2393,7 +2393,7 @@ export default function PerfilSalaoPage() {
                   nome: event.target.value,
                 }))
               }
-              placeholder="Ex.: Salão Premiun"
+              placeholder="Ex.: Salão Premium"
             />
           </Field>
 
