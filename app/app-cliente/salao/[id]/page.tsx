@@ -5,11 +5,11 @@ import {
   Accessibility,
   ArrowLeft,
   CalendarDays,
+  Camera,
   Clock3,
   Coffee,
   CreditCard,
   Heart,
-  Instagram,
   MapPin,
   MessageCircle,
   Navigation,
@@ -393,7 +393,7 @@ export default async function ClienteSalonPage({
                     rel="noreferrer"
                     className="inline-flex min-h-11 items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 text-sm font-bold"
                   >
-                    <Instagram size={17} />
+                    <Camera size={17} />
                     Instagram
                   </a>
                 ) : null}
