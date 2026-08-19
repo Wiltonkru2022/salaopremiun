@@ -50,6 +50,9 @@ jobs:
       - name: Typecheck App Profissional PWA
         run: npm run typecheck:professional
 
+      - name: Test global input masks
+        run: npx vitest run lib/utils/input-masks.test.ts
+
       - name: Test App Cliente identity
         run: npx vitest run lib/client-app/identity.test.ts
 
