@@ -8,7 +8,7 @@ type TransactionalEmailInput = {
   from: string;
   to: string | string[];
   subject: string;
-  html: string;
+  html?: string;
   text?: string;
   bcc?: string | string[];
   replyTo?: string;
@@ -18,6 +18,13 @@ type TransactionalEmailInput = {
 type EmailContact = {
   email: string;
   name?: string;
+};
+
+type BrevoApiResponse = {
+  messageId?: string;
+  messageIds?: string[];
+  message?: string;
+  code?: string;
 };
 
 export function htmlEscape(value: string) {
@@ -34,7 +41,7 @@ function parseEmailContact(value: string): EmailContact {
 
   if (!match) return { email: normalized };
 
-  const name = String(match[1] || "").trim().replace(/^[\"']|[\"']$/g, "");
+  const name = String(match[1] || "").trim().replace(/^["']|["']$/g, "");
   const email = String(match[2] || "").trim();
   return name ? { email, name } : { email };
 }
@@ -65,9 +72,12 @@ export async function sendBrevoEmail(input: TransactionalEmailInput) {
   const to = parseEmailContacts(input.to);
   const bcc = parseEmailContacts(input.bcc);
   const replyTo = input.replyTo ? parseEmailContact(input.replyTo) : undefined;
+  const htmlContent = String(input.html || "").trim();
+  const textContent = String(input.text || "").trim();
 
   if (!sender.email) throw new Error("Remetente de e-mail não configurado.");
   if (to.length === 0) throw new Error("Destinatário de e-mail não informado.");
+  if (!htmlContent && !textContent) throw new Error("Conteúdo do e-mail não informado.");
 
   const response = await fetch(BREVO_API_URL, {
     method: "POST",
@@ -82,23 +92,26 @@ export async function sendBrevoEmail(input: TransactionalEmailInput) {
       ...(bcc.length ? { bcc } : {}),
       ...(replyTo?.email ? { replyTo } : {}),
       subject: input.subject,
-      htmlContent: input.html,
-      ...(input.text ? { textContent: input.text } : {}),
+      ...(htmlContent
+        ? { htmlContent: input.html }
+        : { textContent: input.text }),
       ...(input.idempotencyKey
-        ? { headers: { idempotencyKey: toIdempotencyUuid(input.idempotencyKey) } }
+        ? { headers: { "Idempotency-Key": toIdempotencyUuid(input.idempotencyKey) } }
         : {}),
     }),
   });
 
-  const result = (await response.json().catch(() => ({}))) as {
-    messageId?: string;
-    messageIds?: string[];
-    message?: string;
-    code?: string;
-  };
+  const result = (await response.json().catch(() => ({}))) as BrevoApiResponse;
 
   if (!response.ok) {
-    throw new Error(result.message || result.code || "Brevo recusou o envio.");
+    const detail = result.message || result.code || response.statusText || "Brevo recusou o envio.";
+    console.error("[BREVO_SEND_ERROR]", {
+      status: response.status,
+      code: result.code || null,
+      message: detail,
+      sender: sender.email,
+    });
+    throw new Error(`Brevo ${response.status}: ${detail}`);
   }
 
   return result.messageId || result.messageIds?.[0] || null;

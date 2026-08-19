@@ -41,7 +41,7 @@ type AccountRow = {
 const GENERIC_REQUEST_MESSAGE =
   "Se os dados estiverem vinculados a uma conta válida, enviaremos um código.";
 const OTP_TTL_MS = 10 * 60 * 1000;
-const OTP_BREVO_MS = 60 * 1000;
+const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
 
 function secret() {
@@ -141,7 +141,7 @@ async function createOtp(params: {
 
   if (latest?.criado_em) {
     const createdAt = new Date(latest.criado_em).getTime();
-    if (Number.isFinite(createdAt) && now - createdAt < OTP_BREVO_MS) {
+    if (Number.isFinite(createdAt) && now - createdAt < OTP_RESEND_COOLDOWN_MS) {
       return { ok: false as const, error: "Aguarde um minuto antes de pedir outro código." };
     }
   }
@@ -154,18 +154,58 @@ async function createOtp(params: {
     .is("consumido_em", null);
 
   const code = generateCode();
-  const { error } = await params.supabaseAdmin.from("cliente_app_email_verificacoes").insert({
-    conta_id: params.accountId,
-    finalidade: params.purpose,
-    email: params.email,
-    codigo_hash: hmac(`${params.accountId}:${params.purpose}:${params.email}:${code}`),
-    expira_em: new Date(now + OTP_TTL_MS).toISOString(),
-    tentativas: 0,
-    ip_hash: hashMetadata(params.ip),
-    user_agent_hash: hashMetadata(params.userAgent),
-  });
-  if (error) return { ok: false as const, error: "Não foi possível gerar o código agora." };
-  return { ok: true as const, code };
+  const { data: created, error } = await params.supabaseAdmin
+    .from("cliente_app_email_verificacoes")
+    .insert({
+      conta_id: params.accountId,
+      finalidade: params.purpose,
+      email: params.email,
+      codigo_hash: hmac(`${params.accountId}:${params.purpose}:${params.email}:${code}`),
+      expira_em: new Date(now + OTP_TTL_MS).toISOString(),
+      tentativas: 0,
+      ip_hash: hashMetadata(params.ip),
+      user_agent_hash: hashMetadata(params.userAgent),
+    })
+    .select("id")
+    .maybeSingle();
+  if (error || !created?.id) {
+    return { ok: false as const, error: "Não foi possível gerar o código agora." };
+  }
+  return { ok: true as const, code, id: String(created.id) };
+}
+
+async function invalidateOtpAfterEmailFailure(supabaseAdmin: any, otpId: string) {
+  const { error } = await supabaseAdmin
+    .from("cliente_app_email_verificacoes")
+    .update({ consumido_em: new Date().toISOString() })
+    .eq("id", otpId)
+    .is("consumido_em", null);
+
+  if (error) {
+    console.error("[CLIENTE_APP_OTP_INVALIDATE_ERROR]", {
+      otpId,
+      error: error.message,
+    });
+  }
+}
+
+async function sendCreatedOtp(params: {
+  supabaseAdmin: any;
+  otpId: string;
+  to: string;
+  code: string;
+  title: string;
+}) {
+  try {
+    await sendCodeEmail({
+      to: params.to,
+      code: params.code,
+      title: params.title,
+    });
+  } catch (error) {
+    await invalidateOtpAfterEmailFailure(params.supabaseAdmin, params.otpId);
+    throw error;
+  }
 }
 
 async function consumeOtp(params: {
@@ -281,7 +321,13 @@ export async function requestClienteRecoveryCodeByEmail(params: {
           userAgent: params.userAgent,
         });
         if (otp.ok) {
-          await sendCodeEmail({ to: email, code: otp.code, title: "Código para recuperar seu acesso" });
+          await sendCreatedOtp({
+            supabaseAdmin,
+            otpId: otp.id,
+            to: email,
+            code: otp.code,
+            title: "Código para recuperar seu acesso",
+          });
           void emitSecurityEvent({
             evento: "cliente_app_email_codigo_enviado",
             tipoUsuario: "cliente",
@@ -401,7 +447,13 @@ export async function requestClienteRecoveryCodeByIdentity(params: {
         userAgent: params.userAgent,
       });
       if (!otp.ok) return otp;
-      await sendCodeEmail({ to: email, code: otp.code, title: "Confirme o e-mail para recuperar seu acesso" });
+      await sendCreatedOtp({
+        supabaseAdmin,
+        otpId: otp.id,
+        to: email,
+        code: otp.code,
+        title: "Confirme o e-mail para recuperar seu acesso",
+      });
       return { ok: true, message: "Código enviado para o e-mail informado." };
     },
   });
@@ -485,7 +537,13 @@ export async function requestClienteEmailChangeCode(params: {
         userAgent: params.userAgent,
       });
       if (!otp.ok) return otp;
-      await sendCodeEmail({ to: email, code: otp.code, title: "Confirme seu novo e-mail" });
+      await sendCreatedOtp({
+        supabaseAdmin,
+        otpId: otp.id,
+        to: email,
+        code: otp.code,
+        title: "Confirme seu novo e-mail",
+      });
       return { ok: true, message: "Código enviado para o novo e-mail." };
     },
   });
