@@ -11,6 +11,7 @@ import {
   PlanAccessError,
   createSalaoMutacaoRouteService,
 } from "@/services/salaoMutacaoRouteService";
+import type { PermissionKey } from "@/lib/permissions";
 
 const routeService = createSalaoMutacaoRouteService({
   permission: "produtos_ver",
@@ -24,6 +25,16 @@ const routeService = createSalaoMutacaoRouteService({
     ["salvar", "alterar_status", "excluir"].includes(acaoRaw) ? acaoRaw : null,
 });
 
+function resolvePermission(
+  input: ReturnType<typeof parseProcessarProdutoInput>
+): PermissionKey {
+  if (input.acao === "excluir") return "produtos_excluir";
+  if (input.acao === "alterar_status") return "produtos_editar";
+  return String(input.produto?.id || "").trim()
+    ? "produtos_editar"
+    : "produtos_criar";
+}
+
 export async function POST(req: NextRequest) {
   let idSalao = "";
   let acaoRaw = "";
@@ -33,7 +44,7 @@ export async function POST(req: NextRequest) {
     idSalao = input.idSalao;
     acaoRaw = input.acao;
 
-    await routeService.validar(idSalao);
+    await routeService.validar(idSalao, resolvePermission(input));
 
     const result = await processarProdutoUseCase({
       input,
@@ -46,7 +57,7 @@ export async function POST(req: NextRequest) {
       const firstIssue = error.issues[0];
       return NextResponse.json(
         {
-          error: firstIssue?.message || "Payload invalido.",
+          error: firstIssue?.message || "Payload inválido.",
           issues: error.flatten(),
         },
         { status: 400 }

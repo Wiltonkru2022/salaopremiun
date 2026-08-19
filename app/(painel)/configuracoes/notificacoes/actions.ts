@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
+import { requireSalaoPermission } from "@/lib/auth/require-salao-permission";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
 import {
@@ -47,6 +48,17 @@ export async function salvarConfiguracoesNotificacoesAction(formData: FormData) 
   const { usuario } = await getPainelUserContext();
   if (!usuario?.id_salao) {
     redirect(buildRedirect("erro", "Não foi possível identificar seu salão."));
+  }
+
+  try {
+    await requireSalaoPermission(usuario.id_salao, "configuracoes_editar");
+  } catch (error) {
+    redirect(
+      buildRedirect(
+        "erro",
+        error instanceof Error ? error.message : "Você não tem permissão para alterar configurações."
+      )
+    );
   }
 
   const settings = readSettings(formData);

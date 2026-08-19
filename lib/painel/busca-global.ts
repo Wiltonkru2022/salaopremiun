@@ -9,6 +9,13 @@ export type PainelSearchResult = {
   href: string;
 };
 
+type PainelSearchPermissions = {
+  clientes: boolean;
+  servicos: boolean;
+  agenda: boolean;
+  comandas: boolean;
+};
+
 type ClienteRow = {
   id?: string | null;
   nome?: string | null;
@@ -62,14 +69,10 @@ function normalizeText(value: unknown) {
 }
 
 function relatedName(value: unknown) {
-  if (Array.isArray(value)) {
-    return relatedName(value[0]);
-  }
-
+  if (Array.isArray(value)) return relatedName(value[0]);
   if (value && typeof value === "object" && "nome" in value) {
     return String((value as { nome?: unknown }).nome || "");
   }
-
   return "";
 }
 
@@ -88,52 +91,63 @@ function formatDate(value: unknown) {
   return `${day}/${month}/${year}`;
 }
 
+const emptyResult = <T,>() => Promise.resolve({ data: [] as T[], error: null });
+
 export async function buscarPainelGlobal(params: {
   idSalao: string;
   term: string;
+  permissions: PainelSearchPermissions;
 }) {
   const normalizedTerm = normalizeText(params.term);
   const supabaseAdmin = asSupabaseQueryClient(getSupabaseAdmin());
 
-  const clientesQuery = supabaseAdmin
-    .from<ClienteRow[]>("clientes")
-    .select("id, nome, whatsapp, telefone, email")
-    .eq("id_salao", params.idSalao)
-    .or(
-      [
-        `nome.ilike.%${params.term}%`,
-        `whatsapp.ilike.%${params.term}%`,
-        `telefone.ilike.%${params.term}%`,
-        `email.ilike.%${params.term}%`,
-      ].join(",")
-    )
-    .order("nome", { ascending: true })
-    .limit(6);
+  const clientesQuery = params.permissions.clientes
+    ? supabaseAdmin
+        .from<ClienteRow[]>("clientes")
+        .select("id, nome, whatsapp, telefone, email")
+        .eq("id_salao", params.idSalao)
+        .or(
+          [
+            `nome.ilike.%${params.term}%`,
+            `whatsapp.ilike.%${params.term}%`,
+            `telefone.ilike.%${params.term}%`,
+            `email.ilike.%${params.term}%`,
+          ].join(",")
+        )
+        .order("nome", { ascending: true })
+        .limit(6)
+    : emptyResult<ClienteRow>();
 
-  const servicosQuery = supabaseAdmin
-    .from<ServicoRow[]>("servicos")
-    .select("id, nome, categoria, preco_padrao, preco, status, ativo")
-    .eq("id_salao", params.idSalao)
-    .or([`nome.ilike.%${params.term}%`, `categoria.ilike.%${params.term}%`].join(","))
-    .order("nome", { ascending: true })
-    .limit(6);
+  const servicosQuery = params.permissions.servicos
+    ? supabaseAdmin
+        .from<ServicoRow[]>("servicos")
+        .select("id, nome, categoria, preco_padrao, preco, status, ativo")
+        .eq("id_salao", params.idSalao)
+        .or([`nome.ilike.%${params.term}%`, `categoria.ilike.%${params.term}%`].join(","))
+        .order("nome", { ascending: true })
+        .limit(6)
+    : emptyResult<ServicoRow>();
 
-  const agendamentosQuery = supabaseAdmin
-    .from<AgendamentoRow[]>("agendamentos")
-    .select(
-      "id, data, hora_inicio, status, cliente_id, servico_id, clientes(nome), servicos(nome)"
-    )
-    .eq("id_salao", params.idSalao)
-    .order("data", { ascending: false })
-    .order("hora_inicio", { ascending: true })
-    .limit(60);
+  const agendamentosQuery = params.permissions.agenda
+    ? supabaseAdmin
+        .from<AgendamentoRow[]>("agendamentos")
+        .select(
+          "id, data, hora_inicio, status, cliente_id, servico_id, clientes(nome), servicos(nome)"
+        )
+        .eq("id_salao", params.idSalao)
+        .order("data", { ascending: false })
+        .order("hora_inicio", { ascending: true })
+        .limit(60)
+    : emptyResult<AgendamentoRow>();
 
-  const comandasQuery = supabaseAdmin
-    .from<ComandaRow[]>("comandas")
-    .select("id, numero, status, total, aberta_em, id_cliente, clientes(nome)")
-    .eq("id_salao", params.idSalao)
-    .order("aberta_em", { ascending: false })
-    .limit(40);
+  const comandasQuery = params.permissions.comandas
+    ? supabaseAdmin
+        .from<ComandaRow[]>("comandas")
+        .select("id, numero, status, total, aberta_em, id_cliente, clientes(nome)")
+        .eq("id_salao", params.idSalao)
+        .order("aberta_em", { ascending: false })
+        .limit(40)
+    : emptyResult<ComandaRow>();
 
   const [clientesRes, servicosRes, agendamentosRes, comandasRes] =
     await Promise.allSettled([
@@ -179,7 +193,6 @@ export async function buscarPainelGlobal(params: {
       const haystack = normalizeText(
         `${clienteNome} ${servicoNome} ${agendamento.status} ${agendamento.data} ${agendamento.hora_inicio}`
       );
-
       if (!haystack.includes(normalizedTerm)) continue;
 
       results.push({
@@ -201,7 +214,6 @@ export async function buscarPainelGlobal(params: {
       const haystack = normalizeText(
         `${numero} ${clienteNome} ${comanda.status} ${comanda.total} ${comanda.aberta_em}`
       );
-
       if (!haystack.includes(normalizedTerm)) continue;
 
       results.push({

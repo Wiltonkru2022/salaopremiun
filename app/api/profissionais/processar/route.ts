@@ -13,6 +13,7 @@ import {
   PlanAccessError,
   createSalaoMutacaoRouteService,
 } from "@/services/salaoMutacaoRouteService";
+import type { PermissionKey } from "@/lib/permissions";
 
 const routeService = createSalaoMutacaoRouteService({
   permission: "profissionais_ver",
@@ -25,6 +26,14 @@ const routeService = createSalaoMutacaoRouteService({
   getAction: (acaoRaw) => acaoRaw || null,
 });
 
+function resolvePermission(
+  input: ReturnType<typeof parseProcessarProfissionalInput>
+): PermissionKey {
+  if (input.acao === "criar") return "profissionais_criar";
+  if (input.acao === "excluir") return "profissionais_excluir";
+  return "profissionais_editar";
+}
+
 export async function POST(req: NextRequest) {
   let idSalao = "";
   let acaoRaw = "";
@@ -34,7 +43,7 @@ export async function POST(req: NextRequest) {
     idSalao = input.idSalao;
     acaoRaw = input.acao;
 
-    await routeService.validar(idSalao);
+    await routeService.validar(idSalao, resolvePermission(input));
 
     const result = await processarProfissionalUseCase({
       input,
@@ -73,7 +82,7 @@ export async function POST(req: NextRequest) {
       const firstIssue = error.issues[0];
       return NextResponse.json(
         {
-          error: firstIssue?.message || "Payload invalido.",
+          error: firstIssue?.message || "Payload inválido.",
           issues: error.flatten(),
         },
         { status: 400 }

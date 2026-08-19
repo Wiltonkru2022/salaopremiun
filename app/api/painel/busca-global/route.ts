@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
+import { getSalaoPermissionContext } from "@/lib/auth/require-salao-permission";
 import {
   buscarPainelGlobal,
   normalizeSearchTerm,
@@ -15,16 +16,22 @@ function jsonError(message: string, status = 400) {
 export async function GET(request: Request) {
   const { user, usuario } = await getPainelUserContext();
 
-  if (!user) {
-    return jsonError("Sessão expirada.", 401);
-  }
-
+  if (!user) return jsonError("Sessão expirada.", 401);
   if (!usuario?.id_salao) {
     return jsonError("Não foi possível identificar o salão do usuário.", 403);
   }
+  if (usuario.status !== "ativo") return jsonError("Usuário inativo.", 403);
 
-  if (usuario.status !== "ativo") {
-    return jsonError("Usuário inativo.", 403);
+  const authz = await getSalaoPermissionContext(usuario.id_salao);
+  const permissions = {
+    clientes: Boolean(authz.permissoes.clientes_ver),
+    servicos: Boolean(authz.permissoes.servicos_ver),
+    agenda: Boolean(authz.permissoes.agenda_ver),
+    comandas: Boolean(authz.permissoes.comandas_ver),
+  };
+
+  if (!Object.values(permissions).some(Boolean)) {
+    return jsonError("Usuário sem permissão para usar a busca global.", 403);
   }
 
   const url = new URL(request.url);
@@ -37,6 +44,7 @@ export async function GET(request: Request) {
   const results = await buscarPainelGlobal({
     idSalao: usuario.id_salao,
     term,
+    permissions,
   });
 
   return NextResponse.json({ results });
