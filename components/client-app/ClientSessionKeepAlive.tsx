@@ -2,9 +2,13 @@
 
 import { useEffect, useRef } from "react";
 import { usePathname } from "next/navigation";
+import {
+  clearClienteRestoreToken,
+  readClienteRestoreToken,
+  writeClienteRestoreToken,
+} from "@/lib/client-app/restore-token.client";
 
-const REFRESH_INTERVAL_MS = 1000 * 60 * 5;
-const RESTORE_TOKEN_KEY = "salaopremium:cliente:restore-token";
+const REFRESH_INTERVAL_MS = 1000 * 60 * 10;
 const AUTH_ROUTES = [
   "/app-cliente/login",
   "/app-cliente/cadastro",
@@ -26,9 +30,7 @@ export default function ClientSessionKeepAlive() {
   const pathname = usePathname();
   const lastRefreshRef = useRef(0);
 
-  const isAuthRoute = AUTH_ROUTES.some((route) =>
-    pathname.startsWith(route)
-  );
+  const isAuthRoute = AUTH_ROUTES.some((route) => pathname.startsWith(route));
   const isPublicRoute = PUBLIC_ROUTES.some(
     (route) => pathname === route || pathname.startsWith(`${route}/`)
   );
@@ -36,34 +38,26 @@ export default function ClientSessionKeepAlive() {
 
   useEffect(() => {
     async function refreshSession(force = false) {
-      if (!shouldRefresh) {
-        return;
-      }
+      if (!shouldRefresh) return;
 
       const now = Date.now();
-      if (!force && now - lastRefreshRef.current < REFRESH_INTERVAL_MS) {
-        return;
-      }
-
+      if (!force && now - lastRefreshRef.current < REFRESH_INTERVAL_MS) return;
       lastRefreshRef.current = now;
 
-      const restoreToken =
-        window.localStorage.getItem(RESTORE_TOKEN_KEY) || "";
-      if (isPublicRoute && !restoreToken) {
-        return;
-      }
+      const restoreToken = readClienteRestoreToken();
+      if (isPublicRoute && !restoreToken) return;
 
       const response = await fetch("/api/app-cliente/session/refresh", {
         method: "POST",
         cache: "no-store",
         credentials: "include",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ restoreToken }),
       }).catch(() => null);
 
-      if (!response?.ok) {
+      if (!response) return;
+      if (!response.ok) {
+        if (response.status === 401) clearClienteRestoreToken();
         return;
       }
 
@@ -71,9 +65,7 @@ export default function ClientSessionKeepAlive() {
         restoreToken?: string;
       } | null;
 
-      if (payload?.restoreToken) {
-        window.localStorage.setItem(RESTORE_TOKEN_KEY, payload.restoreToken);
-      }
+      if (payload?.restoreToken) writeClienteRestoreToken(payload.restoreToken);
     }
 
     void refreshSession(true);
@@ -83,9 +75,7 @@ export default function ClientSessionKeepAlive() {
     }, REFRESH_INTERVAL_MS);
 
     function refreshWhenVisible() {
-      if (document.visibilityState === "visible") {
-        void refreshSession();
-      }
+      if (document.visibilityState === "visible") void refreshSession();
     }
 
     window.addEventListener("focus", refreshWhenVisible);

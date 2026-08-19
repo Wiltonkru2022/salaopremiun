@@ -1,9 +1,7 @@
 import { redirect } from "next/navigation";
 import { canUsePlanFeature, isSalaoStatusOperational } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import {
-  getProfissionalSessionFromCookie,
-} from "@/lib/profissional-auth.server";
+import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
 import {
   buildSecurityBlockPath,
   getSecurityAccessDecision,
@@ -24,40 +22,56 @@ function isUnauthorizedError(error: unknown) {
 
 async function loadProfissionalServerContext(): Promise<ProfissionalServerContext> {
   const session = await getProfissionalSessionFromCookie();
-
-  if (!session) {
-    throw new Error("UNAUTHORIZED");
-  }
+  if (!session) throw new Error("UNAUTHORIZED");
 
   const supabaseAdmin = getSupabaseAdmin();
-  const { data: profissional, error: profissionalError } = await supabaseAdmin
-    .from("profissionais")
-    .select(
-      "id, id_salao, nome, nome_exibicao, email, ativo, tipo_profissional, nivel_acesso, pode_usar_sistema"
-    )
-    .eq("id", session.idProfissional)
-    .eq("id_salao", session.idSalao)
-    .maybeSingle();
+  const [acessoResult, profissionalResult, salaoResult] = await Promise.all([
+    supabaseAdmin
+      .from("profissionais_acessos")
+      .select("id, id_profissional, ativo, auth_version")
+      .eq("id", session.acessoId)
+      .eq("id_profissional", session.idProfissional)
+      .eq("ativo", true)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("profissionais")
+      .select(
+        "id, id_salao, nome, nome_exibicao, email, ativo, tipo_profissional, nivel_acesso, pode_usar_sistema"
+      )
+      .eq("id", session.idProfissional)
+      .eq("id_salao", session.idSalao)
+      .maybeSingle(),
+    supabaseAdmin
+      .from("saloes")
+      .select("id, status")
+      .eq("id", session.idSalao)
+      .maybeSingle(),
+  ]);
 
-  if (profissionalError || !profissional?.id || profissional.ativo === false) {
-    throw new Error("UNAUTHORIZED");
-  }
-
+  const acesso = acessoResult.data;
   if (
-    String(profissional.tipo_profissional || "profissional").toLowerCase() ===
-    "assistente"
+    acessoResult.error ||
+    !acesso?.id ||
+    acesso.ativo === false ||
+    Number(acesso.auth_version || 1) !== Number(session.authVersion || 0)
   ) {
     throw new Error("UNAUTHORIZED");
   }
 
-  const { data: salao, error: salaoError } = await supabaseAdmin
-    .from("saloes")
-    .select("id, status")
-    .eq("id", session.idSalao)
-    .maybeSingle();
-
+  const profissional = profissionalResult.data;
   if (
-    salaoError ||
+    profissionalResult.error ||
+    !profissional?.id ||
+    profissional.ativo === false ||
+    String(profissional.tipo_profissional || "profissional").toLowerCase() ===
+      "assistente"
+  ) {
+    throw new Error("UNAUTHORIZED");
+  }
+
+  const salao = salaoResult.data;
+  if (
+    salaoResult.error ||
     !salao?.id ||
     !isSalaoStatusOperational(salao.status)
   ) {
@@ -70,9 +84,7 @@ async function loadProfissionalServerContext(): Promise<ProfissionalServerContex
     idSalao: session.idSalao,
   });
 
-  if (!securityDecision.allowed) {
-    throw new Error("SECURITY_BLOCKED");
-  }
+  if (!securityDecision.allowed) throw new Error("SECURITY_BLOCKED");
 
   const nivelAcesso = String(profissional.nivel_acesso || "proprio").toLowerCase();
   if (profissional.pode_usar_sistema === false || nivelAcesso === "sem_acesso") {
@@ -105,22 +117,15 @@ export async function validateProfissionalAppSession(): Promise<{
   try {
     context = await loadProfissionalServerContext();
   } catch (error) {
-    if (isUnauthorizedError(error)) {
-      return { context: null, reason: "unauthorized" };
-    }
-
+    if (isUnauthorizedError(error)) return { context: null, reason: "unauthorized" };
     if (error instanceof Error && error.message === "SECURITY_BLOCKED") {
       return { context: null, reason: "security_blocked" };
     }
-
     throw error;
   }
 
   const access = await canUsePlanFeature(context.idSalao, "app_profissional");
-
-  if (!access.allowed) {
-    return { context: null, reason: "plan_blocked" };
-  }
+  if (!access.allowed) return { context: null, reason: "plan_blocked" };
 
   return { context, reason: null };
 }
@@ -140,9 +145,7 @@ export async function requireProfissionalAppContext(): Promise<ProfissionalServe
           ? "/app-profissional/login?erro=plano_sem_app"
           : "/app-profissional/login?erro=sessao_expirada";
 
-    redirect(
-      `/app-profissional/logout?destino=${encodeURIComponent(destino)}`
-    );
+    redirect(`/app-profissional/logout?destino=${encodeURIComponent(destino)}`);
   }
 
   return validation.context;

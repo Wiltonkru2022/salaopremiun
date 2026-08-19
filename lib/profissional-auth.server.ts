@@ -9,11 +9,20 @@ export type ProfissionalSession = {
   idSalao: string;
   nome: string;
   cpf: string;
+  acessoId: string;
+  authVersion: number;
   tipo: "profissional";
 };
 
 const COOKIE_NAME = "sp_profissional_session";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 30;
+const ENC_ALGORITHM = "aes-256-gcm";
+const IV_LENGTH = 12;
+
+type SessionEnvelope = {
+  session: ProfissionalSession;
+  exp: number;
+};
 
 async function shouldUseSecureCookies() {
   if (process.env.NODE_ENV !== "production") return false;
@@ -29,13 +38,6 @@ async function shouldUseSecureCookies() {
     protocol === "http"
   );
 }
-const ENC_ALGORITHM = "aes-256-gcm";
-const IV_LENGTH = 12;
-
-type SessionEnvelope = {
-  session: ProfissionalSession;
-  exp: number;
-};
 
 function getSessionSecret() {
   const secret = process.env.PROFISSIONAL_SESSION_SECRET;
@@ -46,9 +48,7 @@ function getSessionSecret() {
 }
 
 async function getCookieDomain() {
-  if (process.env.NODE_ENV !== "production") {
-    return undefined;
-  }
+  if (process.env.NODE_ENV !== "production") return undefined;
 
   const requestHeaders = await headers();
   const host = String(requestHeaders.get("host") || "").split(":")[0].toLowerCase();
@@ -87,27 +87,21 @@ function encryptEnvelope(envelope: SessionEnvelope) {
 
 function decryptEnvelope(token: string): SessionEnvelope | null {
   const [ivEncoded, tagEncoded, encryptedEncoded] = token.split(".");
-  if (!ivEncoded || !tagEncoded || !encryptedEncoded) {
-    return null;
-  }
+  if (!ivEncoded || !tagEncoded || !encryptedEncoded) return null;
+
   try {
     const iv = base64UrlDecodeBuffer(ivEncoded);
     const tag = base64UrlDecodeBuffer(tagEncoded);
     const encrypted = base64UrlDecodeBuffer(encryptedEncoded);
-    const key = deriveKey();
-    const decipher = crypto.createDecipheriv(ENC_ALGORITHM, key, iv);
+    const decipher = crypto.createDecipheriv(ENC_ALGORITHM, deriveKey(), iv);
     decipher.setAuthTag(tag);
     const decrypted = Buffer.concat([
       decipher.update(encrypted),
       decipher.final(),
     ]);
     const parsed = JSON.parse(decrypted.toString("utf8")) as SessionEnvelope;
-    if (!parsed?.session || !parsed?.exp) {
-      return null;
-    }
-    if (parsed.exp < Math.floor(Date.now() / 1000)) {
-      return null;
-    }
+    if (!parsed?.session?.idProfissional || !parsed?.exp) return null;
+    if (parsed.exp < Math.floor(Date.now() / 1000)) return null;
     return parsed;
   } catch {
     return null;
@@ -115,19 +109,18 @@ function decryptEnvelope(token: string): SessionEnvelope | null {
 }
 
 function serializeSession(session: ProfissionalSession) {
-  const envelope: SessionEnvelope = {
-    session,
+  return encryptEnvelope({
+    session: {
+      ...session,
+      authVersion: Math.max(Number(session.authVersion || 1), 1),
+    },
     exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
-  };
-  return encryptEnvelope(envelope);
+  });
 }
 
 function parseSession(token: string): ProfissionalSession | null {
   const envelope = decryptEnvelope(token);
-  if (!envelope?.session) {
-    return null;
-  }
-  return envelope.session;
+  return envelope?.session || null;
 }
 
 export async function hashPassword(password: string) {
@@ -168,13 +161,13 @@ export async function getProfissionalSessionFromCookie(): Promise<ProfissionalSe
     .map((cookie) => cookie.value)
     .filter(Boolean);
 
-  if (!candidates.length) {
-    return null;
-  }
-
   for (const raw of candidates) {
     const session = parseSession(raw);
-    if (session?.idProfissional) {
+    if (
+      session?.idProfissional &&
+      session.acessoId &&
+      Number(session.authVersion || 0) > 0
+    ) {
       return session;
     }
   }
@@ -184,32 +177,25 @@ export async function getProfissionalSessionFromCookie(): Promise<ProfissionalSe
 
 export async function requireProfissionalSession() {
   const session = await getProfissionalSessionFromCookie();
-  if (!session) {
-    redirect("/app-profissional/login");
-  }
+  if (!session) redirect("/app-profissional/login");
   return session;
 }
 
 export async function clearProfissionalSession() {
   const cookieStore = await cookies();
   const secure = await shouldUseSecureCookies();
-  cookieStore.set(COOKIE_NAME, "", {
+  const baseOptions = {
     httpOnly: true,
     secure,
     sameSite: "lax",
     path: "/",
     maxAge: 0,
-  });
+  } as const;
+
+  cookieStore.set(COOKIE_NAME, "", baseOptions);
 
   const cookieDomain = await getCookieDomain();
   if (cookieDomain) {
-    cookieStore.set(COOKIE_NAME, "", {
-      httpOnly: true,
-      secure,
-      sameSite: "lax",
-      domain: cookieDomain,
-      path: "/",
-      maxAge: 0,
-    });
+    cookieStore.set(COOKIE_NAME, "", { ...baseOptions, domain: cookieDomain });
   }
 }

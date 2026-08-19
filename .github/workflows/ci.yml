@@ -44,14 +44,20 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Typecheck
+      - name: Typecheck Next
         run: npm run typecheck
+
+      - name: Typecheck App Profissional Vite
+        run: npm run typecheck:professional
 
       - name: Test App Cliente identity
         run: npx vitest run lib/client-app/identity.test.ts
 
       - name: Test App Cliente visual notices
         run: npx vitest run lib/client-app/visual-notifications.test.ts
+
+      - name: Test safe internal redirects
+        run: npx vitest run lib/security/safe-next-path.test.ts
 
       - name: Test Web Push delivery policies
         run: npx vitest run lib/push-delivery-utils.test.ts

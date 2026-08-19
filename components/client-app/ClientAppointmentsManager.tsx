@@ -103,16 +103,12 @@ function canBookAgain(item: ClientAppAppointmentListItem) {
 function canConfirmPresence(item: ClientAppAppointmentListItem) {
   const status = String(item.status || "").toLowerCase();
   const clientStatus = String(item.confirmacaoClienteStatus || "").toLowerCase();
-  return (
-    status === "confirmado" &&
-    clientStatus !== "confirmado"
-  );
+  return status === "confirmado" && clientStatus !== "confirmado";
 }
 
 function needsSignalPayment(item: ClientAppAppointmentListItem) {
   return (
-    String(item.status || "").toLowerCase() ===
-      "reservado_aguardando_pagamento" ||
+    String(item.status || "").toLowerCase() === "reservado_aguardando_pagamento" ||
     String(item.sinalStatus || "").toLowerCase() === "aguardando_pagamento"
   );
 }
@@ -168,7 +164,16 @@ function CancelAppointmentForm({ idAgendamento }: { idAgendamento: string }) {
   >(cancelClienteAppointmentAction, initialState);
 
   return (
-    <form action={formAction} className="space-y-2">
+    <form
+      action={formAction}
+      className="space-y-2"
+      onSubmit={(event) => {
+        const confirmed = window.confirm(
+          "Tem certeza que deseja cancelar este agendamento? O horário será liberado para outra pessoa."
+        );
+        if (!confirmed) event.preventDefault();
+      }}
+    >
       <input type="hidden" name="agendamento" value={idAgendamento} />
       <ActionButton
         label="Cancelar agendamento"
@@ -195,10 +200,7 @@ function ConfirmAppointmentForm({ idAgendamento }: { idAgendamento: string }) {
   return (
     <form action={formAction} className="space-y-2">
       <input type="hidden" name="agendamento" value={idAgendamento} />
-      <ActionButton
-        label="Confirmar presença"
-        pendingLabel="Confirmando..."
-      />
+      <ActionButton label="Confirmar presença" pendingLabel="Confirmando..." />
       {state.error ? (
         <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
           {state.error}
@@ -208,11 +210,7 @@ function ConfirmAppointmentForm({ idAgendamento }: { idAgendamento: string }) {
   );
 }
 
-function RescheduleAppointmentForm({
-  item,
-}: {
-  item: ClientAppAppointmentListItem;
-}) {
+function RescheduleAppointmentForm({ item }: { item: ClientAppAppointmentListItem }) {
   const initialState: ClienteAppointmentActionState = { error: null };
   const [state, formAction] = useActionState<
     ClienteAppointmentActionState,
@@ -245,10 +243,7 @@ function RescheduleAppointmentForm({
       });
       const response = await fetch(
         `/api/app-cliente/disponibilidade?${params.toString()}`,
-        {
-          method: "GET",
-          credentials: "same-origin",
-        }
+        { method: "GET", credentials: "same-origin" }
       );
       const payload = await response.json();
       if (!response.ok || !payload?.ok) {
@@ -261,9 +256,7 @@ function RescheduleAppointmentForm({
       setSelectedDate(nextDias[0]?.data || "");
       setSelectedTime(nextDias[0]?.horarios[0]?.horaInicio || "");
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Não foi possível carregar horários."
-      );
+      setError(err instanceof Error ? err.message : "Não foi possível carregar horários.");
     } finally {
       setLoading(false);
     }
@@ -281,82 +274,58 @@ function RescheduleAppointmentForm({
       </button>
 
       {open ? (
-          <form action={formAction} className="space-y-4 rounded-2xl bg-zinc-50 p-4">
+        <form action={formAction} className="space-y-4 rounded-2xl bg-zinc-50 p-4">
           <input type="hidden" name="agendamento" value={item.id} />
           <input type="hidden" name="data" value={selectedDate} />
           <input type="hidden" name="hora_inicio" value={selectedTime} />
 
           {loading ? (
-            <div className="rounded-xl bg-white px-3 py-2 text-sm text-zinc-500">
-              Buscando horários livres...
-            </div>
+            <div className="rounded-xl bg-white px-3 py-2 text-sm text-zinc-500">Buscando horários livres...</div>
           ) : error ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
-            </div>
+            <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{error}</div>
           ) : dias.length ? (
             <>
               <div>
-                <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">
-                  Escolha o dia
-                </p>
+                <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Escolha o dia</p>
                 <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                {dias.map((dia) => (
-                  <button
-                    key={dia.data}
-                    type="button"
-                    onClick={() => {
-                      setSelectedDate(dia.data);
-                      setSelectedTime(dia.horarios[0]?.horaInicio || "");
-                    }}
-                    className={`min-h-12 rounded-xl border px-3 py-2 text-left text-sm font-black transition ${
-                      selectedDate === dia.data
-                        ? "border-zinc-950 bg-zinc-950 text-white"
-                        : "border-zinc-200 bg-white text-zinc-700"
-                    }`}
-                  >
-                    {dia.rotulo}
-                  </button>
-                ))}
+                  {dias.map((dia) => (
+                    <button
+                      key={dia.data}
+                      type="button"
+                      onClick={() => {
+                        setSelectedDate(dia.data);
+                        setSelectedTime(dia.horarios[0]?.horaInicio || "");
+                      }}
+                      className={`min-h-12 rounded-xl border px-3 py-2 text-left text-sm font-black transition ${selectedDate === dia.data ? "border-zinc-950 bg-zinc-950 text-white" : "border-zinc-200 bg-white text-zinc-700"}`}
+                    >
+                      {dia.rotulo}
+                    </button>
+                  ))}
                 </div>
               </div>
               <div>
-                <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">
-                  Escolha o horário
-                </p>
+                <p className="mb-2 text-xs font-black uppercase tracking-[0.14em] text-zinc-500">Escolha o horário</p>
                 <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                {horarios.map((horario) => (
-                  <button
-                    key={`${selectedDate}-${horario.horaInicio}`}
-                    type="button"
-                    onClick={() => setSelectedTime(horario.horaInicio)}
-                    className={`min-h-11 rounded-xl border px-2 py-2 text-sm font-black transition ${
-                      selectedTime === horario.horaInicio
-                        ? "border-zinc-950 bg-zinc-950 text-white"
-                        : "border-zinc-200 bg-white text-zinc-700"
-                    }`}
-                  >
-                    {horario.horaInicio.slice(0, 5)}
-                  </button>
-                ))}
+                  {horarios.map((horario) => (
+                    <button
+                      key={`${selectedDate}-${horario.horaInicio}`}
+                      type="button"
+                      onClick={() => setSelectedTime(horario.horaInicio)}
+                      className={`min-h-11 rounded-xl border px-2 py-2 text-sm font-black transition ${selectedTime === horario.horaInicio ? "border-zinc-950 bg-zinc-950 text-white" : "border-zinc-200 bg-white text-zinc-700"}`}
+                    >
+                      {horario.horaInicio.slice(0, 5)}
+                    </button>
+                  ))}
                 </div>
               </div>
-              <ActionButton
-                label="Confirmar reagendamento"
-                pendingLabel="Reagendando..."
-                disabled={!selectedDate || !selectedTime}
-              />
+              <ActionButton label="Confirmar reagendamento" pendingLabel="Reagendando..." disabled={!selectedDate || !selectedTime} />
             </>
           ) : (
-            <div className="rounded-xl bg-white px-3 py-2 text-sm text-zinc-500">
-              Sem horários livres para esse atendimento.
-            </div>
+            <div className="rounded-xl bg-white px-3 py-2 text-sm text-zinc-500">Sem horários livres para esse atendimento.</div>
           )}
 
           {state.error ? (
-            <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">
-              {state.error}
-            </div>
+            <div className="rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-xs text-red-700">{state.error}</div>
           ) : null}
         </form>
       ) : null}
@@ -376,18 +345,10 @@ export default function ClientAppointmentsManager({
   hasMore?: boolean;
 }) {
   const successMessage = useMemo(() => {
-    if (successKey === "agendado") {
-      return "Seu pedido foi enviado. O salão vai confirmar o horário.";
-    }
-    if (successKey === "cancelado") {
-      return "Seu agendamento foi cancelado e o horário foi liberado.";
-    }
-    if (successKey === "confirmado") {
-      return "Sua presença foi confirmada para o salão.";
-    }
-    if (successKey === "comprovante_enviado") {
-      return "Comprovante enviado. Seu agendamento ficou na lista para conferencia.";
-    }
+    if (successKey === "agendado") return "Seu pedido foi enviado. O salão vai confirmar o horário.";
+    if (successKey === "cancelado") return "Seu agendamento foi cancelado e o horário foi liberado.";
+    if (successKey === "confirmado") return "Sua presença foi confirmada para o salão.";
+    if (successKey === "comprovante_enviado") return "Comprovante enviado. Seu agendamento ficou na lista para conferência.";
     if (successKey === "reagendado") return "Seu agendamento foi reagendado.";
     if (successKey === "avaliado") return "Sua avaliação foi enviada.";
     return null;
@@ -396,161 +357,102 @@ export default function ClientAppointmentsManager({
   return (
     <section className="space-y-5">
       {successMessage ? (
-        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
-          {successMessage}
-        </div>
+        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">{successMessage}</div>
       ) : null}
 
       <div className="space-y-4">
         {agendamentos.length ? (
           <>
-          {agendamentos.map((item) => (
-            <article key={item.id} className="space-y-5">
-              <div className="flex flex-wrap gap-3">
-                <span className="inline-flex items-center gap-3 rounded-2xl bg-zinc-100 px-5 py-3 text-base font-semibold text-zinc-800">
-                  <Bell size={18} />
-                  {formatStatus(item.status)}
-                </span>
-                {needsSignalPayment(item) && item.sinalValor ? (
-                  <span className="inline-flex items-center gap-3 rounded-2xl bg-amber-50 px-5 py-3 text-base font-semibold text-[#996512]">
-                    <WalletCards size={20} />
-                    Sinal {formatCurrency(item.sinalValor)}
+            {agendamentos.map((item) => (
+              <article key={item.id} className="space-y-5">
+                <div className="flex flex-wrap gap-3">
+                  <span className="inline-flex items-center gap-3 rounded-2xl bg-zinc-100 px-5 py-3 text-base font-semibold text-zinc-800">
+                    <Bell size={18} />
+                    {formatStatus(item.status)}
                   </span>
-                ) : null}
-                {item.podeCancelar ? (
-                  <span className="inline-flex items-center gap-3 rounded-2xl bg-amber-50 px-5 py-3 text-base font-semibold text-[#996512]">
-                    <Clock3 size={20} />
-                    {String(item.status || "").toLowerCase() === "pendente"
-                      ? "Aguardando confirmação do salão"
-                      : formatClientConfirmation(item.confirmacaoClienteStatus)}
-                  </span>
-                ) : null}
+                  {needsSignalPayment(item) && item.sinalValor ? (
+                    <span className="inline-flex items-center gap-3 rounded-2xl bg-amber-50 px-5 py-3 text-base font-semibold text-[#996512]">
+                      <WalletCards size={20} />
+                      Sinal {formatCurrency(item.sinalValor)}
+                    </span>
+                  ) : null}
+                  {item.podeCancelar ? (
+                    <span className="inline-flex items-center gap-3 rounded-2xl bg-amber-50 px-5 py-3 text-base font-semibold text-[#996512]">
+                      <Clock3 size={20} />
+                      {String(item.status || "").toLowerCase() === "pendente"
+                        ? "Aguardando confirmação do salão"
+                        : formatClientConfirmation(item.confirmacaoClienteStatus)}
+                    </span>
+                  ) : null}
+                </div>
+
+                <div className="grid grid-cols-[1fr_96px] gap-4 rounded-[1.5rem] border border-zinc-100 bg-white p-5 shadow-[0_16px_42px_rgba(15,23,42,0.08)]">
+                  <div className="min-w-0">
+                    <h2 className="break-words text-3xl font-black tracking-[-0.04em] text-zinc-950">{item.servicoNome}</h2>
+                    <p className="mt-4 text-xl text-zinc-500">com {item.profissionalNome}</p>
+                    <p className="mt-4 text-xl font-black text-zinc-950">{item.salaoNome}</p>
+                    <div className="mt-7 space-y-4 text-lg text-zinc-700">
+                      <p className="flex items-center gap-4"><MapPin size={26} /><span>Três Lagoas - MS</span></p>
+                      <p className="flex items-center gap-4"><Clock3 size={26} /><span>{formatDuration(item)}</span></p>
+                      {formatCreatedAt(item.criadoEm) ? (
+                        <p className="flex items-center gap-4 text-base text-zinc-500"><CalendarDays size={24} /><span>Solicitado em {formatCreatedAt(item.criadoEm)}</span></p>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  <div className="border-l border-zinc-200 pl-4 text-center">
+                    <div className="text-2xl font-black text-zinc-950">{formatMonth(item.data)}</div>
+                    <div className="mt-2 text-7xl font-light leading-none text-zinc-950">{formatDay(item.data)}</div>
+                    <div className="mt-3 text-2xl font-black text-zinc-950">{item.horaInicio.slice(0, 5)}</div>
+                  </div>
+
+                  <div className="col-span-2 mt-2 border-t border-zinc-100 pt-5">
+                    <div className="flex flex-wrap gap-3">
+                      {needsSignalPayment(item) ? (
+                        <Link href={`/app-cliente/agendamentos/${item.id}/sinal`} className="inline-flex h-12 items-center rounded-2xl bg-emerald-600 px-5 text-base font-black text-white">Pagar sinal e enviar comprovante</Link>
+                      ) : null}
+                      {canConfirmPresence(item) ? <ConfirmAppointmentForm idAgendamento={item.id} /> : null}
+                      {item.podeCancelar ? (
+                        <>
+                          <RescheduleAppointmentForm item={item} />
+                          <CancelAppointmentForm idAgendamento={item.id} />
+                        </>
+                      ) : null}
+                      {canBookAgain(item) && !item.podeCancelar ? (
+                        <Link href={`/app-cliente/salao/${item.idSalao}`} className="inline-flex h-12 items-center rounded-2xl bg-zinc-950 px-5 text-base font-black text-white">Reservar novamente</Link>
+                      ) : null}
+                      {buildWhatsappLink(item) ? (
+                        <a href={buildWhatsappLink(item) || "#"} target="_blank" rel="noreferrer" className="inline-flex h-12 items-center rounded-2xl border border-emerald-200 bg-emerald-50 px-5 text-base font-black text-emerald-700">Falar no WhatsApp</a>
+                      ) : null}
+                      {item.podeAvaliar ? (
+                        <Link href={`/app-cliente/agendamentos/${item.id}/avaliar`} className="inline-flex h-12 items-center rounded-2xl bg-zinc-950 px-5 text-base font-black text-white">Avaliar</Link>
+                      ) : null}
+                    </div>
+                  </div>
+
+                  {item.podeAvaliar ? (
+                    <div className="col-span-2 mt-1"><ClientAppointmentReviewForm idAgendamento={item.id} compact /></div>
+                  ) : null}
+                  {item.avaliado ? (
+                    <div className="col-span-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">Avaliação enviada.</div>
+                  ) : null}
+                </div>
+              </article>
+            ))}
+            <div className="flex items-center gap-5 rounded-[1.5rem] bg-zinc-50 p-6">
+              <CalendarDays size={46} className="shrink-0 text-zinc-950" />
+              <div>
+                <h2 className="text-xl font-black text-zinc-950">Ainda não há agendamento ativo</h2>
+                <p className="mt-1 text-base text-zinc-500">Escolha um salão e reserve quando quiser.</p>
               </div>
-
-              <div className="grid grid-cols-[1fr_96px] gap-4 rounded-[1.5rem] border border-zinc-100 bg-white p-5 shadow-[0_16px_42px_rgba(15,23,42,0.08)]">
-                <div className="min-w-0">
-                  <h2 className="break-words text-3xl font-black tracking-[-0.04em] text-zinc-950">
-                    {item.servicoNome}
-                  </h2>
-                  <p className="mt-4 text-xl text-zinc-500">
-                    com {item.profissionalNome}
-                  </p>
-                  <p className="mt-4 text-xl font-black text-zinc-950">
-                    {item.salaoNome}
-                  </p>
-                  <div className="mt-7 space-y-4 text-lg text-zinc-700">
-                    <p className="flex items-center gap-4">
-                      <MapPin size={26} />
-                      <span>Três Lagoas - MS</span>
-                    </p>
-                    <p className="flex items-center gap-4">
-                      <Clock3 size={26} />
-                      <span>{formatDuration(item)}</span>
-                    </p>
-                    {formatCreatedAt(item.criadoEm) ? (
-                      <p className="flex items-center gap-4 text-base text-zinc-500">
-                        <CalendarDays size={24} />
-                        <span>Solicitado em {formatCreatedAt(item.criadoEm)}</span>
-                      </p>
-                    ) : null}
-                  </div>
-                </div>
-
-                <div className="border-l border-zinc-200 pl-4 text-center">
-                  <div className="text-2xl font-black text-zinc-950">
-                    {formatMonth(item.data)}
-                  </div>
-                  <div className="mt-2 text-7xl font-light leading-none text-zinc-950">
-                    {formatDay(item.data)}
-                  </div>
-                  <div className="mt-3 text-2xl font-black text-zinc-950">
-                    {item.horaInicio.slice(0, 5)}
-                  </div>
-                </div>
-
-                <div className="col-span-2 mt-2 border-t border-zinc-100 pt-5">
-                  <div className="flex flex-wrap gap-3">
-                    {needsSignalPayment(item) ? (
-                      <Link
-                        href={`/app-cliente/agendamentos/${item.id}/sinal`}
-                        className="inline-flex h-12 items-center rounded-2xl bg-emerald-600 px-5 text-base font-black text-white"
-                      >
-                        Pagar sinal e enviar comprovante
-                      </Link>
-                    ) : null}
-                    {canConfirmPresence(item) ? (
-                      <ConfirmAppointmentForm idAgendamento={item.id} />
-                    ) : null}
-                    {item.podeCancelar ? (
-                      <>
-                        <RescheduleAppointmentForm item={item} />
-                        <CancelAppointmentForm idAgendamento={item.id} />
-                      </>
-                    ) : null}
-                    {canBookAgain(item) && !item.podeCancelar ? (
-                      <Link
-                        href={`/app-cliente/salao/${item.idSalao}`}
-                        className="inline-flex h-12 items-center rounded-2xl bg-zinc-950 px-5 text-base font-black text-white"
-                      >
-                        Reservar novamente
-                      </Link>
-                    ) : null}
-                    {buildWhatsappLink(item) ? (
-                      <a
-                        href={buildWhatsappLink(item) || "#"}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex h-12 items-center rounded-2xl border border-emerald-200 bg-emerald-50 px-5 text-base font-black text-emerald-700"
-                      >
-                        Falar no WhatsApp
-                      </a>
-                    ) : null}
-                    {item.podeAvaliar ? (
-                      <Link
-                        href={`/app-cliente/agendamentos/${item.id}/avaliar`}
-                        className="inline-flex h-12 items-center rounded-2xl bg-zinc-950 px-5 text-base font-black text-white"
-                      >
-                        Avaliar
-                      </Link>
-                    ) : null}
-                  </div>
-                </div>
-
-                {item.podeAvaliar ? (
-                  <div className="col-span-2 mt-1">
-                    <ClientAppointmentReviewForm idAgendamento={item.id} compact />
-                  </div>
-                ) : null}
-                {item.avaliado ? (
-                  <div className="col-span-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">
-                    Avaliação enviada.
-                  </div>
-                ) : null}
-              </div>
-            </article>
-          ))}
-          <div className="flex items-center gap-5 rounded-[1.5rem] bg-zinc-50 p-6">
-            <CalendarDays size={46} className="shrink-0 text-zinc-950" />
-            <div>
-              <h2 className="text-xl font-black text-zinc-950">
-                Ainda não há agendamento ativo
-              </h2>
-              <p className="mt-1 text-base text-zinc-500">
-                Escolha um salão e reserve quando quiser.
-              </p>
             </div>
-          </div>
           </>
         ) : (
           <div className="flex items-center gap-5 rounded-[1.5rem] bg-zinc-50 p-6">
             <CalendarDays size={46} className="shrink-0 text-zinc-950" />
             <div>
-              <h2 className="text-xl font-black text-zinc-950">
-                Ainda não há agendamento ativo
-              </h2>
-              <p className="mt-1 text-base text-zinc-500">
-                Escolha um salão e reserve quando quiser.
-              </p>
+              <h2 className="text-xl font-black text-zinc-950">Ainda não há agendamento ativo</h2>
+              <p className="mt-1 text-base text-zinc-500">Escolha um salão e reserve quando quiser.</p>
             </div>
           </div>
         )}

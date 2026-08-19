@@ -1,4 +1,4 @@
-﻿import { RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { useMemo, useState } from "react";
 import { ptBR } from "../../../core/i18n/pt-BR";
 import { AppShell, type View } from "./components/layout/AppShell";
@@ -32,9 +32,9 @@ const titles: Record<View, string> = {
   perfil: ptBR.professional.profile,
   configuracoes: ptBR.professional.settings,
   suporte: ptBR.professional.support,
-  duvidas: "Duvidas",
+  duvidas: "Dúvidas",
   instalar: "Instalar",
-  privacidade: "Privacidade"
+  privacidade: "Privacidade",
 };
 
 export function App() {
@@ -49,16 +49,30 @@ export function App() {
   );
 
   const subtitle = useMemo(() => {
-    if (view === "agenda") return new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" }).format(new Date(selectedDate + "T12:00:00"));
-    if (view === "comandas") return `${data.comandas.filter((item) => item.status === "aberta").length} abertas`;
-    if (view === "notificacoes") return `${data.notificacoes.filter((item) => !item.lida).length} nao lidas`;
-    if (view === "comissao") return "Repasse e producao";
-    if (view === "perfil") return "Dados, horarios e suporte";
+    if (view === "agenda") {
+      return new Intl.DateTimeFormat("pt-BR", {
+        weekday: "long",
+        day: "2-digit",
+        month: "long",
+      }).format(new Date(selectedDate + "T12:00:00"));
+    }
+    if (view === "comandas") {
+      return `${data.comandas.filter((item) => item.status === "aberta").length} abertas`;
+    }
+    if (view === "notificacoes") {
+      return `${data.notificacoes.filter((item) => !item.lida).length} não lidas`;
+    }
+    if (view === "comissao") return "Repasse e produção";
+    if (view === "perfil") return "Dados, horários e suporte";
     return profissional?.nome || "";
   }, [view, selectedDate, data.comandas, data.notificacoes, profissional?.nome]);
 
   if (authLoading) {
-    return <div className="grid min-h-screen place-items-center bg-zinc-950 text-sm font-black uppercase tracking-[0.22em] text-white">Carregando</div>;
+    return (
+      <div className="grid min-h-screen place-items-center bg-zinc-950 text-sm font-black uppercase tracking-[0.22em] text-white">
+        Carregando
+      </div>
+    );
   }
 
   if (!profissional) return <LoginPage />;
@@ -102,4 +116,3 @@ export function App() {
     </AppShell>
   );
 }
-

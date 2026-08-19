@@ -18,16 +18,15 @@ const blockedWords = [
   "arrombado",
   "fdp",
   "vagabunda",
-  "vagabundo"
+  "vagabundo",
 ];
 
 function hasBadLanguage(text?: string | null) {
   if (!text) return false;
-  const normalized = text
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-  return blockedWords.some((word) => normalized.includes(word.normalize("NFD").replace(/[\u0300-\u036f]/g, "")));
+  const normalized = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  return blockedWords.some((word) =>
+    normalized.includes(word.normalize("NFD").replace(/[\u0300-\u036f]/g, ""))
+  );
 }
 
 function Stars({ value }: { value: number }) {
@@ -42,13 +41,14 @@ function Stars({ value }: { value: number }) {
 
 export function AvaliacoesPage({
   avaliacoes,
-  onDelete
+  onDelete,
 }: {
   avaliacoes: Avaliacao[];
   onDelete: (id: string) => Promise<void>;
 }) {
   const [page, setPage] = useState(1);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const average = useMemo(() => {
     if (!avaliacoes.length) return 0;
@@ -59,10 +59,16 @@ export function AvaliacoesPage({
   const pageItems = avaliacoes.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
   async function remove(id: string) {
+    if (!window.confirm("Tem certeza que deseja excluir esta avaliação? Esta ação não pode ser desfeita.")) {
+      return;
+    }
     setDeletingId(id);
+    setError(null);
     try {
       await onDelete(id);
       setPage(1);
+    } catch (deleteError) {
+      setError(deleteError instanceof Error ? deleteError.message : "Não foi possível excluir a avaliação.");
     } finally {
       setDeletingId(null);
     }
@@ -74,20 +80,22 @@ export function AvaliacoesPage({
         <Stars value={Math.round(average)} />
         <h2 className="mt-5 text-3xl font-black tracking-[-0.06em]">{average ? average.toFixed(1) : "0.0"}</h2>
         <p className="mt-2 text-sm font-semibold leading-6 text-zinc-300">
-          {avaliacoes.length} avaliacoes recebidas pelo app cliente.
+          {avaliacoes.length} avaliações recebidas pelo App Cliente.
         </p>
       </Card>
 
       <Card>
         <div className="flex items-center justify-between gap-3">
           <div>
-            <h2 className="text-xl font-black tracking-[-0.04em]">Avaliacoes</h2>
-            <p className="text-sm font-bold text-zinc-500">Comentarios ofensivos ficam protegidos para revisao.</p>
+            <h2 className="text-xl font-black tracking-[-0.04em]">Avaliações</h2>
+            <p className="text-sm font-bold text-zinc-500">Comentários ofensivos ficam protegidos para revisão.</p>
           </div>
-          <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-600">
-            {page}/{totalPages}
-          </span>
+          <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-600">{page}/{totalPages}</span>
         </div>
+
+        {error ? (
+          <div className="mt-4 rounded-2xl border border-red-200 bg-red-50 px-3 py-2 text-sm font-bold text-red-700">{error}</div>
+        ) : null}
 
         <div className="mt-4 space-y-3">
           {pageItems.length ? (
@@ -100,15 +108,10 @@ export function AvaliacoesPage({
                       <Stars value={Number(item.nota || 0)} />
                       <div className="mt-2 truncate text-base font-black">{item.cliente_nome || "Cliente"}</div>
                       <div className="text-xs font-bold text-zinc-500">
-                        {item.servico_nome || "Servico"} - {item.created_at ? new Date(item.created_at).toLocaleDateString("pt-BR") : "Sem data"}
+                        {item.servico_nome || "Serviço"} - {item.created_at ? new Date(item.created_at).toLocaleDateString("pt-BR") : "Sem data"}
                       </div>
                     </div>
-                    <Button
-                      variant="danger"
-                      className="h-10 px-3"
-                      loading={deletingId === item.id}
-                      onClick={() => remove(item.id)}
-                    >
+                    <Button variant="danger" className="h-10 px-3" loading={deletingId === item.id} onClick={() => void remove(item.id)} aria-label="Excluir avaliação">
                       <Trash2 size={15} />
                     </Button>
                   </div>
@@ -116,11 +119,11 @@ export function AvaliacoesPage({
                   {blocked ? (
                     <div className="mt-3 flex gap-2 rounded-2xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700">
                       <ShieldAlert size={18} />
-                      Comentario oculto por conter palavra ofensiva.
+                      Comentário oculto por conter palavra ofensiva.
                     </div>
                   ) : (
                     <p className="mt-3 text-sm font-semibold leading-6 text-zinc-700">
-                      {item.comentario || "Cliente avaliou sem comentario."}
+                      {item.comentario || "Cliente avaliou sem comentário."}
                     </p>
                   )}
                 </div>
@@ -128,19 +131,15 @@ export function AvaliacoesPage({
             })
           ) : (
             <div className="rounded-2xl border border-dashed border-zinc-300 p-6 text-center text-sm font-bold text-zinc-500">
-              Nenhuma avaliacao recebida ainda.
+              Nenhuma avaliação recebida ainda.
             </div>
           )}
         </div>
 
         {avaliacoes.length > PAGE_SIZE ? (
           <div className="mt-4 grid grid-cols-2 gap-2">
-            <Button variant="secondary" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>
-              Anterior
-            </Button>
-            <Button variant="secondary" disabled={page === totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>
-              Proxima
-            </Button>
+            <Button variant="secondary" disabled={page === 1} onClick={() => setPage((current) => Math.max(1, current - 1))}>Anterior</Button>
+            <Button variant="secondary" disabled={page === totalPages} onClick={() => setPage((current) => Math.min(totalPages, current + 1))}>Próxima</Button>
           </div>
         ) : null}
       </Card>

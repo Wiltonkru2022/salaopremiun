@@ -18,12 +18,14 @@ export type ClienteAppSession = {
 const COOKIE_NAME = "sp_cliente_session";
 const LOGOUT_MARKER_COOKIE_NAME = "sp_cliente_logout";
 const SESSION_TTL_SECONDS = 60 * 60 * 24 * 180;
+const RESTORE_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7;
 const ENC_ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 12;
 
 type SessionEnvelope = {
   session: ClienteAppSession;
   exp: number;
+  purpose?: "session" | "restore";
 };
 
 function getSessionSecret() {
@@ -91,24 +93,38 @@ function decryptEnvelope(token: string): SessionEnvelope | null {
   }
 }
 
-function serializeSession(session: ClienteAppSession) {
+function serializeSession(
+  session: ClienteAppSession,
+  purpose: "session" | "restore",
+  ttlSeconds: number
+) {
   return encryptEnvelope({
-    session: { ...session, authVersion: Number(session.authVersion || 1), issuedAt: session.issuedAt || Date.now() },
-    exp: Math.floor(Date.now() / 1000) + SESSION_TTL_SECONDS,
+    session: {
+      ...session,
+      authVersion: Number(session.authVersion || 1),
+      issuedAt: session.issuedAt || Date.now(),
+    },
+    purpose,
+    exp: Math.floor(Date.now() / 1000) + ttlSeconds,
   });
 }
 
-function parseSession(token: string): ClienteAppSession | null {
+function parseSession(
+  token: string,
+  expectedPurpose: "session" | "restore"
+): ClienteAppSession | null {
   const envelope = decryptEnvelope(token);
-  return envelope?.session || null;
+  if (!envelope?.session) return null;
+  if (envelope.purpose && envelope.purpose !== expectedPurpose) return null;
+  return envelope.session;
 }
 
 export function createClienteSessionRestoreToken(session: ClienteAppSession) {
-  return serializeSession(session);
+  return serializeSession(session, "restore", RESTORE_TOKEN_TTL_SECONDS);
 }
 
 export function parseClienteSessionRestoreToken(token: string) {
-  return parseSession(token);
+  return parseSession(token, "restore");
 }
 
 // Mantidos somente para o login legado durante a janela de migração.
@@ -122,7 +138,7 @@ export async function verifyClientePassword(password: string, hash: string) {
 
 export async function createClienteSession(session: ClienteAppSession) {
   const cookieStore = await cookies();
-  const token = serializeSession(session);
+  const token = serializeSession(session, "session", SESSION_TTL_SECONDS);
   const secure = await shouldUseSecureCookies();
   const baseOptions = {
     httpOnly: true,
@@ -147,7 +163,7 @@ export async function getClienteSessionFromCookie(): Promise<ClienteAppSession |
   if (cookieStore.get(LOGOUT_MARKER_COOKIE_NAME)?.value) return null;
 
   for (const raw of cookieStore.getAll(COOKIE_NAME).map((cookie) => cookie.value).filter(Boolean)) {
-    const session = parseSession(raw);
+    const session = parseSession(raw, "session");
     if (session?.idConta) return session;
   }
   return null;
