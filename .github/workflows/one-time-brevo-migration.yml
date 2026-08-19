@@ -1,0 +1,82 @@
+name: One-time Brevo cleanup
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v5
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Replace remaining Resend references with Brevo
+        shell: bash
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+
+          allowed_suffixes = {
+              '.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.json', '.md', '.yml', '.yaml', '.txt', '.example'
+          }
+          skip_dirs = {'.git', 'node_modules', '.next', 'dist', 'build', '.vercel'}
+
+          for path in Path('.').rglob('*'):
+              if not path.is_file() or any(part in skip_dirs for part in path.parts):
+                  continue
+              if path.as_posix() == '.github/workflows/one-time-brevo-migration.yml':
+                  continue
+              if path.suffix.lower() not in allowed_suffixes and path.name not in {'.env.example', 'README.md'}:
+                  continue
+              try:
+                  text = path.read_text(encoding='utf-8')
+              except UnicodeDecodeError:
+                  continue
+              updated = (
+                  text
+                  .replace('@/lib/email/resend', '@/lib/email/brevo')
+                  .replace('sendResendEmail', 'sendBrevoEmail')
+                  .replace('RESEND_API_KEY', 'BREVO_API_KEY')
+                  .replace('vercel-resend', 'vercel-brevo')
+                  .replace('Resend', 'Brevo')
+                  .replace('resend', 'brevo')
+              )
+              if updated != text:
+                  path.write_text(updated, encoding='utf-8')
+
+          legacy = Path('lib/email/resend.ts')
+          if legacy.exists():
+              legacy.unlink()
+
+          workflow = Path('.github/workflows/one-time-brevo-migration.yml')
+          if workflow.exists():
+              workflow.unlink()
+          PY
+
+      - name: Verify no Resend references remain
+        shell: bash
+        run: |
+          if git grep -ni 'resend' -- ':!package-lock.json'; then
+            echo 'Ainda existem referências ao provedor antigo.' >&2
+            exit 1
+          fi
+
+      - name: Commit cleanup directly to main
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -A
+          if git diff --cached --quiet; then
+            exit 0
+          fi
+          git commit -m 'Remove Resend e padroniza Brevo em todo o sistema'
+          git push origin HEAD:main
