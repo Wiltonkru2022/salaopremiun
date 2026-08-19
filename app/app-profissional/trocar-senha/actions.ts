@@ -26,15 +26,12 @@ export async function trocarSenhaProfissionalAction(
   if (!senhaAtual || !novaSenha || !confirmarSenha) {
     return { ok: false, message: "Preencha todos os campos." };
   }
-
   if (novaSenha.length < 6) {
     return { ok: false, message: "A nova senha precisa ter pelo menos 6 caracteres." };
   }
-
   if (novaSenha !== confirmarSenha) {
-    return { ok: false, message: "A confirmacao da senha nao confere." };
+    return { ok: false, message: "A confirmação da senha não confere." };
   }
-
   if (senhaAtual === novaSenha) {
     return { ok: false, message: "Escolha uma senha diferente da atual." };
   }
@@ -53,15 +50,10 @@ export async function trocarSenhaProfissionalAction(
         .maybeSingle();
 
       if (error || !acesso?.senha_hash) {
-        return {
-          ok: false,
-          message: "Nao foi possivel localizar seu acesso ativo.",
-        };
+        return { ok: false, message: "Não foi possível localizar seu acesso ativo." };
       }
 
-      const senhaAtualOk = await verifyPassword(senhaAtual, acesso.senha_hash);
-
-      if (!senhaAtualOk) {
+      if (!(await verifyPassword(senhaAtual, acesso.senha_hash))) {
         return { ok: false, message: "Senha atual incorreta." };
       }
 
@@ -70,20 +62,20 @@ export async function trocarSenhaProfissionalAction(
         .from("profissionais_acessos")
         .update({
           senha_hash: senhaHash,
-          updated_at: new Date().toISOString(),
+          atualizado_em: new Date().toISOString(),
         })
         .eq("id", acesso.id)
         .eq("id_profissional", session.idProfissional);
 
       if (updateError) {
-        return {
-          ok: false,
-          message: "Nao foi possivel salvar a nova senha agora.",
-        };
+        return { ok: false, message: "Não foi possível salvar a nova senha agora." };
       }
 
       revalidatePath("/app-profissional/perfil");
-      return { ok: true, message: "Senha alterada com sucesso." };
+      return {
+        ok: true,
+        message: "Senha alterada com sucesso. Entre novamente com a nova senha.",
+      };
     },
   });
 }
