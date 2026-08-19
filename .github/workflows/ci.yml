@@ -39,6 +39,9 @@ jobs:
       - name: Test App Cliente identity
         run: npx vitest run lib/client-app/identity.test.ts
 
+      - name: Audit painel PT-BR
+        run: node scripts/audit/painel-ui-text-audit.mjs --check
+
       - name: Audit
         continue-on-error: true
         run: npm run audit
