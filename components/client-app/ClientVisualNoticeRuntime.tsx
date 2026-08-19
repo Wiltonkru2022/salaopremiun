@@ -26,6 +26,8 @@ type ClientVisualNotice = {
   priority: number;
 };
 
+const NOTICE_POLL_INTERVAL_MS = 5 * 60 * 1000;
+
 function noticeIcon(tone: string) {
   if (tone === "manutencao") return ShieldAlert;
   if (tone === "aviso") return AlertTriangle;
@@ -98,7 +100,7 @@ export default function ClientVisualNoticeRuntime() {
     window.addEventListener("focus", onFocus);
     const timer = window.setInterval(() => {
       if (document.visibilityState === "visible") void loadNotice();
-    }, 60_000);
+    }, NOTICE_POLL_INTERVAL_MS);
 
     return () => {
       window.removeEventListener("focus", onFocus);
