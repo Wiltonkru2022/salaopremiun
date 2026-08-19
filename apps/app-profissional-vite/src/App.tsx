@@ -13,6 +13,7 @@ import { ClientesPage } from "./pages/ClientesPage";
 import { ComissaoPage } from "./pages/ComissaoPage";
 import { ComandasPage } from "./pages/ComandasPage";
 import { ConfiguracoesPage } from "./pages/ConfiguracoesPage";
+import { CuponsPage } from "./pages/CuponsPage";
 import { InicioPage } from "./pages/InicioPage";
 import { LoginPage } from "./pages/LoginPage";
 import { NotificacoesPage } from "./pages/NotificacoesPage";
@@ -26,6 +27,7 @@ const titles: Record<View, string> = {
   clientes: ptBR.professional.clients,
   servicos: ptBR.professional.services,
   comandas: ptBR.professional.tickets,
+  cupons: "Cupons",
   comissao: ptBR.professional.commission,
   avaliacoes: ptBR.professional.reviews,
   notificacoes: ptBR.professional.alerts,
@@ -43,9 +45,7 @@ export function App() {
   const [selectedDate, setSelectedDate] = useState(toISODate(new Date()));
   const data = useProfissionalData(
     profissional?.id,
-    profissional?.podeVerAgendaTodos ??
-      profissional?.pode_ver_agenda_todos ??
-      String(profissional?.nivel_acesso || "").toLowerCase() === "todos",
+    profissional?.podeVerAgendaTodos ?? profissional?.pode_ver_agenda_todos ?? String(profissional?.nivel_acesso || "").toLowerCase() === "todos",
     view
   );
 
@@ -55,35 +55,19 @@ export function App() {
     if (view === "notificacoes") return `${data.notificacoes.filter((item) => !item.lida).length} não lidas`;
     if (view === "comissao") return "Repasse e produção";
     if (view === "perfil") return "Dados, horários e suporte";
+    if (view === "cupons") return "Benefícios privados para suas clientes";
     return profissional?.nome || "";
   }, [view, selectedDate, data.comandas, data.notificacoes, profissional?.nome]);
 
-  if (authLoading) {
-    return <div className="grid min-h-screen place-items-center bg-zinc-950 text-sm font-black uppercase tracking-[0.22em] text-white">Carregando</div>;
-  }
-
+  if (authLoading) return <div className="grid min-h-screen place-items-center bg-zinc-950 text-sm font-black uppercase tracking-[0.22em] text-white">Carregando</div>;
   if (!profissional) return <LoginPage />;
 
   return (
     <AppShell view={view} setView={setView} title={titles[view]} subtitle={subtitle || ""}>
-      {data.error ? (
-        <Card className="mb-4 border-red-200 bg-red-50 text-red-700">
-          <div className="text-sm font-bold">{data.error}</div>
-        </Card>
-      ) : null}
-
+      {data.error ? <Card className="mb-4 border-red-200 bg-red-50 text-red-700"><div className="text-sm font-bold">{data.error}</div></Card> : null}
       <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="min-w-0 text-xs font-black uppercase tracking-[0.12em] text-zinc-400">
-          {data.loading
-            ? ptBR.common.syncing
-            : data.isOnline
-              ? `${ptBR.common.online}${data.lastSyncedAt ? ` · ${new Date(data.lastSyncedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : ""}`
-              : ptBR.professional.offlineWarning}
-        </div>
-        <Button variant="secondary" className="h-10 px-3" onClick={() => data.refresh()}>
-          <RefreshCw size={16} />
-          Atualizar
-        </Button>
+        <div className="min-w-0 text-xs font-black uppercase tracking-[0.12em] text-zinc-400">{data.loading ? ptBR.common.syncing : data.isOnline ? `${ptBR.common.online}${data.lastSyncedAt ? ` · ${new Date(data.lastSyncedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : ""}` : ptBR.professional.offlineWarning}</div>
+        <Button variant="secondary" className="h-10 px-3" onClick={() => data.refresh()}><RefreshCw size={16} />Atualizar</Button>
       </div>
 
       {view === "inicio" ? <InicioPage nome={profissional.nome_exibicao || profissional.nome} agendamentos={data.agendamentos} clientes={data.clientes} servicos={data.servicos} comandas={data.comandas} goTo={setView} /> : null}
@@ -91,6 +75,7 @@ export function App() {
       {view === "clientes" ? <ClientesPage clientes={data.clientes} agendamentos={data.agendamentos} comandas={data.comandas} onSave={data.actions.salvarCliente} onEdit={data.actions.editarCliente} /> : null}
       {view === "servicos" ? <ServicosPage servicos={data.servicos} onSave={data.actions.salvarServico} onEdit={data.actions.editarServico} /> : null}
       {view === "comandas" ? <ComandasPage clientes={data.clientes} servicos={data.servicos} comandas={data.comandas} itens={data.itensComanda} actions={data.actions} /> : null}
+      {view === "cupons" ? <CuponsPage clientes={data.clientes} /> : null}
       {view === "comissao" ? <ComissaoPage comissoes={data.comissoes} /> : null}
       {view === "avaliacoes" ? <AvaliacoesPage avaliacoes={data.avaliacoes} onDelete={data.actions.excluirAvaliacao} /> : null}
       {view === "notificacoes" ? <NotificacoesPage notificacoes={data.notificacoes} onRead={data.actions.marcarNotificacaoLida} /> : null}
