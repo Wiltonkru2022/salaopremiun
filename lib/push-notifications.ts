@@ -72,6 +72,8 @@ type PushProviderError = {
   body?: unknown;
 };
 
+type WebPushModule = typeof import("web-push");
+
 const PUSH_BURST_WINDOW_MS = 25 * 1000;
 const PUSH_SAME_TAG_WINDOW_MS = 10 * 60 * 1000;
 const PUSH_SUBSCRIPTION_REFRESH_MS = 12 * 60 * 60 * 1000;
@@ -86,10 +88,7 @@ function getPushConfig() {
     String(process.env.WEB_PUSH_SUBJECT || "").trim() ||
     "mailto:suporte@salaopremiun.com.br";
 
-  if (!publicKey || !privateKey) {
-    return null;
-  }
-
+  if (!publicKey || !privateKey) return null;
   return { publicKey, privateKey, subject };
 }
 
@@ -169,17 +168,12 @@ export async function upsertPushSubscription(params: {
       { onConflict: "audience,endpoint" }
     );
 
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   if (params.audience === "cliente_app" && params.clienteAppContaId) {
     await (supabase as any)
       .from("push_subscriptions")
-      .update({
-        ativo: false,
-        updated_at: now,
-      })
+      .update({ ativo: false, updated_at: now })
       .eq("audience", "cliente_app")
       .eq("cliente_app_conta_id", params.clienteAppContaId)
       .neq("endpoint", parsed.endpoint)
@@ -222,7 +216,6 @@ async function filterClienteAppSubscriptionsByPreference(
         .filter(Boolean)
     )
   );
-
   if (!ids.length) return [];
 
   const { data, error } = await (getSupabaseAdmin() as any)
@@ -270,7 +263,6 @@ async function filterProfissionalAppSubscriptionsByPreference(
         .filter(Boolean)
     )
   );
-
   if (!ids.length) return [];
 
   const { data, error } = await (getSupabaseAdmin() as any)
@@ -316,9 +308,7 @@ function pruneRecentPushes(now: number) {
     }
 
     for (const [tag, sentAt] of state.tagSentAt.entries()) {
-      if (now - sentAt > PUSH_SAME_TAG_WINDOW_MS) {
-        state.tagSentAt.delete(tag);
-      }
+      if (now - sentAt > PUSH_SAME_TAG_WINDOW_MS) state.tagSentAt.delete(tag);
     }
   }
 }
@@ -326,25 +316,18 @@ function pruneRecentPushes(now: number) {
 function shouldThrottlePush(endpoint: string, payload: PushPayload) {
   const now = Date.now();
   pruneRecentPushes(now);
-
   const tag = payload.tag || "salaopremium-update";
   const state = recentPushByEndpoint.get(endpoint);
   if (!state) return false;
 
   const sameTagAt = state.tagSentAt.get(tag);
-  if (sameTagAt && now - sameTagAt < PUSH_SAME_TAG_WINDOW_MS) {
-    return true;
-  }
+  if (sameTagAt && now - sameTagAt < PUSH_SAME_TAG_WINDOW_MS) return true;
 
-  if (
+  return Boolean(
     !payload.renotify &&
-    !payload.requireInteraction &&
-    now - state.lastSentAt < PUSH_BURST_WINDOW_MS
-  ) {
-    return true;
-  }
-
-  return false;
+      !payload.requireInteraction &&
+      now - state.lastSentAt < PUSH_BURST_WINDOW_MS
+  );
 }
 
 function rememberPushSent(endpoint: string, payload: PushPayload) {
@@ -352,10 +335,7 @@ function rememberPushSent(endpoint: string, payload: PushPayload) {
   const tag = payload.tag || "salaopremium-update";
   const state =
     recentPushByEndpoint.get(endpoint) ||
-    ({
-      lastSentAt: 0,
-      tagSentAt: new Map<string, number>(),
-    } satisfies PushBurstState);
+    ({ lastSentAt: 0, tagSentAt: new Map<string, number>() } satisfies PushBurstState);
 
   state.lastSentAt = now;
   state.tagSentAt.set(tag, now);
@@ -366,13 +346,11 @@ function normalizeErrorMessage(error: unknown) {
   if (error instanceof Error && error.message) {
     return error.message.slice(0, PUSH_ERROR_MESSAGE_MAX_LENGTH);
   }
-
   if (typeof error === "object" && error !== null) {
     const providerError = error as PushProviderError;
     const message = String(providerError.message || providerError.body || "").trim();
     if (message) return message.slice(0, PUSH_ERROR_MESSAGE_MAX_LENGTH);
   }
-
   return "Falha desconhecida ao enviar Web Push.";
 }
 
@@ -386,9 +364,7 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-async function resolveSubscriptionAudience(row: PushSubscriptionRow) {
-  if (row.audience) return { audience: row.audience, failureCount: 0 };
-
+async function loadSubscriptionMetadata(row: PushSubscriptionRow) {
   try {
     const { data } = await (getSupabaseAdmin() as any)
       .from("push_subscriptions")
@@ -396,21 +372,20 @@ async function resolveSubscriptionAudience(row: PushSubscriptionRow) {
       .eq("id", row.id)
       .maybeSingle();
 
-    const audience = String(data?.audience || "") as PushAudience;
-    if (
-      audience !== "cliente_app" &&
-      audience !== "profissional_app" &&
-      audience !== "salao_painel"
-    ) {
-      return { audience: null, failureCount: Number(data?.failure_count || 0) };
-    }
+    const rawAudience = String(row.audience || data?.audience || "");
+    const audience: PushAudience | null =
+      rawAudience === "cliente_app" ||
+      rawAudience === "profissional_app" ||
+      rawAudience === "salao_painel"
+        ? rawAudience
+        : null;
 
     return {
       audience,
       failureCount: Number(data?.failure_count || 0),
     };
   } catch {
-    return { audience: null, failureCount: 0 };
+    return { audience: row.audience || null, failureCount: 0 };
   }
 }
 
@@ -425,8 +400,7 @@ async function recordPushDelivery(params: {
   try {
     const supabase = getSupabaseAdmin() as any;
     const now = new Date().toISOString();
-    const metadata = await resolveSubscriptionAudience(params.row);
-    const audience = params.row.audience || metadata.audience;
+    const metadata = await loadSubscriptionMetadata(params.row);
 
     if (params.status === "enviada") {
       await supabase
@@ -442,24 +416,26 @@ async function recordPushDelivery(params: {
         })
         .eq("id", params.row.id);
     } else if (params.status === "falhou") {
+      const failureUpdate: Record<string, unknown> = {
+        last_failure_at: now,
+        last_error_code: params.httpStatus || null,
+        last_error_message: params.errorMessage || "Falha ao enviar Web Push.",
+        failure_count: Math.max(0, metadata.failureCount) + 1,
+        updated_at: now,
+      };
+      if (params.deactivateSubscription) failureUpdate.ativo = false;
+
       await supabase
         .from("push_subscriptions")
-        .update({
-          ativo: params.deactivateSubscription ? false : true,
-          last_failure_at: now,
-          last_error_code: params.httpStatus || null,
-          last_error_message: params.errorMessage || "Falha ao enviar Web Push.",
-          failure_count: Math.max(0, metadata.failureCount) + 1,
-          updated_at: now,
-        })
+        .update(failureUpdate)
         .eq("id", params.row.id);
     }
 
-    if (!audience) return;
+    if (!metadata.audience) return;
 
     await supabase.from("push_delivery_log").insert({
       push_subscription_id: params.row.id,
-      audience,
+      audience: metadata.audience,
       endpoint_host: getPushEndpointHost(params.row.endpoint),
       notification_tag: params.payload.tag || null,
       title: params.payload.title || null,
@@ -477,32 +453,23 @@ async function recordPushDelivery(params: {
 }
 
 async function sendNotificationWithRetry(params: {
-  webPush: typeof import("web-push");
+  webPush: WebPushModule;
   row: PushSubscriptionRow;
   payload: PushPayload;
 }) {
-  let lastError: unknown = null;
-
   for (let attempt = 1; attempt <= PUSH_MAX_ATTEMPTS; attempt += 1) {
     try {
       const response = await params.webPush.default.sendNotification(
         {
           endpoint: params.row.endpoint,
-          keys: {
-            p256dh: params.row.p256dh,
-            auth: params.row.auth,
-          },
+          keys: { p256dh: params.row.p256dh, auth: params.row.auth },
         },
         JSON.stringify(params.payload),
         { TTL: 60 * 60 * 12 }
       );
 
-      return {
-        ok: true as const,
-        statusCode: Number(response?.statusCode || 201),
-      };
+      return { ok: true as const, statusCode: Number(response?.statusCode || 201) };
     } catch (error) {
-      lastError = error;
       const statusCode = getErrorStatusCode(error);
       const policy = classifyPushFailure(statusCode);
 
@@ -519,12 +486,11 @@ async function sendNotificationWithRetry(params: {
     }
   }
 
-  const statusCode = getErrorStatusCode(lastError);
   return {
     ok: false as const,
-    statusCode,
-    message: normalizeErrorMessage(lastError),
-    policy: classifyPushFailure(statusCode),
+    statusCode: 0,
+    message: "Web Push excedeu o limite de tentativas.",
+    policy: classifyPushFailure(0),
   };
 }
 
@@ -534,12 +500,7 @@ function buildDeliveryFailure(
   category: PushFailureCategory,
   message: string
 ): PushDeliveryFailure {
-  return {
-    subscriptionId: row.id,
-    statusCode,
-    category,
-    message,
-  };
+  return { subscriptionId: row.id, statusCode, category, message };
 }
 
 export async function sendPushToRows(
@@ -553,7 +514,6 @@ export async function sendPushToRows(
   const uniqueRows = Array.from(
     new Map(rows.map((row) => [row.endpoint, row])).values()
   );
-  const config = getPushConfig();
   const pushPayload: PushPayload = {
     ...payload,
     renotify: payload.renotify ?? false,
@@ -561,14 +521,11 @@ export async function sendPushToRows(
     silent: payload.silent ?? false,
     timestamp: payload.timestamp || Date.now(),
   };
+  const config = getPushConfig();
 
   if (!config) {
     const message =
       "Web Push nao configurado: WEB_PUSH_PUBLIC_KEY e WEB_PUSH_PRIVATE_KEY sao obrigatorias.";
-    const errors = uniqueRows.map((row) =>
-      buildDeliveryFailure(row, 0, "authentication", message)
-    );
-
     await Promise.all(
       uniqueRows.map((row) =>
         recordPushDelivery({
@@ -581,16 +538,11 @@ export async function sendPushToRows(
         })
       )
     );
-
     throw new Error(message);
   }
 
   const webPush = await import("web-push");
-  webPush.default.setVapidDetails(
-    config.subject,
-    config.publicKey,
-    config.privateKey
-  );
+  webPush.default.setVapidDetails(config.subject, config.publicKey, config.privateKey);
 
   let sent = 0;
   let failed = 0;
@@ -610,20 +562,20 @@ export async function sendPushToRows(
         return;
       }
 
-      const result = await sendNotificationWithRetry({
+      const delivery = await sendNotificationWithRetry({
         webPush,
         row,
         payload: pushPayload,
       });
 
-      if (result.ok) {
+      if (delivery.ok) {
         rememberPushSent(row.endpoint, pushPayload);
         sent += 1;
         await recordPushDelivery({
           row,
           payload: pushPayload,
           status: "enviada",
-          httpStatus: result.statusCode,
+          httpStatus: delivery.statusCode,
         });
         return;
       }
@@ -632,18 +584,18 @@ export async function sendPushToRows(
       errors.push(
         buildDeliveryFailure(
           row,
-          result.statusCode,
-          result.policy.category,
-          result.message
+          delivery.statusCode,
+          delivery.policy.category,
+          delivery.message
         )
       );
       await recordPushDelivery({
         row,
         payload: pushPayload,
         status: "falhou",
-        httpStatus: result.statusCode,
-        errorMessage: result.message,
-        deactivateSubscription: result.policy.deactivateSubscription,
+        httpStatus: delivery.statusCode,
+        errorMessage: delivery.message,
+        deactivateSubscription: delivery.policy.deactivateSubscription,
       });
     })
   );
@@ -678,10 +630,7 @@ export async function broadcastPushNotification(params: {
   const supabase = getSupabaseAdmin();
   const title = String(params.title || "").trim();
   const body = String(params.body || "").trim();
-
-  if (!title || !body) {
-    throw new Error("Informe titulo e mensagem.");
-  }
+  if (!title || !body) throw new Error("Informe titulo e mensagem.");
 
   let query = (supabase as any)
     .from("push_subscriptions")
@@ -690,30 +639,24 @@ export async function broadcastPushNotification(params: {
     )
     .eq("ativo", true);
 
-  if (params.target === "clientes") {
-    query = query.eq("audience", "cliente_app");
-  } else if (params.target === "profissionais") {
+  if (params.target === "clientes") query = query.eq("audience", "cliente_app");
+  else if (params.target === "profissionais") {
     query = query.eq("audience", "profissional_app");
   } else if (params.target === "saloes") {
     query = query.eq("audience", "salao_painel");
   }
 
-  if (params.idSalao) {
-    query = query.eq("id_salao", params.idSalao);
-  }
+  if (params.idSalao) query = query.eq("id_salao", params.idSalao);
 
   const { data: rows, error } = await query.limit(2000);
-  if (error) {
-    throw new Error(error.message);
-  }
+  if (error) throw new Error(error.message);
 
   let subscriptions = (rows || []) as PushSubscriptionRow[];
   if (params.target === "clientes") {
     subscriptions = await filterClienteAppSubscriptionsByPreference(subscriptions);
   }
   if (params.target === "profissionais") {
-    subscriptions =
-      await filterProfissionalAppSubscriptionsByPreference(subscriptions);
+    subscriptions = await filterProfissionalAppSubscriptionsByPreference(subscriptions);
   }
 
   return sendPushToRows(subscriptions, {
@@ -726,10 +669,9 @@ export async function broadcastPushNotification(params: {
 
 function formatAppointmentDate(date?: string | null, time?: string | null) {
   const dateText = date
-    ? new Intl.DateTimeFormat("pt-BR", {
-        day: "2-digit",
-        month: "2-digit",
-      }).format(new Date(`${date}T12:00:00`))
+    ? new Intl.DateTimeFormat("pt-BR", { day: "2-digit", month: "2-digit" }).format(
+        new Date(`${date}T12:00:00`)
+      )
     : "data escolhida";
   const timeText = String(time || "").slice(0, 5);
   return timeText ? `${dateText} as ${timeText}` : dateText;
@@ -782,10 +724,9 @@ export async function notifySalonAboutClientBooking(params: {
     }
 
     if (!profissionalResult.error && profissionalResult.data?.length) {
-      const profissionais =
-        await filterProfissionalAppSubscriptionsByPreference(
-          profissionalResult.data as PushSubscriptionRow[]
-        );
+      const profissionais = await filterProfissionalAppSubscriptionsByPreference(
+        profissionalResult.data as PushSubscriptionRow[]
+      );
       await sendPushToRows(profissionais, {
         title: "Pedido de horário para confirmar",
         body,
@@ -817,7 +758,6 @@ export async function notifyClientAppointmentConfirmed(params: {
       .eq("id", params.idAgendamento)
       .eq("id_salao", params.idSalao)
       .maybeSingle();
-
     if (appointmentError || !agendamento?.cliente_id) return;
 
     const { data: clienteAuth, error: authError } = await (supabase as any)
@@ -829,11 +769,9 @@ export async function notifyClientAppointmentConfirmed(params: {
       .not("app_conta_id", "is", null)
       .limit(1)
       .maybeSingle();
-
     if (authError || !clienteAuth?.app_conta_id) return;
-    const clientePushEnabled = await isClienteAppPushEnabled(
-      clienteAuth.app_conta_id
-    );
+
+    const clientePushEnabled = await isClienteAppPushEnabled(clienteAuth.app_conta_id);
     if (!clientePushEnabled) return;
 
     const { data: rows, error: rowsError } = await (supabase as any)
@@ -842,7 +780,6 @@ export async function notifyClientAppointmentConfirmed(params: {
       .eq("audience", "cliente_app")
       .eq("ativo", true)
       .eq("cliente_app_conta_id", clienteAuth.app_conta_id);
-
     if (rowsError || !rows?.length) return;
 
     const { data: servico } = agendamento.servico_id
