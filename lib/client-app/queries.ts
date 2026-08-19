@@ -103,6 +103,9 @@ export type ClientAppAppointmentListItem = {
   salaoNome: string;
   salaoWhatsapp: string | null;
   salaoTelefone: string | null;
+  salaoCidade: string | null;
+  salaoEstado: string | null;
+  salaoEndereco: string | null;
   data: string;
   horaInicio: string;
   horaFim: string;
@@ -418,554 +421,430 @@ async function attachMarketplaceMetrics(
   });
 }
 
-async function filterClientAppPlanAllowed<T extends { id: string }>(items: T[]) {
-  const allowed: T[] = [];
-
-  for (const item of items) {
-    const access = await canUsePlanFeature(item.id, "app_cliente").catch(() => ({
-      allowed: false,
-    }));
-    if (access.allowed) allowed.push(item);
-  }
-
-  return allowed;
+async function filterClientAppPlanAllowed<T extends ClientAppEligibleSalon>(saloes: T[]) {
+  if (!saloes.length) return saloes;
+  const checks = await Promise.all(
+    saloes.map(async (salao) => {
+      try {
+        await assertSalonCanAppearInClientApp(salao);
+        return salao;
+      } catch {
+        return null;
+      }
+    })
+  );
+  return checks.filter((item): item is T => Boolean(item));
 }
 
-async function listVisibleClientAppSaloesLive(search: string, limit: number) {
-    const term = normalizeSearch(search);
-    const pageSize = Math.min(Math.max(limit, 1), 24);
-    const supabaseAdmin = getSupabaseAdmin();
+async function logClientAppQueryError(
+  area: string,
+  error: unknown,
+  metadata?: Record<string, unknown>
+) {
+  try {
+    await captureSystemError({
+      area,
+      error,
+      metadata,
+    });
+  } catch {
+    // A telemetria nunca deve derrubar a experiência do cliente.
+  }
+}
 
-    let query: any = supabaseAdmin
+export async function listClienteAppSaloes(params?: {
+  search?: string;
+  page?: number;
+  limit?: number;
+}) {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    const limit = Math.min(Math.max(params?.limit ?? 12, 1), 24);
+    const page = Math.max(params?.page ?? 0, 0);
+    const from = page * limit;
+    const to = from + limit - 1;
+    const search = normalizeSearch(params?.search);
+
+    let query = (supabaseAdmin as any)
       .from("saloes")
       .select(CLIENT_APP_SALON_SELECT)
       .eq("app_cliente_publicado", true)
       .eq("app_cliente_pausado", false)
       .order("nome", { ascending: true })
-      .limit(pageSize);
+      .range(from, to);
 
-    if (term) {
-      query = query.or(
-        `nome.ilike.%${term}%,nome_fantasia.ilike.%${term}%,cidade.ilike.%${term}%,bairro.ilike.%${term}%`
-      );
+    if (search) {
+      const escaped = search.replace(/[%_,()]/g, " ").trim();
+      if (escaped) {
+        query = query.or(
+          `nome.ilike.%${escaped}%,nome_fantasia.ilike.%${escaped}%,cidade.ilike.%${escaped}%,bairro.ilike.%${escaped}%`
+        );
+      }
     }
 
     const { data, error } = await query;
+    if (error) throw error;
 
-    if (error || !data) {
-      if (error) {
-        await logClientAppQueryError("cliente_app_discovery_live", error, {
-          search: term,
-        });
-      }
-      return [] as ClientAppSalonListItem[];
-    }
-
-    const saloes = ((data as unknown as Array<Record<string, unknown>>) || [])
+    const eligible = ((data || []) as Array<Record<string, unknown>>)
       .filter((row) => isSalaoStatusOperational(String(row.status || "")))
       .map(mapLiveSalonRow);
-
-    const allowed = await filterClientAppPlanAllowed(saloes);
-
+    const allowed = await filterClientAppPlanAllowed(eligible);
     return attachMarketplaceMetrics(supabaseAdmin, allowed);
+  } catch (error) {
+    await logClientAppQueryError("cliente_app_saloes", error, {
+      search: params?.search || null,
+    });
+    return [] as ClientAppSalonListItem[];
+  }
 }
 
-async function logClientAppQueryError(
-  action: string,
-  error: unknown,
-  details?: Record<string, unknown>
-) {
-  await captureSystemError({
-    module: "client_app",
-    action,
-    surface: "public",
-    origin: "server",
-    severity: "warning",
-    error,
-    fallbackMessage: `Falha silenciosa no App Cliente: ${action}`,
-    details,
-  });
-}
-
-export async function listVisibleClientAppSaloes(params?: {
-  search?: string;
-  limit?: number;
-}) {
-  return listVisibleClientAppSaloesLive(
-    normalizeSearch(params?.search),
-    params?.limit ?? 12
-  );
-}
-
-export async function listNearbyClientAppSaloes(params: {
+export async function listClienteAppSaloesNearby(params: {
   latitude: number;
   longitude: number;
-  search?: string;
-  radiusKm?: number;
   limit?: number;
 }) {
-  const latitude = Number(params.latitude);
-  const longitude = Number(params.longitude);
-
-  if (!isValidClientCoordinate(latitude, longitude)) {
+  if (!isValidClientCoordinate(params.latitude, params.longitude)) {
     return [] as ClientAppNearbySalonListItem[];
   }
 
-  const supabaseAdmin = getSupabaseAdmin();
-  const limit = Math.min(Math.max(params.limit ?? 24, 1), 50);
-  const radiusKm = Math.min(Math.max(params.radiusKm ?? 20, 1), 100);
-  const search = normalizeSearch(params.search);
-
   try {
-    const { data: nearbyRows, error: nearbyError } = await (supabaseAdmin as any)
-      .rpc("buscar_saloes_proximos", {
-        lat_cliente: latitude,
-        lon_cliente: longitude,
-        raio_km: radiusKm,
-        limite: limit,
-        busca: search || null,
-      });
+    const supabaseAdmin = getSupabaseAdmin();
+    const limit = Math.min(Math.max(params.limit ?? 12, 1), 24);
+    const { data, error } = await (supabaseAdmin as any).rpc(
+      "cliente_app_saloes_proximos",
+      {
+        p_latitude: params.latitude,
+        p_longitude: params.longitude,
+        p_limit: limit,
+      }
+    );
+    if (error) throw error;
 
-    if (nearbyError) throw nearbyError;
-
-    const distances = new Map<string, number | null>();
-    const ids = ((nearbyRows || []) as Array<Record<string, unknown>>)
-      .map((row) => {
-        const id = String(row.id || "").trim();
-        if (id) {
-          const distance = parseNullableNumber(row.distancia_km);
-          distances.set(id, distance);
-        }
-        return id;
-      })
-      .filter(Boolean);
-
-    if (!ids.length) return [] as ClientAppNearbySalonListItem[];
-
-    const { data, error } = await (supabaseAdmin as any)
-      .from("saloes")
-      .select(CLIENT_APP_SALON_SELECT)
-      .in("id", ids)
-      .eq("app_cliente_publicado", true)
-      .eq("app_cliente_pausado", false)
-      .limit(limit);
-
-    if (error || !data) throw error;
-
-    const order = new Map(ids.map((id, index) => [id, index]));
-    const saloes = ((data as unknown as Array<Record<string, unknown>>) || [])
+    const rows = ((data || []) as Array<Record<string, unknown>>)
       .filter((row) => isSalaoStatusOperational(String(row.status || "")))
-      .map(mapLiveSalonRow)
-      .sort((left, right) => (order.get(left.id) ?? 0) - (order.get(right.id) ?? 0));
-
-    const allowed = await filterClientAppPlanAllowed(saloes);
-    const enriched = await attachMarketplaceMetrics(supabaseAdmin, allowed);
-
-    return enriched.map((salao) => ({
-      ...salao,
-      distanceKm: distances.get(salao.id) ?? null,
-    })) satisfies ClientAppNearbySalonListItem[];
+      .map((row) => ({
+        ...mapLiveSalonRow(row),
+        distanceKm: parseNullableNumber(row.distancia_km),
+      }));
+    const allowed = await filterClientAppPlanAllowed(rows);
+    return attachMarketplaceMetrics(supabaseAdmin, allowed);
   } catch (error) {
-    await logClientAppQueryError("cliente_app_nearby_saloes", error, {
-      search,
-      radiusKm,
+    await logClientAppQueryError("cliente_app_saloes_proximos", error, {
+      latitude: params.latitude,
+      longitude: params.longitude,
     });
     return [] as ClientAppNearbySalonListItem[];
   }
 }
 
-async function getClientAppSalonDetailLive(idSalao: string) {
-    const salao = await assertSalonCanAppearInClientApp(idSalao);
-    const resolvedSalaoId = salao.id;
-    const supabaseAdmin = getSupabaseAdmin();
-
-    const [
-      profissionaisResult,
-      servicosResult,
-      avaliacoesResult,
-      portfolioResult,
-      vinculosResult,
-      configResult,
-    ] =
-      await Promise.allSettled([
-        (supabaseAdmin as any)
-          .from("profissionais")
-          .select("id, nome, nome_exibicao, especialidade_publica, bio_publica, foto_url")
-          .eq("id_salao", resolvedSalaoId)
-          .eq("ativo", true)
-          .eq("app_cliente_visivel", true)
-          .or("eh_assistente.is.null,eh_assistente.eq.false")
-          .order("ordem_agenda", { ascending: true })
-          .order("nome", { ascending: true })
-          .limit(200),
-        (supabaseAdmin as any)
-          .from("servicos")
-          .select("id, nome, descricao_publica, descricao, preco, preco_padrao, duracao, duracao_minutos, exige_avaliacao, eh_combo, combo_resumo, cobra_sinal_agendamento, sinal_percentual_personalizado, id_categoria, categoria")
-          .eq("id_salao", resolvedSalaoId)
-          .eq("ativo", true)
-          .eq("app_cliente_visivel", true)
-          .order("nome", { ascending: true })
-          .limit(200),
-        (supabaseAdmin as any)
-          .from("clientes_avaliacoes")
-          .select("id, nota, comentario, created_at, clientes(nome)")
-          .eq("id_salao", resolvedSalaoId)
-          .order("created_at", { ascending: false })
-          .limit(12),
-        (supabaseAdmin as any)
-          .from("salao_portfolio_fotos")
-          .select("id, imagem_url, legenda")
-          .eq("id_salao", resolvedSalaoId)
-          .eq("ativo", true)
-          .order("ordem", { ascending: true })
-          .order("created_at", { ascending: false })
-          .limit(12),
-        supabaseAdmin
-          .from("profissional_servicos")
-          .select("id_profissional, id_servico, ativo")
-          .eq("id_salao", resolvedSalaoId)
-          .eq("ativo", true),
-        supabaseAdmin
-          .from("configuracoes_salao")
-          .select("intervalo_minutos, hora_abertura, hora_fechamento, dias_funcionamento")
-          .eq("id_salao", resolvedSalaoId)
-          .limit(1)
-          .maybeSingle(),
-      ]);
-
-    const vinculosPorServico = new Map<string, string[]>();
-
-    if (vinculosResult.status === "fulfilled") {
-      for (const item of (vinculosResult.value.data || []) as Array<{
-        id_profissional?: string | null;
-        id_servico?: string | null;
-      }>) {
-        const idServico = String(item.id_servico || "").trim();
-        const idProfissional = String(item.id_profissional || "").trim();
-        if (!idServico || !idProfissional) continue;
-
-        const current = vinculosPorServico.get(idServico) || [];
-        if (!current.includes(idProfissional)) {
-          current.push(idProfissional);
-          vinculosPorServico.set(idServico, current);
-        }
-      }
-    }
-
-    const profissionais =
-      profissionaisResult.status === "fulfilled"
-        ? (((profissionaisResult.value.data || []) as unknown as Array<Record<string, unknown>>) || []).map(
-            (item) => ({
-              id: String(item.id || ""),
-              nome:
-                String(item.nome_exibicao || "").trim() ||
-                String(item.nome || "").trim() ||
-                "Profissional",
-              especialidade:
-                String(item.especialidade_publica || "").trim() || null,
-              fotoUrl: String(item.foto_url || "").trim() || null,
-              bio: String(item.bio_publica || "").trim() || null,
-            })
-          )
-        : [];
-
-    const servicos =
-      servicosResult.status === "fulfilled"
-        ? (((servicosResult.value.data || []) as unknown as Array<Record<string, unknown>>) || []).map(
-            (item) => ({
-              id: String(item.id || ""),
-              nome: String(item.nome || "").trim() || "Serviço",
-              descricao:
-                String(item.descricao_publica || item.descricao || "").trim() ||
-                null,
-              categoriaId: String(item.id_categoria || "").trim() || null,
-              categoriaNome:
-                String(item.categoria || "").trim() || "Outros serviços",
-              preco: parseNullableNumber(item.preco_padrao ?? item.preco),
-              duracaoMinutos:
-                Number(item.duracao_minutos ?? item.duracao ?? 0) || null,
-              exigeAvaliacao: Boolean(item.exige_avaliacao),
-              ehCombo: Boolean(item.eh_combo),
-              comboResumo: String(item.combo_resumo || "").trim() || null,
-              cobraSinalAgendamento: Boolean(item.cobra_sinal_agendamento),
-              sinalPercentualPersonalizado:
-                item.sinal_percentual_personalizado === null ||
-                item.sinal_percentual_personalizado === undefined
-                  ? null
-                  : Number(item.sinal_percentual_personalizado),
-              profissionaisPermitidos:
-                vinculosPorServico.get(String(item.id || "").trim()) || [],
-            })
-          )
-        : [];
-
-    const avaliacoes =
-      avaliacoesResult.status === "fulfilled"
-        ? (((avaliacoesResult.value.data || []) as unknown as Array<Record<string, unknown>>) || []).map(
-            (item) => ({
-              id: String(item.id || ""),
-              clienteNome:
-                String(
-                  (item.clientes as { nome?: string } | null)?.nome || ""
-                ).trim() || "Cliente",
-              nota: Number(item.nota ?? 0) || 0,
-              comentario: String(item.comentario || "").trim() || null,
-              createdAt: String(item.created_at || ""),
-            })
-          )
-        : [];
-
-    const portfolio =
-      portfolioResult.status === "fulfilled"
-        ? (((portfolioResult.value.data || []) as unknown as Array<Record<string, unknown>>) || []).map(
-            (item) => ({
-              id: String(item.id || ""),
-              imagemUrl: String(item.imagem_url || "").trim(),
-              legenda: String(item.legenda || "").trim() || null,
-            })
-          )
-        : [];
-
-    return {
-      ...salao,
-      profissionais,
-      servicos,
-      avaliacoes,
-      portfolio,
-      horarioFuncionamento:
-        configResult.status === "fulfilled"
-          ? {
-              horaAbertura: String(configResult.value.data?.hora_abertura || "08:00").slice(0, 5),
-              horaFechamento: String(configResult.value.data?.hora_fechamento || "19:00").slice(0, 5),
-              diasFuncionamento: Array.isArray(configResult.value.data?.dias_funcionamento)
-                ? configResult.value.data.dias_funcionamento.map((dia: unknown) => String(dia || "")).filter(Boolean)
-                : ["segunda", "terca", "quarta", "quinta", "sexta", "sabado"],
-            }
-          : {
-              horaAbertura: "08:00",
-              horaFechamento: "19:00",
-              diasFuncionamento: ["segunda", "terca", "quarta", "quinta", "sexta", "sabado"],
-            },
-      intervaloAgendaMinutos:
-        configResult.status === "fulfilled"
-          ? Number(configResult.value.data?.intervalo_minutos || 15) || 15
-          : 15,
-    } satisfies ClientAppSalonDetail;
-  }
-
-export async function getClientAppSalonDetail(idSalao: string) {
-  return getClientAppSalonDetailLive(idSalao);
-}
-
-export async function listClienteAppAvailableCoupons(params: {
-  idConta: string;
-  idSalao: string;
-}): Promise<ClientAppAvailableCoupon[]> {
-  const idConta = String(params.idConta || "").trim();
-  const idSalao = String(params.idSalao || "").trim();
-  if (!idConta || !idSalao) return [];
-
+export async function getClienteAppSalao(idSalaoOrSlug: string) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
+    const rawIdentifier = String(idSalaoOrSlug || "").trim();
+    if (!rawIdentifier) return null;
 
-    const { data: vinculo } = await (supabaseAdmin as any)
-      .from("clientes_auth")
-      .select("id_cliente, clientes(created_at)")
-      .eq("id_salao", idSalao)
-      .eq("app_conta_id", idConta)
-      .eq("app_ativo", true)
-      .limit(1)
+    const normalizedIdentifier = rawIdentifier.toLowerCase();
+    const byId = /^[0-9a-f-]{36}$/i.test(rawIdentifier);
+    const { data: salao, error: salaoError } = await (supabaseAdmin as any)
+      .from("saloes")
+      .select(CLIENT_APP_SALON_SELECT)
+      [byId ? "eq" : "ilike"](byId ? "id" : "app_cliente_slug", byId ? rawIdentifier : normalizedIdentifier)
       .maybeSingle();
+    if (salaoError || !salao) return null;
 
-    const idCliente = String(vinculo?.id_cliente || "").trim();
-    if (!idCliente) return [];
+    if (!salao.app_cliente_publicado || salao.app_cliente_pausado || !isSalaoStatusOperational(String(salao.status || ""))) {
+      return null;
+    }
 
-    const { data: ultimoAgendamento } = await (supabaseAdmin as any)
-      .from("agendamentos")
-      .select("data")
-      .eq("id_salao", idSalao)
-      .eq("cliente_id", idCliente)
-      .in("status", ["atendido", "aguardando_pagamento"])
-      .order("data", { ascending: false })
-      .limit(1)
-      .maybeSingle();
+    const baseSalon = mapLiveSalonRow(salao);
+    const [allowedSalon] = await filterClientAppPlanAllowed([baseSalon]);
+    if (!allowedSalon) return null;
 
-    const clienteCreatedAt = String(
-      (vinculo.clientes as { created_at?: string | null } | null)?.created_at ||
-        ""
-    ).slice(0, 10);
-    const { data: conta } = await (supabaseAdmin as any)
-      .from("clientes_app_auth")
-      .select("created_at")
-      .eq("id", idConta)
-      .limit(1)
-      .maybeSingle();
-    const contaCreatedAt = String(
-      (conta as { created_at?: string | null } | null)?.created_at || ""
-    ).slice(0, 10);
-    const referenceDate =
-      String(ultimoAgendamento?.data || "").slice(0, 10) ||
-      clienteCreatedAt ||
-      contaCreatedAt;
-    const inactiveDays = Math.max(0, diffDaysFromDate(referenceDate));
+    const [servicesResult, professionalsResult, reviewsResult, portfolioResult, configResult] = await Promise.allSettled([
+      (supabaseAdmin as any)
+        .from("servicos")
+        .select("id, nome, descricao, categoria_id, categoria, preco, preco_padrao, duracao, duracao_minutos, exige_avaliacao, eh_combo, cobra_sinal_agendamento, sinal_percentual_personalizado")
+        .eq("id_salao", allowedSalon.id)
+        .eq("ativo", true)
+        .eq("app_cliente_visivel", true)
+        .order("nome", { ascending: true })
+        .limit(160),
+      (supabaseAdmin as any)
+        .from("profissionais")
+        .select("id, nome, nome_exibicao, especialidade, foto_url, bio")
+        .eq("id_salao", allowedSalon.id)
+        .eq("ativo", true)
+        .eq("app_cliente_visivel", true)
+        .or("eh_assistente.is.null,eh_assistente.eq.false")
+        .order("nome", { ascending: true })
+        .limit(80),
+      (supabaseAdmin as any)
+        .from("clientes_avaliacoes")
+        .select("id, nota, comentario, created_at, id_cliente")
+        .eq("id_salao", allowedSalon.id)
+        .order("created_at", { ascending: false })
+        .limit(80),
+      (supabaseAdmin as any)
+        .from("salao_portfolio_fotos")
+        .select("id, imagem_url, legenda, ordem")
+        .eq("id_salao", allowedSalon.id)
+        .eq("ativo", true)
+        .order("ordem", { ascending: true })
+        .limit(60),
+      (supabaseAdmin as any)
+        .from("configuracoes_salao")
+        .select("hora_abertura, hora_fechamento, dias_funcionamento, intervalo_agenda_minutos")
+        .eq("id_salao", allowedSalon.id)
+        .maybeSingle(),
+    ]);
 
-    const { data: cupons } = await (supabaseAdmin as any)
+    const services = servicesResult.status === "fulfilled" ? servicesResult.value.data || [] : [];
+    const professionals = professionalsResult.status === "fulfilled" ? professionalsResult.value.data || [] : [];
+    const reviews = reviewsResult.status === "fulfilled" ? reviewsResult.value.data || [] : [];
+    const portfolio = portfolioResult.status === "fulfilled" ? portfolioResult.value.data || [] : [];
+    const config = configResult.status === "fulfilled" ? configResult.value.data : null;
+
+    const serviceIds = services.map((service: any) => String(service.id || "")).filter(Boolean);
+    const professionalIds = professionals.map((professional: any) => String(professional.id || "")).filter(Boolean);
+
+    const [professionalServiceResult, comboResult, categoriesResult, clientNamesResult] = await Promise.allSettled([
+      serviceIds.length && professionalIds.length
+        ? (supabaseAdmin as any)
+            .from("profissional_servicos")
+            .select("id_profissional, id_servico")
+            .in("id_profissional", professionalIds)
+            .in("id_servico", serviceIds)
+        : Promise.resolve({ data: [] }),
+      serviceIds.length
+        ? (supabaseAdmin as any)
+            .from("servicos_combo_itens")
+            .select("id_servico_combo, quantidade, servicos!servicos_combo_itens_id_servico_item_fkey(nome)")
+            .in("id_servico_combo", serviceIds)
+        : Promise.resolve({ data: [] }),
+      (supabaseAdmin as any)
+        .from("servicos_categorias")
+        .select("id, nome")
+        .eq("id_salao", allowedSalon.id)
+        .eq("ativo", true),
+      reviews.length
+        ? (supabaseAdmin as any)
+            .from("clientes")
+            .select("id, nome")
+            .in("id", reviews.map((review: any) => review.id_cliente).filter(Boolean))
+        : Promise.resolve({ data: [] }),
+    ]);
+
+    const professionalServiceRows = professionalServiceResult.status === "fulfilled" ? professionalServiceResult.value.data || [] : [];
+    const comboRows = comboResult.status === "fulfilled" ? comboResult.value.data || [] : [];
+    const categoryRows = categoriesResult.status === "fulfilled" ? categoriesResult.value.data || [] : [];
+    const clientNameRows = clientNamesResult.status === "fulfilled" ? clientNamesResult.value.data || [] : [];
+
+    const professionalsByService = new Map<string, string[]>();
+    for (const row of professionalServiceRows as any[]) {
+      const serviceId = String(row.id_servico || "");
+      const professionalId = String(row.id_profissional || "");
+      if (!serviceId || !professionalId) continue;
+      const current = professionalsByService.get(serviceId) || [];
+      current.push(professionalId);
+      professionalsByService.set(serviceId, current);
+    }
+
+    const combosByService = new Map<string, string[]>();
+    for (const row of comboRows as any[]) {
+      const comboId = String(row.id_servico_combo || "");
+      const service = row.servicos as { nome?: string | null } | null;
+      const name = String(service?.nome || "").trim();
+      if (!comboId || !name) continue;
+      const quantity = Math.max(1, Number(row.quantidade || 1));
+      const current = combosByService.get(comboId) || [];
+      current.push(quantity > 1 ? `${quantity}x ${name}` : name);
+      combosByService.set(comboId, current);
+    }
+
+    const categoryById = new Map<string, string>();
+    for (const row of categoryRows as any[]) {
+      const id = String(row.id || "");
+      if (id) categoryById.set(id, String(row.nome || "").trim() || "Outros");
+    }
+
+    const clientNameById = new Map<string, string>();
+    for (const row of clientNameRows as any[]) {
+      const id = String(row.id || "");
+      if (id) clientNameById.set(id, String(row.nome || "").trim() || "Cliente");
+    }
+
+    return {
+      ...allowedSalon,
+      profissionais: (professionals as any[]).map((professional) => ({
+        id: String(professional.id || ""),
+        nome: String(professional.nome_exibicao || professional.nome || "Profissional"),
+        especialidade: String(professional.especialidade || "").trim() || null,
+        fotoUrl: String(professional.foto_url || "").trim() || null,
+        bio: String(professional.bio || "").trim() || null,
+      })),
+      servicos: (services as any[]).map((service) => {
+        const id = String(service.id || "");
+        const categoriaId = String(service.categoria_id || "").trim() || null;
+        const fallbackCategory = String(service.categoria || "").trim();
+        return {
+          id,
+          nome: String(service.nome || "Serviço"),
+          descricao: String(service.descricao || "").trim() || null,
+          categoriaId,
+          categoriaNome: (categoriaId ? categoryById.get(categoriaId) : null) || fallbackCategory || "Outros",
+          preco: parseNullableNumber(service.preco_padrao ?? service.preco),
+          duracaoMinutos: parseNullableNumber(service.duracao_minutos ?? service.duracao),
+          exigeAvaliacao: Boolean(service.exige_avaliacao),
+          ehCombo: Boolean(service.eh_combo),
+          comboResumo: (combosByService.get(id) || []).join(" + ") || null,
+          cobraSinalAgendamento: Boolean(service.cobra_sinal_agendamento),
+          sinalPercentualPersonalizado: parseNullableNumber(service.sinal_percentual_personalizado),
+          profissionaisPermitidos: professionalsByService.get(id) || [],
+        };
+      }),
+      avaliacoes: (reviews as any[]).map((review) => ({
+        id: String(review.id || ""),
+        clienteNome: clientNameById.get(String(review.id_cliente || "")) || "Cliente",
+        nota: Number(review.nota || 0),
+        comentario: String(review.comentario || "").trim() || null,
+        createdAt: String(review.created_at || ""),
+      })),
+      portfolio: (portfolio as any[]).map((photo) => ({
+        id: String(photo.id || ""),
+        imagemUrl: String(photo.imagem_url || "").trim(),
+        legenda: String(photo.legenda || "").trim() || null,
+      })).filter((photo) => Boolean(photo.imagemUrl)),
+      horarioFuncionamento: {
+        horaAbertura: String(config?.hora_abertura || "09:00").slice(0, 5),
+        horaFechamento: String(config?.hora_fechamento || "18:00").slice(0, 5),
+        diasFuncionamento: Array.isArray(config?.dias_funcionamento) ? config.dias_funcionamento.map(String) : [],
+      },
+      intervaloAgendaMinutos: Math.max(5, Number(config?.intervalo_agenda_minutos || 30)),
+    } satisfies ClientAppSalonDetail;
+  } catch (error) {
+    await logClientAppQueryError("cliente_app_salao", error, { idSalaoOrSlug });
+    return null;
+  }
+}
+
+export async function listClienteAppCouponsForSalon(params: {
+  idConta?: string | null;
+  idSalao: string;
+}) {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    const today = new Date().toISOString().slice(0, 10);
+    const { data, error } = await (supabaseAdmin as any)
       .from("cupons_salao")
-      .select(
-        "id, codigo, nome, descricao, dias_cliente_inativo, tipo_desconto, valor_desconto, requer_resgate, valido_de, valido_ate"
-      )
-      .eq("id_salao", idSalao)
+      .select("id,codigo,nome,descricao,tipo_desconto,valor_desconto,valido_de,valido_ate,dias_cliente_inativo,publico_tipo,requer_resgate,ativo,status_campanha,limite_uso_total,limite_uso_cliente")
+      .eq("id_salao", params.idSalao)
       .eq("ativo", true)
+      .in("status_campanha", ["ativa", "programada"])
+      .lte("valido_de", today)
+      .or(`valido_ate.is.null,valido_ate.gte.${today}`)
       .order("created_at", { ascending: false })
-      .limit(20);
+      .limit(30);
 
-    if (!cupons?.length) return [];
+    if (error) throw error;
 
-    const cupomIds = cupons
-      .map((cupom: Record<string, unknown>) => String(cupom.id || "").trim())
-      .filter(Boolean);
-    const { data: usos } = cupomIds.length
-      ? await (supabaseAdmin as any)
-          .from("cupom_salao_usos")
-          .select("id_cupom")
-          .eq("id_salao", idSalao)
-          .eq("id_cliente", idCliente)
-          .in("id_cupom", cupomIds)
-          .neq("status", "cancelado")
-      : { data: [] };
-    const usedCouponIds = new Set(
-      ((usos || []) as Array<Record<string, unknown>>).map((uso) =>
-        String(uso.id_cupom || "").trim()
-      )
-    );
-    const { data: resgates } = cupomIds.length
-      ? await (supabaseAdmin as any)
-          .from("cupom_salao_resgates")
-          .select("id_cupom")
-          .eq("id_salao", idSalao)
-          .eq("cliente_app_conta_id", idConta)
-          .eq("status", "resgatado")
-          .in("id_cupom", cupomIds)
-      : { data: [] };
-    const redeemedCouponIds = new Set(
-      ((resgates || []) as Array<Record<string, unknown>>).map((resgate) =>
-        String(resgate.id_cupom || "").trim()
-      )
-    );
-    const { data: permitidos } = cupomIds.length
-      ? await (supabaseAdmin as any)
-          .from("cupom_salao_clientes")
-          .select("id_cupom")
-          .eq("id_salao", idSalao)
-          .eq("id_cliente", idCliente)
-          .in("id_cupom", cupomIds)
-      : { data: [] };
-    const allowedCouponIds = new Set(
-      ((permitidos || []) as Array<Record<string, unknown>>).map((permitido) =>
-        String(permitido.id_cupom || "").trim()
-      )
-    );
+    const rows = ((data || []) as Array<Record<string, unknown>>);
+    if (!rows.length) return [] as ClientAppAvailableCoupon[];
 
-    return ((cupons || []) as Array<Record<string, unknown>>)
-      .filter((cupom) => {
-        const idCupom = String(cupom.id || "").trim();
-        const hoje = new Date().toISOString().slice(0, 10);
-        const validoDe = String(cupom.valido_de || "").slice(0, 10);
-        const validoAte = String(cupom.valido_ate || "").slice(0, 10);
-        const diasInativo = Number(cupom.dias_cliente_inativo || 0);
-        const clienteTemAcesso =
-          allowedCouponIds.has(idCupom) || redeemedCouponIds.has(idCupom);
-        if (usedCouponIds.has(idCupom)) return false;
-        if (!clienteTemAcesso) return false;
-        if (validoDe && validoDe > hoje) return false;
-        if (validoAte && validoAte < hoje) return false;
-        if (cupom.requer_resgate === false && diasInativo > 0 && diasInativo > inactiveDays) {
-          return false;
-        }
-        return true;
-      })
-      .slice(0, 3)
-      .map((cupom) => ({
+    const privateTypes = new Set(["link_privado", "manual"]);
+    const publicRows = rows.filter((cupom) => !privateTypes.has(String(cupom.publico_tipo || "").toLowerCase()));
+    if (!params.idConta) {
+      return publicRows.map((cupom) => ({
         codigo: String(cupom.codigo || "").trim(),
-        nome: String(cupom.nome || "").trim() || "Cupom Saudades",
+        nome: String(cupom.nome || "").trim() || "Cupom especial",
         descricao: String(cupom.descricao || "").trim() || null,
         descontoLabel: formatCouponDiscountLabel(cupom),
         diasInativo: Number(cupom.dias_cliente_inativo || 0) || null,
-        tipoDesconto: (String(cupom.tipo_desconto || "percentual") === "valor_fixo"
-          ? "valor_fixo"
-          : "percentual") as "percentual" | "valor_fixo",
+        tipoDesconto: String(cupom.tipo_desconto || "percentual") === "valor_fixo" ? "valor_fixo" : "percentual",
         valorDesconto: Number(cupom.valor_desconto || 0),
         validoAte: String(cupom.valido_ate || "").slice(0, 10) || null,
-      }))
-      .filter((cupom) => cupom.codigo);
+      }));
+    }
+
+    const { data: linkRows } = await (supabaseAdmin as any)
+      .from("clientes_auth")
+      .select("id_cliente")
+      .eq("app_conta_id", params.idConta)
+      .eq("id_salao", params.idSalao)
+      .eq("app_ativo", true);
+    const clienteIds = (linkRows || []).map((item: any) => String(item.id_cliente || "")).filter(Boolean);
+    if (!clienteIds.length) return publicRows.map((cupom) => ({
+      codigo: String(cupom.codigo || "").trim(),
+      nome: String(cupom.nome || "").trim() || "Cupom especial",
+      descricao: String(cupom.descricao || "").trim() || null,
+      descontoLabel: formatCouponDiscountLabel(cupom),
+      diasInativo: Number(cupom.dias_cliente_inativo || 0) || null,
+      tipoDesconto: String(cupom.tipo_desconto || "percentual") === "valor_fixo" ? "valor_fixo" : "percentual",
+      valorDesconto: Number(cupom.valor_desconto || 0),
+      validoAte: String(cupom.valido_ate || "").slice(0, 10) || null,
+    }));
+
+    const couponIds = rows.map((cupom) => String(cupom.id || "")).filter(Boolean);
+    const [allowedRows, redemptionRows] = await Promise.all([
+      (supabaseAdmin as any).from("cupom_salao_clientes").select("id_cupom,id_cliente").in("id_cupom", couponIds).in("id_cliente", clienteIds),
+      (supabaseAdmin as any).from("cupom_salao_resgates").select("id_cupom,id_cliente,status").in("id_cupom", couponIds).in("id_cliente", clienteIds).eq("status", "resgatado"),
+    ]);
+    const allowedIds = new Set([...(allowedRows.data || []), ...(redemptionRows.data || [])].map((item: any) => String(item.id_cupom || "")));
+    return rows.filter((cupom) => {
+      const privateType = privateTypes.has(String(cupom.publico_tipo || "").toLowerCase());
+      return !privateType || allowedIds.has(String(cupom.id || ""));
+    }).map((cupom) => ({
+      codigo: String(cupom.codigo || "").trim(),
+      nome: String(cupom.nome || "").trim() || "Cupom especial",
+      descricao: String(cupom.descricao || "").trim() || null,
+      descontoLabel: formatCouponDiscountLabel(cupom),
+      diasInativo: Number(cupom.dias_cliente_inativo || 0) || null,
+      tipoDesconto: String(cupom.tipo_desconto || "percentual") === "valor_fixo" ? "valor_fixo" : "percentual",
+      valorDesconto: Number(cupom.valor_desconto || 0),
+      validoAte: String(cupom.valido_ate || "").slice(0, 10) || null,
+    }));
   } catch (error) {
-    await logClientAppQueryError("cliente_app_available_coupons", error, {
-      idConta,
-      idSalao,
-    });
-    return [];
+    await logClientAppQueryError("cliente_app_cupons_salao", error, { idSalao: params.idSalao });
+    return [] as ClientAppAvailableCoupon[];
   }
 }
 
-export async function listClienteAppCouponWallet(params: {
-  idConta: string;
-}): Promise<ClientAppCouponWalletItem[]> {
-  const idConta = String(params.idConta || "").trim();
-  if (!idConta) return [];
-
+export async function listClienteAppCouponWallet({ idConta }: { idConta: string }) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
-    const { data: vinculos } = await (supabaseAdmin as any)
+    const { data: links, error: linkError } = await (supabaseAdmin as any)
       .from("clientes_auth")
-      .select("id_cliente, id_salao, app_ativo, saloes(id, nome, nome_fantasia)")
+      .select("id_cliente,id_salao")
       .eq("app_conta_id", idConta)
       .eq("app_ativo", true)
       .limit(80);
+    if (linkError) throw linkError;
+    const idClientes = Array.from(new Set((links || []).map((item: any) => String(item.id_cliente || "")).filter(Boolean)));
+    const idSaloes = Array.from(new Set((links || []).map((item: any) => String(item.id_salao || "")).filter(Boolean)));
+    if (!idClientes.length || !idSaloes.length) return [];
 
-    const vinculosValidos = ((vinculos || []) as Array<Record<string, any>>)
-      .map((vinculo) => ({
-        idCliente: String(vinculo.id_cliente || "").trim(),
-        idSalao: String(vinculo.id_salao || "").trim(),
-        salao: Array.isArray(vinculo.saloes) ? vinculo.saloes[0] : vinculo.saloes,
-      }))
-      .filter((vinculo) => vinculo.idCliente && vinculo.idSalao);
-
-    if (!vinculosValidos.length) return [];
-
-    const idSaloes = Array.from(new Set(vinculosValidos.map((item) => item.idSalao)));
-    const idClientes = Array.from(new Set(vinculosValidos.map((item) => item.idCliente)));
-    const salaoById = new Map(
-      vinculosValidos.map((item) => [
-        item.idSalao,
-        String(item.salao?.nome_fantasia || item.salao?.nome || "Salão"),
-      ])
-    );
-
-    const { data: cupons } = await (supabaseAdmin as any)
-      .from("cupons_salao")
-      .select(
-        "id, id_salao, codigo, nome, descricao, tipo_desconto, valor_desconto, dias_cliente_inativo, valido_de, valido_ate, requer_resgate, ativo, status_campanha"
-      )
-      .in("id_salao", idSaloes)
-      .eq("ativo", true)
-      .order("created_at", { ascending: false })
-      .limit(120);
-
-    const cupomIds = ((cupons || []) as Array<Record<string, unknown>>)
-      .map((cupom) => String(cupom.id || "").trim())
-      .filter(Boolean);
+    const [{ data: saloes }, { data: cupons, error: couponError }] = await Promise.all([
+      (supabaseAdmin as any).from("saloes").select("id,nome,nome_fantasia").in("id", idSaloes),
+      (supabaseAdmin as any)
+        .from("cupons_salao")
+        .select("id,id_salao,codigo,nome,descricao,tipo_desconto,valor_desconto,valido_ate,dias_cliente_inativo")
+        .in("id_salao", idSaloes)
+        .eq("ativo", true)
+        .limit(100),
+    ]);
+    if (couponError) throw couponError;
+    const salaoById = new Map((saloes || []).map((salao: any) => [String(salao.id), String(salao.nome_fantasia || salao.nome || "Salão")]));
+    const cupomIds = (cupons || []).map((cupom: any) => String(cupom.id || "")).filter(Boolean);
     if (!cupomIds.length) return [];
 
     const [usosResult, resgatesResult, permitidosResult] = await Promise.all([
       (supabaseAdmin as any)
         .from("cupom_salao_usos")
-        .select("id_cupom, id_cliente, status, created_at")
+        .select("id_cupom, created_at")
         .in("id_cupom", cupomIds)
-        .in("id_cliente", idClientes)
-        .neq("status", "cancelado"),
+        .in("id_cliente", idClientes),
       (supabaseAdmin as any)
         .from("cupom_salao_resgates")
-        .select("id_cupom, status, created_at")
+        .select("id_cupom")
         .eq("cliente_app_conta_id", idConta)
         .eq("status", "resgatado")
         .in("id_cupom", cupomIds),
@@ -981,14 +860,10 @@ export async function listClienteAppCouponWallet(params: {
       usedByCoupon.set(String(uso.id_cupom || ""), uso);
     }
     const redeemedIds = new Set(
-      ((resgatesResult.data || []) as Array<Record<string, unknown>>).map((resgate) =>
-        String(resgate.id_cupom || "")
-      )
+      ((resgatesResult.data || []) as Array<Record<string, unknown>>).map((resgate) => String(resgate.id_cupom || ""))
     );
     const allowedIds = new Set(
-      ((permitidosResult.data || []) as Array<Record<string, unknown>>).map((permitido) =>
-        String(permitido.id_cupom || "")
-      )
+      ((permitidosResult.data || []) as Array<Record<string, unknown>>).map((permitido) => String(permitido.id_cupom || ""))
     );
     const today = new Date().toISOString().slice(0, 10);
 
@@ -1002,11 +877,7 @@ export async function listClienteAppCouponWallet(params: {
         const validoAte = String(cupom.valido_ate || "").slice(0, 10) || null;
         const usado = usedByCoupon.get(idCupom);
         const expirado = Boolean(validoAte && validoAte < today);
-        const status: ClientAppCouponWalletItem["status"] = usado
-          ? "usado"
-          : expirado
-            ? "expirado"
-            : "disponivel";
+        const status: ClientAppCouponWalletItem["status"] = usado ? "usado" : expirado ? "expirado" : "disponivel";
 
         return {
           id: idCupom,
@@ -1017,9 +888,7 @@ export async function listClienteAppCouponWallet(params: {
           descricao: String(cupom.descricao || "").trim() || null,
           descontoLabel: formatCouponDiscountLabel(cupom),
           diasInativo: Number(cupom.dias_cliente_inativo || 0) || null,
-          tipoDesconto: String(cupom.tipo_desconto || "percentual") === "valor_fixo"
-            ? "valor_fixo"
-            : "percentual",
+          tipoDesconto: String(cupom.tipo_desconto || "percentual") === "valor_fixo" ? "valor_fixo" : "percentual",
           valorDesconto: Number(cupom.valor_desconto || 0),
           validoAte,
           status,
@@ -1045,7 +914,7 @@ export async function listClienteAppAppointments(params: {
     const to = from + limit - 1;
     const { data: vinculos, error: vinculosError } = await supabaseAdmin
       .from("clientes_auth")
-      .select("id_cliente, id_salao, saloes(nome, nome_fantasia, whatsapp, telefone)")
+      .select("id_cliente, id_salao, saloes(nome, nome_fantasia, whatsapp, telefone, cidade, estado, endereco, numero)")
       .eq("app_conta_id", params.idConta)
       .eq("app_ativo", true)
       .limit(40);
@@ -1054,76 +923,42 @@ export async function listClienteAppAppointments(params: {
       return [];
     }
 
-    const clientesIds = Array.from(
-      new Set(
-        vinculos
-          .map((item) => String(item.id_cliente || "").trim())
-          .filter(Boolean)
-      )
-    );
+    const clientesIds = Array.from(new Set(vinculos.map((item) => String(item.id_cliente || "").trim()).filter(Boolean)));
+    if (!clientesIds.length) return [];
 
-    if (!clientesIds.length) {
-      return [];
-    }
-
-    const salaoNomeByCliente = new Map<
-      string,
-      {
-        nome: string;
-        idSalao: string;
-        whatsapp: string | null;
-        telefone: string | null;
-      }
-    >();
+    const salaoNomeByCliente = new Map<string, { nome: string; idSalao: string; whatsapp: string | null; telefone: string | null; cidade: string | null; estado: string | null; endereco: string | null }>();
     for (const item of vinculos) {
       const idCliente = String(item.id_cliente || "").trim();
       const idSalao = String(item.id_salao || "").trim();
       if (!idCliente || !idSalao) continue;
-      const salaoRow = item.saloes as
-        | { nome?: string | null; nome_fantasia?: string | null }
-        | null;
+      const salaoRow = item.saloes as { nome?: string | null; nome_fantasia?: string | null; whatsapp?: string | null; telefone?: string | null; cidade?: string | null; estado?: string | null; endereco?: string | null; numero?: string | null } | null;
       salaoNomeByCliente.set(idCliente, {
         idSalao,
-        nome:
-          String(salaoRow?.nome_fantasia || "").trim() ||
-          String(salaoRow?.nome || "").trim() ||
-          "Salão Premium",
-        whatsapp: String((salaoRow as { whatsapp?: string | null } | null)?.whatsapp || "").trim() || null,
-        telefone: String((salaoRow as { telefone?: string | null } | null)?.telefone || "").trim() || null,
+        nome: String(salaoRow?.nome_fantasia || "").trim() || String(salaoRow?.nome || "").trim() || "Salão Premium",
+        whatsapp: String(salaoRow?.whatsapp || "").trim() || null,
+        telefone: String(salaoRow?.telefone || "").trim() || null,
+        cidade: String(salaoRow?.cidade || "").trim() || null,
+        estado: String(salaoRow?.estado || "").trim() || null,
+        endereco: [String(salaoRow?.endereco || "").trim(), String(salaoRow?.numero || "").trim()].filter(Boolean).join(", ") || null,
       });
     }
 
     const { data, error } = await (supabaseAdmin as any)
       .from("agendamentos")
-      .select(
-        "id, cliente_id, id_salao, servico_id, profissional_id, data, hora_inicio, hora_fim, status, sinal_status, sinal_valor, reserva_expira_em, cliente_confirmacao_status, cliente_confirmou_em, observacoes, created_at, servicos(nome), profissionais(nome, nome_exibicao)"
-      )
+      .select("id, cliente_id, id_salao, servico_id, profissional_id, data, hora_inicio, hora_fim, status, sinal_status, sinal_valor, reserva_expira_em, cliente_confirmacao_status, cliente_confirmou_em, observacoes, created_at, servicos(nome), profissionais(nome, nome_exibicao)")
       .in("cliente_id", clientesIds)
       .order("data", { ascending: false })
       .order("hora_inicio", { ascending: false })
       .range(from, to);
 
-    if (error || !data) {
-      return [];
-    }
+    if (error || !data) return [];
 
     const rows = data as Array<Record<string, unknown>>;
-    const appointmentIds = rows
-      .map((item) => String(item.id || "").trim())
-      .filter(Boolean);
-
+    const appointmentIds = rows.map((item) => String(item.id || "").trim()).filter(Boolean);
     const { data: reviewRows } = appointmentIds.length
-      ? await (supabaseAdmin as any)
-          .from("clientes_avaliacoes")
-          .select("id_agendamento")
-          .in("id_agendamento", appointmentIds)
+      ? await (supabaseAdmin as any).from("clientes_avaliacoes").select("id_agendamento").in("id_agendamento", appointmentIds)
       : { data: [] };
-
-    const reviewedIds = new Set(
-      ((reviewRows as Array<{ id_agendamento?: string | null }> | null) || [])
-        .map((item) => String(item.id_agendamento || "").trim())
-        .filter(Boolean)
-    );
+    const reviewedIds = new Set(((reviewRows as Array<{ id_agendamento?: string | null }> | null) || []).map((item) => String(item.id_agendamento || "").trim()).filter(Boolean));
 
     return rows.map((item) => {
       const status = String(item.status || "").trim() || "pendente";
@@ -1138,68 +973,36 @@ export async function listClienteAppAppointments(params: {
         salaoNome: salaoMeta?.nome || "Salão Premium",
         salaoWhatsapp: salaoMeta?.whatsapp || null,
         salaoTelefone: salaoMeta?.telefone || null,
+        salaoCidade: salaoMeta?.cidade || null,
+        salaoEstado: salaoMeta?.estado || null,
+        salaoEndereco: salaoMeta?.endereco || null,
         data: String(item.data || ""),
         horaInicio: String(item.hora_inicio || ""),
         horaFim: String(item.hora_fim || ""),
         criadoEm: String(item.created_at || "").trim() || null,
         status,
         sinalStatus: String(item.sinal_status || "").trim() || null,
-        sinalValor:
-          item.sinal_valor === null || item.sinal_valor === undefined
-            ? null
-            : Number(item.sinal_valor),
+        sinalValor: item.sinal_valor === null || item.sinal_valor === undefined ? null : Number(item.sinal_valor),
         reservaExpiraEm: String(item.reserva_expira_em || "").trim() || null,
-        confirmacaoClienteStatus:
-          String(item.cliente_confirmacao_status || "").trim() || "aguardando",
-        clienteConfirmouEm:
-          String(item.cliente_confirmou_em || "").trim() || null,
+        confirmacaoClienteStatus: String(item.cliente_confirmacao_status || "").trim() || "aguardando",
+        clienteConfirmouEm: String(item.cliente_confirmou_em || "").trim() || null,
         observacoes: String(item.observacoes || "").trim() || null,
-        servicoNome:
-          String((item.servicos as { nome?: string } | null)?.nome || "").trim() ||
-          "Serviço",
-        profissionalNome:
-          String(
-            (
-              item.profissionais as
-                | { nome_exibicao?: string; nome?: string }
-                | null
-            )?.nome_exibicao ||
-              (
-                item.profissionais as
-                  | { nome_exibicao?: string; nome?: string }
-                  | null
-              )?.nome ||
-              ""
-          ).trim() || "Profissional",
-        podeCancelar:
-          status === "pendente" ||
-          status === "confirmado" ||
-          status === "reservado_aguardando_pagamento",
-        podeAvaliar:
-          !avaliado &&
-          (status === "atendido" || status === "aguardando_pagamento"),
+        servicoNome: String((item.servicos as { nome?: string } | null)?.nome || "").trim() || "Serviço",
+        profissionalNome: String(((item.profissionais as { nome_exibicao?: string; nome?: string } | null)?.nome_exibicao || (item.profissionais as { nome_exibicao?: string; nome?: string } | null)?.nome || "")).trim() || "Profissional",
+        podeCancelar: status === "pendente" || status === "confirmado" || status === "reservado_aguardando_pagamento",
+        podeAvaliar: !avaliado && (status === "atendido" || status === "aguardando_pagamento"),
         avaliado,
       } satisfies ClientAppAppointmentListItem;
     });
   } catch (error) {
-    await logClientAppQueryError("cliente_app_appointments", error, {
-      idConta: params.idConta,
-    });
+    await logClientAppQueryError("cliente_app_appointments", error, { idConta: params.idConta });
     return [];
   }
 }
 
-export async function getClienteAppAppointmentForReview(params: {
-  idConta: string;
-  idAgendamento: string;
-}) {
-  const appointments = await listClienteAppAppointments({
-    idConta: params.idConta,
-  });
-  const item = appointments.find(
-    (appointment) => appointment.id === params.idAgendamento
-  );
-
+export async function getClienteAppAppointmentForReview(params: { idConta: string; idAgendamento: string }) {
+  const appointments = await listClienteAppAppointments({ idConta: params.idConta });
+  const item = appointments.find((appointment) => appointment.id === params.idAgendamento);
   return item ? ({ ...item, clienteNome: null } satisfies ClientAppAppointmentReviewDetail) : null;
 }
 
@@ -1218,56 +1021,28 @@ async function listClienteAppLinkedClientIds(idConta: string) {
   const clientesIds = ((data || []) as Array<Record<string, unknown>>)
     .map((item) => {
       const idCliente = String(item.id_cliente || "").trim();
-      const salao = item.saloes as
-        | { nome?: string | null; nome_fantasia?: string | null }
-        | null;
-      if (idCliente) {
-        salaoByCliente.set(
-          idCliente,
-          String(salao?.nome_fantasia || "").trim() ||
-            String(salao?.nome || "").trim() ||
-            "Salão Premium"
-        );
-      }
+      const salao = item.saloes as { nome?: string | null; nome_fantasia?: string | null } | null;
+      if (idCliente) salaoByCliente.set(idCliente, String(salao?.nome_fantasia || "").trim() || String(salao?.nome || "").trim() || "Salão Premium");
       return idCliente;
     })
     .filter(Boolean);
 
-  return {
-    clientesIds: Array.from(new Set(clientesIds)),
-    salaoByCliente,
-  };
+  return { clientesIds: Array.from(new Set(clientesIds)), salaoByCliente };
 }
 
-export async function isClienteAppSalonFavorite(params: {
-  idConta: string;
-  idSalao: string;
-}) {
+export async function isClienteAppSalonFavorite(params: { idConta: string; idSalao: string }) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
-    const { data, error } = await (supabaseAdmin as any)
-      .from("clientes_app_favoritos")
-      .select("id")
-      .eq("cliente_app_conta_id", params.idConta)
-      .eq("id_salao", params.idSalao)
-      .limit(1)
-      .maybeSingle();
-
+    const { data, error } = await (supabaseAdmin as any).from("clientes_app_favoritos").select("id").eq("cliente_app_conta_id", params.idConta).eq("id_salao", params.idSalao).limit(1).maybeSingle();
     if (error) throw error;
     return Boolean(data?.id);
   } catch (error) {
-    await logClientAppQueryError("cliente_app_favorite_lookup", error, {
-      idSalao: params.idSalao,
-    });
+    await logClientAppQueryError("cliente_app_favorite_lookup", error, { idSalao: params.idSalao });
     return false;
   }
 }
 
-export async function listClienteAppFavoriteSaloes(params: {
-  idConta: string;
-  page?: number;
-  limit?: number;
-}) {
+export async function listClienteAppFavoriteSaloes(params: { idConta: string; page?: number; limit?: number }) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
     const limit = Math.min(Math.max(params.limit ?? 10, 1), 24);
@@ -1276,12 +1051,7 @@ export async function listClienteAppFavoriteSaloes(params: {
     const to = from + limit - 1;
     const { data, error } = await (supabaseAdmin as any)
       .from("clientes_app_favoritos")
-      .select(
-        [
-          "id_salao",
-          "saloes(id, nome, nome_fantasia, cidade, estado, bairro, endereco, numero, cep, logo_url, telefone, whatsapp, descricao_publica, foto_capa_url, latitude, longitude, estacionamento, formas_pagamento_publico, status, app_cliente_publicado, app_cliente_pausado, app_cliente_pausa_mensagem, app_cliente_slug)",
-        ].join(",")
-      )
+      .select(["id_salao", "saloes(id, nome, nome_fantasia, cidade, estado, bairro, endereco, numero, cep, logo_url, telefone, whatsapp, descricao_publica, foto_capa_url, latitude, longitude, estacionamento, formas_pagamento_publico, status, app_cliente_publicado, app_cliente_pausado, app_cliente_pausa_mensagem, app_cliente_slug)"].join(","))
       .eq("cliente_app_conta_id", params.idConta)
       .order("created_at", { ascending: false })
       .range(from, to);
@@ -1290,18 +1060,10 @@ export async function listClienteAppFavoriteSaloes(params: {
 
     const rows = ((data || []) as Array<Record<string, unknown>>)
       .map((item) => item.saloes as Record<string, unknown> | null)
-      .filter((item): item is Record<string, unknown> =>
-        Boolean(
-          item?.id &&
-            item?.app_cliente_publicado &&
-            !item?.app_cliente_pausado &&
-            isSalaoStatusOperational(String(item.status || ""))
-        )
-      )
+      .filter((item): item is Record<string, unknown> => Boolean(item?.id && item?.app_cliente_publicado && !item?.app_cliente_pausado && isSalaoStatusOperational(String(item.status || ""))))
       .map(mapLiveSalonRow);
 
     const allowed = await filterClientAppPlanAllowed(rows);
-
     return attachMarketplaceMetrics(supabaseAdmin, allowed);
   } catch (error) {
     await logClientAppQueryError("cliente_app_favorite_saloes", error);
@@ -1309,399 +1071,54 @@ export async function listClienteAppFavoriteSaloes(params: {
   }
 }
 
-export async function listClienteAppReceipts(params: {
-  idConta: string;
-  page?: number;
-  limit?: number;
-}) {
+export async function listClienteAppReceipts(params: { idConta: string; page?: number; limit?: number }) {
   try {
     const supabaseAdmin = getSupabaseAdmin();
-    const { clientesIds, salaoByCliente } = await listClienteAppLinkedClientIds(
-      params.idConta
-    );
-
-    if (!clientesIds.length) {
-      return {
-        items: [] as ClientAppReceiptListItem[],
-        total: 0,
-        hasMore: false,
-      };
-    }
-
+    const { clientesIds, salaoByCliente } = await listClienteAppLinkedClientIds(params.idConta);
+    if (!clientesIds.length) return { items: [] as ClientAppReceiptListItem[], total: 0, hasMore: false };
     const limit = Math.min(Math.max(params.limit ?? 10, 1), 20);
     const page = Math.max(params.page ?? 0, 0);
     const from = page * limit;
     const to = from + limit - 1;
-    const { data, error, count } = await (supabaseAdmin as any)
-      .from("vw_vendas_busca")
-      .select(
-        "id, id_salao, numero, status, total, fechada_em, cancelada_em, formas_pagamento, itens_descricoes, id_cliente",
-        { count: "exact" }
-      )
-      .in("id_cliente", clientesIds)
-      .in("status", ["fechada", "cancelada"])
-      .order("fechada_em", { ascending: false, nullsFirst: false })
-      .range(from, to);
-
+    const { data, error, count } = await (supabaseAdmin as any).from("vw_vendas_busca").select("id, id_salao, numero, status, total, fechada_em, cancelada_em, formas_pagamento, itens_descricoes, id_cliente", { count: "exact" }).in("id_cliente", clientesIds).in("status", ["fechada", "cancelada"]).order("fechada_em", { ascending: false, nullsFirst: false }).range(from, to);
     if (error) throw error;
-
     const items = ((data || []) as Array<Record<string, unknown>>).map((item) => {
       const idCliente = String(item.id_cliente || "");
-      return {
-        id: String(item.id || ""),
-        numero: Number(item.numero || 0) || null,
-        salaoNome:
-          salaoByCliente.get(idCliente) || "Salão Premium",
-        total: Number(item.total || 0),
-        data:
-          String(item.fechada_em || "").trim() ||
-          String(item.cancelada_em || "").trim() ||
-          null,
-        status: String(item.status || ""),
-        formasPagamento: String(item.formas_pagamento || "").trim() || null,
-        itens: String(item.itens_descricoes || "").trim() || null,
-      } satisfies ClientAppReceiptListItem;
+      return { id: String(item.id || ""), numero: Number(item.numero || 0) || null, salaoNome: salaoByCliente.get(idCliente) || "Salão Premium", total: Number(item.total || 0), data: String(item.fechada_em || "").trim() || String(item.cancelada_em || "").trim() || null, status: String(item.status || ""), formasPagamento: String(item.formas_pagamento || "").trim() || null, itens: String(item.itens_descricoes || "").trim() || null } satisfies ClientAppReceiptListItem;
     });
-
-    return {
-      items,
-      total: count || 0,
-      hasMore: (count || 0) > to + 1,
-    };
+    return { items, total: count || 0, hasMore: (count || 0) > to + 1 };
   } catch (error) {
     await logClientAppQueryError("cliente_app_receipts", error);
-    return {
-      items: [] as ClientAppReceiptListItem[],
-      total: 0,
-      hasMore: false,
-    };
+    return { items: [] as ClientAppReceiptListItem[], total: 0, hasMore: false };
   }
 }
 
-export async function listClienteAppWrittenReviews(params: {
-  idConta: string;
-  page?: number;
-  limit?: number;
-}) {
+export async function listClienteAppWrittenReviews(params: { idConta: string; page?: number; limit?: number }) {
   try {
-    const { clientesIds, salaoByCliente } = await listClienteAppLinkedClientIds(
-      params.idConta
-    );
-    if (!clientesIds.length) {
-      return {
-        items: [] as ClientAppWrittenReviewListItem[],
-        total: 0,
-        hasMore: false,
-      };
-    }
-
+    const { clientesIds, salaoByCliente } = await listClienteAppLinkedClientIds(params.idConta);
+    if (!clientesIds.length) return { items: [] as ClientAppWrittenReviewListItem[], total: 0, hasMore: false };
     const supabaseAdmin = getSupabaseAdmin();
     const limit = Math.min(Math.max(params.limit ?? 10, 1), 20);
     const page = Math.max(params.page ?? 0, 0);
     const from = page * limit;
     const to = from + limit - 1;
-    const { data, error, count } = await (supabaseAdmin as any)
-      .from("clientes_avaliacoes")
-      .select(
-        "id, id_cliente, id_salao, id_agendamento, nota, comentario, created_at",
-        { count: "exact" }
-      )
-      .in("id_cliente", clientesIds)
-      .order("created_at", { ascending: false })
-      .range(from, to);
-
+    const { data, error, count } = await (supabaseAdmin as any).from("clientes_avaliacoes").select("id, id_cliente, id_salao, id_agendamento, nota, comentario, created_at", { count: "exact" }).in("id_cliente", clientesIds).order("created_at", { ascending: false }).range(from, to);
     if (error) throw error;
-
     const rows = ((data || []) as Array<Record<string, unknown>>) || [];
-    const salaoIds = Array.from(
-      new Set(rows.map((item) => String(item.id_salao || "")).filter(Boolean))
-    );
-    const agendamentoIds = Array.from(
-      new Set(
-        rows.map((item) => String(item.id_agendamento || "")).filter(Boolean)
-      )
-    );
-
+    const salaoIds = Array.from(new Set(rows.map((item) => String(item.id_salao || "")).filter(Boolean)));
+    const agendamentoIds = Array.from(new Set(rows.map((item) => String(item.id_agendamento || "")).filter(Boolean)));
     const [saloesResult, agendamentosResult] = await Promise.allSettled([
-      salaoIds.length
-        ? (supabaseAdmin as any)
-            .from("saloes")
-            .select("id, nome, nome_fantasia")
-            .in("id", salaoIds)
-        : Promise.resolve({ data: [] }),
-      agendamentoIds.length
-        ? (supabaseAdmin as any)
-            .from("agendamentos")
-            .select("id, servicos(nome), profissionais(nome, nome_exibicao)")
-            .in("id", agendamentoIds)
-        : Promise.resolve({ data: [] }),
+      salaoIds.length ? (supabaseAdmin as any).from("saloes").select("id, nome, nome_fantasia").in("id", salaoIds) : Promise.resolve({ data: [] }),
+      agendamentoIds.length ? (supabaseAdmin as any).from("agendamentos").select("id, servicos(nome), profissionais(nome, nome_exibicao)").in("id", agendamentoIds) : Promise.resolve({ data: [] }),
     ]);
-
     const salaoById = new Map<string, string>();
-    if (saloesResult.status === "fulfilled") {
-      for (const salao of ((saloesResult.value.data || []) as Array<
-        Record<string, unknown>
-      >)) {
-        const id = String(salao.id || "");
-        if (!id) continue;
-        salaoById.set(
-          id,
-          String(salao.nome_fantasia || "").trim() ||
-            String(salao.nome || "").trim() ||
-            "SalãoPremium"
-        );
-      }
-    }
-
-    const atendimentoById = new Map<
-      string,
-      { servicoNome: string; profissionalNome: string }
-    >();
-    if (agendamentosResult.status === "fulfilled") {
-      for (const agendamento of ((agendamentosResult.value.data || []) as Array<
-        Record<string, unknown>
-      >)) {
-        const id = String(agendamento.id || "");
-        if (!id) continue;
-        const servico = agendamento.servicos as { nome?: string | null } | null;
-        const profissional = agendamento.profissionais as
-          | { nome?: string | null; nome_exibicao?: string | null }
-          | null;
-        atendimentoById.set(id, {
-          servicoNome: String(servico?.nome || "").trim() || "Atendimento",
-          profissionalNome:
-            String(profissional?.nome_exibicao || "").trim() ||
-            String(profissional?.nome || "").trim() ||
-            "Profissional",
-        });
-      }
-    }
-
-    const items = rows.map((item) => {
-      const idCliente = String(item.id_cliente || "");
-      const idSalao = String(item.id_salao || "");
-      const atendimento = atendimentoById.get(
-        String(item.id_agendamento || "")
-      );
-      const salao = item.saloes as
-        | { nome?: string | null; nome_fantasia?: string | null }
-        | null;
-      const servico = item.servicos as { nome?: string | null } | null;
-      const profissional = item.profissionais as
-        | { nome?: string | null; nome_exibicao?: string | null }
-        | null;
-
-      return {
-        id: String(item.id || ""),
-        salaoNome:
-          salaoById.get(idSalao) ||
-          String(salao?.nome_fantasia || "").trim() ||
-          String(salao?.nome || "").trim() ||
-          salaoByCliente.get(idCliente) ||
-          "Salão Premium",
-        servicoNome:
-          atendimento?.servicoNome ||
-          String(servico?.nome || "").trim() ||
-          "Atendimento",
-        profissionalNome:
-          atendimento?.profissionalNome ||
-          String(profissional?.nome_exibicao || "").trim() ||
-          String(profissional?.nome || "").trim() ||
-          "Profissional",
-        nota: Number(item.nota || 0),
-        comentario: String(item.comentario || "").trim() || null,
-        createdAt: String(item.created_at || ""),
-      } satisfies ClientAppWrittenReviewListItem;
-    });
-
-    return {
-      items,
-      total: count || 0,
-      hasMore: (count || 0) > to + 1,
-    };
+    if (saloesResult.status === "fulfilled") for (const salao of ((saloesResult.value.data || []) as Array<Record<string, unknown>>)) { const id = String(salao.id || ""); if (id) salaoById.set(id, String(salao.nome_fantasia || "").trim() || String(salao.nome || "").trim() || "SalãoPremium"); }
+    const atendimentoById = new Map<string, { servicoNome: string; profissionalNome: string }>();
+    if (agendamentosResult.status === "fulfilled") for (const agendamento of ((agendamentosResult.value.data || []) as Array<Record<string, unknown>>)) { const id = String(agendamento.id || ""); if (!id) continue; const servico = agendamento.servicos as { nome?: string | null } | null; const profissional = agendamento.profissionais as { nome?: string | null; nome_exibicao?: string | null } | null; atendimentoById.set(id, { servicoNome: String(servico?.nome || "").trim() || "Atendimento", profissionalNome: String(profissional?.nome_exibicao || "").trim() || String(profissional?.nome || "").trim() || "Profissional" }); }
+    const items = rows.map((item) => { const idCliente = String(item.id_cliente || ""); const idSalao = String(item.id_salao || ""); const atendimento = atendimentoById.get(String(item.id_agendamento || "")); return { id: String(item.id || ""), salaoNome: salaoById.get(idSalao) || salaoByCliente.get(idCliente) || "Salão Premium", servicoNome: atendimento?.servicoNome || "Atendimento", profissionalNome: atendimento?.profissionalNome || "Profissional", nota: Number(item.nota || 0), comentario: String(item.comentario || "").trim() || null, createdAt: String(item.created_at || "") } satisfies ClientAppWrittenReviewListItem; });
+    return { items, total: count || 0, hasMore: (count || 0) > to + 1 };
   } catch (error) {
     await logClientAppQueryError("cliente_app_written_reviews", error);
-    return {
-      items: [] as ClientAppWrittenReviewListItem[],
-      total: 0,
-      hasMore: false,
-    };
-  }
-}
-
-export async function listClienteAppSalonReviews(params: {
-  idSalao: string;
-  page?: number;
-  limit?: number;
-}) {
-  const idSalao = String(params.idSalao || "").trim();
-  if (!idSalao) {
-    return {
-      items: [] as ClientAppReviewListItem[],
-      total: 0,
-      hasMore: false,
-    };
-  }
-
-  try {
-    const supabaseAdmin = getSupabaseAdmin();
-    const limit = Math.min(Math.max(params.limit ?? 10, 1), 20);
-    const page = Math.max(params.page ?? 0, 0);
-    const from = page * limit;
-    const to = from + limit - 1;
-
-    const { data, error, count } = await (supabaseAdmin as any)
-      .from("clientes_avaliacoes")
-      .select("id, nota, comentario, created_at, clientes(nome)", {
-        count: "exact",
-      })
-      .eq("id_salao", idSalao)
-      .order("created_at", { ascending: false })
-      .range(from, to);
-
-    if (error) throw error;
-
-    const items = ((data || []) as Array<Record<string, unknown>>).map(
-      (item) => ({
-        id: String(item.id || ""),
-        clienteNome:
-          String((item.clientes as { nome?: string } | null)?.nome || "").trim() ||
-          "Cliente",
-        nota: Number(item.nota ?? 0) || 0,
-        comentario: String(item.comentario || "").trim() || null,
-        createdAt: String(item.created_at || ""),
-      })
-    ) satisfies ClientAppReviewListItem[];
-
-    return {
-      items,
-      total: count || 0,
-      hasMore: (count || 0) > to + 1,
-    };
-  } catch (error) {
-    await logClientAppQueryError("cliente_app_salon_reviews", error);
-    return {
-      items: [] as ClientAppReviewListItem[],
-      total: 0,
-      hasMore: false,
-    };
-  }
-}
-
-export async function listClienteAppNotifications(params: {
-  idConta: string;
-  read?: boolean;
-  page?: number;
-  limit?: number;
-}) {
-  try {
-    const supabaseAdmin = getSupabaseAdmin();
-    const limit = Math.min(Math.max(params.limit ?? 10, 1), 20);
-    const page = Math.max(params.page ?? 0, 0);
-    const from = page * limit;
-    const to = from + limit - 1;
-    const shouldRead = params.read === true;
-    let query = (supabaseAdmin as any)
-      .from("notification_jobs")
-      .select("id, tipo, titulo, mensagem, status, url, enviar_em, created_at, metadata", {
-        count: "exact",
-      })
-      .eq("cliente_app_conta_id", params.idConta)
-      .eq("canal", "cliente_app")
-      .order("created_at", { ascending: false });
-
-    query = shouldRead
-      ? query.not("metadata->>cliente_lida_em", "is", null)
-      : query.is("metadata->>cliente_lida_em", null);
-
-    const { data, error, count } = await query.range(from, to);
-
-    if (error) throw error;
-
-    const items = ((data || []) as Array<Record<string, unknown>>).map((item) => {
-      const metadata = (item.metadata || {}) as Record<string, unknown>;
-      return {
-        id: String(item.id || ""),
-        titulo: String(item.titulo || "").trim() || "Notificacao",
-        mensagem: String(item.mensagem || "").trim() || "",
-        tipo: String(item.tipo || "").trim(),
-        status: String(item.status || "").trim(),
-        url: String(item.url || "").trim() || null,
-        enviarEm: String(item.enviar_em || "").trim() || null,
-        createdAt: String(item.created_at || "").trim() || null,
-        lidaEm: String(metadata.cliente_lida_em || "").trim() || null,
-      };
-    }) satisfies ClientAppNotificationListItem[];
-
-    return {
-      items,
-      hasMore: (count || 0) > to + 1,
-      total: count || 0,
-    };
-  } catch (error) {
-    await logClientAppQueryError("cliente_app_notifications", error);
-    return {
-      items: [] as ClientAppNotificationListItem[],
-      hasMore: false,
-      total: 0,
-    };
-  }
-}
-
-export async function getClienteAppProfileData(params: { idConta: string }) {
-  try {
-    const supabaseAdmin = getSupabaseAdmin();
-    const [{ data: conta }, { data: vinculos }] = await Promise.all([
-      (supabaseAdmin as any)
-        .from("clientes_app_auth")
-        .select("nome, email, telefone, preferencias_gerais")
-        .eq("id", params.idConta)
-        .limit(1)
-        .maybeSingle(),
-      (supabaseAdmin as any)
-        .from("clientes_auth")
-        .select("id_salao, id_cliente, saloes(nome, nome_fantasia), clientes(cashback)")
-        .eq("app_conta_id", params.idConta)
-        .eq("app_ativo", true)
-        .limit(50),
-    ]);
-
-    const creditos = ((vinculos || []) as Array<Record<string, unknown>>)
-      .map((item) => {
-        const salao = item.saloes as
-          | { nome?: string | null; nome_fantasia?: string | null }
-          | null
-          | undefined;
-        const cliente = item.clientes as { cashback?: number | null } | null | undefined;
-        return {
-          idSalao: String(item.id_salao || ""),
-          salaoNome:
-            String(salao?.nome_fantasia || "").trim() ||
-            String(salao?.nome || "").trim() ||
-            "Salão",
-          credito: Number(cliente?.cashback || 0),
-        };
-      })
-      .filter((item) => item.idSalao && item.credito > 0)
-      .sort((a, b) => b.credito - a.credito);
-
-    return {
-      nome: String(conta?.nome || "").trim(),
-      email: getClienteAppPublicEmail(conta?.email),
-      telefone: String(conta?.telefone || "").trim() || null,
-      preferenciasGerais: String(conta?.preferencias_gerais || "").trim() || null,
-      creditos,
-    } satisfies ClientAppProfileData;
-  } catch (error) {
-    await logClientAppQueryError("cliente_app_profile_data", error, {
-      idConta: params.idConta,
-    });
-    return {
-      nome: "",
-      email: "",
-      telefone: null,
-      preferenciasGerais: null,
-      creditos: [],
-    } satisfies ClientAppProfileData;
+    return { items: [] as ClientAppWrittenReviewListItem[], total: 0, hasMore: false };
   }
 }
