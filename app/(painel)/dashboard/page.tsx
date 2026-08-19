@@ -566,7 +566,7 @@ export default function DashboardPage() {
             <InfoMetric
               title="Plano"
               value={resumo.planoSalao || "-"}
-              helper={dashboardAvancado ? "Visão geral avançada ativo" : `Avançado no ${dashboardUpgradeLabel}`}
+              helper={dashboardAvancado ? "Visão geral avançada ativa" : `Avançado no ${dashboardUpgradeLabel}`}
             />
             <InfoMetric
               title="Última leitura"
