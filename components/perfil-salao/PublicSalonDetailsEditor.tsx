@@ -116,14 +116,15 @@ export default function PublicSalonDetailsEditor() {
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
   const [form, setForm] = useState<PublicDetailsForm>(EMPTY_FORM);
+  const idSalao = snapshot?.idSalao || "";
 
   const visible =
     pathname === "/perfil-salao" &&
-    Boolean(snapshot?.idSalao) &&
+    Boolean(idSalao) &&
     Boolean(snapshot?.permissoes?.perfil_salao_editar);
 
   useEffect(() => {
-    if (!open || !snapshot?.idSalao) return;
+    if (!open || !idSalao) return;
 
     let active = true;
 
@@ -138,7 +139,7 @@ export default function PublicSalonDetailsEditor() {
           .select(
             "instagram_url, estacionamento, acessibilidade, wifi, cafe, ar_condicionado, formas_pagamento_publico"
           )
-          .eq("id", snapshot.idSalao)
+          .eq("id", idSalao)
           .maybeSingle();
 
         if (queryError) throw queryError;
@@ -172,12 +173,12 @@ export default function PublicSalonDetailsEditor() {
     return () => {
       active = false;
     };
-  }, [open, snapshot?.idSalao]);
+  }, [open, idSalao]);
 
   if (!visible) return null;
 
   async function save() {
-    if (!snapshot?.idSalao) return;
+    if (!idSalao) return;
 
     try {
       setSaving(true);
@@ -200,14 +201,14 @@ export default function PublicSalonDetailsEditor() {
       const { error: updateError } = await supabase
         .from("saloes")
         .update(payload)
-        .eq("id", snapshot.idSalao);
+        .eq("id", idSalao);
 
       if (updateError) throw updateError;
 
       try {
         await asLooseSupabaseClient(supabase).rpc(
           "refresh_client_app_marketplace_cache",
-          { p_id_salao: snapshot.idSalao }
+          { p_id_salao: idSalao }
         );
       } catch {
         // A vitrine possui fallback ao vivo quando o cache não está disponível.
