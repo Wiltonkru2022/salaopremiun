@@ -3,6 +3,7 @@ import "server-only";
 import { reconcileOperationalIncidents } from "@/lib/monitoring/operational-reconciler.server";
 import { syncOperationalComponentRegistry } from "@/lib/monitoring/operational-registry.server";
 import { runOperationalProbes } from "@/lib/monitoring/operational-probes.server";
+import { syncOperationalSecurityPosture } from "@/lib/monitoring/security-posture.server";
 import { sendPendingPublicStatusNotifications } from "@/lib/monitoring/status-subscriptions.server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -24,7 +25,13 @@ async function startCron() {
   return data.id as string;
 }
 
-async function finishCron(id: string, status: string, resumo: string, payload: Record<string, unknown>, errorText?: string | null) {
+async function finishCron(
+  id: string,
+  status: string,
+  resumo: string,
+  payload: Record<string, unknown>,
+  errorText?: string | null
+) {
   const supabase = getSupabaseAdmin() as any;
   await supabase
     .from("eventos_cron")
@@ -42,14 +49,23 @@ export async function runOperationalHealthCycle() {
   const cronId = await startCron();
   try {
     const registry = await syncOperationalComponentRegistry();
-    const probes = await runOperationalProbes();
+    const [probes, securityPosture] = await Promise.all([
+      runOperationalProbes(),
+      syncOperationalSecurityPosture(),
+    ]);
     const reconciliation = await reconcileOperationalIncidents();
     const notifications = await sendPendingPublicStatusNotifications();
     const byStatus = probes.reduce<Record<string, number>>((acc, probe) => {
       acc[probe.status] = (acc[probe.status] || 0) + 1;
       return acc;
     }, {});
-    const payload = { registry, probes: byStatus, reconciliation, notifications };
+    const payload = {
+      registry,
+      probes: byStatus,
+      securityPosture,
+      reconciliation,
+      notifications,
+    };
     await finishCron(
       cronId,
       "sucesso",
@@ -58,8 +74,15 @@ export async function runOperationalHealthCycle() {
     );
     return { ok: true, ...payload };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Falha no ciclo de saúde operacional.";
-    await finishCron(cronId, "erro", "Ciclo de saúde operacional falhou.", {}, message.slice(0, 500));
+    const message =
+      error instanceof Error ? error.message : "Falha no ciclo de saúde operacional.";
+    await finishCron(
+      cronId,
+      "erro",
+      "Ciclo de saúde operacional falhou.",
+      {},
+      message.slice(0, 500)
+    );
     throw error;
   }
 }
