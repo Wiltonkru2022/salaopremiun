@@ -25,7 +25,8 @@ type ProbeSummary = {
   reason: string;
 };
 
-const OPERATIONAL_PROBE_CONCURRENCY = 8;
+const OPERATIONAL_PROBE_CONCURRENCY = 4;
+const DATABASE_PROBE_TIMEOUT_MS = 10_000;
 
 const deploymentId = () => process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_URL || null;
 const commitSha = () => process.env.VERCEL_GIT_COMMIT_SHA || null;
@@ -75,7 +76,7 @@ async function recordProbe(component: OperationalComponentDefinition, result: Pr
     p_freshness_ttl_segundos: component.freshnessTtlSeconds,
     p_sucessos_para_recuperar: 3,
     p_falhas_para_degradar: component.criticality === "critical" ? 1 : 2,
-    p_probe_version: "operational-health-v3",
+    p_probe_version: "operational-health-v4",
   });
   if (error) throw error;
 }
@@ -85,7 +86,7 @@ async function databaseProbe(table: string, timeoutMs: number): Promise<ProbeRes
     const supabase = getSupabaseAdmin() as any;
     const { result, latencyMs } = await timed(
       () => supabase.from(table).select("id").limit(1),
-      timeoutMs
+      Math.max(timeoutMs, DATABASE_PROBE_TIMEOUT_MS)
     );
     if (result.error) throw result.error;
     return { status: "ok", score: latencyMs < 1500 ? 100 : 85, latencyMs, reason: "Leitura canário concluída.", evidence: { table, readable: true } };
@@ -99,7 +100,7 @@ async function httpProbe(path: string, timeoutMs: number): Promise<ProbeResult> 
   if (!origin) return { status: "unknown", score: 0, latencyMs: null, reason: "Origem pública não configurada." };
   try {
     const { result: response, latencyMs } = await timed(
-      () => fetch(`${origin}${path}`, { method: "GET", cache: "no-store", redirect: "manual", headers: { "User-Agent": "SalaoPremium-OperationalProbe/3.0" } }),
+      () => fetch(`${origin}${path}`, { method: "GET", cache: "no-store", redirect: "manual", headers: { "User-Agent": "SalaoPremium-OperationalProbe/4.0" } }),
       timeoutMs
     );
     const acceptable = response.status >= 200 && response.status < 400;
@@ -197,7 +198,7 @@ async function asaasProbe(timeoutMs: number): Promise<ProbeResult> {
   }
   try {
     const { result: response, latencyMs } = await timed(
-      () => fetch(`${baseUrl}/myAccount/accountNumber`, { method: "GET", cache: "no-store", headers: { accept: "application/json", access_token: apiKey, "User-Agent": "SalaoPremium-OperationalProbe/3.0" } }),
+      () => fetch(`${baseUrl}/myAccount/accountNumber`, { method: "GET", cache: "no-store", headers: { accept: "application/json", access_token: apiKey, "User-Agent": "SalaoPremium-OperationalProbe/4.0" } }),
       timeoutMs
     );
     return {
@@ -359,6 +360,7 @@ async function runProbe(component: OperationalComponentDefinition): Promise<Prob
     case "platform.assets": return httpProbe("/favicon.ico", component.timeoutMs);
     case "infra.vercel.runtime": return deploymentProbe();
     case "supabase.database":
+      return { status: "unknown", score: 0, latencyMs: 0, reason: "Estado delegado ao heartbeat interno do PostgreSQL/pg_cron.", evidence: { delegated: true, source: "pg_cron" } };
     case "supabase.data_api": return databaseProbe("saloes", component.timeoutMs);
     case "supabase.auth": return supabaseAuthProbe(component.timeoutMs);
     case "supabase.storage": return storageProbe(component.timeoutMs);
@@ -403,7 +405,6 @@ async function runProbe(component: OperationalComponentDefinition): Promise<Prob
 
 function probeExecutionKey(component: OperationalComponentDefinition) {
   switch (component.componentKey) {
-    case "supabase.database":
     case "supabase.data_api":
     case "client.explore":
     case "client.salon":
