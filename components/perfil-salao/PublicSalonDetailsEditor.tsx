@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { CheckCircle2, ChevronRight, Globe, Loader2, PencilLine, Sparkles } from "lucide-react";
+import { CheckCircle2, ChevronRight, Globe, Loader2, Sparkles } from "lucide-react";
 import AppModal from "@/components/ui/AppModal";
 import { Field, TextInput } from "@/components/configuracoes/ui";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
