@@ -1,12 +1,12 @@
 import "server-only";
 
 import { classifyOperationalError } from "@/lib/monitoring/error-catalog";
-import { buildOperationalFingerprint, sanitizeOperationalText } from "@/lib/monitoring/fingerprint";
+import { buildOperationalFingerprint } from "@/lib/monitoring/fingerprint";
 import { canAutoResolveIncident } from "@/lib/monitoring/incident-state-machine";
 import { findOperationalComponentForContext } from "@/lib/monitoring/operational-components";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-const RESOLVER_VERSION = "operational-reconciler-v1";
+const RESOLVER_VERSION = "operational-reconciler-v2";
 const RECOVERY_WINDOW_MS = 30 * 60 * 1000;
 
 type IncidentRow = {
@@ -27,6 +27,7 @@ type IncidentRow = {
   healthy_probe_count?: number | null;
   primeiro_commit_sha?: string | null;
   ultimo_commit_sha?: string | null;
+  first_healthy_at?: string | null;
 };
 
 type ComponentRow = {
@@ -78,6 +79,11 @@ function isFresh(check: CheckRow | null, now: number) {
   return now - updated <= ttl;
 }
 
+function parseTime(value?: string | null) {
+  if (!value) return Number.NaN;
+  return Date.parse(value);
+}
+
 async function writeTimeline(params: {
   incident: IncidentRow;
   from: string;
@@ -110,7 +116,11 @@ async function resolveLinkedAlerts(incident: IncidentRow, fingerprint?: string |
   if (!keys.length) return;
   await supabase
     .from("alertas_sistema")
-    .update({ resolvido: true, resolvido_em: new Date().toISOString(), atualizado_em: new Date().toISOString() })
+    .update({
+      resolvido: true,
+      resolvido_em: new Date().toISOString(),
+      atualizado_em: new Date().toISOString(),
+    })
     .in("chave", keys);
 }
 
@@ -120,30 +130,55 @@ export async function reconcileOperationalIncidents() {
   const currentCommit = process.env.VERCEL_GIT_COMMIT_SHA || null;
   const currentDeployment = process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_URL || null;
 
-  const [incidentsResult, allFingerprintsResult, componentsResult, checksResult, dependenciesResult, eventStatsResult] =
-    await Promise.all([
-      supabase
-        .from("incidentes_sistema")
-        .select("id, chave, fingerprint, titulo, modulo, severidade, status, primeira_ocorrencia_em, ultima_ocorrencia_em, total_ocorrencias, component_key, catalog_code, referencia_json, required_healthy_probes, healthy_probe_count, primeiro_commit_sha, ultimo_commit_sha")
-        .in("status", ["detectado", "aberto", "investigando", "recuperando", "recorrente"])
-        .order("primeira_ocorrencia_em", { ascending: true })
-        .limit(250),
-      supabase.from("incidentes_sistema").select("id, fingerprint, status").not("fingerprint", "is", null).limit(1000),
-      supabase.from("operational_components").select("component_key, estado_atual, criticidade, ultimo_sucesso_em, ultima_falha_em"),
-      supabase.from("health_checks_sistema").select("component_key, status, atualizado_em, freshness_ttl_segundos, sucessos_consecutivos, falhas_consecutivas, ultimo_sucesso_em, deployment_id, commit_sha, evidence_json"),
-      supabase.from("operational_component_dependencies").select("component_key, depends_on_component_key, critica"),
-      supabase.rpc("fn_operational_event_stats", { p_since: new Date(now - 24 * 60 * 60 * 1000).toISOString() }),
-    ]);
+  const [
+    incidentsResult,
+    allFingerprintsResult,
+    componentsResult,
+    checksResult,
+    dependenciesResult,
+    eventStatsResult,
+  ] = await Promise.all([
+    supabase
+      .from("incidentes_sistema")
+      .select("id, chave, fingerprint, titulo, modulo, severidade, status, primeira_ocorrencia_em, ultima_ocorrencia_em, total_ocorrencias, component_key, catalog_code, referencia_json, required_healthy_probes, healthy_probe_count, primeiro_commit_sha, ultimo_commit_sha, first_healthy_at")
+      .in("status", ["detectado", "aberto", "investigando", "recuperando", "recorrente"])
+      .order("primeira_ocorrencia_em", { ascending: true })
+      .limit(250),
+    supabase
+      .from("incidentes_sistema")
+      .select("id, fingerprint, status")
+      .not("fingerprint", "is", null)
+      .limit(1000),
+    supabase
+      .from("operational_components")
+      .select("component_key, estado_atual, criticidade, ultimo_sucesso_em, ultima_falha_em"),
+    supabase
+      .from("health_checks_sistema")
+      .select("component_key, status, atualizado_em, freshness_ttl_segundos, sucessos_consecutivos, falhas_consecutivas, ultimo_sucesso_em, deployment_id, commit_sha, evidence_json"),
+    supabase
+      .from("operational_component_dependencies")
+      .select("component_key, depends_on_component_key, critica"),
+    supabase.rpc("fn_operational_event_stats", {
+      p_since: new Date(now - RECOVERY_WINDOW_MS).toISOString(),
+    }),
+  ]);
 
   if (incidentsResult.error) throw incidentsResult.error;
+
   const incidents = (incidentsResult.data || []) as IncidentRow[];
   const components = new Map<string, ComponentRow>(
-    ((componentsResult.data || []) as ComponentRow[]).map((row) => [row.component_key, row])
+    ((componentsResult.data || []) as ComponentRow[]).map((row) => [
+      row.component_key,
+      row,
+    ])
   );
   const checks = new Map<string, CheckRow>();
   for (const row of (checksResult.data || []) as CheckRow[]) {
-    if (row.component_key && !checks.has(row.component_key)) checks.set(row.component_key, row);
+    if (row.component_key && !checks.has(row.component_key)) {
+      checks.set(row.component_key, row);
+    }
   }
+
   const dependencies = new Map<string, string[]>();
   for (const row of dependenciesResult.data || []) {
     if (!row.critica) continue;
@@ -151,12 +186,18 @@ export async function reconcileOperationalIncidents() {
     current.push(row.depends_on_component_key);
     dependencies.set(row.component_key, current);
   }
+
   const stats = new Map<string, any>(
-    (eventStatsResult.data || []).map((row: any) => [String(row.modulo || "sistema"), row])
+    (eventStatsResult.data || []).map((row: any) => [
+      String(row.modulo || "sistema"),
+      row,
+    ])
   );
   const fingerprintOwner = new Map<string, string>();
   for (const row of allFingerprintsResult.data || []) {
-    if (row.fingerprint) fingerprintOwner.set(String(row.fingerprint), String(row.id));
+    if (row.fingerprint) {
+      fingerprintOwner.set(String(row.fingerprint), String(row.id));
+    }
   }
 
   const summary = {
@@ -177,7 +218,8 @@ export async function reconcileOperationalIncidents() {
       const previous = incident.status;
       const evidence = {
         classification: "expected_user_behavior",
-        reason: "Tentativa de autenticação recusada sem evidência de falha interna do serviço.",
+        reason:
+          "Tentativa de autenticação recusada sem evidência de falha interna do serviço.",
         preservedSecurityTelemetry: true,
       };
       await supabase
@@ -187,20 +229,29 @@ export async function reconcileOperationalIncidents() {
           catalog_code: "invalid_user_credentials",
           categoria: "user_behavior",
           sintoma: "Tentativa de login recusada.",
-          causa_provavel: "Credenciais inválidas ou tentativa automatizada de acesso.",
+          causa_provavel:
+            "Credenciais inválidas ou tentativa automatizada de acesso.",
           confianca: "alta",
           responsavel: "Segurança/Auth",
           resolution_mode: "automatic",
           resolution_confidence: "alta",
           recovery_verified_at: new Date().toISOString(),
           resolvido_em: new Date().toISOString(),
-          resolution_reason: "Comportamento de usuário/segurança; não representa indisponibilidade do Auth isoladamente.",
+          resolution_reason:
+            "Comportamento de usuário/segurança; não representa indisponibilidade do Auth isoladamente.",
           resolution_evidence: evidence,
           resolver_version: RESOLVER_VERSION,
           updated_at: new Date().toISOString(),
         })
         .eq("id", incident.id);
-      await writeTimeline({ incident, from: previous, to: "resolvido", message: "Reclassificado automaticamente como comportamento esperado de autenticação, não outage.", details: evidence });
+      await writeTimeline({
+        incident,
+        from: previous,
+        to: "resolvido",
+        message:
+          "Reclassificado automaticamente como comportamento esperado de autenticação, não outage.",
+        details: evidence,
+      });
       await resolveLinkedAlerts(incident, incident.fingerprint);
       summary.expectedBehavior += 1;
       summary.autoResolved += 1;
@@ -238,42 +289,73 @@ export async function reconcileOperationalIncidents() {
           catalog_code: rule.code,
           categoria: "duplicate",
           root_cause_candidate: `incident:${existingOwner}`,
-          resolution_reason: "Incidente duplicado correlacionado ao mesmo fingerprint operacional.",
-          resolution_evidence: { canonicalIncidentId: existingOwner, candidateFingerprint },
+          resolution_reason:
+            "Incidente duplicado correlacionado ao mesmo fingerprint operacional.",
+          resolution_evidence: {
+            canonicalIncidentId: existingOwner,
+            candidateFingerprint,
+          },
           resolver_version: RESOLVER_VERSION,
           updated_at: new Date().toISOString(),
         })
         .eq("id", incident.id);
-      await writeTimeline({ incident, from: previous, to: "suprimido", message: "Duplicado correlacionado automaticamente a um incidente canônico.", details: { canonicalIncidentId: existingOwner } });
+      await writeTimeline({
+        incident,
+        from: previous,
+        to: "suprimido",
+        message:
+          "Duplicado correlacionado automaticamente a um incidente canônico.",
+        details: { canonicalIncidentId: existingOwner },
+      });
       await resolveLinkedAlerts(incident, incident.fingerprint);
       summary.suppressedDuplicates += 1;
       continue;
     }
 
     fingerprintOwner.set(candidateFingerprint, incident.id);
+
     const componentKey = component?.componentKey || null;
     const componentState = componentKey ? components.get(componentKey) : null;
     const check = componentKey ? checks.get(componentKey) || null : null;
     const fresh = isFresh(check, now);
-    const probeCount = fresh && check?.status === "ok" ? Number(check.sucessos_consecutivos || 0) : 0;
-    const required = Math.max(1, Number(incident.required_healthy_probes || 3));
+    const probeCount =
+      fresh && check?.status === "ok"
+        ? Number(check.sucessos_consecutivos || 0)
+        : 0;
+    const required = Math.max(
+      1,
+      Number(incident.required_healthy_probes || 3)
+    );
     const moduleStats = stats.get(incident.modulo);
     const totalEvents = Number(moduleStats?.total_events || 0);
     const failures = Number(moduleStats?.failure_events || 0);
     const errorRate = totalEvents ? (failures / totalEvents) * 100 : 0;
     const deps = componentKey ? dependencies.get(componentKey) || [] : [];
-    const dependenciesHealthy = deps.every((dependency) => components.get(dependency)?.estado_atual === "operational");
+    const dependenciesHealthy = deps.every(
+      (dependency) => components.get(dependency)?.estado_atual === "operational"
+    );
+
+    const internalProbe = check?.evidence_json?.internal === true;
     const deploymentHealthy = Boolean(
       fresh &&
         check?.status === "ok" &&
-        ((currentCommit && check.commit_sha === currentCommit) ||
+        (internalProbe ||
+          (currentCommit && check.commit_sha === currentCommit) ||
           (currentDeployment && check.deployment_id === currentDeployment) ||
           (!currentCommit && !currentDeployment))
     );
-    const contradictoryEvidence = Boolean(
-      componentState?.ultima_falha_em &&
-        Date.parse(componentState.ultima_falha_em) > Date.parse(incident.ultima_ocorrencia_em)
+
+    const lastFailureMs = parseTime(componentState?.ultima_falha_em);
+    const lastSuccessMs = parseTime(
+      check?.ultimo_sucesso_em || check?.atualizado_em
     );
+    const lastIncidentMs = parseTime(incident.ultima_ocorrencia_em);
+    const contradictoryEvidence = Boolean(
+      Number.isFinite(lastFailureMs) &&
+        lastFailureMs > lastIncidentMs &&
+        (!Number.isFinite(lastSuccessMs) || lastFailureMs > lastSuccessMs)
+    );
+
     const canResolve = Boolean(
       componentState &&
         canAutoResolveIncident({
@@ -302,9 +384,17 @@ export async function reconcileOperationalIncidents() {
       responsavel: component?.owner || rule.owner,
       acao_sugerida: rule.recommendedAction,
       healthy_probe_count: probeCount,
-      first_healthy_at: probeCount > 0 ? (incident as any).first_healthy_at || check?.ultimo_sucesso_em || check?.atualizado_em : null,
+      first_healthy_at:
+        probeCount > 0
+          ? incident.first_healthy_at ||
+            check?.ultimo_sucesso_em ||
+            check?.atualizado_em
+          : null,
       last_success_at: check?.status === "ok" ? check.atualizado_em : null,
-      last_failed_probe_at: check?.status === "critical" || check?.status === "warning" ? check.atualizado_em : null,
+      last_failed_probe_at:
+        check?.status === "critical" || check?.status === "warning"
+          ? check.atualizado_em
+          : null,
       ultimo_deployment_id: currentDeployment,
       ultimo_commit_sha: currentCommit,
       resolver_version: RESOLVER_VERSION,
@@ -314,13 +404,21 @@ export async function reconcileOperationalIncidents() {
     if (canResolve) {
       const previous = incident.status;
       const evidence = {
-        quietWindowMinutes: Math.round((now - Date.parse(incident.ultima_ocorrencia_em)) / 60000),
+        quietWindowMinutes: Math.round(
+          (now - Date.parse(incident.ultima_ocorrencia_em)) / 60000
+        ),
         healthyProbeCount: probeCount,
         requiredHealthyProbes: required,
         componentState: componentState?.estado_atual,
-        errorRate24h: Number(errorRate.toFixed(2)),
+        errorRateRecoveryWindow: Number(errorRate.toFixed(2)),
+        recoveryWindowMinutes: Math.round(RECOVERY_WINDOW_MS / 60000),
         dependenciesHealthy,
         deploymentHealthy,
+        internalProbe,
+        contradictoryEvidence,
+        latestFailureAt: componentState?.ultima_falha_em || null,
+        latestSuccessAt:
+          check?.ultimo_sucesso_em || check?.atualizado_em || null,
         probeUpdatedAt: check?.atualizado_em,
         probeEvidence: check?.evidence_json || {},
       };
@@ -330,7 +428,8 @@ export async function reconcileOperationalIncidents() {
           ...commonUpdate,
           status: "resolvido",
           resolution_mode: "automatic",
-          resolution_confidence: probeCount >= required + 2 ? "alta" : "media",
+          resolution_confidence:
+            probeCount >= required + 2 ? "alta" : "media",
           recovery_verified_at: new Date().toISOString(),
           resolvido_em: new Date().toISOString(),
           resolved_deployment_id: currentDeployment,
@@ -343,18 +442,25 @@ export async function reconcileOperationalIncidents() {
         incident,
         from: previous,
         to: "resolvido",
-        message: "Recuperação confirmada automaticamente por evidências convergentes.",
+        message:
+          "Recuperação confirmada automaticamente por evidências convergentes.",
         details: evidence,
         publicVisible: Boolean((incident as any).visibilidade_publica),
-        publicMessage: "Recuperação confirmada. O componente voltou ao estado operacional.",
+        publicMessage:
+          "Recuperação confirmada. O componente voltou ao estado operacional.",
       });
       await resolveLinkedAlerts(incident, candidateFingerprint);
       summary.autoResolved += 1;
       continue;
     }
 
-    const hasRecoveryEvidence = Boolean(fresh && check?.status === "ok" && probeCount > 0);
-    const targetStatus = hasRecoveryEvidence ? "recuperando" : componentKey ? "investigando" : "investigando";
+    const hasRecoveryEvidence = Boolean(
+      fresh && check?.status === "ok" && probeCount > 0
+    );
+    const targetStatus = hasRecoveryEvidence
+      ? "recuperando"
+      : "investigando";
+
     if (targetStatus !== incident.status) {
       await writeTimeline({
         incident,
@@ -363,9 +469,19 @@ export async function reconcileOperationalIncidents() {
         message: hasRecoveryEvidence
           ? `Recuperação em verificação: ${probeCount}/${required} probe(s) saudável(is).`
           : "Incidente em investigação; ainda não há evidência suficiente para resolução automática.",
-        details: { fresh, probeCount, required, dependenciesHealthy, deploymentHealthy, errorRate24h: Number(errorRate.toFixed(2)) },
+        details: {
+          fresh,
+          probeCount,
+          required,
+          dependenciesHealthy,
+          deploymentHealthy,
+          internalProbe,
+          contradictoryEvidence,
+          errorRateRecoveryWindow: Number(errorRate.toFixed(2)),
+        },
       });
     }
+
     await supabase
       .from("incidentes_sistema")
       .update({ ...commonUpdate, status: targetStatus })
