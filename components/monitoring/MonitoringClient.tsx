@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import { captureClientError, setClientMonitoringContext } from "@/lib/monitoring/client";
+import { classifyClientRuntimeError } from "@/lib/monitoring/client-error-classifier";
 
 function inferSurface(pathname: string) {
   if (pathname.startsWith("/admin-master")) return "admin_master";
@@ -43,6 +44,10 @@ function inferModule(pathname: string) {
   return segments[0];
 }
 
+function isResourceErrorTarget(target: EventTarget | null) {
+  return target instanceof HTMLScriptElement || target instanceof HTMLLinkElement;
+}
+
 export default function MonitoringClient() {
   const pathname = usePathname() || "/";
 
@@ -59,6 +64,14 @@ export default function MonitoringClient() {
 
   useEffect(() => {
     function handleWindowError(event: ErrorEvent) {
+      // Erros de <script>/<link> sao tratados pelo runtime de assets para evitar duplicidade.
+      if (isResourceErrorTarget(event.target)) return;
+
+      const classification = classifyClientRuntimeError({
+        error: event.error,
+        message: event.message,
+      });
+
       void captureClientError({
         module: inferModule(pathname),
         action: "window_error",
@@ -66,31 +79,35 @@ export default function MonitoringClient() {
         screen: pathname,
         error: event.error || new Error(event.message || "Erro de janela"),
         fallbackMessage: event.message || "Erro inesperado de interface.",
+        errorCode: classification.code,
         details: {
           filename: event.filename,
           lineno: event.lineno,
           colno: event.colno,
+          runtimeCategory: classification.category,
         },
         useBeacon: true,
       });
     }
 
     function handleUnhandledRejection(event: PromiseRejectionEvent) {
+      const error =
+        event.reason instanceof Error
+          ? event.reason
+          : new Error(String(event.reason || "Promise rejeitada"));
+      const classification = classifyClientRuntimeError({ error });
+
       void captureClientError({
         module: inferModule(pathname),
         action: "unhandled_rejection",
         route: pathname,
         screen: pathname,
-        error:
-          event.reason instanceof Error
-            ? event.reason
-            : new Error(String(event.reason || "Promise rejeitada")),
+        error,
+        errorCode: classification.code,
         fallbackMessage: "Falha não tratada na interface.",
         details: {
-          reason:
-            event.reason instanceof Error
-              ? event.reason.message
-              : String(event.reason || ""),
+          reason: error.message,
+          runtimeCategory: classification.category,
         },
         useBeacon: true,
       });

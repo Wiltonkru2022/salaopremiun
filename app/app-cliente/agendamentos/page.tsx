@@ -5,6 +5,8 @@ import ClientAppointmentsManager from "@/components/client-app/ClientAppointment
 import ClientBookingDraftCleanup from "@/components/client-app/ClientBookingDraftCleanup";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 import { listClienteAppAppointments } from "@/lib/client-app/queries";
+import { getSalonTimeZoneMap } from "@/lib/client-app/appointment-timezones.server";
+import { toDeterministicSalonLocalDateTime } from "@/lib/client-app/deterministic-date";
 
 export const metadata = {
   title: "Meus Agendamentos",
@@ -25,6 +27,16 @@ export default async function ClienteAppointmentsPage({
     limit: pageSize + 1,
   });
   const hasMore = agendamentos.length > pageSize;
+  const salonTimeZones = await getSalonTimeZoneMap(
+    agendamentos.map((item) => item.idSalao)
+  );
+  const hydrationStableAppointments = agendamentos.map((item) => ({
+    ...item,
+    criadoEm: toDeterministicSalonLocalDateTime(
+      item.criadoEm,
+      salonTimeZones.get(item.idSalao)
+    ),
+  }));
 
   return (
     <ClientAppFrame
@@ -48,7 +60,7 @@ export default async function ClienteAppointmentsPage({
           </h1>
         </header>
         <ClientAppointmentsManager
-          agendamentos={agendamentos.slice(0, pageSize)}
+          agendamentos={hydrationStableAppointments.slice(0, pageSize)}
           successKey={params?.status || null}
           currentPage={paginaAtual}
           hasMore={hasMore}
