@@ -1,10 +1,9 @@
 import { createClient } from "@/lib/supabase/server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
 import { getAdminMasterUserContextByAuthUserId } from "@/lib/admin-master/auth/get-admin-master-user-context.server";
-import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
+import { classifyOperationalError } from "@/lib/monitoring/error-catalog";
+import { observeOperationalFailure } from "@/lib/monitoring/operational-observer.server";
 import {
-  captureSystemError,
   captureSystemEvent,
   captureSystemMetric,
 } from "@/lib/monitoring/server";
@@ -78,33 +77,96 @@ export function createMonitoringService() {
     },
 
     async captureError(payload: MonitoringPayload) {
-      await captureSystemError({
-        ...payload,
-        error: new Error(payload.message || "Erro de cliente"),
-        stack: payload.stack || null,
+      const message = payload.message || "Erro de cliente";
+      const rule = classifyOperationalError({
+        message,
+        errorCode: payload.errorCode,
+        module: payload.module,
+        route: payload.route,
+        action: payload.action,
+        origin: payload.origin,
       });
+
+      await captureSystemEvent({
+        ...payload,
+        eventType: payload.eventType || "error",
+        severity: payload.severity || (rule.opensIncident ? "error" : "warning"),
+        message,
+        errorCode: rule.code,
+        success: false,
+        isUserError: !rule.opensIncident,
+        createIncident: false,
+      });
+
+      if (rule.opensIncident) {
+        await observeOperationalFailure({
+          message,
+          errorCode: rule.code,
+          module: payload.module,
+          action: payload.action,
+          route: payload.route,
+          origin: payload.origin,
+          stack: payload.stack,
+          details: payload.details,
+        });
+      }
     },
 
     async captureEvent(payload: MonitoringPayload) {
-      await captureSystemEvent(payload);
+      const isFailure =
+        payload.success === false ||
+        payload.severity === "error" ||
+        payload.severity === "critical";
+
+      if (!isFailure) {
+        await captureSystemEvent(payload);
+        return;
+      }
+
+      const rule = classifyOperationalError({
+        message: payload.message,
+        errorCode: payload.errorCode,
+        module: payload.module,
+        route: payload.route,
+        action: payload.action,
+        origin: payload.origin,
+      });
+
+      await captureSystemEvent({
+        ...payload,
+        errorCode: rule.code,
+        isUserError: !rule.opensIncident,
+        createIncident: false,
+      });
+
+      if (rule.opensIncident) {
+        await observeOperationalFailure({
+          message: payload.message || "Falha operacional",
+          errorCode: rule.code,
+          module: payload.module,
+          action: payload.action,
+          route: payload.route,
+          origin: payload.origin,
+          stack: payload.stack,
+          details: payload.details,
+        });
+      }
     },
 
     async reportRouteFailure(error: unknown) {
       try {
-        await reportOperationalIncident({
-          supabaseAdmin: getSupabaseAdmin(),
-          key: "api:monitoring:event:erro",
-          module: "monitoring_event_route",
-          title: "Rota de monitoramento falhou",
-          description:
+        await observeOperationalFailure({
+          message:
             error instanceof Error
               ? error.message
               : "Erro ao processar evento de monitoramento.",
-          severity: "alta",
-          details: {
-            route: "/api/monitoring/event",
-            method: "POST",
-          },
+          module: "monitoring_event_route",
+          action: "capture_event",
+          route: "/api/monitoring/event",
+          origin: "api",
+          stack: error instanceof Error ? error.stack : null,
+          componentKey: "admin.health",
+          details: { method: "POST" },
         });
       } catch (incidentError) {
         console.error("Falha ao registrar incidente de monitoring:", incidentError);

@@ -1,267 +1,378 @@
 import Link from "next/link";
-import { AdminDataTable } from "@/components/admin-master/AdminMasterViews";
 import {
-  getAdminMasterHealthCenter,
-  type HealthTone,
-} from "@/lib/admin-master/health-center";
+  Activity,
+  AlertTriangle,
+  CheckCircle2,
+  Clock3,
+  Gauge,
+  Radar,
+  ShieldCheck,
+} from "lucide-react";
+import { getOperationalHealthSnapshot } from "@/lib/monitoring/operational-snapshot.server";
 
 export const dynamic = "force-dynamic";
 
-function toneClass(tone: HealthTone) {
-  if (tone === "green") return "border-emerald-200 bg-emerald-50 text-emerald-900";
-  if (tone === "amber") return "border-amber-200 bg-amber-50 text-amber-900";
-  if (tone === "red") return "border-red-200 bg-red-50 text-red-900";
-  if (tone === "blue") return "border-blue-200 bg-blue-50 text-blue-900";
-  return "border-zinc-800 bg-zinc-950 text-white";
+function stateClass(state: string) {
+  if (state === "operational")
+    return "border-emerald-200 bg-emerald-50 text-emerald-900";
+  if (state === "degraded")
+    return "border-amber-200 bg-amber-50 text-amber-900";
+  if (state === "partial_outage")
+    return "border-orange-200 bg-orange-50 text-orange-900";
+  if (state === "major_outage") return "border-red-200 bg-red-50 text-red-900";
+  if (state === "maintenance") return "border-blue-200 bg-blue-50 text-blue-900";
+  return "border-zinc-200 bg-zinc-100 text-zinc-700";
 }
 
-function scoreClass(tone: HealthTone) {
-  if (tone === "green") return "from-emerald-500 to-lime-200 text-emerald-950";
-  if (tone === "amber") return "from-amber-500 to-yellow-200 text-amber-950";
-  if (tone === "red") return "from-rose-600 to-orange-300 text-red-950";
-  return "from-blue-500 to-sky-200 text-blue-950";
+function findingClass(classification: string) {
+  if (classification === "falha_operacional")
+    return "border-red-200 bg-red-50 text-red-800";
+  if (classification === "risco_seguranca")
+    return "border-amber-200 bg-amber-50 text-amber-800";
+  if (classification === "configuracao_intencional")
+    return "border-blue-200 bg-blue-50 text-blue-800";
+  return "border-zinc-200 bg-zinc-50 text-zinc-700";
 }
 
-function HealthList({
-  title,
-  rows,
-}: {
-  title: string;
-  rows: {
-    id: string;
-    title: string;
-    subtitle: string;
-    status: string;
-    when: string;
-    href?: string;
-    tone: HealthTone;
-  }[];
-}) {
-  return (
-    <section className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm">
-      <div className="text-xs font-black uppercase tracking-[0.25em] text-zinc-400">
-        {title}
-      </div>
-      <div className="mt-4 space-y-3">
-        {rows.length ? (
-          rows.map((row) => {
-            const content = (
-              <div className="flex items-start justify-between gap-4 rounded-[22px] border border-zinc-100 bg-zinc-50 px-4 py-3 transition hover:border-zinc-300">
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-black text-zinc-950">
-                    {row.title}
-                  </div>
-                  <div className="mt-1 line-clamp-2 text-xs leading-5 text-zinc-500">
-                    {row.subtitle}
-                  </div>
-                  <div className="mt-2 text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">
-                    {row.when}
-                  </div>
-                </div>
-                <span className={`shrink-0 rounded-full border px-3 py-1 text-[11px] font-black ${toneClass(row.tone)}`}>
-                  {row.status}
-                </span>
-              </div>
-            );
+function metric(label: string, value: string, hint: string) {
+  return { label, value, hint };
+}
 
-            return row.href ? (
-              <Link key={row.id} href={row.href}>
-                {content}
-              </Link>
-            ) : (
-              <div key={row.id}>{content}</div>
-            );
-          })
-        ) : (
-          <div className="rounded-[22px] border border-zinc-100 bg-zinc-50 px-4 py-8 text-center text-sm text-zinc-500">
-            Nenhum evento recente nesta fila.
-          </div>
-        )}
-      </div>
-    </section>
-  );
+function formatPercent(value: number | null) {
+  return value === null ? "—" : `${value.toFixed(1).replace(".", ",")}%`;
+}
+
+function formatDuration(seconds: number | null) {
+  if (!seconds) return "—";
+  if (seconds < 60) return `${Math.round(seconds)}s`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
+  return `${(seconds / 3600).toFixed(1).replace(".", ",")} h`;
+}
+
+function formatMs(value: number | null) {
+  return value ? `${Math.round(value)} ms` : "—";
+}
+
+function formatDate(value?: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "-";
+  return new Intl.DateTimeFormat("pt-BR", {
+    dateStyle: "short",
+    timeStyle: "short",
+    timeZone: "America/Campo_Grande",
+  }).format(date);
 }
 
 export default async function AdminMasterSaudePage() {
-  const data = await getAdminMasterHealthCenter();
+  const data = await getOperationalHealthSnapshot();
+  const metrics = [
+    metric(
+      "Cobertura operacional",
+      `${data.coverage.percentage.toFixed(1).replace(".", ",")}%`,
+      `${data.coverage.monitored}/${data.coverage.total} componentes conhecidos com monitor registrado`
+    ),
+    metric(
+      "Cobertura crítica",
+      `${data.coverage.criticalPercentage.toFixed(1).replace(".", ",")}%`,
+      `${data.coverage.criticalMonitored}/${data.coverage.criticalTotal} componentes críticos`
+    ),
+    metric(
+      "Incidentes ativos",
+      String(data.metrics.activeIncidents),
+      "Sem contar duplicados suprimidos"
+    ),
+    metric(
+      "Recuperando",
+      String(data.metrics.recoveringIncidents),
+      "Aguardando evidências suficientes"
+    ),
+    metric(
+      "Auto-resolvidos hoje",
+      String(data.metrics.autoResolvedToday),
+      "Resolução por evidência, não por silêncio"
+    ),
+    metric(
+      "MTTR 30 dias",
+      formatDuration(data.metrics.mttrSeconds),
+      "Média dos incidentes resolvidos"
+    ),
+    metric(
+      "Taxa de erro 24h",
+      formatPercent(data.metrics.errorRate24h),
+      `${data.metrics.failures24h}/${data.metrics.totalEvents24h} eventos operacionais`
+    ),
+    metric(
+      "p95 observado",
+      formatMs(data.metrics.p95Ms),
+      "Maior p95 entre módulos com amostra"
+    ),
+  ];
 
-  const incidentRows = data.operational.incidents.map((item) => ({
-    incidente: item.title,
-    modulo: item.module,
-    gravidade: item.severity,
-    ocorrencias: item.occurrences,
-    saloes: item.impactedSalons,
-    ultima: item.lastOccurrence,
-    acao: item.recommendedAction,
-  }));
-
-  const telemetryRows = data.operational.moduleTelemetry.map((item) => ({
-    modulo: item.module,
-    sucesso: item.successRate,
-    falha: item.failureRate,
-    tempo_medio: item.avgResponseMs,
-    ultima_falha: item.lastFailure,
-    erro_mais_comum: item.topError,
-    tendencia: item.trend,
-  }));
-
-  const suggestionRows = data.operational.suggestions.map((item) => ({
-    prioridade:
-      item.kind === "automatico"
-        ? "Automatica"
-        : item.kind === "sugerido"
-          ? "Sugerida"
-          : "Manual",
-    acao: item.title,
-    alvo: item.target,
-    detalhe: item.detail,
-  }));
+  const attention = data.incidents.filter(
+    (incident) => incident.status !== "recuperando"
+  );
+  const recovering = data.incidents.filter(
+    (incident) => incident.status === "recuperando"
+  );
 
   return (
     <div className="space-y-6">
-      <section className="overflow-hidden rounded-[36px] border border-zinc-900 bg-zinc-950 text-white shadow-sm">
-        <div className="grid gap-6 p-6 lg:grid-cols-[0.75fr_1.25fr] lg:p-8">
-          <div className={`rounded-[32px] bg-gradient-to-br p-6 ${scoreClass(data.statusTone)}`}>
-            <div className="text-xs font-black uppercase tracking-[0.28em] opacity-70">
-              Saúde operacional
+      <section
+        className={`rounded-[34px] border p-6 shadow-sm lg:p-8 ${stateClass(
+          data.overall.state
+        )}`}
+      >
+        <div className="flex flex-wrap items-start justify-between gap-6">
+          <div className="max-w-4xl">
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.22em] opacity-65">
+              <Radar size={17} /> Saúde operacional autônoma
             </div>
-            <div className="mt-6 font-display text-7xl font-black leading-none">
-              {data.score}
-            </div>
-            <div className="mt-3 text-xl font-black">{data.statusLabel}</div>
-            <p className="mt-3 max-w-sm text-sm leading-6 opacity-75">{data.summary}</p>
+            <h1 className="mt-3 font-display text-4xl font-black tracking-[-0.05em] md:text-5xl">
+              {data.overall.label}
+            </h1>
+            <p className="mt-3 max-w-3xl text-sm leading-6 opacity-75">
+              {data.overall.summary}
+            </p>
           </div>
-
-          <div className="flex flex-col justify-between gap-6">
-            <div>
-              <div className="text-xs font-black uppercase tracking-[0.28em] text-amber-200">
-                Centro de comando serverless
-              </div>
-              <h1 className="mt-3 max-w-3xl font-display text-4xl font-black leading-tight md:text-5xl">
-                Vercel e Supabase como núcleo operacional do SalãoPremium.
-              </h1>
-              <p className="mt-4 max-w-3xl text-sm leading-6 text-zinc-300">
-                Webhooks, checkouts, crons, alertas, incidentes e telemetria são acompanhados diretamente no banco e nas APIs do sistema, sem servidor auxiliar externo.
-              </p>
+          <div className="rounded-2xl border border-current/15 bg-white/60 px-4 py-3 text-sm font-bold">
+            <div className="text-xs uppercase tracking-[0.15em] opacity-60">
+              Deployment atual
             </div>
-
-            <div className="grid gap-3 md:grid-cols-2">
-              {data.actions.map((action) => (
-                <Link
-                  key={action.title}
-                  href={action.href}
-                  className={`rounded-[24px] border p-4 transition hover:-translate-y-0.5 ${toneClass(action.tone)}`}
-                >
-                  <div className="text-sm font-black">{action.title}</div>
-                  <div className="mt-2 text-xs leading-5 opacity-75">{action.detail}</div>
-                </Link>
-              ))}
+            <div className="mt-1 font-mono text-xs">
+              {data.deployment.commitSha?.slice(0, 12) || "não identificado"}
             </div>
           </div>
         </div>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {data.metrics.map((metric) => {
-          const card = (
-            <div className={`h-full rounded-[28px] border p-5 shadow-sm ${toneClass(metric.tone)}`}>
-              <div className="text-[11px] font-black uppercase tracking-[0.22em] opacity-60">
-                {metric.label}
-              </div>
-              <div className="mt-3 font-display text-3xl font-black">{metric.value}</div>
-              <div className="mt-2 text-sm opacity-75">{metric.hint}</div>
-            </div>
-          );
-
-          return metric.href ? (
-            <Link key={metric.label} href={metric.href}>
-              {card}
-            </Link>
-          ) : (
-            <div key={metric.label}>{card}</div>
-          );
-        })}
-      </section>
-
-      <section className="rounded-[30px] border border-blue-200 bg-blue-50 p-5 text-blue-950 shadow-sm">
-        <div className="text-xs font-black uppercase tracking-[0.25em] text-blue-600">
-          Infraestrutura atual
-        </div>
-        <h2 className="mt-2 font-display text-2xl font-black">
-          Sem dependência de VM
-        </h2>
-        <p className="mt-2 max-w-4xl text-sm leading-6 text-blue-900/80">
-          As rotinas de API executam na Vercel. Persistência, filas, eventos, segurança e agendamentos de cron ficam no Supabase. Falhas são registradas no próprio centro de observabilidade abaixo.
-        </p>
-      </section>
-
-      <div className="grid gap-5 xl:grid-cols-2">
-        <HealthList title="Ultimos webhooks Asaas" rows={data.webhooks} />
-        <HealthList title="Checkouts e travas de assinatura" rows={data.checkouts} />
-        <HealthList title="Cron e jobs internos" rows={data.crons} />
-        <HealthList title="Alertas ativos" rows={data.alerts} />
-      </div>
-
-      <section className="grid gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
-        <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="text-xs font-black uppercase tracking-[0.25em] text-zinc-400">
-            Diagnostico das ultimas 24h
-          </div>
-          <h2 className="mt-2 font-display text-2xl font-black text-zinc-950">
-            Onde o sistema esta falhando, lento ou instavel
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Esta leitura cruza incidentes, erros, rotas lentas e impacto em salões diretamente da telemetria persistida no Supabase.
-          </p>
-          <div className="mt-4">
-            <AdminDataTable
-              rows={telemetryRows}
-              columns={["modulo", "sucesso", "falha", "tempo_medio", "ultima_falha", "tendencia"]}
-            />
-          </div>
-        </div>
-
-        <div className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm">
-          <div className="text-xs font-black uppercase tracking-[0.25em] text-zinc-400">
-            Proximas acoes
-          </div>
-          <h2 className="mt-2 font-display text-2xl font-black text-zinc-950">
-            Fila de resposta do Admin Master
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Cada item precisa virar resolução, ticket interno ou acompanhamento.
-          </p>
-          <div className="mt-4">
-            <AdminDataTable
-              rows={suggestionRows}
-              columns={["prioridade", "acao", "alvo", "detalhe"]}
-            />
-          </div>
-        </div>
-      </section>
-
-      <section className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div>
-            <div className="text-xs font-black uppercase tracking-[0.25em] text-zinc-400">
-              Incidentes abertos
-            </div>
-            <h2 className="mt-2 font-display text-2xl font-black text-zinc-950">
-              Problemas que ainda precisam de dono
-            </h2>
-          </div>
-          <Link
-            href="/admin-master/tickets"
-            className="rounded-full bg-zinc-950 px-4 py-2 text-sm font-black text-white transition hover:bg-zinc-800"
+      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        {metrics.map((item) => (
+          <div
+            key={item.label}
+            className="rounded-[26px] border border-zinc-200 bg-white p-5 shadow-sm"
           >
-            Abrir tickets
-          </Link>
+            <div className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-400">
+              {item.label}
+            </div>
+            <div className="mt-2 font-display text-3xl font-black text-zinc-950">
+              {item.value}
+            </div>
+            <div className="mt-2 text-xs leading-5 text-zinc-500">
+              {item.hint}
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-2">
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-red-500">
+            <AlertTriangle size={16} /> Incidentes que precisam de atenção
+          </div>
+          <div className="mt-4 space-y-3">
+            {attention.length ? (
+              attention.map((incident) => (
+                <article
+                  key={incident.id}
+                  className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="text-xs font-black uppercase tracking-[0.14em] text-zinc-400">
+                        {incident.componentName}
+                      </div>
+                      <h3 className="mt-1 text-base font-black">{incident.title}</h3>
+                    </div>
+                    <span className="rounded-full bg-white px-3 py-1 text-xs font-black text-zinc-700">
+                      {incident.severity}
+                    </span>
+                  </div>
+                  <dl className="mt-4 grid gap-3 text-sm sm:grid-cols-2">
+                    <div>
+                      <dt className="font-black text-zinc-500">Sintoma</dt>
+                      <dd className="mt-1 text-zinc-700">{incident.symptom}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-black text-zinc-500">Causa provável</dt>
+                      <dd className="mt-1 text-zinc-700">
+                        {incident.cause}{" "}
+                        <span className="text-xs text-zinc-400">
+                          ({incident.confidence})
+                        </span>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt className="font-black text-zinc-500">Responsável</dt>
+                      <dd className="mt-1 text-zinc-700">{incident.owner}</dd>
+                    </div>
+                    <div>
+                      <dt className="font-black text-zinc-500">Última ocorrência</dt>
+                      <dd className="mt-1 text-zinc-700">
+                        {formatDate(incident.lastOccurrenceAt)} · {incident.occurrences}{" "}
+                        ocorrência(s)
+                      </dd>
+                    </div>
+                  </dl>
+                  <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-3 py-2 text-sm text-blue-900">
+                    <strong>O que fazer:</strong> {incident.action}
+                  </div>
+                </article>
+              ))
+            ) : (
+              <div className="rounded-2xl bg-zinc-50 px-4 py-8 text-center text-sm text-zinc-500">
+                Nenhum incidente ativo nesta fila.
+              </div>
+            )}
+          </div>
         </div>
-        <div className="mt-4">
-          <AdminDataTable
-            rows={incidentRows}
-            columns={["incidente", "modulo", "gravidade", "ocorrencias", "saloes", "ultima", "acao"]}
-          />
+
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-amber-500">
+            <Clock3 size={16} /> Recuperando automaticamente
+          </div>
+          <div className="mt-4 space-y-3">
+            {recovering.length ? (
+              recovering.map((incident) => (
+                <article
+                  key={incident.id}
+                  className="rounded-2xl border border-amber-100 bg-amber-50 p-4"
+                >
+                  <div className="text-xs font-black uppercase tracking-[0.14em] text-amber-700">
+                    {incident.componentName}
+                  </div>
+                  <h3 className="mt-1 text-base font-black text-amber-950">
+                    {incident.title}
+                  </h3>
+                  <p className="mt-2 text-sm text-amber-900">
+                    Recuperação: {incident.recovery}. O incidente só será encerrado
+                    quando janela, dependências e deployment também estiverem saudáveis.
+                  </p>
+                </article>
+              ))
+            ) : (
+              <div className="rounded-2xl bg-zinc-50 px-4 py-8 text-center text-sm text-zinc-500">
+                Nenhum incidente em recuperação neste momento.
+              </div>
+            )}
+          </div>
+        </div>
+      </section>
+
+      <section className="grid gap-5 xl:grid-cols-3">
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm xl:col-span-2">
+          <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-400">
+            <Activity size={16} /> Componentes monitorados
+          </div>
+          <div className="mt-4 grid gap-3 md:grid-cols-2">
+            {data.components.map((component) => (
+              <div
+                key={component.componentKey}
+                className="rounded-2xl border border-zinc-100 bg-zinc-50 p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-400">
+                      {component.category}
+                    </div>
+                    <div className="mt-1 text-sm font-black">{component.name}</div>
+                  </div>
+                  <span
+                    className={`rounded-full border px-2.5 py-1 text-[11px] font-black ${stateClass(
+                      component.state
+                    )}`}
+                  >
+                    {component.stateLabel}
+                  </span>
+                </div>
+                <p className="mt-2 text-xs leading-5 text-zinc-500">
+                  {component.reason}
+                </p>
+                <div className="mt-2 text-[11px] text-zinc-400">
+                  Último check: {formatDate(component.lastCheckedAt)} · Dono:{" "}
+                  {component.owner}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="space-y-5">
+          <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-400">
+              <Gauge size={16} /> Cobertura e freshness
+            </div>
+            <div className="mt-4 space-y-3 text-sm">
+              <div className="flex justify-between">
+                <span>Sem monitor</span>
+                <strong>{data.withoutMonitor.length}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span>Monitoramento atrasado</span>
+                <strong>{data.stale.length}</strong>
+              </div>
+              <div className="flex justify-between">
+                <span>Componentes degradados</span>
+                <strong>{data.degraded.length}</strong>
+              </div>
+            </div>
+          </div>
+
+          <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-400">
+                <ShieldCheck size={16} /> Segurança operacional
+              </div>
+              <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-black text-zinc-700">
+                {data.metrics.openSecurityFindings}
+              </span>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-zinc-500">
+              Findings são separados de outage. Advisor INFO/WARN e postura de banco
+              não alteram o status público sem evidência de impacto operacional.
+            </p>
+            <div className="mt-4 space-y-2">
+              {data.securityFindings.slice(0, 8).map((finding) => (
+                <div
+                  key={finding.key}
+                  className={`rounded-2xl border p-3 text-xs ${findingClass(
+                    finding.classification
+                  )}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <strong>{finding.title}</strong>
+                    <span className="font-black uppercase">{finding.severity}</span>
+                  </div>
+                  <div className="mt-1 font-mono text-[11px] opacity-70">
+                    {finding.entity}
+                  </div>
+                  <p className="mt-2 leading-5 opacity-85">{finding.detail}</p>
+                  <div className="mt-2 text-[10px] font-black uppercase tracking-[0.12em] opacity-60">
+                    {finding.classification.replaceAll("_", " ")} · {finding.source}
+                  </div>
+                </div>
+              ))}
+              {!data.securityFindings.length ? (
+                <div className="rounded-2xl bg-zinc-50 px-3 py-4 text-xs text-zinc-500">
+                  Nenhum finding de postura sincronizado. Ausência de finding não é
+                  prova de segurança completa.
+                </div>
+              ) : null}
+            </div>
+          </div>
+
+          <Link
+            href="/status"
+            className="flex items-center justify-between rounded-[28px] border border-zinc-900 bg-zinc-950 p-5 text-white shadow-sm"
+          >
+            <div>
+              <div className="text-xs font-black uppercase tracking-[0.16em] text-zinc-400">
+                Página pública
+              </div>
+              <div className="mt-1 text-lg font-black">Abrir /status</div>
+            </div>
+            <CheckCircle2 />
+          </Link>
         </div>
       </section>
     </div>

@@ -1,31 +1,14 @@
 "use client";
 
 import { useEffect } from "react";
-import { captureClientError, captureClientEvent } from "@/lib/monitoring/client";
+import { captureClientEvent } from "@/lib/monitoring/client";
+import {
+  classifyClientRuntimeError,
+  classifyStaticResourceFailure,
+} from "@/lib/monitoring/client-error-classifier";
 
 const RECOVERY_KEY = "salaopremium:chunk-recovery:last-reload";
 const RECOVERY_WINDOW_MS = 60_000;
-
-function isChunkUrl(value: unknown) {
-  const text = String(value || "");
-  return text.includes("/_next/static/chunks/") || text.includes("/_next/static/");
-}
-
-function isChunkError(value: unknown) {
-  if (!value) return false;
-
-  const message =
-    value instanceof Error
-      ? `${value.name} ${value.message} ${value.stack || ""}`
-      : String(value);
-
-  return (
-    /ChunkLoadError/i.test(message) ||
-    /Loading chunk \d+ failed/i.test(message) ||
-    /failed to load chunk/i.test(message) ||
-    isChunkUrl(message)
-  );
-}
 
 async function refreshBrowserRuntime() {
   if (typeof window === "undefined") return;
@@ -58,9 +41,7 @@ function shouldReloadOnce() {
     const now = Date.now();
     const lastReload = Number(window.sessionStorage.getItem(RECOVERY_KEY) || "0");
 
-    if (now - lastReload < RECOVERY_WINDOW_MS) {
-      return false;
-    }
+    if (now - lastReload < RECOVERY_WINDOW_MS) return false;
 
     window.sessionStorage.setItem(RECOVERY_KEY, String(now));
     return true;
@@ -71,14 +52,20 @@ function shouldReloadOnce() {
 
 export default function ChunkRecoveryRuntime() {
   useEffect(() => {
-    async function recover(reason: string, details: Record<string, unknown>) {
+    async function recover(
+      code: "chunk_load_failed" | "stale_service_worker" | "asset_version_mismatch",
+      reason: string,
+      details: Record<string, unknown>
+    ) {
       void captureClientEvent({
         module: "app",
-        action: "chunk_recovery_detected",
-        eventType: "chunk_load_failed",
+        action: "asset_recovery_detected",
+        eventType: "asset_recovery",
         severity: "warning",
-        message: "Falha ao carregar arquivos atualizados da aplicacao.",
-        details,
+        errorCode: code,
+        message: "Falha real de asset detectada; recuperacao segura iniciada.",
+        details: { reason, ...details },
+        success: true,
         useBeacon: true,
       });
 
@@ -96,46 +83,46 @@ export default function ChunkRecoveryRuntime() {
           : target instanceof HTMLLinkElement
             ? target.href
             : "";
+      const classification = classifyStaticResourceFailure(source);
+      if (!classification?.recoverAsset) return;
 
-      if (!isChunkUrl(source)) return;
-
-      void recover("resource_error", {
+      void recover("chunk_load_failed", "resource_error", {
         source,
         tagName: target instanceof Element ? target.tagName : null,
       });
     }
 
     function handleWindowError(event: ErrorEvent) {
-      if (!isChunkError(event.error || event.message || event.filename)) return;
-
-      void captureClientError({
-        module: "app",
-        action: "chunk_window_error",
-        eventType: "chunk_load_failed",
-        error: event.error || new Error(event.message || "Falha ao carregar chunk."),
-        fallbackMessage: "Falha ao carregar arquivos atualizados da aplicacao.",
-        details: {
-          filename: event.filename,
-          message: event.message,
-        },
-        useBeacon: true,
-      });
-
-      void recover("window_error", {
-        filename: event.filename,
+      const classification = classifyClientRuntimeError({
+        error: event.error,
         message: event.message,
       });
+      if (!classification.recoverAsset) return;
+
+      void recover(
+        classification.code as "chunk_load_failed" | "stale_service_worker" | "asset_version_mismatch",
+        "window_error",
+        {
+          filename: event.filename,
+          message: event.message,
+        }
+      );
     }
 
     function handleUnhandledRejection(event: PromiseRejectionEvent) {
-      if (!isChunkError(event.reason)) return;
+      const classification = classifyClientRuntimeError({ error: event.reason });
+      if (!classification.recoverAsset) return;
 
-      void recover("unhandled_rejection", {
-        reason:
-          event.reason instanceof Error
-            ? event.reason.message
-            : String(event.reason || ""),
-      });
+      void recover(
+        classification.code as "chunk_load_failed" | "stale_service_worker" | "asset_version_mismatch",
+        "unhandled_rejection",
+        {
+          reason:
+            event.reason instanceof Error
+              ? event.reason.message
+              : String(event.reason || ""),
+        }
+      );
     }
 
     window.addEventListener("error", handleResourceError, true);

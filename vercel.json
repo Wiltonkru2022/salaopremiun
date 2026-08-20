@@ -2,14 +2,15 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
-      "**": false,
-      "main": true
+      "main": true,
+      "*": false
     }
   },
-  "github": {
-    "silent": true
-  },
   "crons": [
+    {
+      "path": "/api/cron/operational-health",
+      "schedule": "15 4 * * *"
+    },
     {
       "path": "/api/cron/limpar-observabilidade",
       "schedule": "20 5 * * *"
