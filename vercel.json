@@ -1,8 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
+  "buildCommand": "npm run ci:validate",
   "git": {
     "deploymentEnabled": {
       "main": true,
+      "feat/operational-health-autonomy": true,
       "*": false
     }
   },
