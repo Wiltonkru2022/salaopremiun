@@ -44,6 +44,7 @@ type CheckRow = {
   freshness_ttl_segundos?: number | null;
   sucessos_consecutivos?: number | null;
   falhas_consecutivas?: number | null;
+  ultimo_sucesso_em?: string | null;
   deployment_id?: string | null;
   commit_sha?: string | null;
   evidence_json?: Record<string, unknown> | null;
@@ -129,7 +130,7 @@ export async function reconcileOperationalIncidents() {
         .limit(250),
       supabase.from("incidentes_sistema").select("id, fingerprint, status").not("fingerprint", "is", null).limit(1000),
       supabase.from("operational_components").select("component_key, estado_atual, criticidade, ultimo_sucesso_em, ultima_falha_em"),
-      supabase.from("health_checks_sistema").select("component_key, status, atualizado_em, freshness_ttl_segundos, sucessos_consecutivos, falhas_consecutivas, deployment_id, commit_sha, evidence_json"),
+      supabase.from("health_checks_sistema").select("component_key, status, atualizado_em, freshness_ttl_segundos, sucessos_consecutivos, falhas_consecutivas, ultimo_sucesso_em, deployment_id, commit_sha, evidence_json"),
       supabase.from("operational_component_dependencies").select("component_key, depends_on_component_key, critica"),
       supabase.rpc("fn_operational_event_stats", { p_since: new Date(now - 24 * 60 * 60 * 1000).toISOString() }),
     ]);
