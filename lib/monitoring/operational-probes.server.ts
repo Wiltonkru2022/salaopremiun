@@ -26,7 +26,9 @@ function appOrigin() {
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.VERCEL_PROJECT_PRODUCTION_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
-  return String(raw || "").replace(/\/$/, "");
+  const normalized = String(raw || "").trim().replace(/\/$/, "");
+  if (!normalized) return "";
+  return /^https?:\/\//i.test(normalized) ? normalized : `https://${normalized}`;
 }
 
 async function timed(operation: () => PromiseLike<unknown> | unknown, timeoutMs: number): Promise<{ result: any; latencyMs: number }> {
@@ -235,7 +237,7 @@ async function cronProbe(timeoutMs: number): Promise<ProbeResult> {
     const missing = expected.filter((name) => !latest.has(name));
     const failures = [...latest.values()].filter((row) => /erro|falha|failed/i.test(String(row.status || "")));
     if (missing.length) return { status: "unknown", score: 65, latencyMs, reason: "Ainda não há evidência recente para todos os crons cadastrados.", evidence: { expected: expected.length, observed: latest.size, missing } };
-    if (failures.length) return { status: "warning", score: 65, latencyMs, reason: "Existe cron recente com falha.", evidence: { failures: failures.map((row) => row.nome) } };
+    if (failures.length) return { status: "warning", score: 65, latencyMs, reason: "Existe cron recente com falha.", evidence: { failures: failures.map((row) => row.nome) };
     return { status: "ok", score: 100, latencyMs, reason: "Crons cadastrados possuem execução observada sem falha na última amostra.", evidence: { expected: expected.length, observed: latest.size } };
   } catch (error) {
     return { status: "warning", score: 55, latencyMs: null, reason: error instanceof Error ? error.message : "Falha ao consultar crons.", evidence: {} };
