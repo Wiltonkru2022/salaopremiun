@@ -26,7 +26,9 @@ function appOrigin() {
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.VERCEL_PROJECT_PRODUCTION_URL ||
     (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "");
-  return String(raw || "").replace(/\/$/, "");
+  const normalized = String(raw || "").trim().replace(/\/$/, "");
+  if (!normalized) return "";
+  return /^https?:\/\//i.test(normalized) ? normalized : `https://${normalized}`;
 }
 
 async function timed(operation: () => PromiseLike<unknown> | unknown, timeoutMs: number): Promise<{ result: any; latencyMs: number }> {
