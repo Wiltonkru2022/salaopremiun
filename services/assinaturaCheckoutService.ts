@@ -177,6 +177,9 @@ async function validarSalaoDoUsuario(idSalao: string) {
 
 function getAsaasHeaders() {
   const apiKey = process.env.ASAAS_API_KEY;
+  const userAgent =
+    String(process.env.ASAAS_USER_AGENT || "").trim() ||
+    "SalaoPremium/1.0 (Node.js; Vercel)";
 
   if (!apiKey) {
     throw new Error("ASAAS_API_KEY não configurado.");
@@ -185,6 +188,7 @@ function getAsaasHeaders() {
   return {
     accept: "application/json",
     "content-type": "application/json",
+    "user-agent": userAgent,
     access_token: apiKey,
   };
 }
