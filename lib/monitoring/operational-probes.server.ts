@@ -1,7 +1,9 @@
 import "server-only";
 
+import { isGoogleCalendarConfigured } from "@/lib/google-calendar/oauth";
 import {
   getOperationalComponent,
+  getOperationalProbeKey,
   listOperationalComponents,
   type OperationalComponentDefinition,
 } from "@/lib/monitoring/operational-components";
@@ -48,11 +50,11 @@ async function timed(operation: () => PromiseLike<unknown> | unknown, timeoutMs:
 }
 
 async function recordProbe(component: OperationalComponentDefinition, result: ProbeResult) {
-  if (!component.probeKey) return;
+  const probeKey = getOperationalProbeKey(component);
   const supabase = getSupabaseAdmin() as any;
   const { error } = await supabase.rpc("fn_operational_record_probe", {
     p_component_key: component.componentKey,
-    p_probe_key: component.probeKey,
+    p_probe_key: probeKey,
     p_name: component.name,
     p_status: result.status,
     p_score: result.score,
@@ -65,7 +67,7 @@ async function recordProbe(component: OperationalComponentDefinition, result: Pr
     p_freshness_ttl_segundos: component.freshnessTtlSeconds,
     p_sucessos_para_recuperar: 3,
     p_falhas_para_degradar: component.criticality === "critical" ? 1 : 2,
-    p_probe_version: "operational-health-v1",
+    p_probe_version: "operational-health-v2",
   });
   if (error) throw error;
 }
@@ -89,7 +91,7 @@ async function httpProbe(path: string, timeoutMs: number): Promise<ProbeResult> 
   if (!origin) return { status: "unknown", score: 0, latencyMs: null, reason: "Origem pública não configurada." };
   try {
     const { result: response, latencyMs } = await timed(
-      () => fetch(`${origin}${path}`, { method: "GET", cache: "no-store", redirect: "manual", headers: { "User-Agent": "SalaoPremium-OperationalProbe/1.0" } }),
+      () => fetch(`${origin}${path}`, { method: "GET", cache: "no-store", redirect: "manual", headers: { "User-Agent": "SalaoPremium-OperationalProbe/2.0" } }),
       timeoutMs
     );
     const acceptable = response.status >= 200 && response.status < 400;
@@ -130,6 +132,55 @@ async function storageProbe(timeoutMs: number): Promise<ProbeResult> {
   }
 }
 
+async function realtimeProbe(timeoutMs: number): Promise<ProbeResult> {
+  const started = Date.now();
+  const supabase = getSupabaseAdmin() as any;
+  const channel = supabase.channel(`operational-health-${Date.now()}`);
+
+  return new Promise<ProbeResult>((resolve) => {
+    let finished = false;
+    let timer: ReturnType<typeof setTimeout> | null = null;
+
+    const finish = (result: ProbeResult) => {
+      if (finished) return;
+      finished = true;
+      if (timer) clearTimeout(timer);
+      Promise.resolve(supabase.removeChannel(channel)).catch(() => undefined);
+      resolve(result);
+    };
+
+    timer = setTimeout(() => {
+      finish({
+        status: "warning",
+        score: 60,
+        latencyMs: Date.now() - started,
+        reason: "Realtime não confirmou assinatura dentro do timeout.",
+        evidence: { subscribed: false },
+      });
+    }, timeoutMs);
+
+    channel.subscribe((status: string) => {
+      if (status === "SUBSCRIBED") {
+        finish({
+          status: "ok",
+          score: 100,
+          latencyMs: Date.now() - started,
+          reason: "Supabase Realtime confirmou handshake de canal.",
+          evidence: { subscribed: true },
+        });
+      } else if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
+        finish({
+          status: "warning",
+          score: 55,
+          latencyMs: Date.now() - started,
+          reason: `Supabase Realtime retornou ${status}.`,
+          evidence: { subscribed: false, channelStatus: status },
+        });
+      }
+    });
+  });
+}
+
 async function asaasProbe(timeoutMs: number): Promise<ProbeResult> {
   const baseUrl = String(process.env.ASAAS_BASE_URL || "").replace(/\/$/, "");
   const apiKey = process.env.ASAAS_API_KEY;
@@ -138,7 +189,7 @@ async function asaasProbe(timeoutMs: number): Promise<ProbeResult> {
   }
   try {
     const { result: response, latencyMs } = await timed(
-      () => fetch(`${baseUrl}/myAccount/accountNumber`, { method: "GET", cache: "no-store", headers: { accept: "application/json", access_token: apiKey, "User-Agent": "SalaoPremium-OperationalProbe/1.0" } }),
+      () => fetch(`${baseUrl}/myAccount/accountNumber`, { method: "GET", cache: "no-store", headers: { accept: "application/json", access_token: apiKey, "User-Agent": "SalaoPremium-OperationalProbe/2.0" } }),
       timeoutMs
     );
     return {
@@ -222,23 +273,59 @@ async function webhookProbe(timeoutMs: number): Promise<ProbeResult> {
   }
 }
 
+async function googleCalendarProbe(timeoutMs: number): Promise<ProbeResult> {
+  if (!isGoogleCalendarConfigured()) {
+    return { status: "unknown", score: 0, latencyMs: null, reason: "Google Calendar não está completamente configurado.", evidence: { configured: false } };
+  }
+  try {
+    const supabase = getSupabaseAdmin() as any;
+    const { result, latencyMs } = await timed(
+      () => supabase.from("saloes_google_calendar_connections").select("id, expires_at").eq("ativo", true).limit(1),
+      timeoutMs
+    );
+    if (result.error) throw result.error;
+    const connection = result.data?.[0];
+    if (!connection) {
+      return { status: "unknown", score: 70, latencyMs, reason: "Google Calendar está configurado, mas não há conexão ativa para provar disponibilidade externa.", evidence: { configured: true, activeConnection: false } };
+    }
+    return { status: "ok", score: 90, latencyMs, reason: "Google Calendar está configurado e possui conexão ativa registrada.", evidence: { configured: true, activeConnection: true, tokenExpiryKnown: Boolean(connection.expires_at) } };
+  } catch (error) {
+    return { status: "warning", score: 55, latencyMs: null, reason: error instanceof Error ? error.message : "Falha ao avaliar Google Calendar.", evidence: { configured: true } };
+  }
+}
+
 async function cronProbe(timeoutMs: number): Promise<ProbeResult> {
   try {
     const supabase = getSupabaseAdmin() as any;
-    const expected = ["limpar_observabilidade", "renovar_assinaturas", "security_cleanup", "trial_alerts"];
+    const expectations = [
+      { name: "operational_health", maxAgeMs: 30 * 60 * 1000 },
+      { name: "limpar_observabilidade", maxAgeMs: 30 * 60 * 60 * 1000 },
+    ];
+    const expectedNames = expectations.map((item) => item.name);
     const { result, latencyMs } = await timed(
-      () => supabase.from("eventos_cron").select("nome, status, iniciado_em, finalizado_em").in("nome", expected).order("iniciado_em", { ascending: false }).limit(40),
+      () => supabase.from("eventos_cron").select("nome, status, iniciado_em, finalizado_em").in("nome", expectedNames).order("iniciado_em", { ascending: false }).limit(40),
       timeoutMs
     );
     if (result.error) throw result.error;
     const rows = result.data || [];
     const latest = new Map<string, any>();
     for (const row of rows) if (!latest.has(row.nome)) latest.set(row.nome, row);
-    const missing = expected.filter((name) => !latest.has(name));
+    const missing = expectedNames.filter((name) => !latest.has(name));
+    if (missing.length) return { status: "unknown", score: 65, latencyMs, reason: "Ainda não há evidência recente para todos os crons cadastrados.", evidence: { expected: expectedNames.length, observed: latest.size, missing } };
+
     const failures = [...latest.values()].filter((row) => /erro|falha|failed/i.test(String(row.status || "")));
-    if (missing.length) return { status: "unknown", score: 65, latencyMs, reason: "Ainda não há evidência recente para todos os crons cadastrados.", evidence: { expected: expected.length, observed: latest.size, missing } };
-    if (failures.length) return { status: "warning", score: 65, latencyMs, reason: "Existe cron recente com falha.", evidence: { failures: failures.map((row) => row.nome) } };
-    return { status: "ok", score: 100, latencyMs, reason: "Crons cadastrados possuem execução observada sem falha na última amostra.", evidence: { expected: expected.length, observed: latest.size } };
+    if (failures.length) return { status: "warning", score: 55, latencyMs, reason: "Existe cron recente com falha.", evidence: { failures: failures.map((row) => row.nome) } };
+
+    const stale = expectations.filter((expectation) => {
+      const row = latest.get(expectation.name);
+      const started = Date.parse(String(row?.iniciado_em || ""));
+      return !Number.isFinite(started) || Date.now() - started > expectation.maxAgeMs;
+    });
+    if (stale.length) {
+      return { status: "warning", score: 60, latencyMs, reason: "Existe cron atrasado em relação ao intervalo esperado.", evidence: { stale: stale.map((item) => item.name) } };
+    }
+
+    return { status: "ok", score: 100, latencyMs, reason: "Crons essenciais possuem execução recente sem falha.", evidence: { expected: expectedNames.length, observed: latest.size } };
   } catch (error) {
     return { status: "warning", score: 55, latencyMs: null, reason: error instanceof Error ? error.message : "Falha ao consultar crons.", evidence: {} };
   }
@@ -261,18 +348,35 @@ async function runProbe(component: OperationalComponentDefinition): Promise<Prob
   switch (component.componentKey) {
     case "platform.site": return httpProbe("/", component.timeoutMs);
     case "platform.api": return httpProbe("/api/healthz", component.timeoutMs);
+    case "platform.assets": return httpProbe("/favicon.ico", component.timeoutMs);
     case "infra.vercel.runtime": return deploymentProbe();
     case "supabase.database":
     case "supabase.data_api": return databaseProbe("saloes", component.timeoutMs);
     case "supabase.auth": return supabaseAuthProbe(component.timeoutMs);
     case "supabase.storage": return storageProbe(component.timeoutMs);
+    case "supabase.realtime": return realtimeProbe(component.timeoutMs);
     case "client.auth": return httpProbe("/app-cliente/login", component.timeoutMs);
-    case "client.explore": return databaseProbe("saloes", component.timeoutMs);
+    case "client.registration": return httpProbe("/app-cliente/cadastro", component.timeoutMs);
+    case "client.explore":
+    case "client.salon": return databaseProbe("saloes", component.timeoutMs);
     case "client.availability":
     case "client.appointments":
     case "professional.agenda":
     case "agenda.core": return databaseProbe("agendamentos", component.timeoutMs);
+    case "client.profile":
+    case "professional.clients":
+    case "crm.core": return databaseProbe("clientes", component.timeoutMs);
+    case "client.reviews": return databaseProbe("clientes_avaliacoes", component.timeoutMs);
+    case "client.favorites": return databaseProbe("clientes_app_favoritos", component.timeoutMs);
+    case "client.pwa": return httpProbe("/app-cliente/manifest.webmanifest", component.timeoutMs);
+    case "client.push":
+    case "professional.push": return pushProbe(component.timeoutMs);
     case "professional.auth": return professionalAuthProbe(component);
+    case "professional.services":
+    case "services.core": return databaseProbe("servicos", component.timeoutMs);
+    case "professional.pwa": return httpProbe("/app-profissional-manifest.webmanifest", component.timeoutMs);
+    case "professional.commands": return databaseProbe("comandas", component.timeoutMs);
+    case "professional.cash": return databaseProbe("comanda_pagamentos", component.timeoutMs);
     case "admin.dashboard": return databaseProbe("saloes", component.timeoutMs);
     case "admin.master": return databaseProbe("admin_master_usuarios", component.timeoutMs);
     case "admin.health": return databaseProbe("eventos_sistema", component.timeoutMs);
@@ -280,16 +384,17 @@ async function runProbe(component: OperationalComponentDefinition): Promise<Prob
     case "subscriptions.core": return databaseProbe("assinaturas", component.timeoutMs);
     case "integration.asaas.api": return asaasProbe(component.timeoutMs);
     case "integration.asaas.webhooks": return webhookProbe(component.timeoutMs);
+    case "integration.google_calendar": return googleCalendarProbe(component.timeoutMs);
     case "communication.brevo": return brevoProbe(component.timeoutMs);
     case "communication.whatsapp": return whatsappProbe(component.timeoutMs);
     case "communication.push_vapid": return pushProbe(component.timeoutMs);
     case "automation.cron": return cronProbe(component.timeoutMs);
-    default: return { status: "unknown", score: 0, latencyMs: null, reason: "Componente sem probe sintético ativo; estado depende de telemetria.", evidence: { probeKey: component.probeKey || null } };
+    default: return { status: "unknown", score: 0, latencyMs: null, reason: "Componente sem probe sintético ativo; estado depende de telemetria.", evidence: { probeKey: getOperationalProbeKey(component) } };
   }
 }
 
 export async function runOperationalProbes() {
-  const components = listOperationalComponents().filter((component) => Boolean(component.probeKey));
+  const components = listOperationalComponents();
   const results: Array<{ componentKey: string; status: ProbeStatus; reason: string }> = [];
 
   for (const component of components) {
@@ -303,6 +408,6 @@ export async function runOperationalProbes() {
 
 export async function recordUnknownProbeForComponent(componentKey: string, reason: string) {
   const component = getOperationalComponent(componentKey);
-  if (!component?.probeKey) return;
+  if (!component) return;
   await recordProbe(component, { status: "unknown", score: 0, latencyMs: null, reason, evidence: {} });
 }
