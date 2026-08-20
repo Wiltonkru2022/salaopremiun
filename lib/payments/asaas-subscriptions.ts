@@ -56,6 +56,13 @@ function getAsaasConfig() {
   return { baseUrl, apiKey };
 }
 
+function getAsaasUserAgent() {
+  return (
+    String(process.env.ASAAS_USER_AGENT || "").trim() ||
+    "SalaoPremium/1.0 (Node.js; Vercel)"
+  );
+}
+
 async function registrarSaudeAsaas(params: {
   status: "ok" | "warning" | "critical";
   score: number;
@@ -109,6 +116,7 @@ async function asaasFetch<T>(path: string, init?: RequestInit): Promise<T> {
     ...init,
     headers: {
       "Content-Type": "application/json",
+      "User-Agent": getAsaasUserAgent(),
       access_token: apiKey,
       ...(init?.headers || {}),
     },
