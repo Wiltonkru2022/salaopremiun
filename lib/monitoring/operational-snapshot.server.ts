@@ -307,6 +307,7 @@ export async function getOperationalHealthSnapshot() {
           Date.parse(b.ultima_verificacao_em || "0") -
           Date.parse(a.ultima_verificacao_em || "0")
       )[0] || null;
+  const openSecurityFindingsCount = Number(securityOpenCountRes.count || 0);
 
   return {
     generatedAt: nowIso(),
@@ -332,7 +333,7 @@ export async function getOperationalHealthSnapshot() {
         : null,
       p95Ms,
       mttrSeconds: avgMttrSeconds,
-      openSecurityFindings: Number(securityOpenCountRes.count || 0),
+      openSecurityFindings: `${openSecurityFindingsCount} ${openSecurityFindingsCount === 1 ? "finding aberto" : "findings abertos"}`,
     },
     deployment: {
       id:
