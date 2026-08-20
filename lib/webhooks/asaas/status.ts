@@ -15,7 +15,6 @@ const TERMINAL_REVERSAL_EVENTS = new Set([
   "PAYMENT_REFUNDED",
   "PAYMENT_RECEIVED_IN_CASH_UNDONE",
   "PAYMENT_BANK_SLIP_CANCELLED",
-  "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED",
 ]);
 
 const TERMINAL_REVERSAL_STATUSES = new Set([
@@ -72,6 +71,7 @@ export function getWebhookEventOrder(event: string, status?: string | null) {
   }
 
   if (event === "PAYMENT_OVERDUE" || normalizedStatus === "OVERDUE") return 60;
+  if (event === "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED") return 50;
   if (event === "PAYMENT_RESTORED" || normalizedStatus === "PENDING") return 40;
 
   return 20;
@@ -90,6 +90,7 @@ export function mapAsaasStatusToInternal(
 
   if (isTerminalReversalEvent(normalizedEvent, normalized)) return "cancelada";
   if (normalizedEvent === "PAYMENT_OVERDUE") return "vencida";
+  if (normalizedEvent === "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED") return "pendente";
   if (normalizedEvent === "PAYMENT_RESTORED") return "pendente";
   if (normalized === "PENDING") return "pendente";
   if (normalized === "OVERDUE") return "vencida";
