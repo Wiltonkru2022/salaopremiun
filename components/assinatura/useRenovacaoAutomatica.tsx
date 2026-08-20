@@ -27,11 +27,11 @@ export function useRenovacaoAutomatica({
         asaasCustomerId: assinatura?.asaas_customer_id,
         formaPagamentoAtual: assinatura?.forma_pagamento_atual,
         renovacaoAutomatica,
-        asaasCreditCardToken: assinatura?.asaas_credit_card_token,
+        asaasCreditCardTokenizedAt: assinatura?.asaas_credit_card_tokenized_at,
         asaasSubscriptionId: assinatura?.asaas_subscription_id,
       }),
     [
-      assinatura?.asaas_credit_card_token,
+      assinatura?.asaas_credit_card_tokenized_at,
       assinatura?.asaas_customer_id,
       assinatura?.asaas_subscription_id,
       assinatura?.forma_pagamento_atual,
