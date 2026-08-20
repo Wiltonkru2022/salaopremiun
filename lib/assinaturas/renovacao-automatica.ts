@@ -29,7 +29,10 @@ type GetRenovacaoAutomaticaInfoParams = {
   asaasCustomerId?: string | null;
   formaPagamentoAtual?: string | null;
   renovacaoAutomatica?: boolean | null;
+  /** Server-only legacy input. Never send this value to the browser. */
   asaasCreditCardToken?: string | null;
+  /** Safe browser-visible evidence that tokenization already happened. */
+  asaasCreditCardTokenizedAt?: string | null;
   asaasSubscriptionId?: string | null;
 };
 
@@ -96,7 +99,8 @@ export function getRenovacaoAutomaticaInfo(
     String(params.asaasCustomerId || "").trim()
   );
   const possuiCartaoTokenizado = Boolean(
-    String(params.asaasCreditCardToken || "").trim()
+    String(params.asaasCreditCardTokenizedAt || "").trim() ||
+      String(params.asaasCreditCardToken || "").trim()
   );
   const possuiAssinaturaRecorrenteCartao = Boolean(
     String(params.asaasSubscriptionId || "").trim()
