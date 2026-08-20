@@ -248,7 +248,9 @@ export function useAssinaturaPage() {
     const formaPagamentoAtual = String(
       assinatura?.forma_pagamento_atual || ""
     ).toUpperCase();
-    const tokenCartao = String(assinatura?.asaas_credit_card_token || "").trim();
+    const cartaoJaTokenizado = Boolean(
+      String(assinatura?.asaas_credit_card_tokenized_at || "").trim()
+    );
     const paymentId = String(assinatura?.asaas_payment_id || "").trim();
     const salaoId = String(salao?.id || "").trim();
 
@@ -256,7 +258,7 @@ export function useAssinaturaPage() {
       !salaoId ||
       formaPagamentoAtual !== "CREDIT_CARD" ||
       !paymentId ||
-      tokenCartao
+      cartaoJaTokenizado
     ) {
       return;
     }
@@ -298,7 +300,7 @@ export function useAssinaturaPage() {
       }
     })();
   }, [
-    assinatura?.asaas_credit_card_token,
+    assinatura?.asaas_credit_card_tokenized_at,
     assinatura?.asaas_payment_id,
     assinatura?.forma_pagamento_atual,
     carregarDados,
