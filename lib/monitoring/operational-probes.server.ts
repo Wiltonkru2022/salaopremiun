@@ -19,6 +19,14 @@ type ProbeResult = {
   evidence?: Record<string, unknown>;
 };
 
+type ProbeSummary = {
+  componentKey: string;
+  status: ProbeStatus;
+  reason: string;
+};
+
+const OPERATIONAL_PROBE_CONCURRENCY = 8;
+
 const deploymentId = () => process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_URL || null;
 const commitSha = () => process.env.VERCEL_GIT_COMMIT_SHA || null;
 
@@ -67,7 +75,7 @@ async function recordProbe(component: OperationalComponentDefinition, result: Pr
     p_freshness_ttl_segundos: component.freshnessTtlSeconds,
     p_sucessos_para_recuperar: 3,
     p_falhas_para_degradar: component.criticality === "critical" ? 1 : 2,
-    p_probe_version: "operational-health-v2",
+    p_probe_version: "operational-health-v3",
   });
   if (error) throw error;
 }
@@ -91,7 +99,7 @@ async function httpProbe(path: string, timeoutMs: number): Promise<ProbeResult> 
   if (!origin) return { status: "unknown", score: 0, latencyMs: null, reason: "Origem pública não configurada." };
   try {
     const { result: response, latencyMs } = await timed(
-      () => fetch(`${origin}${path}`, { method: "GET", cache: "no-store", redirect: "manual", headers: { "User-Agent": "SalaoPremium-OperationalProbe/2.0" } }),
+      () => fetch(`${origin}${path}`, { method: "GET", cache: "no-store", redirect: "manual", headers: { "User-Agent": "SalaoPremium-OperationalProbe/3.0" } }),
       timeoutMs
     );
     const acceptable = response.status >= 200 && response.status < 400;
@@ -189,7 +197,7 @@ async function asaasProbe(timeoutMs: number): Promise<ProbeResult> {
   }
   try {
     const { result: response, latencyMs } = await timed(
-      () => fetch(`${baseUrl}/myAccount/accountNumber`, { method: "GET", cache: "no-store", headers: { accept: "application/json", access_token: apiKey, "User-Agent": "SalaoPremium-OperationalProbe/2.0" } }),
+      () => fetch(`${baseUrl}/myAccount/accountNumber`, { method: "GET", cache: "no-store", headers: { accept: "application/json", access_token: apiKey, "User-Agent": "SalaoPremium-OperationalProbe/3.0" } }),
       timeoutMs
     );
     return {
@@ -393,16 +401,91 @@ async function runProbe(component: OperationalComponentDefinition): Promise<Prob
   }
 }
 
+function probeExecutionKey(component: OperationalComponentDefinition) {
+  switch (component.componentKey) {
+    case "supabase.database":
+    case "supabase.data_api":
+    case "client.explore":
+    case "client.salon":
+    case "admin.dashboard":
+      return "db:saloes";
+    case "client.availability":
+    case "client.appointments":
+    case "professional.agenda":
+    case "agenda.core":
+      return "db:agendamentos";
+    case "client.profile":
+    case "professional.clients":
+    case "crm.core":
+      return "db:clientes";
+    case "professional.services":
+    case "services.core":
+      return "db:servicos";
+    case "professional.commands":
+    case "cash.core":
+      return "db:comandas";
+    case "client.push":
+    case "professional.push":
+    case "communication.push_vapid":
+      return "push:delivery";
+    default:
+      return component.componentKey;
+  }
+}
+
 export async function runOperationalProbes() {
   const components = listOperationalComponents();
-  const results: Array<{ componentKey: string; status: ProbeStatus; reason: string }> = [];
+  const results: ProbeSummary[] = [];
+  const sharedRuns = new Map<string, Promise<ProbeResult>>();
+  let cursor = 0;
 
-  for (const component of components) {
-    const result = await runProbe(component);
-    await recordProbe(component, result);
-    results.push({ componentKey: component.componentKey, status: result.status, reason: result.reason });
-  }
+  const worker = async () => {
+    while (cursor < components.length) {
+      const component = components[cursor++];
+      if (!component) return;
 
+      const executionKey = probeExecutionKey(component);
+      let probePromise = sharedRuns.get(executionKey);
+      if (!probePromise) {
+        probePromise = runProbe(component);
+        sharedRuns.set(executionKey, probePromise);
+      }
+
+      let result: ProbeResult;
+      try {
+        result = await probePromise;
+      } catch (error) {
+        result = {
+          status: "unknown",
+          score: 0,
+          latencyMs: null,
+          reason: error instanceof Error ? error.message : "Falha inesperada ao executar probe.",
+          evidence: { executionKey },
+        };
+      }
+
+      try {
+        await recordProbe(component, result);
+      } catch (error) {
+        console.error("[OPERATIONAL_PROBE_RECORD_FAILED]", {
+          componentKey: component.componentKey,
+          message: error instanceof Error ? error.message : "Falha ao registrar probe.",
+        });
+      }
+
+      results.push({
+        componentKey: component.componentKey,
+        status: result.status,
+        reason: result.reason,
+      });
+    }
+  };
+
+  const workers = Array.from(
+    { length: Math.min(OPERATIONAL_PROBE_CONCURRENCY, components.length) },
+    () => worker()
+  );
+  await Promise.all(workers);
   return results;
 }
 
