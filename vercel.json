@@ -1,17 +1,15 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "npm run ci:validate",
   "git": {
     "deploymentEnabled": {
       "main": true,
-      "feat/operational-health-autonomy": true,
       "*": false
     }
   },
   "crons": [
     {
       "path": "/api/cron/operational-health",
-      "schedule": "*/10 * * * *"
+      "schedule": "15 4 * * *"
     },
     {
       "path": "/api/cron/limpar-observabilidade",
