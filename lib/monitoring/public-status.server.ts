@@ -4,6 +4,18 @@ import { getOperationalHealthSnapshot } from "@/lib/monitoring/operational-snaps
 import { operationalStateLabel } from "@/lib/monitoring/operational-components";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
+export type PublicStatusHistoryItem = {
+  id: string;
+  title: string;
+  component: string;
+  publicMessage: string;
+  startedAt: string | null;
+  lastOccurrenceAt: string | null;
+  resolvedAt: string | null;
+  resolutionMode: "Automática" | "Manual";
+  resolutionSummary: string;
+};
+
 function publicOverallMessage(state: string) {
   if (state === "operational") return "Todos os sistemas estão operacionais";
   if (state === "degraded") return "Desempenho degradado";
@@ -62,7 +74,7 @@ export async function getPublicStatusSnapshot() {
   };
 }
 
-export async function getPublicStatusHistory(limit = 50) {
+export async function getPublicStatusHistory(limit = 50): Promise<PublicStatusHistoryItem[]> {
   const supabase = getSupabaseAdmin() as any;
   const { data, error } = await supabase
     .from("incidentes_sistema")
@@ -73,16 +85,16 @@ export async function getPublicStatusHistory(limit = 50) {
     .limit(Math.min(Math.max(limit, 1), 100));
   if (error) throw error;
 
-  return (data || []).map((row: any) => ({
-    id: row.id,
-    title: row.titulo,
+  return (data || []).map((row: any): PublicStatusHistoryItem => ({
+    id: String(row.id || ""),
+    title: String(row.titulo || "Incidente operacional"),
     component: Array.isArray(row.operational_components)
       ? row.operational_components[0]?.nome || "SalãoPremium"
       : row.operational_components?.nome || "SalãoPremium",
     publicMessage: row.mensagem_publica || "O incidente foi resolvido.",
-    startedAt: row.primeira_ocorrencia_em,
-    lastOccurrenceAt: row.ultima_ocorrencia_em,
-    resolvedAt: row.resolvido_em,
+    startedAt: row.primeira_ocorrencia_em || null,
+    lastOccurrenceAt: row.ultima_ocorrencia_em || null,
+    resolvedAt: row.resolvido_em || null,
     resolutionMode: row.resolution_mode === "automatic" ? "Automática" : "Manual",
     resolutionSummary: row.resolution_reason
       ? "Recuperação confirmada e incidente encerrado."

@@ -29,12 +29,12 @@ function appOrigin() {
   return String(raw || "").replace(/\/$/, "");
 }
 
-async function timed<T>(operation: () => Promise<T>, timeoutMs: number) {
+async function timed(operation: () => PromiseLike<unknown> | unknown, timeoutMs: number): Promise<{ result: any; latencyMs: number }> {
   const started = Date.now();
   let timer: ReturnType<typeof setTimeout> | null = null;
   try {
     const result = await Promise.race([
-      operation(),
+      Promise.resolve(operation()),
       new Promise<never>((_, reject) => {
         timer = setTimeout(() => reject(new Error("probe_timeout")), timeoutMs);
       }),
