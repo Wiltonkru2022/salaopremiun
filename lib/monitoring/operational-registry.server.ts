@@ -1,6 +1,7 @@
 import "server-only";
 
 import {
+  getOperationalProbeKey,
   listOperationalComponents,
   OPERATIONAL_REGISTRY_VERSION,
 } from "@/lib/monitoring/operational-components";
@@ -18,39 +19,46 @@ export async function syncOperationalComponentRegistry() {
     .in("component_key", keys);
 
   if (!countError && Number(count || 0) === components.length) {
-    return { synced: false, version: OPERATIONAL_REGISTRY_VERSION, components: components.length };
+    return {
+      synced: false,
+      version: OPERATIONAL_REGISTRY_VERSION,
+      components: components.length,
+    };
   }
 
   const now = new Date().toISOString();
-  const rows = components.map((component) => ({
-    component_key: component.componentKey,
-    nome: component.name,
-    descricao: component.description,
-    categoria: component.category,
-    superficie: component.surface,
-    criticidade: component.criticality,
-    responsavel: component.owner,
-    runbook: "/docs/operational-health",
-    visibilidade_publica: component.publicVisible,
-    tipo_probe: component.probeType,
-    intervalo_esperado_segundos: component.expectedIntervalSeconds,
-    freshness_ttl_segundos: component.freshnessTtlSeconds,
-    timeout_ms: component.timeoutMs,
-    sucessos_para_recuperar: 3,
-    falhas_para_degradar: component.criticality === "critical" ? 1 : 2,
-    cooldown_segundos: component.criticality === "critical" ? 120 : 300,
-    monitorado: component.monitoringMode !== "derived" || Boolean(component.probeKey),
-    habilitado: true,
-    registry_version: OPERATIONAL_REGISTRY_VERSION,
-    metadata_json: {
-      sourcePatterns: component.sourcePatterns,
-      routePrefixes: component.routePrefixes || [],
-      contentSignals: component.contentSignals || [],
-      monitoringMode: component.monitoringMode,
-      probeKey: component.probeKey || null,
-    },
-    updated_at: now,
-  }));
+  const rows = components.map((component) => {
+    const probeKey = getOperationalProbeKey(component);
+    return {
+      component_key: component.componentKey,
+      nome: component.name,
+      descricao: component.description,
+      categoria: component.category,
+      superficie: component.surface,
+      criticidade: component.criticality,
+      responsavel: component.owner,
+      runbook: "/docs/operational-health",
+      visibilidade_publica: component.publicVisible,
+      tipo_probe: component.probeType,
+      intervalo_esperado_segundos: component.expectedIntervalSeconds,
+      freshness_ttl_segundos: component.freshnessTtlSeconds,
+      timeout_ms: component.timeoutMs,
+      sucessos_para_recuperar: 3,
+      falhas_para_degradar: component.criticality === "critical" ? 1 : 2,
+      cooldown_segundos: component.criticality === "critical" ? 120 : 300,
+      monitorado: true,
+      habilitado: true,
+      registry_version: OPERATIONAL_REGISTRY_VERSION,
+      metadata_json: {
+        sourcePatterns: component.sourcePatterns,
+        routePrefixes: component.routePrefixes || [],
+        contentSignals: component.contentSignals || [],
+        monitoringMode: component.monitoringMode,
+        probeKey,
+      },
+      updated_at: now,
+    };
+  });
 
   const { error } = await supabase
     .from("operational_components")
@@ -79,5 +87,9 @@ export async function syncOperationalComponentRegistry() {
     if (dependencyError) throw dependencyError;
   }
 
-  return { synced: true, version: OPERATIONAL_REGISTRY_VERSION, components: components.length };
+  return {
+    synced: true,
+    version: OPERATIONAL_REGISTRY_VERSION,
+    components: components.length,
+  };
 }
