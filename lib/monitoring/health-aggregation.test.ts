@@ -5,37 +5,37 @@ import {
 } from "@/lib/monitoring/health-aggregation";
 
 describe("operational health aggregation", () => {
+  it("reports operational only when every relevant monitor is fresh and healthy", () => {
+    expect(
+      aggregateOperationalState([
+        { componentKey: "database", criticality: "critical", state: "operational", monitored: true, fresh: true },
+        { componentKey: "site", criticality: "high", state: "operational", monitored: true, fresh: true },
+      ])
+    ).toBe("operational");
+  });
+
   it("never reports operational when monitoring is stale", () => {
     expect(
       aggregateOperationalState([
-        {
-          componentKey: "database",
-          criticality: "critical",
-          state: "operational",
-          monitored: true,
-          fresh: false,
-        },
+        { componentKey: "database", criticality: "critical", state: "operational", monitored: true, fresh: false },
       ])
     ).toBe("unknown");
+  });
+
+  it("reports degraded for a monitored secondary degradation", () => {
+    expect(
+      aggregateOperationalState([
+        { componentKey: "database", criticality: "critical", state: "operational", monitored: true, fresh: true },
+        { componentKey: "email", criticality: "medium", state: "degraded", monitored: true, fresh: true },
+      ])
+    ).toBe("degraded");
   });
 
   it("propagates a critical major outage", () => {
     expect(
       aggregateOperationalState([
-        {
-          componentKey: "database",
-          criticality: "critical",
-          state: "major_outage",
-          monitored: true,
-          fresh: true,
-        },
-        {
-          componentKey: "site",
-          criticality: "high",
-          state: "operational",
-          monitored: true,
-          fresh: true,
-        },
+        { componentKey: "database", criticality: "critical", state: "major_outage", monitored: true, fresh: true },
+        { componentKey: "site", criticality: "high", state: "operational", monitored: true, fresh: true },
       ])
     ).toBe("major_outage");
   });

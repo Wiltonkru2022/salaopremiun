@@ -2,13 +2,14 @@ import { describe, expect, it } from "vitest";
 import { classifyOperationalError } from "@/lib/monitoring/error-catalog";
 
 describe("operational error catalog", () => {
-  it("recognizes React #418", () => {
+  it("recognizes React #418 and explicitly rejects masking the cause", () => {
     const rule = classifyOperationalError({
       message: "Minified React error #418",
       route: "/app-cliente/agendamentos",
     });
     expect(rule.code).toBe("react_hydration_mismatch");
-    expect(rule.recommendedAction).not.toContain("suppressHydrationWarning");
+    expect(rule.recommendedAction).toMatch(/determin/i);
+    expect(rule.recommendedAction).toMatch(/n[aã]o mascarar/i);
   });
 
   it("does not open operational incident for ordinary invalid credentials", () => {

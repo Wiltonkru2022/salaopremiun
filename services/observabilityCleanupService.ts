@@ -26,10 +26,7 @@ async function registrarInicioCron() {
     .select("id")
     .single();
 
-  if (error) {
-    throw error;
-  }
-
+  if (error) throw error;
   return data.id as string;
 }
 
@@ -56,29 +53,39 @@ async function atualizarCron(params: {
 export async function limparObservabilidade() {
   const cronId = await registrarInicioCron();
   const supabaseAdmin = getSupabaseAdmin();
-  const { data, error } = await supabaseAdmin.rpc(
-    "fn_observability_retention_cleanup",
-    {
-      p_eventos_sistema_days:
-        OBSERVABILITY_RETENTION_DEFAULTS.eventosSistemaDays,
-      p_logs_sistema_days: OBSERVABILITY_RETENTION_DEFAULTS.logsSistemaDays,
-      p_auditoria_logs_days:
-        OBSERVABILITY_RETENTION_DEFAULTS.auditoriaLogsDays,
-      p_acoes_automaticas_days:
-        OBSERVABILITY_RETENTION_DEFAULTS.acoesAutomaticasDays,
-      p_eventos_webhook_days:
-        OBSERVABILITY_RETENTION_DEFAULTS.eventosWebhookDays,
-      p_eventos_cron_days: OBSERVABILITY_RETENTION_DEFAULTS.eventosCronDays,
-      p_batch_limit: OBSERVABILITY_RETENTION_DEFAULTS.batchLimit,
-    }
-  );
 
-  if (error) {
-    throw error;
-  }
+  const [{ data, error }, { data: operationalData, error: operationalError }] =
+    await Promise.all([
+      supabaseAdmin.rpc("fn_observability_retention_cleanup", {
+        p_eventos_sistema_days:
+          OBSERVABILITY_RETENTION_DEFAULTS.eventosSistemaDays,
+        p_logs_sistema_days: OBSERVABILITY_RETENTION_DEFAULTS.logsSistemaDays,
+        p_auditoria_logs_days:
+          OBSERVABILITY_RETENTION_DEFAULTS.auditoriaLogsDays,
+        p_acoes_automaticas_days:
+          OBSERVABILITY_RETENTION_DEFAULTS.acoesAutomaticasDays,
+        p_eventos_webhook_days:
+          OBSERVABILITY_RETENTION_DEFAULTS.eventosWebhookDays,
+        p_eventos_cron_days: OBSERVABILITY_RETENTION_DEFAULTS.eventosCronDays,
+        p_batch_limit: OBSERVABILITY_RETENTION_DEFAULTS.batchLimit,
+      }),
+      (supabaseAdmin as any).rpc("fn_operational_retention_cleanup", {
+        p_probe_history_days: 30,
+        p_incident_update_days: 365,
+        p_delivery_days: 180,
+        p_batch_limit: Math.min(
+          OBSERVABILITY_RETENTION_DEFAULTS.batchLimit,
+          500
+        ),
+      }),
+    ]);
+
+  if (error) throw error;
+  if (operationalError) throw operationalError;
 
   const rows = (data || []) as ObservabilityCleanupRow[];
-  const summary = formatObservabilityCleanupSummary(rows);
+  const operationalRows = (operationalData || []) as ObservabilityCleanupRow[];
+  const summary = formatObservabilityCleanupSummary([...rows, ...operationalRows]);
 
   await atualizarCron({
     id: cronId,
@@ -88,7 +95,12 @@ export async function limparObservabilidade() {
       route: CRON_ROUTE,
       totalRemovido: summary.total,
       tabelas: summary.detail,
-      retention: OBSERVABILITY_RETENTION_DEFAULTS,
+      retention: {
+        ...OBSERVABILITY_RETENTION_DEFAULTS,
+        operationalProbeHistoryDays: 30,
+        incidentUpdatesDays: 365,
+        statusDeliveriesDays: 180,
+      },
     } as Json,
   });
 
@@ -113,11 +125,9 @@ export async function registrarFalhaLimpezaObservabilidade(error: unknown) {
           ? error.message
           : "Erro ao limpar eventos antigos do sistema.",
       severity: "alta",
-      details: {
-        route: CRON_ROUTE,
-      },
+      details: { route: CRON_ROUTE },
     });
   } catch {
-    // No-op: a falha principal ja sera devolvida no cron.
+    // Best effort: telemetria nunca deve derrubar o fluxo principal.
   }
 }
