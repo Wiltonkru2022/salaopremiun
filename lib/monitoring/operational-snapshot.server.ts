@@ -23,6 +23,7 @@ export type OperationalSnapshotComponent = {
   reason: string;
   monitored: boolean;
   fresh: boolean;
+  enabled: boolean;
   lastCheckedAt: string | null;
   lastSuccessAt: string | null;
   lastFailureAt: string | null;
@@ -76,6 +77,11 @@ function isFresh(updatedAt?: string | null, ttlSeconds?: number | null) {
   );
 }
 
+function isDisabledEvidence(value: unknown) {
+  if (!value || typeof value !== "object") return false;
+  return (value as Record<string, unknown>).disabled === true;
+}
+
 export async function getOperationalHealthSnapshot() {
   const supabase = getSupabaseAdmin() as any;
   const registry = listOperationalComponents();
@@ -103,7 +109,7 @@ export async function getOperationalHealthSnapshot() {
       .eq("habilitado", true),
     supabase
       .from("health_checks_sistema")
-      .select("component_key, status, score, atualizado_em, freshness_ttl_segundos, sucessos_consecutivos, falhas_consecutivas, motivo_status, latency_ms, deployment_id, commit_sha")
+      .select("component_key, status, score, atualizado_em, freshness_ttl_segundos, sucessos_consecutivos, falhas_consecutivas, motivo_status, latency_ms, evidence_json, deployment_id, commit_sha")
       .order("atualizado_em", { ascending: false }),
     supabase
       .from("operational_component_dependencies")
@@ -134,12 +140,14 @@ export async function getOperationalHealthSnapshot() {
       .from("operational_security_findings")
       .select("finding_key, source, source_rule, title, severity, classification, entity_name, detail, reviewed, first_seen_at, last_seen_at")
       .is("resolved_at", null)
+      .neq("classification", "configuracao_intencional")
       .order("last_seen_at", { ascending: false })
       .limit(40),
     supabase
       .from("operational_security_findings")
       .select("finding_key", { count: "exact", head: true })
-      .is("resolved_at", null),
+      .is("resolved_at", null)
+      .neq("classification", "configuracao_intencional"),
   ]);
 
   const dbRows = (componentsRes.data || []) as any[];
@@ -154,15 +162,19 @@ export async function getOperationalHealthSnapshot() {
   const components: OperationalSnapshotComponent[] = registry.map((definition) => {
     const row = dbByKey.get(definition.componentKey);
     const check = checkByKey.get(definition.componentKey);
-    const fresh = isFresh(
-      check?.atualizado_em || row?.ultima_verificacao_em,
-      check?.freshness_ttl_segundos ||
-        row?.freshness_ttl_segundos ||
-        definition.freshnessTtlSeconds
-    );
-    const state: OperationalState = fresh
+    const enabled = !isDisabledEvidence(check?.evidence_json);
+    const fresh = enabled
+      ? isFresh(
+          check?.atualizado_em || row?.ultima_verificacao_em,
+          check?.freshness_ttl_segundos ||
+            row?.freshness_ttl_segundos ||
+            definition.freshnessTtlSeconds
+        )
+      : true;
+    const state: OperationalState = enabled && fresh
       ? ((row?.estado_atual || "unknown") as OperationalState)
       : "unknown";
+
     return {
       componentKey: definition.componentKey,
       name: definition.name,
@@ -170,17 +182,23 @@ export async function getOperationalHealthSnapshot() {
       criticality: definition.criticality,
       owner: definition.owner,
       state,
-      stateLabel: operationalStateLabel(state),
-      reason: fresh
-        ? String(
-            check?.motivo_status || row?.motivo_estado || "Monitoramento atualizado."
-          )
-        : "Monitoramento atrasado ou sem evidência recente.",
+      stateLabel: enabled ? operationalStateLabel(state) : "Desativado",
+      reason: enabled
+        ? fresh
+          ? String(
+              check?.motivo_status || row?.motivo_estado || "Monitoramento atualizado."
+            )
+          : "Monitoramento atrasado ou sem evidência recente."
+        : String(
+            check?.motivo_status ||
+              "Componente opcional desativado; não participa do cálculo de disponibilidade."
+          ),
       monitored: Boolean(
         row?.monitorado ??
           (definition.monitoringMode !== "derived" || definition.probeKey)
       ),
       fresh,
+      enabled,
       lastCheckedAt: check?.atualizado_em || row?.ultima_verificacao_em || null,
       lastSuccessAt: row?.ultimo_sucesso_em || null,
       lastFailureAt: row?.ultima_falha_em || null,
@@ -188,8 +206,9 @@ export async function getOperationalHealthSnapshot() {
     };
   });
 
+  const enabledComponents = components.filter((component) => component.enabled);
   const overallState = aggregateOperationalState(
-    components
+    enabledComponents
       .filter((component) => component.criticality !== "low")
       .map((component) => ({
         componentKey: component.componentKey,
@@ -274,11 +293,12 @@ export async function getOperationalHealthSnapshot() {
   const resolution = (resolutionStatsRes.data || [])[0] || {};
   const avgMttrSeconds = Number(resolution.avg_mttr_seconds || 0) || null;
 
-  const degraded = components.filter((component) =>
+  const degraded = enabledComponents.filter((component) =>
     ["degraded", "partial_outage", "major_outage"].includes(component.state)
   );
-  const stale = components.filter((component) => !component.fresh);
-  const withoutMonitor = components.filter((component) => !component.monitored);
+  const stale = enabledComponents.filter((component) => !component.fresh);
+  const withoutMonitor = enabledComponents.filter((component) => !component.monitored);
+  const disabled = components.filter((component) => !component.enabled);
   const latestDeployment =
     dbRows
       .filter((row) => row.commit_sha || row.deployment_id)
@@ -295,10 +315,10 @@ export async function getOperationalHealthSnapshot() {
       label: operationalStateLabel(overallState),
       summary:
         overallState === "operational"
-          ? "Todos os componentes relevantes possuem evidência recente de operação saudável."
+          ? "Todos os componentes ativos relevantes possuem evidência recente de operação saudável."
           : overallState === "unknown"
-            ? "Não há evidência recente suficiente para declarar todos os sistemas operacionais."
-            : "Há componente degradado ou indisponível que requer acompanhamento.",
+            ? "Não há evidência recente suficiente para declarar todos os componentes ativos operacionais."
+            : "Há componente ativo degradado ou indisponível que requer acompanhamento.",
     },
     coverage,
     metrics: {
@@ -328,6 +348,7 @@ export async function getOperationalHealthSnapshot() {
     degraded,
     stale,
     withoutMonitor,
+    disabled,
     securityFindings,
     eventStats: statsRows,
     dependencies: dependenciesRes.data || [],

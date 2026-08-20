@@ -27,7 +27,9 @@ function publicOverallMessage(state: string) {
 
 export async function getPublicStatusSnapshot() {
   const internal = await getOperationalHealthSnapshot();
-  const publicComponents = internal.components.filter((component) => component.publicVisible);
+  const publicComponents = internal.components.filter(
+    (component) => component.publicVisible && component.enabled
+  );
   const groups = new Map<string, typeof publicComponents>();
   for (const component of publicComponents) {
     const current = groups.get(component.category) || [];
