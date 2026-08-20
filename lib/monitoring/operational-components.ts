@@ -53,6 +53,15 @@ export function listOperationalComponents() {
   return [...OPERATIONAL_COMPONENTS];
 }
 
+export function getOperationalProbeKey(
+  component: Pick<OperationalComponentDefinition, "componentKey" | "probeKey">
+) {
+  return (
+    component.probeKey ||
+    `probe:${component.componentKey.replace(/[^a-z0-9]+/gi, ":").toLowerCase()}`
+  );
+}
+
 export function findOperationalComponentForContext(params: {
   componentKey?: string | null;
   route?: string | null;
@@ -69,8 +78,12 @@ export function findOperationalComponentForContext(params: {
         (component.routePrefixes || []).some((prefix) => route.startsWith(prefix))
       )
       .sort((a, b) => {
-        const aLength = Math.max(...(a.routePrefixes || [""]).map((value) => value.length));
-        const bLength = Math.max(...(b.routePrefixes || [""]).map((value) => value.length));
+        const aLength = Math.max(
+          ...(a.routePrefixes || [""]).map((value) => value.length)
+        );
+        const bLength = Math.max(
+          ...(b.routePrefixes || [""]).map((value) => value.length)
+        );
         return bLength - aLength;
       });
     if (candidates[0]) return candidates[0];
@@ -89,7 +102,11 @@ export function findOperationalComponentForContext(params: {
   if (module.includes("agenda") || action.includes("agendamento")) {
     return getOperationalComponent("agenda.core");
   }
-  if (module.includes("caixa") || module.includes("comanda") || module.includes("venda")) {
+  if (
+    module.includes("caixa") ||
+    module.includes("comanda") ||
+    module.includes("venda")
+  ) {
     return getOperationalComponent("cash.core");
   }
   if (module.includes("security") || module.includes("auth")) {
