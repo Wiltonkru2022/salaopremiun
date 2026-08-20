@@ -6,8 +6,19 @@ const SOURCE = "database_posture";
 
 export async function syncOperationalSecurityPosture() {
   const supabase = getSupabaseAdmin() as any;
-  const { data, error } = await supabase.rpc("fn_operational_security_posture");
+  const [{ data, error }, { data: existing, error: existingError }] =
+    await Promise.all([
+      supabase.rpc("fn_operational_security_posture"),
+      supabase
+        .from("operational_security_findings")
+        .select("finding_key")
+        .eq("source", SOURCE)
+        .is("resolved_at", null)
+        .limit(500),
+    ]);
+
   if (error) throw error;
+  if (existingError) throw existingError;
 
   const findings = (data || []) as Array<{
     finding_key: string;
@@ -21,7 +32,10 @@ export async function syncOperationalSecurityPosture() {
     operational_impact?: boolean | null;
   }>;
   const now = new Date().toISOString();
-  const activeKeys = findings.map((finding) => finding.finding_key);
+  const activeKeys = new Set(findings.map((finding) => finding.finding_key));
+  const staleKeys = (existing || [])
+    .map((row: { finding_key?: string | null }) => String(row.finding_key || ""))
+    .filter((key: string) => key && !activeKeys.has(key));
 
   if (findings.length) {
     const { error: upsertError } = await supabase
@@ -47,22 +61,22 @@ export async function syncOperationalSecurityPosture() {
     if (upsertError) throw upsertError;
   }
 
-  let staleQuery = supabase
-    .from("operational_security_findings")
-    .update({ resolved_at: now, updated_at: now })
-    .eq("source", SOURCE)
-    .is("resolved_at", null);
-
-  if (activeKeys.length) {
-    staleQuery = staleQuery.not("finding_key", "in", `(${activeKeys.map((key) => `"${key.replaceAll('"', '')}"`).join(",")})`);
+  if (staleKeys.length) {
+    const { error: staleError } = await supabase
+      .from("operational_security_findings")
+      .update({ resolved_at: now, updated_at: now })
+      .in("finding_key", staleKeys);
+    if (staleError) throw staleError;
   }
-  const { error: staleError } = await staleQuery;
-  if (staleError) throw staleError;
 
   return {
     source: SOURCE,
     detected: findings.length,
-    securityRisks: findings.filter((finding) => finding.classification === "risco_seguranca").length,
-    reviewNeeded: findings.filter((finding) => finding.classification === "precisa_revisao").length,
+    securityRisks: findings.filter(
+      (finding) => finding.classification === "risco_seguranca"
+    ).length,
+    reviewNeeded: findings.filter(
+      (finding) => finding.classification === "precisa_revisao"
+    ).length,
   };
 }
