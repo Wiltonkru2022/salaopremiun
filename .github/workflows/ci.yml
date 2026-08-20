@@ -9,9 +9,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
 
-    # Estas credenciais sao publicas por definicao do Supabase e podem ser
-    # usadas no bundle web/PWA e no GitHub Actions. Credenciais administrativas
-    # continuam exclusivas do ambiente seguro da Vercel.
     env:
       NEXT_PUBLIC_SUPABASE_URL: https://rcyoqfmduockncbztmen.supabase.co
       NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_T_BPx7iurGWoYHJgbWEYNw_s_6VqoIf
@@ -73,6 +70,12 @@ jobs:
 
       - name: Test Web Push delivery policies
         run: npx vitest run lib/push-delivery-utils.test.ts
+
+      - name: Test operational health engine
+        run: npm run test:operational
+
+      - name: Audit operational coverage
+        run: npm run audit:operational-coverage
 
       - name: Audit painel PT-BR
         run: node scripts/audit/painel-ui-text-audit.mjs --check

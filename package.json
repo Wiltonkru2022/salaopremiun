@@ -29,9 +29,9 @@
     "// CI": "Validacao deterministica para pull request",
     "ci:lint": "npm run lint",
     "ci:typecheck": "npm run typecheck:ci",
-    "ci:audit": "npm run audit:security && npm run audit:service-role && npm run audit:admin-actions && npm run audit:admin-client-inventory && npm run audit:admin-surface && npm run audit:api-guards && npm run audit:critical-routes && npm run audit:no-wildcard-select && npm run audit:database-contract && npm run audit:architecture-boundaries",
+    "ci:audit": "npm run audit:security && npm run audit:service-role && npm run audit:admin-actions && npm run audit:admin-client-inventory && npm run audit:admin-surface && npm run audit:api-guards && npm run audit:critical-routes && npm run audit:no-wildcard-select && npm run audit:database-contract && npm run audit:architecture-boundaries && npm run audit:operational-coverage",
     "ci:build": "npm run build",
-    "ci:validate": "npm run ci:lint && npm run ci:typecheck && npm run ci:audit && npm run ci:build",
+    "ci:validate": "npm run ci:lint && npm run ci:typecheck && npm run ci:audit && npm run test:operational && npm run ci:build",
     "// release": "Validacao pesada antes de promover producao",
     "release:validate": "npm run ci:validate && npm run e2e:proxy && npm run e2e:sales",
     "release:smoke": "npm run e2e:proxy && npm run e2e:sales",
@@ -51,6 +51,8 @@
     "audit:database-contract": "node scripts/audit/database-contract-audit.mjs",
     "audit:admin-client-inventory": "node scripts/audit/admin-client-inventory.mjs",
     "audit:launch-readiness": "node scripts/audit/launch-readiness-audit.mjs",
+    "audit:operational-coverage": "node scripts/audit/operational-coverage-audit.mjs",
+    "test:operational": "vitest run lib/monitoring/*.test.ts lib/client-app/deterministic-date.test.ts",
     "e2e:proxy": "node scripts/e2e/proxy-smoke.mjs",
     "e2e:sales": "node scripts/e2e/saas-sales-flow.mjs",
     "e2e:provision": "node scripts/e2e/provision-test-accounts.mjs",
@@ -60,9 +62,10 @@
     "e2e:client-login-booking": "node scripts/e2e/client-login-during-booking-flow.mjs",
     "e2e:professional-offline": "node scripts/e2e/professional-offline-cache-flow.mjs",
     "e2e:signal-confirmation": "node scripts/e2e/signal-payment-confirmation-flow.mjs",
+    "e2e:status": "node scripts/e2e/status-page-health-flow.mjs",
     "validate": "npm run ci:validate",
     "validate:release": "npm run release:validate",
-    "launch:validate": "npm run lint && npm run typecheck && npm run db:audit && npm run audit:service-role && npm run audit:admin-actions && npm run audit:admin-client-inventory && npm run audit:admin-surface && npm run audit:api-guards && npm run audit:critical-routes && npm run audit:no-wildcard-select && npm run audit:architecture-boundaries && npm run audit:launch-readiness && npm run build"
+    "launch:validate": "npm run lint && npm run typecheck && npm run db:audit && npm run audit:service-role && npm run audit:admin-actions && npm run audit:admin-client-inventory && npm run audit:admin-surface && npm run audit:api-guards && npm run audit:critical-routes && npm run audit:no-wildcard-select && npm run audit:architecture-boundaries && npm run audit:operational-coverage && npm run audit:launch-readiness && npm run test:operational && npm run build"
   },
   "dependencies": {
     "@supabase/ssr": "^0.9.0",
