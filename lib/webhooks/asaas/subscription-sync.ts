@@ -207,16 +207,18 @@ export async function aplicarStatusNaoPago(params: {
     isEventoTerminal,
   } = params;
 
+  const manterAcessoDuranteRetryCartao =
+    event === "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED";
   let novoStatus = assinatura.status || "pendente";
 
   if (event === "PAYMENT_OVERDUE") novoStatus = "vencida";
+  if (manterAcessoDuranteRetryCartao) novoStatus = "pendente";
 
   if (
     event === "PAYMENT_DELETED" ||
     event === "PAYMENT_REFUNDED" ||
     event === "PAYMENT_RECEIVED_IN_CASH_UNDONE" ||
     event === "PAYMENT_BANK_SLIP_CANCELLED" ||
-    event === "PAYMENT_CREDIT_CARD_CAPTURE_REFUSED" ||
     isEventoTerminal
   ) {
     novoStatus = "cancelada";
@@ -243,23 +245,25 @@ export async function aplicarStatusNaoPago(params: {
     throw updateAssinaturaError;
   }
 
-  const { error: updateSalaoError } = await supabaseAdmin
-    .from("saloes")
-    .update({
-      status: novoStatus,
-      trial_ativo: false,
-      updated_at: agoraIso,
-    })
-    .eq("id", assinatura.id_salao);
+  if (!manterAcessoDuranteRetryCartao) {
+    const { error: updateSalaoError } = await supabaseAdmin
+      .from("saloes")
+      .update({
+        status: novoStatus,
+        trial_ativo: false,
+        updated_at: agoraIso,
+      })
+      .eq("id", assinatura.id_salao);
 
-  if (updateSalaoError) {
-    await atualizarStatusEventoWebhook(
-      supabaseAdmin,
-      webhookEventId,
-      "erro",
-      "Erro ao atualizar salao."
-    );
-    throw updateSalaoError;
+    if (updateSalaoError) {
+      await atualizarStatusEventoWebhook(
+        supabaseAdmin,
+        webhookEventId,
+        "erro",
+        "Erro ao atualizar salao."
+      );
+      throw updateSalaoError;
+    }
   }
 
   await atualizarStatusEventoWebhook(supabaseAdmin, webhookEventId, "processado", null, {
@@ -267,8 +271,13 @@ export async function aplicarStatusNaoPago(params: {
     id_assinatura: assinatura.id,
     id_cobranca: cobrancaAtual.id,
     event_order: eventOrder,
-    decisao: `status_applied_${novoStatus}`,
+    decisao: manterAcessoDuranteRetryCartao
+      ? "card_retry_required_access_preserved"
+      : `status_applied_${novoStatus}`,
   });
 
-  return { updated: novoStatus };
+  return {
+    updated: novoStatus,
+    accessPreserved: manterAcessoDuranteRetryCartao,
+  };
 }
