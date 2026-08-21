@@ -7,6 +7,7 @@
   },
   "scripts": {
     "// desenvolvimento": "Rotina leve para codar e testar tela/fluxo",
+    "predev": "node scripts/prepare-client-hero-video.mjs",
     "dev": "next dev",
     "dev:inspect": "next dev --inspect",
     "build": "node scripts/run-build.mjs",
