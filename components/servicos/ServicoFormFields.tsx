@@ -40,7 +40,7 @@ export function Card({
   return (
     <details
       open={defaultOpen}
-      className="group rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm md:p-6"
+      className="group rounded-lg border border-zinc-200 bg-white p-5 shadow-sm md:p-6"
     >
       <summary className="flex cursor-pointer list-none items-start justify-between gap-4">
         <span>

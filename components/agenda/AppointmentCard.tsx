@@ -326,7 +326,7 @@ export default function AppointmentCard({
       >
         <div className="absolute inset-y-0 left-0 w-[1px] bg-white/70" />
         {isInProgress ? (
-          <div className="absolute inset-x-0 top-0 h-[2px] bg-violet-400/75" />
+          <div className="absolute inset-x-0 top-0 h-[2px] bg-amber-400/80" />
         ) : null}
 
         <div

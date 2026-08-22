@@ -1,8 +1,9 @@
 ﻿"use client";
 
 import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
-import AppLoading from "@/components/ui/AppLoading";
+import { PainelListLoading } from "@/components/painel-ui";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import { useComissoesPage } from "@/components/comissoes/useComissoesPage";
 import {
@@ -138,7 +139,7 @@ function getInitials(name: string) {
 function origemMeta(origem: string | null | undefined) {
   if (origem === "profissional_servico") {
     return {
-      badgeClass: "border-violet-200 bg-violet-50 text-violet-700",
+      badgeClass: "border-amber-200 bg-amber-50 text-amber-800",
       description: "Exceção do profissional no serviço.",
       label: "Exceção do profissional",
     };
@@ -194,7 +195,7 @@ function ComboDescriptionBlock({
       </div>
       {comboMeta.isComboItem && comboMeta.comboName ? (
         <div className="mt-1 flex max-w-[230px] items-center gap-2 overflow-hidden text-xs text-zinc-500">
-          <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-700">
+          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-800">
             Combo
           </span>
           <span className="truncate">{comboMeta.comboName}</span>
@@ -794,7 +795,7 @@ export default function ComissoesPage() {
 
   if (!acessoCarregado || (!dadosCarregados && loading)) {
     return (
-      <AppLoading
+      <PainelListLoading
         title="Carregando comissões"
         message="Aguarde enquanto consolidamos lançamentos, filtros e rateios da equipe."
         fullHeight={false}
@@ -1106,7 +1107,7 @@ export default function ComissoesPage() {
                       maiorLancamento ? getValorLancamento(maiorLancamento) : 0
                     )}
                     icon={<Sparkles size={16} />}
-                    tone="violet"
+                    tone="amber"
                   />
                 </>
                 ) : (
@@ -1121,10 +1122,10 @@ export default function ComissoesPage() {
             </div>
 
           {comissoesAvancadas && comboSummary.length > 0 ? (
-            <div className="rounded-[24px] border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-white p-4 shadow-sm">
+            <div className="rounded-[24px] border border-amber-100 bg-amber-50 p-4 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-4">
                 <div className="max-w-3xl">
-                  <div className="text-xs font-semibold uppercase tracking-[0.22em] text-violet-500">
+                  <div className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-600">
                     Leitura por combo
                   </div>
                   <h2 className="mt-1 text-lg font-bold text-zinc-950">
@@ -1134,7 +1135,7 @@ export default function ComissoesPage() {
                     Cada card soma os lançamentos que vieram dos serviços filhos do combo.
                   </p>
                 </div>
-                <div className="rounded-2xl border border-violet-200 bg-white px-3.5 py-2.5 text-right shadow-sm">
+                <div className="rounded-2xl border border-amber-200 bg-white px-3.5 py-2.5 text-right shadow-sm">
                   <div className="text-xs uppercase tracking-[0.16em] text-zinc-500">
                     Combos encontrados
                   </div>
@@ -1148,10 +1149,10 @@ export default function ComissoesPage() {
                 {comboSummary.map((combo) => (
                   <div
                     key={combo.comboName}
-                    className="rounded-[20px] border border-violet-200 bg-white p-3.5 shadow-sm"
+                    className="rounded-[20px] border border-amber-200 bg-white p-3.5 shadow-sm"
                   >
                     <div className="flex items-center justify-between gap-3">
-                      <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-700">
+                      <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-800">
                         Combo
                       </span>
                       <span className="text-sm font-semibold text-zinc-900">
@@ -1583,7 +1584,7 @@ function ResumoCard({
   title: string;
   value: string;
   icon: ReactNode;
-  tone: "amber" | "emerald" | "sky" | "violet" | "zinc";
+  tone: "amber" | "emerald" | "sky" | "zinc";
 }) {
   const toneClass =
     tone === "amber"
@@ -1592,9 +1593,7 @@ function ResumoCard({
         ? "border-emerald-200 bg-emerald-50 text-emerald-900"
         : tone === "sky"
           ? "border-sky-200 bg-sky-50 text-sky-900"
-          : tone === "violet"
-            ? "border-violet-200 bg-violet-50 text-violet-900"
-            : "border-zinc-200 bg-zinc-50 text-zinc-900";
+          : "border-zinc-200 bg-zinc-50 text-zinc-900";
 
   return (
     <div className={`rounded-2xl border px-4 py-4 ${toneClass}`}>
@@ -1631,12 +1630,13 @@ function UpgradeActions({
 }) {
   return (
     <div className="mt-4 flex flex-wrap gap-2">
-      <a
+      <Link
         href="/comparar-planos"
+        prefetch
         className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
       >
         Comparar planos
-      </a>
+      </Link>
       <a
         href={getAssinaturaUrl(`/assinatura?plano=${plan}`)}
         className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"

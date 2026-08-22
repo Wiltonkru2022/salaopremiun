@@ -168,6 +168,10 @@ a.bg-white {
   font-family: var(--font-display), sans-serif;
 }
 
+.painel-density :where(h1, h2, h3, h4, h5, h6, p, span, label, button, a, div) {
+  letter-spacing: 0 !important;
+}
+
 * {
   scrollbar-width: thin;
   scrollbar-color: rgba(16, 24, 40, 0.18) transparent;
@@ -220,7 +224,7 @@ a.bg-white {
 
 @media (min-width: 1024px) {
   .painel-density {
-    --painel-card-radius-lg: 20px;
+    --painel-card-radius-lg: 8px;
   }
 
   .painel-density .text-sm {
@@ -286,7 +290,14 @@ a.bg-white {
 
   .painel-density .rounded-\[28px\],
   .painel-density .rounded-\[26px\],
-  .painel-density .rounded-\[24px\] {
+  .painel-density .rounded-\[24px\],
+  .painel-density .rounded-\[22px\],
+  .painel-density .rounded-\[20px\],
+  .painel-density .rounded-\[30px\],
+  .painel-density .rounded-\[1\.75rem\],
+  .painel-density .rounded-\[2rem\],
+  .painel-density .rounded-3xl,
+  .painel-density .rounded-2xl {
     border-radius: var(--painel-card-radius-lg);
   }
 

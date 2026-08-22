@@ -119,7 +119,7 @@ export default function ProfissionaisBar({
                       : "min-w-[144px] px-3 py-1.5 xl:min-w-[160px]"
                   }`,
                   active
-                    ? "border-violet-400 bg-white text-zinc-900 shadow-[0_14px_34px_rgba(124,58,237,0.14)]"
+                    ? "border-amber-300 bg-amber-50 text-zinc-900 shadow-[0_14px_34px_rgba(142,106,47,0.12)]"
                     : "border-zinc-200 bg-white/95 text-zinc-800 hover:border-zinc-300 hover:bg-white"
                 )}
               >
@@ -148,7 +148,7 @@ export default function ProfissionaisBar({
                   <div
                     className={clsx(
                       "text-[10px] uppercase tracking-[0.14em]",
-                      active ? "text-violet-500" : "text-zinc-400"
+                      active ? "text-amber-700" : "text-zinc-400"
                     )}
                   >
                     {subtitle}

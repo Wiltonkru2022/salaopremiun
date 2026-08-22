@@ -22,6 +22,7 @@ import {
   type RoadmapStatus,
 } from "@/lib/product-roadmap";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
+import { PainelPageHeader } from "@/components/painel-ui";
 
 const statusTone: Record<
   RoadmapStatus,
@@ -79,58 +80,46 @@ export default async function NovidadesPage() {
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
-        <div className="grid gap-0 2xl:grid-cols-[1.05fr_0.95fr]">
-          <div className="bg-zinc-950 px-4 py-5 text-white sm:px-5 sm:py-6">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.22em] text-white/70">
-              <Sparkles size={14} />
-              Roadmap do Salão Premium
-            </div>
-            <h1 className="mt-3 max-w-3xl font-display text-3xl font-bold tracking-[-0.04em] sm:text-[2.15rem]">
-              O que está entrando no produto
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-white/70 sm:text-[15px]">
-              Uma visão direta das entregas que deixam o painel, o app cliente e
-              a operação do salão mais fortes. NFS-e e WhatsApp automático ficam
-              marcados como novidades em implementação.
-            </p>
-            <div className="mt-5 flex flex-wrap gap-2">
-              <HeroMetric value={inProgress.length} label="em implementação" />
-              <HeroMetric value={planned.length} label="planejadas" />
-              <HeroMetric value={delivered.length} label="disponíveis" />
-            </div>
-          </div>
+      <PainelPageHeader
+        eyebrow="Roadmap"
+        title="O que esta entrando no produto"
+        description="Uma visao direta das entregas que deixam o painel, o app cliente e a operacao do salao mais fortes."
+        actions={
+          <>
+            <HeroMetric value={inProgress.length} label="em implementacao" />
+            <HeroMetric value={planned.length} label="planejadas" />
+            <HeroMetric value={delivered.length} label="disponiveis" />
+          </>
+        }
+      />
 
-          <div className="grid content-between gap-3 bg-zinc-50 p-4 sm:p-5">
-            <div>
-              <div className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
-                Próxima leva
-              </div>
-              <div className="mt-3 grid gap-3">
-                {inProgress.map((item) => (
-                  <SpotlightItem key={item.title} item={item} />
-                ))}
-              </div>
-            </div>
-            <div className="rounded-[22px] border border-zinc-200 bg-white p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-zinc-950 text-white">
-                  <ArrowUpRight size={17} />
-                </div>
-                <div>
-                  <div className="text-sm font-bold text-zinc-950">
-                    Evolução com controle
-                  </div>
-                  <p className="mt-1 text-sm leading-6 text-zinc-600">
-                    Recursos que mexem com agenda, cobrança e mensagem entram em
-                    etapas para preservar estabilidade, notificações e dados do
-                    salão.
-                  </p>
-                </div>
-              </div>
-            </div>
+      <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+        <div>
+          <div className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
+            Proxima leva
+          </div>
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            {inProgress.map((item) => (
+              <SpotlightItem key={item.title} item={item} />
+            ))}
           </div>
         </div>
+        <aside className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-amber-950 shadow-sm">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-white text-amber-700 shadow-sm">
+              <ArrowUpRight size={17} />
+            </div>
+            <div>
+              <div className="text-sm font-bold text-zinc-950">
+                Evolucao com controle
+              </div>
+              <p className="mt-1 text-sm leading-6 text-amber-900">
+                Recursos que mexem com agenda, cobranca e mensagem entram em
+                etapas para preservar estabilidade, notificacoes e dados do salao.
+              </p>
+            </div>
+          </div>
+        </aside>
       </section>
 
       <section className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
@@ -139,13 +128,13 @@ export default async function NovidadesPage() {
         <RoadmapColumn status="entregue" items={delivered} />
       </section>
 
-      <section className="rounded-[26px] border border-zinc-200 bg-white p-5 shadow-sm">
+      <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
         <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <div className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
               Lista completa
             </div>
-            <h2 className="mt-1 font-display text-2xl font-bold tracking-[-0.04em] text-zinc-950">
+            <h2 className="mt-1 text-2xl font-black text-zinc-950">
               Prioridades do app, agenda e painel
             </h2>
           </div>
@@ -166,9 +155,9 @@ export default async function NovidadesPage() {
 
 function HeroMetric({ value, label }: { value: number; label: string }) {
   return (
-    <div className="rounded-2xl border border-white/15 bg-white/10 px-3.5 py-2">
-      <div className="text-xl font-black leading-none">{value}</div>
-      <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white/55">
+    <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3.5 py-2 text-right">
+      <div className="text-xl font-black leading-none text-zinc-950">{value}</div>
+      <div className="mt-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-500">
         {label}
       </div>
     </div>
@@ -177,7 +166,7 @@ function HeroMetric({ value, label }: { value: number; label: string }) {
 
 function SpotlightItem({ item }: { item: RoadmapItem }) {
   return (
-    <article className="rounded-[22px] border border-zinc-200 bg-white p-4 shadow-sm">
+    <article className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
       <div className="flex items-start gap-3">
         <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[rgba(199,162,92,0.16)] text-[var(--app-accent-strong)]">
           {itemIcons[item.title] || <Sparkles size={18} />}
@@ -206,11 +195,11 @@ function RoadmapColumn({
   const copy = roadmapStatusCopy[status];
 
   return (
-    <div className="rounded-[26px] border border-zinc-200 bg-white p-4 shadow-sm">
+    <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
       <div className="flex items-start justify-between gap-3">
         <div>
           <StatusBadge status={status} />
-          <h2 className="mt-3 font-display text-xl font-bold tracking-[-0.03em] text-zinc-950">
+          <h2 className="mt-3 text-xl font-black text-zinc-950">
             {copy.label}
           </h2>
           <p className="mt-1 text-sm leading-6 text-zinc-500">
@@ -226,7 +215,7 @@ function RoadmapColumn({
         {items.map((item) => (
           <article
             key={item.title}
-            className={`rounded-[22px] border p-4 ${statusTone[status].cardClassName}`}
+            className={`rounded-lg border p-4 ${statusTone[status].cardClassName}`}
           >
             <div className="flex items-start gap-3">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-white text-zinc-900 shadow-sm">
@@ -253,7 +242,7 @@ function RoadmapColumn({
 
 function CompactItem({ item }: { item: RoadmapItem }) {
   return (
-    <article className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
+    <article className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-400">

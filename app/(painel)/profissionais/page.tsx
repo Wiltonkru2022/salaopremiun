@@ -10,7 +10,11 @@ import {
   Users,
 } from "lucide-react";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
-import AppLoading from "@/components/ui/AppLoading";
+import {
+  PainelLinkButton,
+  PainelListLoading,
+  PainelPageHeader,
+} from "@/components/painel-ui";
 import AppModal from "@/components/ui/AppModal";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import PaginationControls from "@/components/ui/PaginationControls";
@@ -410,7 +414,7 @@ export default function ProfissionaisListPage() {
 
   if (loading || !acessoCarregado) {
     return (
-      <AppLoading
+      <PainelListLoading
         title="Carregando profissionais"
         message="Aguarde enquanto preparamos equipe, acessos, categorias e indicadores operacionais."
         fullHeight={false}
@@ -453,31 +457,18 @@ export default function ProfissionaisListPage() {
 
     <div className="contents">
         <div className="mx-auto max-w-7xl space-y-4">
-          <section className="rounded-[24px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="max-w-3xl">
-                <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
-                  Time e acesso
-                </div>
-                <h1 className="mt-1 text-[1.8rem] font-bold tracking-[-0.04em] md:text-[1.95rem]">
-                  Profissionais
-                </h1>
-                <p className="mt-1.5 max-w-2xl text-sm leading-6 text-zinc-600">
-                  Equipe, comissão, acesso e apoio em uma leitura mais curta
-                  para a operação do salão.
-                </p>
-              </div>
-
-              {podeGerenciar ? (
-                <Link
-                  href="/profissionais/novo"
-                  className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
-                >
+          <PainelPageHeader
+            eyebrow="Time e acesso"
+            title="Profissionais"
+            description="Equipe, comissao, acesso ao app profissional e apoio em uma leitura curta para a operacao do salao."
+            actions={
+              podeGerenciar ? (
+                <PainelLinkButton href="/profissionais/novo">
                   Novo profissional
-                </Link>
-              ) : null}
-            </div>
-          </section>
+                </PainelLinkButton>
+              ) : null
+            }
+          />
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             <ResumoCard
@@ -838,7 +829,7 @@ function RoleBadge({ isAssistente }: { isAssistente: boolean }) {
     <span
       className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold ${
         isAssistente
-          ? "bg-violet-100 text-violet-700"
+          ? "bg-amber-100 text-amber-800"
           : "bg-zinc-100 text-zinc-700"
       }`}
     >

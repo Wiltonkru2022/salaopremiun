@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
   AlertCircle,
@@ -14,14 +15,17 @@ import {
   RefreshCw,
   Scissors,
   ShieldAlert,
-  Sparkles,
   Target,
   TrendingUp,
   UserCheck,
   Users,
 } from "lucide-react";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
-import AppLoading from "@/components/ui/AppLoading";
+import {
+  PainelDashboardSkeleton,
+  PainelPageHeader,
+  PainelToolbar,
+} from "@/components/painel-ui";
 import { getPlanoMinimoParaRecurso, type PlanoCobravelCodigo } from "@/lib/plans/catalog";
 import { getAssinaturaUrl } from "@/lib/site-urls";
 import { statusPtBR } from "@/core/i18n/pt-BR";
@@ -273,15 +277,16 @@ function MiniStatusCard({ icon, title, value }: { icon: React.ReactNode; title: 
 function UpgradeActions({ plan = getPlanoMinimoParaRecurso("dashboard_avancado") }: { plan?: PlanoCobravelCodigo }) {
   return (
     <div className="mt-4 flex flex-wrap gap-2">
-      <a
+      <Link
         href="/comparar-planos"
+        prefetch
         className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-black text-zinc-800 transition hover:bg-zinc-50"
       >
         Comparar planos
-      </a>
+      </Link>
       <a
         href={getAssinaturaUrl(`/assinatura?plano=${plan}`)}
-        className="inline-flex items-center justify-center rounded-2xl bg-white px-4 py-2.5 text-sm font-black text-zinc-950 transition hover:bg-zinc-100"
+        className="inline-flex items-center justify-center rounded-2xl bg-zinc-950 px-4 py-2.5 text-sm font-black text-white transition hover:bg-zinc-800"
       >
         Fazer upgrade
       </a>
@@ -291,18 +296,17 @@ function UpgradeActions({ plan = getPlanoMinimoParaRecurso("dashboard_avancado")
 
 function LockedPanel({ plan }: { plan: PlanoCobravelCodigo }) {
   return (
-    <div className="relative min-h-full overflow-hidden rounded-[28px] border border-zinc-200 bg-zinc-950 p-5 text-white shadow-sm">
-      <div className="pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full bg-amber-400/20 blur-3xl" />
-      <div className="relative flex items-start gap-3">
-        <div className="rounded-2xl bg-white/10 p-3 text-amber-200">
+    <div className="min-h-full rounded-lg border border-amber-200 bg-amber-50 p-5 text-amber-950 shadow-sm">
+      <div className="flex items-start gap-3">
+        <div className="rounded-lg bg-white p-3 text-amber-700 shadow-sm">
           <Crown size={22} />
         </div>
         <div>
-          <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-100">Visão geral avançada</p>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-amber-700">Visão geral avançada</p>
           <h3 className="mt-2 text-2xl font-black tracking-[-0.04em]">
             Liberado no {plan === "premium" ? "Premium" : "Pro"}
           </h3>
-          <p className="mt-2 text-sm leading-6 text-zinc-300">
+          <p className="mt-2 text-sm leading-6 text-amber-900">
             Rankings, clientes sem retorno, curva de faturamento e leitura executiva ficam nos planos mais completos.
           </p>
           <UpgradeActions plan={plan} />
@@ -498,7 +502,15 @@ export default function DashboardPage() {
   const kpiPeriodoLabel = resumo.periodoLabel || PERIODOS_DASHBOARD.find((item) => item.value === periodo)?.label || "Período";
 
   if (loading) {
-    return <AppLoading title="Carregando dashboard" message={faseCarregamento} fullHeight={false} />;
+    return (
+      <div className="space-y-3">
+        <PainelPageHeader
+          title="Carregando dashboard"
+          description={faseCarregamento}
+        />
+        <PainelDashboardSkeleton />
+      </div>
+    );
   }
 
   if (semPermissao) {
@@ -525,57 +537,48 @@ export default function DashboardPage() {
         <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{erro}</div>
       ) : null}
 
-      <section className="relative overflow-hidden rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm">
-        <div className="pointer-events-none absolute right-0 top-0 h-40 w-40 rounded-full bg-amber-100/80 blur-3xl" />
-        <div className="relative flex flex-col gap-5 2xl:flex-row 2xl:items-center 2xl:justify-between">
-          <div className="max-w-4xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-200 bg-amber-50 px-3 py-1 text-[11px] font-black uppercase tracking-[0.18em] text-amber-800">
-              <Sparkles size={13} />
-              Comando do salão
-            </div>
-            <h1 className="mt-3 text-[2.35rem] font-black tracking-[-0.05em] text-zinc-950">Visão geral</h1>
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
-              Visão executiva do salão: agenda, faturamento, clientes sem retorno, profissionais em destaque e
-              serviços com mais procura.
-            </p>
-            <div className="mt-4 grid gap-2 sm:grid-cols-4">
-              {PERIODOS_DASHBOARD.map((option) => {
-                const active = periodo === option.value;
-                return (
-                  <button
-                    key={option.value}
-                    type="button"
-                    onClick={() => setPeriodo(option.value)}
-                    className={`rounded-2xl border px-3 py-2.5 text-left transition ${
-                      active
-                        ? "border-zinc-950 bg-zinc-950 text-white shadow-sm"
-                        : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
-                    }`}
-                  >
-                    <span className="block text-sm font-black">{option.label}</span>
-                    <span className={`mt-0.5 block text-[11px] font-bold ${active ? "text-zinc-300" : "text-zinc-400"}`}>
-                      {option.helper}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          <div className="grid gap-2.5 sm:grid-cols-2 2xl:min-w-[430px]">
+      <PainelPageHeader
+        eyebrow="Comando do salao"
+        title="Visao geral"
+        description="Agenda, faturamento, clientes sem retorno, profissionais em destaque e servicos com mais procura."
+        actions={
+          <div className="grid min-w-[260px] grid-cols-2 gap-2">
             <InfoMetric
               title="Plano"
               value={resumo.planoSalao || "-"}
-              helper={dashboardAvancado ? "Visão geral avançada ativa" : `Avançado no ${dashboardUpgradeLabel}`}
+              helper={dashboardAvancado ? "Visao avancada ativa" : `Avancado no ${dashboardUpgradeLabel}`}
             />
             <InfoMetric
-              title="Última leitura"
+              title="Ultima leitura"
               value={ultimaAtualizacao ? new Date(ultimaAtualizacao).toLocaleTimeString("pt-BR") : "--:--"}
               helper={faseCarregamento}
             />
           </div>
-        </div>
-      </section>
+        }
+      />
+
+      <PainelToolbar className="grid gap-2 sm:grid-cols-4">
+        {PERIODOS_DASHBOARD.map((option) => {
+          const active = periodo === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              onClick={() => setPeriodo(option.value)}
+              className={`rounded-lg border px-3 py-2.5 text-left transition ${
+                active
+                  ? "border-zinc-950 bg-zinc-950 text-white shadow-sm"
+                  : "border-zinc-200 bg-white text-zinc-700 hover:border-zinc-400"
+              }`}
+            >
+              <span className="block text-sm font-black">{option.label}</span>
+              <span className={`mt-0.5 block text-[11px] font-bold ${active ? "text-zinc-300" : "text-zinc-400"}`}>
+                {option.helper}
+              </span>
+            </button>
+          );
+        })}
+      </PainelToolbar>
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <KpiCard

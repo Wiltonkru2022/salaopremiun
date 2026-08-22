@@ -245,6 +245,41 @@ export async function atualizarStatusCampanhaAction(formData: FormData) {
   redirect("/campanhas?ok=Campanha%20atualizada.");
 }
 
+export async function atualizarStatusCampanhaInlineAction(input: {
+  id: string;
+  status: string;
+}) {
+  const { usuario } = await requireCampaignMutation();
+  const id = String(input.id || "").trim();
+  const status = String(input.status || "").trim();
+
+  if (!id || !["ativa", "pausada"].includes(status)) {
+    return { ok: false, error: "Campanha invalida." };
+  }
+
+  const { error } = await (getSupabaseAdmin() as any)
+    .from("cupons_salao")
+    .update({
+      status_campanha: status,
+      ativo: status === "ativa",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", id)
+    .eq("id_salao", usuario.id_salao);
+
+  if (error) {
+    return {
+      ok: false,
+      error: error.message || "Nao foi possivel atualizar a campanha.",
+    };
+  }
+
+  revalidatePath("/campanhas");
+  revalidatePath(`/campanhas/${id}`);
+
+  return { ok: true, status };
+}
+
 export async function atualizarCampanhaAction(formData: FormData) {
   const { usuario } = await requireCampaignMutation();
   const id = String(formData.get("id") || "").trim();

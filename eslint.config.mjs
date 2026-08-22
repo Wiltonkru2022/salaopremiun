@@ -8,6 +8,8 @@ export default [
   {
     ignores: [
       ".next/**",
+      ".next-*/**",
+      ".codex-artifacts/**",
       "node_modules/**",
       "dist/**",
       "build/**",

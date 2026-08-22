@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
-import AppLoading from "@/components/ui/AppLoading";
+import { PainelListLoading } from "@/components/painel-ui";
 import { createClient } from "@/lib/supabase/client";
 import type { UserNivel } from "@/lib/permissions";
 import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
@@ -922,7 +922,12 @@ export default function ConfiguracoesPageClient({
   }, [salaoForm.status, salaoForm.plano, limiteUsuarios]);
 
   if (loading) {
-    return <AppLoading title="Configurações" fullHeight={false} />;
+    return (
+      <PainelListLoading
+        title="Carregando configuracoes"
+        message="Aguarde enquanto carregamos dados do salao, usuarios e regras operacionais."
+      />
+    );
   }
 
   if (semPermissao) {

@@ -1,14 +1,17 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import {
   maskMoneyInput,
   parseMoneyToNumber,
 } from "@/lib/utils/produtoMasks";
-import AppLoading from "@/components/ui/AppLoading";
+import {
+  PainelLinkButton,
+  PainelListLoading,
+  PainelPageHeader,
+} from "@/components/painel-ui";
 
 type Produto = {
   id: string;
@@ -29,7 +32,6 @@ type EstoqueProcessarErrorResponse = {
 
 export default function MovimentacaoForm() {
   const supabase = createClient();
-  const router = useRouter();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -182,20 +184,22 @@ export default function MovimentacaoForm() {
   }
 
   if (loading) {
-    return <AppLoading title="Movimentação de estoque" fullHeight={false} />;
+    return (
+      <PainelListLoading
+        title="Carregando movimentacao"
+        message="Aguarde enquanto carregamos os produtos disponiveis."
+      />
+    );
   }
 
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-3xl space-y-6">
-        <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
-          <h1 className="mt-2 text-2xl font-bold md:text-3xl">
-            Nova movimentacao
-          </h1>
-          <p className="mt-2 text-sm text-zinc-500">
-            Registre entrada, saída, ajuste, consumo interno ou venda.
-          </p>
-        </div>
+        <PainelPageHeader
+          eyebrow="Estoque"
+          title="Nova movimentacao"
+          description="Registre entrada, saida, ajuste, consumo interno ou venda."
+        />
 
         {erro ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -209,7 +213,7 @@ export default function MovimentacaoForm() {
           </div>
         ) : null}
 
-        <div className="space-y-4 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+        <div className="space-y-4 rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
           <Select
             label="Produto"
             value={produtoId}
@@ -277,13 +281,9 @@ export default function MovimentacaoForm() {
           />
 
           <div className="flex flex-wrap justify-between gap-3">
-            <button
-              type="button"
-              onClick={() => router.push("/estoque")}
-              className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-700"
-            >
+            <PainelLinkButton href="/estoque" variant="secondary">
               Voltar
-            </button>
+            </PainelLinkButton>
 
             <button
               type="button"

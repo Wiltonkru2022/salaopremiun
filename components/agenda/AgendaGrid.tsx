@@ -552,7 +552,7 @@ export default function AgendaGrid({
                 `sticky top-0 z-30 select-none border-b border-l border-zinc-200 px-3 ${
                   compactMode ? "h-[38px] py-1.5" : "h-[44px] py-2"
                 }`,
-                isTodayDate(day) ? "bg-violet-50/60" : "bg-white"
+                isTodayDate(day) ? "bg-amber-50/70" : "bg-white"
               )}
             >
               <div className="flex items-start justify-between gap-2">
@@ -571,7 +571,7 @@ export default function AgendaGrid({
                 </div>
 
                 {isTodayDate(day) ? (
-                  <span className="rounded-full border border-violet-200 bg-violet-500 px-2 py-1 text-[9px] font-semibold text-white shadow-sm">
+                  <span className="rounded-full border border-amber-200 bg-zinc-950 px-2 py-1 text-[9px] font-semibold text-white shadow-sm">
                     Hoje
                   </span>
                 ) : null}
@@ -658,7 +658,7 @@ export default function AgendaGrid({
                 key={dayStr}
                 className={clsx(
                   "relative select-none border-l border-zinc-200",
-                  isTodayDate(day) ? "bg-violet-50/20" : "bg-white"
+                  isTodayDate(day) ? "bg-amber-50/25" : "bg-white"
                 )}
                 style={{ height: totalGridHeight }}
               >
@@ -690,8 +690,8 @@ export default function AgendaGrid({
                     className="pointer-events-none absolute left-0 right-0 z-10"
                     style={{ top: eventTop(minutesToTime(nowMinutes)) }}
                   >
-                    <div className="relative h-[2px] bg-violet-400/75">
-                      <span className="absolute -top-3 left-3 rounded-full bg-violet-600 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
+                    <div className="relative h-[2px] bg-amber-500/80">
+                      <span className="absolute -top-3 left-3 rounded-full bg-zinc-950 px-2 py-0.5 text-[10px] font-semibold text-white shadow-sm">
                         {minutesToTime(nowMinutes)}
                       </span>
                     </div>

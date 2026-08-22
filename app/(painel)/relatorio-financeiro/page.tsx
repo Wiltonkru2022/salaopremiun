@@ -1,8 +1,9 @@
 ﻿"use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
-import AppLoading from "@/components/ui/AppLoading";
+import { PainelListLoading } from "@/components/painel-ui";
 import AppModal from "@/components/ui/AppModal";
 import { createClient } from "@/lib/supabase/client";
 import {
@@ -306,7 +307,7 @@ function ComboDescriptionCell({
       <div className="text-sm text-zinc-700">{comboMeta.displayTitle}</div>
       {comboMeta.isComboItem && comboMeta.comboName ? (
         <div className="mt-1 inline-flex items-center gap-2">
-          <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-700">
+          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-800">
             Combo
           </span>
           <span className="text-xs text-zinc-500">{comboMeta.comboName}</span>
@@ -1586,7 +1587,7 @@ export default function RelatorioFinanceiroPage() {
 
   if (loading) {
     return (
-      <AppLoading
+      <PainelListLoading
         title="Carregando relatório financeiro"
         message="Aguarde enquanto cruzamos vendas, pagamentos, taxas e comissões do período."
         fullHeight={false}
@@ -2291,12 +2292,13 @@ export default function RelatorioFinanceiroPage() {
                       financeiro e a leitura essencial das vendas.
                     </div>
                     <div className="mt-4 flex flex-wrap gap-2">
-                      <a
+                      <Link
                         href="/comparar-planos"
+                        prefetch
                         className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
                       >
                         Comparar planos
-                      </a>
+                      </Link>
                       <a
                         href={getAssinaturaUrl(`/assinatura?plano=${getPlanoMinimoParaRecurso("relatorios_avancados")}`)}
                         className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
@@ -2492,12 +2494,13 @@ function UpgradePanel({
         {description}
       </p>
       <div className="mt-4 flex flex-wrap gap-2">
-        <a
+        <Link
           href="/comparar-planos"
+          prefetch
           className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
         >
           Comparar planos
-        </a>
+        </Link>
         <a
           href={getAssinaturaUrl(`/assinatura?plano=${plan}`)}
           className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"

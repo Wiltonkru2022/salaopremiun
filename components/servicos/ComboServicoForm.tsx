@@ -13,7 +13,11 @@ import {
   normalizeComboComponents,
 } from "@/lib/servicos/combo-utils";
 import type { CategoriaServico, ComboServicoItemState } from "@/types/servicos";
-import AppLoading from "@/components/ui/AppLoading";
+import {
+  PainelLinkButton,
+  PainelListLoading,
+  PainelPageHeader,
+} from "@/components/painel-ui";
 
 type BaseServico = {
   id: string;
@@ -444,37 +448,27 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
   }
 
   if (loading) {
-    return <AppLoading title="Combo de serviços" fullHeight={false} />;
+    return (
+      <PainelListLoading
+        title="Carregando combo"
+        message="Aguarde enquanto preparamos servicos, categorias e regras de rateio."
+      />
+    );
   }
 
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-7xl space-y-6">
-        <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
-                Catálogo premium
-              </div>
-              <h1 className="mt-2 text-2xl font-bold md:text-3xl">
-                {modo === "novo" ? "Criar combo de serviços" : "Editar combo de serviços"}
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
-                Monte um preço final único usando vários serviços do catálogo.
-                A agenda enxerga o combo como um serviço só, e o caixa divide
-                internamente para comissão e relatório.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => router.push("/servicos")}
-              className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-700"
-            >
-              Voltar para serviços
-            </button>
-          </div>
-        </section>
+        <PainelPageHeader
+          eyebrow="Catalogo premium"
+          title={modo === "novo" ? "Criar combo de servicos" : "Editar combo de servicos"}
+          description="Monte um preco final unico usando varios servicos do catalogo. A agenda enxerga o combo como um servico so, e o caixa divide internamente para comissao e relatorio."
+          actions={
+            <PainelLinkButton href="/servicos" variant="secondary">
+              Voltar para servicos
+            </PainelLinkButton>
+          }
+        />
 
         {erro ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -490,7 +484,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="space-y-6">
-            <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="Nome do combo">
                   <input
@@ -579,7 +573,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
               </div>
             </section>
 
-            <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
                   <div className="text-xs font-semibold uppercase tracking-[0.2em] text-zinc-400">
@@ -691,7 +685,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
           </div>
 
           <aside className="space-y-6">
-            <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="flex items-center gap-3">
                 <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-zinc-700">
                   <Layers3 size={18} />
@@ -718,7 +712,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
               </div>
             </section>
 
-            <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
                 Rateio financeiro
               </div>
@@ -754,7 +748,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
               </div>
             </section>
 
-            <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+            <section className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
                 Comissão prevista
               </div>

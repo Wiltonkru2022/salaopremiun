@@ -7,6 +7,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import {
   Building2,
@@ -33,7 +34,7 @@ import {
   Users,
 } from "lucide-react";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
-import AppLoading from "@/components/ui/AppLoading";
+import { PainelListLoading } from "@/components/painel-ui";
 import AppModal from "@/components/ui/AppModal";
 import { Field, SectionCard, TextInput } from "@/components/configuracoes/ui";
 import { EMPTY_SALAO } from "@/components/configuracoes/constants";
@@ -784,7 +785,6 @@ export default function PerfilSalaoPage() {
 
       await supabase.auth.signOut({ scope: "local" });
       router.replace("/salao-excluido");
-      router.refresh();
     } catch (error) {
       setErro(
         error instanceof Error
@@ -870,7 +870,6 @@ export default function PerfilSalaoPage() {
       setAppClienteDraft(nextForm);
       setMsg(sucesso);
       setActiveModal(null);
-      router.refresh();
       return true;
     } catch (error: unknown) {
       const message = error instanceof Error ? error.message : "";
@@ -995,7 +994,6 @@ export default function PerfilSalaoPage() {
 
       setPortfolioFotos((prev) => [...prev, payload.foto as PortfolioFoto]);
       setMsg("Foto adicionada ao portfólio do app cliente.");
-      router.refresh();
     } catch (error: unknown) {
       setErro(
         error instanceof Error
@@ -1028,7 +1026,6 @@ export default function PerfilSalaoPage() {
 
       setPortfolioFotos((prev) => prev.filter((foto) => foto.id !== id));
       setMsg("Foto removida do portfólio.");
-      router.refresh();
     } catch (error: unknown) {
       setErro(
         error instanceof Error
@@ -1558,7 +1555,7 @@ export default function PerfilSalaoPage() {
 
   if (loading) {
     return (
-      <AppLoading
+      <PainelListLoading
         title="Carregando perfil do salão"
         message="Aguarde enquanto reunimos identidade do negocio, contatos e segurança da conta."
         fullHeight={false}
@@ -2079,8 +2076,9 @@ export default function PerfilSalaoPage() {
                   )}
                 </div>
 
-                <a
+                <Link
                   href="/configuracoes/agenda-horarios"
+                  prefetch
                   className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 transition hover:-translate-y-0.5 hover:bg-zinc-100"
                 >
                   <div className="flex items-start gap-3">
@@ -2097,10 +2095,11 @@ export default function PerfilSalaoPage() {
                       </p>
                     </div>
                   </div>
-                </a>
+                </Link>
 
-                <a
+                <Link
                   href="/configuracoes/agenda-horarios#fuso-horario"
+                  prefetch
                   className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 transition hover:-translate-y-0.5 hover:bg-zinc-100"
                 >
                   <div className="flex items-start gap-3">
@@ -2117,10 +2116,11 @@ export default function PerfilSalaoPage() {
                       </p>
                     </div>
                   </div>
-                </a>
+                </Link>
 
-                <a
+                <Link
                   href="/servicos"
+                  prefetch
                   className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 transition hover:-translate-y-0.5 hover:bg-zinc-100"
                 >
                   <div className="flex items-start gap-3">
@@ -2137,10 +2137,11 @@ export default function PerfilSalaoPage() {
                       </p>
                     </div>
                   </div>
-                </a>
+                </Link>
 
-                <a
+                <Link
                   href="/profissionais"
+                  prefetch
                   className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4 transition hover:-translate-y-0.5 hover:bg-zinc-100"
                 >
                   <div className="flex items-start gap-3">
@@ -2157,7 +2158,7 @@ export default function PerfilSalaoPage() {
                       </p>
                     </div>
                   </div>
-                </a>
+                </Link>
               </div>
             </SectionCard>
 

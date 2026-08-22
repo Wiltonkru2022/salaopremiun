@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   ArrowLeft,
@@ -16,13 +15,16 @@ import {
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { canUsePlanFeature } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import CampanhaStatusToggle from "@/components/campanhas/CampanhaStatusToggle";
+import {
+  PainelLinkButton,
+  PainelPageHeader,
+} from "@/components/painel-ui";
 import PaginationLinks from "@/components/ui/PaginationLinks";
-import PendingActionButton from "@/components/ui/PendingActionButton";
 import {
   adicionarClienteCampanhaAction,
   atualizarCampanhaAction,
   atualizarServicosCampanhaAction,
-  atualizarStatusCampanhaAction,
   auditarCampanhasAction,
   excluirCampanhaAction,
   removerClienteCampanhaAction,
@@ -456,9 +458,23 @@ export default async function CampanhaDetalhePage({
 
   return (
     <main className="space-y-6">
-      <Link href="/campanhas" className="inline-flex h-11 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-950">
-        <ArrowLeft size={16} /> Voltar
-      </Link>
+      <PainelPageHeader
+        eyebrow="Relatorio da campanha"
+        title={String(campanha.nome || "Campanha")}
+        description={String(campanha.mensagem_cliente || campanha.descricao || "Campanha privada com link de agendamento.")}
+        actions={
+          <>
+            <PainelLinkButton href="/campanhas" variant="secondary">
+              <ArrowLeft size={16} />
+              Voltar
+            </PainelLinkButton>
+            <CampanhaStatusToggle
+              id={String(campanha.id)}
+              initialStatus={statusAtual}
+            />
+          </>
+        }
+      />
 
       {ok ? (
         <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">
@@ -470,29 +486,6 @@ export default async function CampanhaDetalhePage({
           {erro}
         </p>
       ) : null}
-
-      <section className="overflow-hidden rounded-[2rem] border border-zinc-200 bg-zinc-950 p-6 text-white shadow-[0_24px_70px_rgba(15,23,42,0.24)] md:p-8">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <span className="inline-flex rounded-full bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-amber-100">
-              Relatório da campanha
-            </span>
-            <h1 className="mt-4 text-4xl font-black tracking-tight">{String(campanha.nome || "Campanha")}</h1>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
-              {String(campanha.mensagem_cliente || campanha.descricao || "Campanha privada com link de agendamento.")}
-            </p>
-          </div>
-          <form action={atualizarStatusCampanhaAction}>
-            <input type="hidden" name="id" value={String(campanha.id)} />
-            <input type="hidden" name="status" value={statusAtual === "ativa" ? "pausada" : "ativa"} />
-            <PendingActionButton
-              label={statusAtual === "ativa" ? "Pausar campanha" : "Ativar campanha"}
-              pendingLabel={statusAtual === "ativa" ? "Pausando..." : "Ativando..."}
-              className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-white px-5 text-sm font-black text-zinc-950"
-            />
-          </form>
-        </div>
-      </section>
 
       <section className="grid gap-4 md:grid-cols-4">
         {kpiCards.map(({ label, value, icon: Icon, hint }) => (

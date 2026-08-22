@@ -1,6 +1,9 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, Gift, Scissors, Sparkles } from "lucide-react";
+import { ArrowLeft, Scissors, Sparkles } from "lucide-react";
+import {
+  PainelLinkButton,
+  PainelPageHeader,
+} from "@/components/painel-ui";
 import { criarCampanhaCupomAction } from "../actions";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { canUsePlanFeature } from "@/lib/plans/access";
@@ -87,10 +90,17 @@ export default async function NovaCampanhaPage({
 
   return (
     <main className="space-y-6">
-      <Link href="/campanhas" className="inline-flex h-11 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-950">
-        <ArrowLeft size={16} />
-        Voltar para campanhas
-      </Link>
+      <PainelPageHeader
+        eyebrow="Nova campanha"
+        title="Criar campanha"
+        description="Configure dados, link, validade, limites, publico e servicos permitidos em uma tela propria."
+        actions={
+          <PainelLinkButton href="/campanhas" variant="secondary">
+            <ArrowLeft size={16} />
+            Voltar
+          </PainelLinkButton>
+        }
+      />
 
       {erro ? (
         <p className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
@@ -98,27 +108,12 @@ export default async function NovaCampanhaPage({
         </p>
       ) : null}
 
-      <section className="overflow-hidden rounded-[2rem] border border-zinc-200 bg-zinc-950 p-6 text-white shadow-[0_24px_70px_rgba(15,23,42,0.24)] md:p-8">
-        <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-amber-100">
-              <Gift size={14} />
-              Nova campanha
-            </span>
-            <h1 className="mt-5 text-4xl font-black tracking-tight md:text-5xl">
-              Criar campanha
-            </h1>
-            <p className="mt-3 max-w-3xl text-base leading-7 text-zinc-300">
-              Configure dados, link, validade, limites, público e serviços permitidos em uma tela própria.
-            </p>
-          </div>
-          <div className="rounded-[1.5rem] border border-white/10 bg-white/[0.06] p-4 text-sm leading-6 text-zinc-200">
-            Campanhas ficam disponíveis apenas para Premium, Pro e teste grátis ativo. O plano Básico vê o convite de upgrade antes de usar.
-          </div>
-        </div>
+      <section className="rounded-lg border border-amber-200 bg-amber-50 p-4 text-sm font-semibold leading-6 text-amber-900 shadow-sm">
+        Campanhas ficam disponiveis apenas para Premium, Pro e teste gratis ativo.
+        O plano Basico ve o convite de upgrade antes de usar.
       </section>
 
-      <section className="rounded-[2rem] border border-zinc-200 bg-white p-5 shadow-sm md:p-6">
+      <section className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm md:p-6">
         <form action={criarCampanhaCupomAction} className="space-y-6">
           <input type="hidden" name="tipo" value={defaults.tipo} />
           <input type="hidden" name="template" value={template} />

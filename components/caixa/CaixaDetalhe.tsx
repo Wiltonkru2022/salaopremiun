@@ -109,7 +109,7 @@ export default function CaixaDetalhe({
                 type="button"
                 onClick={onFinalizarComanda}
                 disabled={saving || faltaReceber > 0}
-                className="inline-flex h-10 items-center gap-2 rounded-2xl bg-slate-950 px-4 text-sm font-semibold text-white transition hover:bg-slate-900 disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex h-10 items-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 <CheckCircle2 size={15} />
                 Finalizar venda

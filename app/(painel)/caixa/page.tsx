@@ -10,7 +10,7 @@ import CaixaHeader from "@/components/caixa/CaixaHeader";
 import CaixaItemModal from "@/components/caixa/CaixaItemModal";
 import CaixaSidebar from "@/components/caixa/CaixaSidebar";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
-import AppLoading from "@/components/ui/AppLoading";
+import { PainelListLoading } from "@/components/painel-ui";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import { useCaixaApi } from "@/components/caixa/useCaixaApi";
 import { useCaixaLoaders } from "@/components/caixa/useCaixaLoaders";
@@ -381,7 +381,7 @@ export default function CaixaPage() {
 
   if (!acessoCarregado) {
     return (
-      <AppLoading
+      <PainelListLoading
         title="Carregando caixa"
         message="Aguarde enquanto preparamos comandas, fila, pagamentos e resumo financeiro da operação."
         fullHeight={false}

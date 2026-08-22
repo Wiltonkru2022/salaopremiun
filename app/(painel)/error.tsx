@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect } from "react";
 import { captureClientError } from "@/lib/monitoring/client";
 
@@ -44,12 +45,13 @@ export default function PainelError({
         >
           Tentar novamente
         </button>
-        <a
+        <Link
           href="/dashboard"
+          prefetch
           className="rounded-full border border-red-200 bg-white px-5 py-3 text-sm font-bold text-red-700"
         >
           Voltar ao dashboard
-        </a>
+        </Link>
       </div>
     </div>
   );

@@ -8,7 +8,10 @@ import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { getErrorMessage } from "@/lib/get-error-message";
 import PlanoLimiteNotice from "@/components/plans/PlanoLimiteNotice";
-import AppLoading from "@/components/ui/AppLoading";
+import {
+  PainelListLoading,
+  PainelPageHeader,
+} from "@/components/painel-ui";
 import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
 import type {
   AutorizacoesCliente,
@@ -456,7 +459,12 @@ async function bootstrap() {
   }
 
   if (loading) {
-    return <AppLoading title="Cadastro de cliente" fullHeight={false} />;
+    return (
+      <PainelListLoading
+        title="Carregando cadastro"
+        message="Aguarde enquanto preparamos os dados da cliente."
+      />
+    );
   }
 
   const limiteClientes = planoAccess?.limites?.clientes ?? null;
@@ -469,21 +477,20 @@ async function bootstrap() {
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
-          <h1 className="mt-2 text-2xl font-bold md:text-3xl">
-            {modo === "novo" ? "Novo Cliente" : "Editar Cliente"}
-          </h1>
-          <p className="mt-2 text-sm text-zinc-500">
-            Cadastro simples com os dados principais, cuidados de atendimento e status da cliente.
-          </p>
-          <div className="mt-4 inline-flex rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-2 text-sm font-semibold text-emerald-800">
-            Crédito disponível:{" "}
-            {cliente.cashback.toLocaleString("pt-BR", {
-              style: "currency",
-              currency: "BRL",
-            })}
-          </div>
-        </div>
+        <PainelPageHeader
+          eyebrow="Cadastro"
+          title={modo === "novo" ? "Novo cliente" : "Editar cliente"}
+          description="Dados principais, cuidados de atendimento, app cliente e status da cliente."
+          actions={
+            <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-black text-emerald-800">
+              Credito:{" "}
+              {cliente.cashback.toLocaleString("pt-BR", {
+                style: "currency",
+                currency: "BRL",
+              })}
+            </div>
+          }
+        />
 
         {modo === "novo" && limiteClientes != null ? (
           <PlanoLimiteNotice
@@ -794,7 +801,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm md:p-6">
+    <div className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm md:p-6">
       <div className="mb-5">
         <h2 className="text-lg font-bold text-zinc-900">{title}</h2>
         {subtitle ? <p className="mt-1 text-sm text-zinc-500">{subtitle}</p> : null}

@@ -145,8 +145,7 @@ export default function AppShell({
             // Best effort only.
           }
         }
-        router.push("/login?motivo=logout");
-        router.refresh();
+        router.replace("/login?motivo=logout");
       }
     );
   }

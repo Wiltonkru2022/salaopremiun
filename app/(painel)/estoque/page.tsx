@@ -1,10 +1,13 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
-import AppLoading from "@/components/ui/AppLoading";
+import {
+  PainelLinkButton,
+  PainelListLoading,
+  PainelPageHeader,
+} from "@/components/painel-ui";
 import PaginationControls from "@/components/ui/PaginationControls";
 import { createClient } from "@/lib/supabase/client";
 
@@ -197,7 +200,7 @@ export default function EstoquePage() {
 
   if (loading || !acessoCarregado) {
     return (
-      <AppLoading
+      <PainelListLoading
         title="Carregando estoque"
         message="Aguarde enquanto verificamos produtos, alertas, validade e niveis de reposicao."
         fullHeight={false}
@@ -218,25 +221,18 @@ export default function EstoquePage() {
   return (
     <div className="contents">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
-          <div className="mt-2 flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h1 className="text-2xl font-bold md:text-3xl">Estoque</h1>
-              <p className="mt-2 text-sm text-zinc-500">
-                Controle entradas, saídas, validade, lote e alertas do estoque.
-              </p>
-            </div>
-
-            {podeGerenciar ? (
-              <Link
-                href="/estoque/movimentar"
-                className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95"
-              >
-                + Nova movimentação
-              </Link>
-            ) : null}
-          </div>
-        </div>
+        <PainelPageHeader
+          eyebrow="Reposicao e validade"
+          title="Estoque"
+          description="Entradas, saidas, validade, lote e alertas em uma leitura rapida para evitar venda sem saldo."
+          actions={
+            podeGerenciar ? (
+              <PainelLinkButton href="/estoque/movimentar">
+                Nova movimentacao
+              </PainelLinkButton>
+            ) : null
+          }
+        />
 
         {erro ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -251,7 +247,7 @@ export default function EstoquePage() {
         ) : null}
 
         {alertas.length > 0 && (
-          <div className="rounded-3xl border border-amber-200 bg-amber-50 p-5">
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-5">
             <h2 className="text-lg font-bold text-amber-800">Alertas de estoque</h2>
             <div className="mt-3 space-y-2">
               {alertas.slice(0, 6).map((alerta) => (
@@ -266,7 +262,7 @@ export default function EstoquePage() {
           </div>
         )}
 
-        <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm">
+        <div className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             <input
               type="text"
@@ -289,7 +285,7 @@ export default function EstoquePage() {
           </div>
         </div>
 
-        <div className="overflow-hidden rounded-3xl border border-zinc-200 bg-white shadow-sm">
+        <div className="overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-sm">
           {listaFiltrada.length === 0 ? (
             <div className="p-6 text-sm text-zinc-600">Nenhum produto encontrado.</div>
           ) : (

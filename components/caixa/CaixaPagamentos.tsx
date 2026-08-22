@@ -297,7 +297,7 @@ export default function CaixaPagamentos({
             type="button"
             onClick={handleAdicionarPagamento}
             disabled={saving || !comandaSelecionada || valorBaseDigitado <= 0}
-            className="flex-1 rounded-2xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-slate-900 disabled:cursor-not-allowed disabled:bg-slate-300"
+            className="flex-1 rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-300"
           >
             {saving ? "Processando..." : "Lancar recebimento"}
           </button>

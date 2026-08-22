@@ -25,7 +25,10 @@ import { useAgendaData } from "@/components/agenda/useAgendaData";
 import { useAgendaMutations } from "@/components/agenda/useAgendaMutations";
 import { useAgendaPageState } from "@/components/agenda/useAgendaPageState";
 import { useAgendaFeedback } from "@/components/agenda/useAgendaFeedback";
-import AppLoading from "@/components/ui/AppLoading";
+import {
+  PainelAgendaSkeleton,
+  PainelPageHeader,
+} from "@/components/painel-ui";
 import {
   buscarComandasAbertasDoClienteAgenda,
   criarNovaComandaAgenda,
@@ -837,11 +840,13 @@ export default function AgendaPage() {
 
   if (!acessoCarregado) {
     return (
-      <AppLoading
-        title="Carregando agenda"
-        message="Aguarde enquanto organizamos horários, profissionais e atendimentos do periodo."
-        fullHeight={false}
-      />
+      <div className="space-y-3 p-3">
+        <PainelPageHeader
+          title="Carregando agenda"
+          description="Organizando horarios, profissionais e atendimentos do periodo."
+        />
+        <PainelAgendaSkeleton />
+      </div>
     );
   }
 

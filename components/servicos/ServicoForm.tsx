@@ -8,7 +8,10 @@ import { createClient } from "@/lib/supabase/client";
 import { parseMoneyToNumber } from "@/lib/utils/serviceMasks";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import PlanoLimiteNotice from "@/components/plans/PlanoLimiteNotice";
-import AppLoading from "@/components/ui/AppLoading";
+import {
+  PainelListLoading,
+  PainelPageHeader,
+} from "@/components/painel-ui";
 import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
 import {
   ServicoFormAgendaSection,
@@ -650,7 +653,12 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
   }
 
   if (loading) {
-    return <AppLoading title="Cadastro de serviço" fullHeight={false} />;
+    return (
+      <PainelListLoading
+        title="Carregando servico"
+        message="Aguarde enquanto preparamos atendimento, valores e comissao."
+      />
+    );
   }
 
   const limiteServicos = planoAccess?.limites?.servicos ?? null;
@@ -663,17 +671,11 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
-          <h1 className="mt-2 text-2xl font-bold md:text-3xl">
-            {modo === "novo" ? "Novo Serviço" : "Editar Serviço"}
-          </h1>
-          <p className="mt-2 text-sm text-zinc-500">
-            Cadastro do serviço com informações de atendimento, valores e regras de comissão.
-          </p>
-          <p className="mt-2 text-xs font-medium text-zinc-500">
-            Comece pelos dados básicos e abra as demais seções conforme precisar.
-          </p>
-        </div>
+        <PainelPageHeader
+          eyebrow="Catalogo operacional"
+          title={modo === "novo" ? "Novo servico" : "Editar servico"}
+          description="Atendimento, valores, agenda, consumo e regras de comissao em secoes compactas."
+        />
 
         {modo === "novo" && limiteServicos != null ? (
           <PlanoLimiteNotice

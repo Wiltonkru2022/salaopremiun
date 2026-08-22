@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import PanelFormPendingGuard from "@/components/layout/PanelFormPendingGuard";
 import { loadPainelShellData } from "@/lib/painel/load-painel-shell-data";
@@ -28,12 +29,13 @@ export default async function PainelLayout({
           <p className="mt-2 text-sm leading-6 text-zinc-600">
             Tente atualizar a página. Se o problema continuar, aguarde alguns instantes e tente novamente.
           </p>
-          <a
+          <Link
             href="/dashboard"
+            prefetch
             className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-5 text-sm font-bold text-white"
           >
             Tentar novamente
-          </a>
+          </Link>
         </div>
       </main>
     );

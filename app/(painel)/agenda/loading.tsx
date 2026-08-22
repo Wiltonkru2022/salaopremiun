@@ -1,11 +1,16 @@
-import AppLoading from "@/components/ui/AppLoading";
+import {
+  PainelAgendaSkeleton,
+  PainelPageHeader,
+} from "@/components/painel-ui";
 
 export default function Loading() {
   return (
-    <AppLoading
-      title="Abrindo agenda"
-      message="Carregando profissionais, grade e atendimentos para você entrar mais rápido."
-      fullHeight={false}
-    />
+    <div className="space-y-3">
+      <PainelPageHeader
+        title="Abrindo agenda"
+        description="Preparando profissionais, horarios e atendimentos."
+      />
+      <PainelAgendaSkeleton />
+    </div>
   );
 }

@@ -4,7 +4,11 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
-import AppLoading from "@/components/ui/AppLoading";
+import {
+  PainelLinkButton,
+  PainelListLoading,
+  PainelPageHeader,
+} from "@/components/painel-ui";
 import AppModal from "@/components/ui/AppModal";
 import PaginationControls from "@/components/ui/PaginationControls";
 import { createClient } from "@/lib/supabase/client";
@@ -285,7 +289,7 @@ export default function ComandasPage() {
 
   if (loading || !acessoCarregado) {
     return (
-      <AppLoading
+      <PainelListLoading
         title="Carregando comandas"
         message="Aguarde enquanto reunimos consumo, status, clientes e totais para conferencia."
         fullHeight={false}
@@ -306,40 +310,27 @@ export default function ComandasPage() {
   return (
     <div className="contents">
       <div className="mx-auto max-w-7xl space-y-5">
-        <section className="rounded-[28px] border border-zinc-200 bg-white p-5 text-zinc-950 shadow-sm">
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-            <div className="max-w-3xl">
-              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
-                Consumo e fechamento
-              </div>
-              <h1 className="mt-1 text-[1.9rem] font-bold tracking-[-0.04em] md:text-[2.1rem]">
-                Comandas
-              </h1>
-              <p className="mt-2 text-sm leading-6 text-zinc-600">
-                Consumo, status e total da venda em uma leitura mais direta para
-                recepção e caixa.
-              </p>
-            </div>
-
-            {podeGerenciar ? (
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Link
-                  href="/comandas/nova"
-                  className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95"
-                >
-                  + Nova comanda
-                </Link>
-                <Link
+        <PainelPageHeader
+          eyebrow="Consumo e fechamento"
+          title="Comandas"
+          description="Consumo, status, cliente e total da venda em uma leitura direta para recepcao e caixa."
+          actions={
+            podeGerenciar ? (
+              <>
+                <PainelLinkButton href="/comandas/nova">
+                  Nova comanda
+                </PainelLinkButton>
+                <PainelLinkButton
                   href="/caixa"
                   target={getWorkspaceWindowTarget("/caixa")}
-                  className="inline-flex items-center justify-center rounded-2xl border border-zinc-200 bg-white px-5 py-3 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
+                  variant="secondary"
                 >
                   Ir para o caixa
-                </Link>
-              </div>
-            ) : null}
-          </div>
-        </section>
+                </PainelLinkButton>
+              </>
+            ) : null
+          }
+        />
 
         <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
           <ResumoCard label="Comandas ativas" value={String(resumoComandas.ativas)} />

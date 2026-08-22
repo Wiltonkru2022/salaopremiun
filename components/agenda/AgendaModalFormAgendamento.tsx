@@ -41,7 +41,7 @@ function getStatusTone(statusLabel: string) {
     case "Cancelado":
       return "border-rose-200 bg-rose-50 text-rose-700";
     default:
-      return "border-violet-200 bg-violet-50 text-violet-700";
+      return "border-amber-200 bg-amber-50 text-amber-800";
   }
 }
 

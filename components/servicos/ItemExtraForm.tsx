@@ -6,7 +6,10 @@ import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { maskMoneyInput, parseMoneyToNumber } from "@/lib/utils/serviceMasks";
-import AppLoading from "@/components/ui/AppLoading";
+import {
+  PainelListLoading,
+  PainelPageHeader,
+} from "@/components/painel-ui";
 
 type ItemExtraFormProps = {
   modo: "novo" | "editar";
@@ -196,20 +199,22 @@ export default function ItemExtraForm({ modo }: ItemExtraFormProps) {
   }
 
   if (loading) {
-    return <AppLoading title="Cadastro de serviço extra" fullHeight={false} />;
+    return (
+      <PainelListLoading
+        title="Carregando extra"
+        message="Aguarde enquanto preparamos preco, custo e estoque."
+      />
+    );
   }
 
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-5xl space-y-6">
-        <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
-          <h1 className="mt-2 text-2xl font-bold md:text-3xl">
-            {modo === "novo" ? "Novo Serviço Extra" : "Editar Serviço Extra"}
-          </h1>
-          <p className="mt-2 text-sm text-zinc-500">
-            Cadastre extras cobrados à parte, como adicionais e complementos.
-          </p>
-        </div>
+        <PainelPageHeader
+          eyebrow="Catalogo operacional"
+          title={modo === "novo" ? "Novo servico extra" : "Editar servico extra"}
+          description="Extras cobrados a parte, com preco, custo e estoque quando aplicavel."
+        />
 
         {erro ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -347,7 +352,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm md:p-6">
+    <div className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm md:p-6">
       <div className="mb-5">
         <h2 className="text-lg font-bold text-zinc-900">{title}</h2>
         {subtitle ? <p className="mt-1 text-sm text-zinc-500">{subtitle}</p> : null}

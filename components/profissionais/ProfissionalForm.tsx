@@ -8,7 +8,10 @@ import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { getErrorMessage } from "@/lib/get-error-message";
 import PlanoLimiteNotice from "@/components/plans/PlanoLimiteNotice";
-import AppLoading from "@/components/ui/AppLoading";
+import {
+  PainelListLoading,
+  PainelPageHeader,
+} from "@/components/painel-ui";
 import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
 import type {
   ProfissionalProcessarBody,
@@ -695,20 +698,22 @@ async function _salvarAcessoProfissional(idProfissional: string) {
   const isAssistenteSalao = form.tipo_profissional === "assistente";
 
   if (loading) {
-    return <AppLoading title="Cadastro de profissional" fullHeight={false} />;
+    return (
+      <PainelListLoading
+        title="Carregando profissional"
+        message="Aguarde enquanto preparamos equipe, comissao e acesso ao app."
+      />
+    );
   }
 
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
-          <h1 className="mt-2 text-2xl font-bold md:text-3xl">
-            {modo === "novo" ? "Novo Profissional" : "Editar Profissional"}
-          </h1>
-          <p className="mt-2 text-sm text-zinc-500">
-            Cadastro simples com dados principais, disponibilidade de referência e acesso ao app profissional.
-          </p>
-        </div>
+        <PainelPageHeader
+          eyebrow="Equipe"
+          title={modo === "novo" ? "Novo profissional" : "Editar profissional"}
+          description="Dados principais, disponibilidade de referencia, comissao, assistentes e acesso ao app profissional."
+        />
 
         {modo === "novo" && limiteProfissionais != null ? (
           <PlanoLimiteNotice
@@ -1200,7 +1205,7 @@ async function _salvarAcessoProfissional(idProfissional: string) {
                   </p>
 
                   {recoveryTicketId ? (
-                    <div className="mt-4 rounded-2xl border border-violet-200 bg-violet-50 px-4 py-3 text-sm text-violet-800">
+                    <div className="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
                       Esta alteracao veio de um ticket de recuperação de senha. Ao salvar uma nova senha, o sistema resolve o ticket e avisa o profissional no app.
                     </div>
                   ) : null}
@@ -1268,7 +1273,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm md:p-6">
+    <div className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm md:p-6">
       <div className="mb-5">
         <h2 className="text-lg font-bold text-zinc-900">{title}</h2>
         {subtitle ? <p className="mt-1 text-sm text-zinc-500">{subtitle}</p> : null}

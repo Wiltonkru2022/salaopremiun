@@ -7,7 +7,12 @@ import ComandaItemModal, {
   type ComandaItemModalPayload,
 } from "@/components/comandas/ComandaItemModal";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
-import AppLoading from "@/components/ui/AppLoading";
+import {
+  PainelLinkButton,
+  PainelListLoading,
+  PainelPageHeader,
+  PainelStatusBadge,
+} from "@/components/painel-ui";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { monitorClientOperation } from "@/lib/monitoring/client";
 import type {
@@ -521,7 +526,12 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
   }
 
   if (loading) {
-    return <AppLoading title="Comanda" fullHeight={false} />;
+    return (
+      <PainelListLoading
+        title="Carregando comanda"
+        message="Aguarde enquanto preparamos cliente, itens, servicos e produtos."
+      />
+    );
   }
 
   return (
@@ -553,26 +563,12 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
 
       <div className="bg-white">
         <div className="mx-auto max-w-7xl space-y-6">
-          <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
-            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-              <div>
-                <p className="text-sm uppercase tracking-[0.25em] text-zinc-300">
-                  Comanda
-                </p>
-                <h1 className="mt-2 text-2xl font-bold md:text-3xl">
-                  {modo === "novo" ? "Nova Comanda" : `Comanda #${numero}`}
-                </h1>
-                <p className="mt-2 text-sm text-zinc-500">
-                  Controle atendimento, consumo, serviços, produtos e
-                  fechamento.
-                </p>
-              </div>
-
-              <div className="rounded-2xl bg-white/10 px-4 py-3 text-sm">
-                Status: <strong>{status}</strong>
-              </div>
-            </div>
-          </div>
+          <PainelPageHeader
+            eyebrow="Comanda"
+            title={modo === "novo" ? "Nova comanda" : `Comanda #${numero}`}
+            description="Controle atendimento, consumo, servicos, produtos e fechamento sem perder o contexto do caixa."
+            actions={<PainelStatusBadge tone="info">Status: {status}</PainelStatusBadge>}
+          />
 
           {erro ? (
             <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -596,7 +592,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
 
           <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1.4fr_0.6fr]">
             <div className="space-y-6">
-              <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+              <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                   <div>
                     <label className="mb-1 block text-sm font-semibold text-zinc-700">
@@ -656,7 +652,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+              <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
                 <div className="mb-4 flex items-center justify-between">
                   <h2 className="text-xl font-bold text-zinc-900">
                     Itens da comanda
@@ -723,7 +719,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
             </div>
 
             <div className="space-y-6">
-              <div className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm">
+              <div className="rounded-lg border border-zinc-200 bg-white p-6 shadow-sm">
                 <h2 className="text-xl font-bold text-zinc-900">Resumo</h2>
 
                 <div className="mt-5 space-y-4">
@@ -781,13 +777,13 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
                     Enviar para pagamento
                   </button>
 
-                  <button
-                    type="button"
-                    onClick={() => router.push("/comandas")}
-                    className="w-full rounded-2xl border border-zinc-300 bg-white px-5 py-3 font-semibold text-zinc-700"
+                  <PainelLinkButton
+                    href="/comandas"
+                    variant="secondary"
+                    className="w-full"
                   >
                     Voltar
-                  </button>
+                  </PainelLinkButton>
                 </div>
               </div>
             </div>

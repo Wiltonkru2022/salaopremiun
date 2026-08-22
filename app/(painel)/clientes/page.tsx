@@ -6,7 +6,11 @@ import { useRouter } from "next/navigation";
 import { CalendarClock, HeartHandshake, Mail, Users } from "lucide-react";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapshot";
-import AppLoading from "@/components/ui/AppLoading";
+import {
+  PainelLinkButton,
+  PainelListLoading,
+  PainelPageHeader,
+} from "@/components/painel-ui";
 import AppModal from "@/components/ui/AppModal";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import PaginationControls from "@/components/ui/PaginationControls";
@@ -382,7 +386,7 @@ export default function ClientesPage() {
 
   if (loading || !acessoCarregado) {
     return (
-      <AppLoading
+      <PainelListLoading
         title="Carregando clientes"
         message="Aguarde enquanto montamos cadastro, relacionamento e histórico das clientes."
         fullHeight={false}
@@ -421,31 +425,18 @@ export default function ClientesPage() {
 
     <div className="contents">
         <div className="mx-auto max-w-7xl space-y-4">
-          <section className="rounded-[24px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="max-w-3xl">
-                <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
-                  Relacao com cliente
-                </div>
-                <h1 className="mt-1 text-[1.8rem] font-bold tracking-[-0.04em] md:text-[1.95rem]">
-                  Clientes
-                </h1>
-                <p className="mt-1.5 max-w-2xl text-sm leading-6 text-zinc-600">
-                  Contato, crédito e histórico em uma leitura mais direta para a
-                  recepção.
-                </p>
-              </div>
-
-              {podeGerenciar ? (
-                <Link
-                  href="/clientes/novo"
-                  className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
-                >
+          <PainelPageHeader
+            eyebrow="Relacao com cliente"
+            title="Clientes"
+            description="Contato, credito, app cliente e historico em uma leitura direta para a recepcao."
+            actions={
+              podeGerenciar ? (
+                <PainelLinkButton href="/clientes/novo">
                   Novo cliente
-                </Link>
-              ) : null}
-            </div>
-          </section>
+                </PainelLinkButton>
+              ) : null
+            }
+          />
 
           <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
             <ResumoCard

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Check, Crown, Sparkles } from "lucide-react";
+import { Check, Crown } from "lucide-react";
 import {
   getPlanoSaasCatalogo,
   getPlanosSaasCobraveisOrdenados,
@@ -7,6 +7,11 @@ import {
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getAssinaturaUrl } from "@/lib/site-urls";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import {
+  PainelLinkButton,
+  PainelPageHeader,
+  PainelStatusBadge,
+} from "@/components/painel-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -100,44 +105,26 @@ export default async function CompararPlanosPage({
 
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-[30px] border border-zinc-200 bg-white shadow-sm">
-        <div className="grid gap-0 2xl:grid-cols-[1.2fr_0.8fr]">
-          <div className="bg-zinc-950 p-6 text-white sm:p-8">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.20em] text-[var(--app-accent)]">
-              <Sparkles size={14} />
-              Planos Salão Premium
-            </div>
-            <h1 className="mt-4 max-w-3xl font-display text-[2.45rem] font-black leading-tight tracking-[-0.05em]">
-              Escolha o plano certo sem poluição.
-            </h1>
-            <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300">
-              Agora a comparação mostra somente o que importa: preço, capacidade
-              da equipe e recursos principais para operar melhor.
-            </p>
-          </div>
+      <PainelPageHeader
+        eyebrow="Planos"
+        title="Escolha o plano certo sem poluicao"
+        description="Compare preco, capacidade da equipe e recursos principais para operar melhor."
+        actions={
+          <>
+            <PainelStatusBadge tone="info">
+              Plano atual: {planoAtualInfo.nome}
+            </PainelStatusBadge>
+            <PainelLinkButton href="/meu-plano" variant="secondary">
+              Voltar para Meu Plano
+            </PainelLinkButton>
+          </>
+        }
+      />
 
-          <div className="bg-gradient-to-br from-amber-50 via-white to-zinc-50 p-6 sm:p-8">
-            <div className="rounded-[24px] border border-white/80 bg-white/90 p-5 shadow-sm">
-              <div className="text-xs font-black uppercase tracking-[0.20em] text-zinc-400">
-                Plano atual
-              </div>
-              <div className="mt-2 text-2xl font-black text-zinc-950">
-                {planoAtualInfo.nome}
-              </div>
-              <p className="mt-2 text-sm leading-6 text-zinc-500">
-                {jaPossuiAssinatura
-                  ? "Escolha outro plano para abrir a tela de assinatura já pronta para upgrade ou downgrade."
-                  : "Escolha um plano para ativar a assinatura do seu salão."}
-              </p>
-              <Link
-                href="/meu-plano"
-                className="mt-4 inline-flex min-h-11 items-center rounded-2xl bg-zinc-950 px-4 text-sm font-black text-white"
-              >
-                Voltar para Meu Plano
-              </Link>
-            </div>
-          </div>
-        </div>
+      <section className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 text-sm leading-6 text-zinc-600 shadow-sm">
+        {jaPossuiAssinatura
+          ? "Escolha outro plano para abrir a tela de assinatura ja pronta para upgrade ou downgrade."
+          : "Escolha um plano para ativar a assinatura do seu salao."}
       </section>
 
       {erro ? (
@@ -161,9 +148,9 @@ export default async function CompararPlanosPage({
           return (
             <article
               key={plano.codigo}
-              className={`relative overflow-hidden rounded-[30px] border p-5 shadow-sm ${
+              className={`relative overflow-hidden rounded-lg border p-5 shadow-sm ${
                 destaque
-                  ? "border-zinc-950 bg-zinc-950 text-white"
+                  ? "border-amber-300 bg-amber-50 text-zinc-950"
                   : "border-zinc-200 bg-white text-zinc-950"
               }`}
             >
@@ -177,7 +164,7 @@ export default async function CompararPlanosPage({
               <div className="max-w-[78%]">
                 <div
                   className={`text-xs font-black uppercase tracking-[0.2em] ${
-                    destaque ? "text-[var(--app-accent)]" : "text-zinc-400"
+                    destaque ? "text-amber-700" : "text-zinc-400"
                   }`}
                 >
                   {plano.foco}
@@ -187,7 +174,7 @@ export default async function CompararPlanosPage({
                   <span
                     className={`mt-2 inline-flex rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] ${
                       destaque
-                        ? "bg-white/10 text-white"
+                        ? "bg-white text-amber-900"
                         : "bg-zinc-100 text-zinc-700"
                     }`}
                   >
@@ -198,19 +185,19 @@ export default async function CompararPlanosPage({
 
               <p
                 className={`mt-4 min-h-[48px] text-sm leading-6 ${
-                  destaque ? "text-zinc-300" : "text-zinc-500"
+                  destaque ? "text-amber-900" : "text-zinc-500"
                 }`}
               >
                 {plano.subtitulo}
               </p>
 
               <div className="mt-5">
-                <span className="text-[2.6rem] font-black tracking-[-0.06em]">
+                <span className="text-[2.6rem] font-black">
                   {formatCurrency(plano.valorMensal)}
                 </span>
                 <span
                   className={`ml-2 text-sm font-bold ${
-                    destaque ? "text-zinc-300" : "text-zinc-500"
+                    destaque ? "text-amber-900" : "text-zinc-500"
                   }`}
                 >
                   / mês
@@ -220,7 +207,7 @@ export default async function CompararPlanosPage({
               <div
                 className={`mt-5 grid grid-cols-2 gap-2 rounded-[24px] border p-3 ${
                   destaque
-                    ? "border-white/10 bg-white/5"
+                    ? "border-amber-200 bg-white"
                     : "border-zinc-200 bg-zinc-50"
                 }`}
               >
@@ -236,7 +223,7 @@ export default async function CompararPlanosPage({
                     key={item}
                     className={`inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3 text-xs font-black ${
                       destaque
-                        ? "border-white/10 bg-white/10 text-white"
+                        ? "border-amber-200 bg-white text-amber-950"
                         : "border-zinc-200 bg-zinc-50 text-zinc-800"
                     }`}
                   >
@@ -251,10 +238,10 @@ export default async function CompararPlanosPage({
                 className={`mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-2xl px-4 text-sm font-black transition hover:-translate-y-0.5 ${
                   action.variant === "current"
                     ? destaque
-                      ? "border border-white/15 bg-white/10 text-white"
+                      ? "border border-amber-300 bg-white text-amber-900"
                       : "border border-zinc-200 bg-zinc-100 text-zinc-700"
                     : destaque
-                      ? "bg-[var(--app-accent)] text-zinc-950"
+                      ? "bg-zinc-950 text-white"
                       : "bg-zinc-950 text-white"
                 }`}
               >
@@ -281,7 +268,7 @@ function PlanMetric({
     <div
       className={`rounded-[18px] px-3 py-3 shadow-sm ring-1 ${
         dark
-          ? "bg-white/10 text-white ring-white/10"
+          ? "bg-white text-zinc-950 ring-amber-200"
           : "bg-white text-zinc-950 ring-black/[0.03]"
       }`}
     >

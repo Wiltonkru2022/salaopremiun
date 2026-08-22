@@ -4,11 +4,11 @@ import {
   MessageSquareMore,
   RadioTower,
   ShieldCheck,
-  Sparkles,
   TimerReset,
 } from "lucide-react";
 import { getPlanoAccessSnapshot } from "@/lib/plans/access";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
+import { PainelPageHeader, PainelStatusBadge } from "@/components/painel-ui";
 
 const itens = [
   {
@@ -50,38 +50,34 @@ export default async function MarketingPage() {
 
   return (
     <div className="space-y-5">
-      <section className="relative overflow-hidden rounded-[28px] border border-zinc-200 bg-[linear-gradient(135deg,_#111827_0%,_#18181b_55%,_#0f172a_100%)] px-5 py-6 text-white shadow-sm sm:px-6 sm:py-7">
-
-        <div className="relative max-w-4xl">
-          <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.24em] text-white/75">
-            <Sparkles size={14} />
-            Nova funcionalidade em produção
-          </div>
-
-          <h1 className="mt-4 max-w-3xl font-display text-3xl font-bold tracking-[-0.05em] sm:text-[2.8rem]">
-            Central de marketing em fase final de liberação
-          </h1>
-
-          <p className="mt-3 max-w-2xl text-sm leading-6 text-white/75 sm:text-[15px]">
-            Este módulo está sendo preparado para entrar com disparo profissional,
-            histórico validado e operação segura. A liberação será feita assim que
-            a camada final de produção for concluída.
-          </p>
-
-          <div className="mt-5 flex flex-wrap gap-2.5">
-            <Badge icon={<BellRing size={14} />} label="Em implantação técnica" />
-            <Badge icon={<TimerReset size={14} />} label="Aguarde a liberação" />
-            <Badge icon={<ShieldCheck size={14} />} label="Go-live controlado" />
-          </div>
-        </div>
-      </section>
+      <PainelPageHeader
+        eyebrow="Marketing"
+        title="Central de marketing em fase final de liberacao"
+        description="Modulo preparado para disparo profissional, historico validado e operacao segura. A liberacao sera feita assim que a camada final de producao for concluida."
+        actions={
+          <>
+            <PainelStatusBadge tone="warning" className="gap-1.5">
+              <BellRing size={14} />
+              Em implantacao
+            </PainelStatusBadge>
+            <PainelStatusBadge tone="default" className="gap-1.5">
+              <TimerReset size={14} />
+              Aguardando liberacao
+            </PainelStatusBadge>
+            <PainelStatusBadge tone="success" className="gap-1.5">
+              <ShieldCheck size={14} />
+              Go-live controlado
+            </PainelStatusBadge>
+          </>
+        }
+      />
 
       <section className="grid gap-4 2xl:grid-cols-[1.08fr_0.92fr]">
-        <div className="rounded-[26px] border border-zinc-200 bg-white p-5 shadow-sm">
+        <div className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm">
           <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
             Status do módulo
           </div>
-          <h2 className="mt-2 font-display text-[1.7rem] font-bold tracking-[-0.04em] text-zinc-950">
+          <h2 className="mt-2 text-2xl font-black text-zinc-950">
             Marketing temporariamente reservado para a virada oficial
           </h2>
           <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
@@ -95,7 +91,7 @@ export default async function MarketingPage() {
             {itens.map((item) => (
               <article
                 key={item.title}
-                className="rounded-[20px] border border-zinc-200 bg-zinc-50 p-3.5"
+                className="rounded-lg border border-zinc-200 bg-zinc-50 p-3.5"
               >
                 <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[rgba(199,162,92,0.16)] text-[var(--app-accent-strong)]">
                   {item.icon}
@@ -111,24 +107,24 @@ export default async function MarketingPage() {
           </div>
         </div>
 
-        <aside className="rounded-[26px] border border-zinc-200 bg-zinc-950 p-5 text-white shadow-sm">
-          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-white/45">
+        <aside className="rounded-lg border border-amber-200 bg-amber-50 p-5 text-amber-950 shadow-sm">
+          <div className="text-xs font-semibold uppercase tracking-[0.22em] text-amber-700">
             Aviso operacional
           </div>
-          <h2 className="mt-2 font-display text-[1.7rem] font-bold tracking-[-0.04em]">
+          <h2 className="mt-2 text-2xl font-black text-zinc-950">
             Nova funcionalidade em produção. Aguarde.
           </h2>
-          <p className="mt-3 text-sm leading-6 text-white/70">
+          <p className="mt-3 text-sm leading-6 text-amber-900">
             Esta tela está reservada para a liberação do novo módulo de marketing.
             Assim que a ativação for concluída, os recursos serão exibidos aqui
             automaticamente.
           </p>
 
-          <div className="mt-5 rounded-[20px] border border-white/10 bg-white/5 p-3.5">
-            <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-white/45">
+          <div className="mt-5 rounded-lg border border-amber-200 bg-white p-3.5">
+            <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-amber-700">
               Mensagem do sistema
             </div>
-            <div className="mt-2.5 text-base font-semibold leading-7 text-white">
+            <div className="mt-2.5 text-base font-semibold leading-7 text-zinc-900">
               "Estamos preparando a liberação final desta funcionalidade para
               garantir estabilidade, rastreabilidade e uma entrada premium no
               painel."
@@ -136,21 +132,6 @@ export default async function MarketingPage() {
           </div>
         </aside>
       </section>
-    </div>
-  );
-}
-
-function Badge({
-  icon,
-  label,
-}: {
-  icon: React.ReactNode;
-  label: string;
-}) {
-  return (
-    <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-semibold text-white/80">
-      {icon}
-      {label}
     </div>
   );
 }

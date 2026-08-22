@@ -1,12 +1,16 @@
-import AppLoading from "@/components/ui/AppLoading";
+import {
+  PainelDashboardSkeleton,
+  PainelPageHeader,
+} from "@/components/painel-ui";
 
 export default function PainelLoading() {
   return (
-    <AppLoading
-      title="Carregando painel"
-      message="Aguarde enquanto preparamos sua área de trabalho com os dados mais recentes."
-      theme="painel"
-      fullHeight={false}
-    />
+    <div className="space-y-3">
+      <PainelPageHeader
+        title="Carregando painel"
+        description="Preparando sua area de trabalho com os dados mais recentes."
+      />
+      <PainelDashboardSkeleton />
+    </div>
   );
 }

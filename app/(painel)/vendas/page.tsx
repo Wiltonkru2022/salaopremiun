@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
-import AppLoading from "@/components/ui/AppLoading";
+import { PainelListLoading, PainelPageHeader } from "@/components/painel-ui";
 import PaginationControls from "@/components/ui/PaginationControls";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import { createClient } from "@/lib/supabase/client";
@@ -923,7 +923,7 @@ export default function VendasPage() {
 
   if (loading || !acessoCarregado) {
     return (
-      <AppLoading
+      <PainelListLoading
         title="Carregando vendas"
         message="Aguarde enquanto reunimos histórico, filtros, detalhes e totais das comandas fechadas."
         fullHeight={false}
@@ -945,23 +945,21 @@ export default function VendasPage() {
     <>
       <div className="bg-zinc-50">
         <div className="mx-auto max-w-[1700px] space-y-4">
-          <div className="rounded-[24px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <h1 className="mt-1 text-[1.8rem] font-bold">Vendas</h1>
-                <p className="mt-2 text-sm text-zinc-500">
-                  Histórico de comandas fechadas, busca avançada, reabertura para o caixa, exclusão e impressão de cupom.
-                </p>
-              </div>
-
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-3.5 py-2.5 text-right">
-                <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+          <PainelPageHeader
+            eyebrow="Historico financeiro"
+            title="Vendas"
+            description="Comandas fechadas, busca avancada, reabertura para o caixa, exclusao e impressao de cupom."
+            actions={
+              <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-right">
+                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
                   Resultados
                 </div>
-                <div className="mt-1 text-xl font-bold">{vendasFiltradas.length}</div>
+                <div className="mt-1 text-xl font-black text-zinc-950">
+                  {vendasFiltradas.length}
+                </div>
               </div>
-            </div>
-          </div>
+            }
+          />
 
           <div className="grid grid-cols-1 gap-3 xl:grid-cols-4">
             <KpiCard
@@ -1362,10 +1360,10 @@ export default function VendasPage() {
                     </div>
 
                     {comboSummaryDetalhe.length > 0 ? (
-                      <div className="rounded-[20px] border border-violet-100 bg-gradient-to-br from-violet-50 via-white to-white p-4">
+                      <div className="rounded-[20px] border border-amber-100 bg-amber-50 p-4">
                         <div className="mb-3.5 flex items-start justify-between gap-4">
                           <div>
-                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-violet-500">
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-600">
                               Totais por combo
                             </div>
                             <div className="mt-2 text-lg font-bold text-zinc-950">
@@ -1375,7 +1373,7 @@ export default function VendasPage() {
                               O total abaixo soma os serviços filhos que vieram de cada combo.
                             </p>
                           </div>
-                          <div className="rounded-2xl border border-violet-200 bg-white px-3.5 py-2.5 text-right shadow-sm">
+                          <div className="rounded-2xl border border-amber-200 bg-white px-3.5 py-2.5 text-right shadow-sm">
                             <div className="text-xs uppercase tracking-[0.16em] text-zinc-500">
                               Combos
                             </div>
@@ -1389,10 +1387,10 @@ export default function VendasPage() {
                           {comboSummaryDetalhe.map((combo) => (
                             <div
                               key={combo.comboName}
-                              className="rounded-[20px] border border-violet-200 bg-white p-3.5 shadow-sm"
+                              className="rounded-[20px] border border-amber-200 bg-white p-3.5 shadow-sm"
                             >
                               <div className="flex items-center justify-between gap-3">
-                                <span className="rounded-full border border-violet-200 bg-violet-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-violet-700">
+                                <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-800">
                                   Combo
                                 </span>
                                 <span className="text-sm font-semibold text-zinc-900">
@@ -1672,7 +1670,7 @@ function ComboItemLabel({ descricao }: { descricao: string }) {
       <div className="font-semibold text-zinc-900">{comboMeta.displayTitle}</div>
       {comboMeta.isComboItem ? (
         <div className="mt-1 flex flex-wrap items-center gap-2">
-          <span className="rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-violet-700">
+          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-800">
             Combo
           </span>
           <span className="text-xs text-zinc-500">{comboMeta.comboName}</span>

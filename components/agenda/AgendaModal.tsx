@@ -287,7 +287,7 @@ export default function AgendaModal(props: Props) {
                     onClick={() => setDraftStatus(option.value)}
                     className={
                       draftStatus === option.value
-                        ? "flex min-h-12 w-full items-center rounded-2xl border border-violet-300 bg-violet-50 px-4 py-3 text-left text-sm font-semibold text-violet-700 shadow-[0_10px_24px_rgba(124,58,237,0.12)] transition duration-200"
+                        ? "flex min-h-12 w-full items-center rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-left text-sm font-semibold text-amber-800 shadow-[0_10px_24px_rgba(142,106,47,0.12)] transition duration-200"
                         : "flex min-h-12 w-full items-center rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-left text-sm font-medium text-zinc-700 transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
                     }
                   >

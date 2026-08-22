@@ -128,7 +128,7 @@ export default function AgendaToolbar({
                       onSelectDate(new Date(`${event.target.value}T12:00:00`));
                       setCalendarOpen(false);
                     }}
-                    className="mt-3 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-800 outline-none focus:border-violet-300 focus:ring-4 focus:ring-violet-100"
+                    className="mt-3 h-12 w-full rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-medium text-zinc-800 outline-none focus:border-amber-300 focus:ring-4 focus:ring-amber-100"
                   />
                 </div>
               ) : null}
@@ -156,7 +156,7 @@ export default function AgendaToolbar({
               onClick={() => onChangeView("day")}
               className={`rounded-[9px] px-3 py-1.5 text-xs font-semibold ${
                 viewMode === "day"
-                  ? "bg-violet-600 text-white shadow-[0_10px_25px_rgba(124,58,237,0.25)]"
+                  ? "bg-zinc-950 text-white shadow-[0_10px_24px_rgba(15,23,42,0.16)]"
                   : "text-zinc-700"
               }`}
             >
@@ -167,7 +167,7 @@ export default function AgendaToolbar({
               onClick={() => onChangeView("week")}
               className={`rounded-[9px] px-3 py-1.5 text-xs font-semibold ${
                 viewMode === "week"
-                  ? "bg-violet-600 text-white shadow-[0_10px_25px_rgba(124,58,237,0.25)]"
+                  ? "bg-zinc-950 text-white shadow-[0_10px_24px_rgba(15,23,42,0.16)]"
                   : "text-zinc-700"
               }`}
             >

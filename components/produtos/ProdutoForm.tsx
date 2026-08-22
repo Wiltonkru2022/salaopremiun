@@ -10,7 +10,10 @@ import type {
   ProdutoProcessarErrorResponse,
   ProdutoProcessarResponse,
 } from "@/types/produtos";
-import AppLoading from "@/components/ui/AppLoading";
+import {
+  PainelListLoading,
+  PainelPageHeader,
+} from "@/components/painel-ui";
 
 import {
   calculateCostPerDose,
@@ -293,20 +296,22 @@ async function bootstrap() {
   }
 
   if (loading) {
-    return <AppLoading title="Cadastro de produto" fullHeight={false} />;
+    return (
+      <PainelListLoading
+        title="Carregando produto"
+        message="Aguarde enquanto preparamos valores, estoque e dados de compra."
+      />
+    );
   }
 
   return (
     <div className="bg-white">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="rounded-3xl border border-zinc-200 bg-white p-6 text-zinc-950 shadow-sm">
-          <h1 className="mt-2 text-2xl font-bold md:text-3xl">
-            {modo === "novo" ? "Novo Produto" : "Editar Produto"}
-          </h1>
-          <p className="mt-2 text-sm text-zinc-500">
-            Cadastro simples com identificacao, valores, estoque e dados de compra.
-          </p>
-        </div>
+        <PainelPageHeader
+          eyebrow="Catalogo"
+          title={modo === "novo" ? "Novo produto" : "Editar produto"}
+          description="Identificacao, valores, margem, estoque e dados de compra em um formulario direto."
+        />
 
         {erro ? (
           <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -559,7 +564,7 @@ function Card({
   children: React.ReactNode;
 }) {
   return (
-    <div className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm md:p-6">
+    <div className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm md:p-6">
       <div className="mb-5">
         <h2 className="text-lg font-bold text-zinc-900">{title}</h2>
         {subtitle ? <p className="mt-1 text-sm text-zinc-500">{subtitle}</p> : null}

@@ -13,6 +13,11 @@ import {
 } from "@/lib/plans/catalog-server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getAssinaturaUrl } from "@/lib/site-urls";
+import {
+  PainelLinkButton,
+  PainelPageHeader,
+  PainelStatusBadge,
+} from "@/components/painel-ui";
 
 export const dynamic = "force-dynamic";
 
@@ -165,7 +170,7 @@ export default async function MeuPlanoPage({
       title: "Clientes",
       used: access.uso.clientes,
       limit: access.limites.clientes,
-      color: "bg-violet-600",
+      color: "bg-zinc-950",
     },
     {
       title: "Serviços",
@@ -189,100 +194,85 @@ export default async function MeuPlanoPage({
 
   return (
     <div className="space-y-4">
-      <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
-        <div className="grid gap-0 2xl:grid-cols-[1.15fr_0.85fr]">
-          <div className="bg-zinc-950 p-6 text-white sm:p-7">
-            <div className="text-xs font-black uppercase tracking-[0.28em] text-emerald-200">
-              Meu plano
-            </div>
-            <h1 className="mt-2 text-[2.2rem] font-black tracking-[-0.04em]">
-              {planoCatalogo.nome}
-            </h1>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
-              {planoCatalogo.descricao}
-            </p>
-
-            <div className="mt-5 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-                <div className="text-[11px] font-black uppercase tracking-[0.20em] text-zinc-400">
-                  Foco do plano
-                </div>
-                <div className="mt-2 text-lg font-black text-white">
-                  {planoCatalogo.foco}
-                </div>
-                <p className="mt-2 text-sm leading-6 text-zinc-300">
-                  Ideal para {planoCatalogo.idealPara}
-                </p>
-              </div>
-
-              <div className="rounded-[22px] border border-white/10 bg-white/5 p-4">
-                <div className="text-[11px] font-black uppercase tracking-[0.20em] text-zinc-400">
-                  Leitura rápida
-                </div>
-                <div className="mt-2 text-lg font-black text-white">
-                  {recursosResumo.liberados} recursos liberados
-                </div>
-                <p className="mt-2 text-sm leading-6 text-zinc-300">
-                  {recursosResumo.bloqueados} recurso(s) ainda ficam travados no
-                  plano atual.
-                </p>
-              </div>
-            </div>
-
-            <div className="mt-5 flex flex-wrap gap-2">
-              <Link
-                href="/comparar-planos"
-                className="rounded-full bg-white px-5 py-2.5 text-sm font-black text-zinc-950 transition hover:-translate-y-0.5"
+      <PainelPageHeader
+        eyebrow="Meu plano"
+        title={planoCatalogo.nome}
+        description={planoCatalogo.descricao}
+        actions={
+          <>
+            <PainelStatusBadge tone={possuiAssinatura ? "success" : "warning"}>
+              {statusLabel(access.assinaturaStatus)}
+            </PainelStatusBadge>
+            <PainelLinkButton href="/comparar-planos" variant="secondary">
+              Ver pacotes
+            </PainelLinkButton>
+            <PainelLinkButton href={assinaturaHref}>
+              {acaoPrincipalLabel}
+            </PainelLinkButton>
+            {upgradePlano ? (
+              <PainelLinkButton
+                href={getAssinaturaUrl(`/assinatura?plano=${upgradePlano.codigo}`)}
+                variant="secondary"
               >
-                Ver pacotes de assinatura
-              </Link>
-              <Link
-                href={assinaturaHref}
-                className="rounded-full border border-white/15 bg-white/10 px-5 py-2.5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-white/15"
+                Upgrade para {upgradePlano.nome}
+              </PainelLinkButton>
+            ) : null}
+            {downgradePlano ? (
+              <PainelLinkButton
+                href={getAssinaturaUrl(`/assinatura?plano=${downgradePlano.codigo}`)}
+                variant="secondary"
               >
-                {acaoPrincipalLabel}
-              </Link>
-              {upgradePlano ? (
-                <Link
-                  href={getAssinaturaUrl(`/assinatura?plano=${upgradePlano.codigo}`)}
-                  className="rounded-full border border-white/15 bg-white/10 px-5 py-2.5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-white/15"
-                >
-                  Upgrade para {upgradePlano.nome}
-                </Link>
-              ) : null}
-              {downgradePlano ? (
-                <Link
-                  href={getAssinaturaUrl(`/assinatura?plano=${downgradePlano.codigo}`)}
-                  className="rounded-full border border-white/15 bg-white/10 px-5 py-2.5 text-sm font-black text-white transition hover:-translate-y-0.5 hover:bg-white/15"
-                >
-                  Downgrade para {downgradePlano.nome}
-                </Link>
-              ) : null}
-            </div>
+                Downgrade para {downgradePlano.nome}
+              </PainelLinkButton>
+            ) : null}
+          </>
+        }
+      />
+
+      <section className="grid gap-3 lg:grid-cols-3">
+        <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="text-xs font-black uppercase text-zinc-400">
+            Foco do plano
           </div>
+          <div className="mt-2 text-lg font-black text-zinc-950">
+            {planoCatalogo.foco}
+          </div>
+          <p className="mt-2 text-sm leading-6 text-zinc-500">
+            Ideal para {planoCatalogo.idealPara}
+          </p>
+        </div>
 
-          <div className="bg-gradient-to-br from-emerald-50 via-white to-amber-50 p-6 sm:p-7">
-            <div className="rounded-[24px] border border-white/80 bg-white/90 p-5 shadow-sm">
-              <div className="text-xs font-black uppercase tracking-[0.20em] text-zinc-400">
-                Status comercial
-              </div>
-              <div className="mt-2 text-2xl font-black capitalize text-zinc-950">
-                {statusLabel(access.assinaturaStatus)}
-              </div>
-              <div className="mt-3 space-y-2 text-sm leading-6 text-zinc-600">
-                <p>
-                  Status do salão:{" "}
-                  <span className="font-bold capitalize text-zinc-900">
-                    {statusLabel(access.salaoStatus)}
-                  </span>
-                </p>
-                <p>
-                  {possuiAssinatura
-                    ? "Você já possui uma assinatura. Quando quiser trocar de pacote, entre em assinatura ou use os atalhos de upgrade e downgrade acima."
-                    : "Seu salão ainda está na fase inicial. Compare os pacotes e escolha o primeiro plano pago quando quiser seguir."}
-                </p>
-              </div>
-            </div>
+        <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="text-xs font-black uppercase text-zinc-400">
+            Leitura rapida
+          </div>
+          <div className="mt-2 text-lg font-black text-zinc-950">
+            {recursosResumo.liberados} recursos liberados
+          </div>
+          <p className="mt-2 text-sm leading-6 text-zinc-500">
+            {recursosResumo.bloqueados} recurso(s) ainda ficam travados no plano atual.
+          </p>
+        </div>
+
+        <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4 shadow-sm">
+          <div className="text-xs font-black uppercase text-zinc-400">
+            Status comercial
+          </div>
+          <div className="mt-2 text-lg font-black capitalize text-zinc-950">
+            {statusLabel(access.assinaturaStatus)}
+          </div>
+          <div className="mt-2 space-y-2 text-sm leading-6 text-zinc-600">
+            <p>
+              Status do salao:{" "}
+              <span className="font-bold capitalize text-zinc-900">
+                {statusLabel(access.salaoStatus)}
+              </span>
+            </p>
+            <p>
+              {possuiAssinatura
+                ? "Voce ja possui uma assinatura. Para trocar de pacote, use os atalhos de upgrade, downgrade ou assinatura."
+                : "Seu salao ainda esta na fase inicial. Compare os pacotes e escolha o primeiro plano pago quando quiser seguir."}
+            </p>
           </div>
         </div>
       </section>

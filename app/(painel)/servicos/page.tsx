@@ -6,7 +6,11 @@ import { useRouter } from "next/navigation";
 import { AlertTriangle, CircleHelp, Clock3, Percent, Wallet } from "lucide-react";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
-import AppLoading from "@/components/ui/AppLoading";
+import {
+  PainelLinkButton,
+  PainelListLoading,
+  PainelPageHeader,
+} from "@/components/painel-ui";
 import AppModal from "@/components/ui/AppModal";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import PaginationControls from "@/components/ui/PaginationControls";
@@ -368,7 +372,7 @@ export default function ServicosPage() {
 
   if (loading || !acessoCarregado) {
     return (
-      <AppLoading
+      <PainelListLoading
         title="Carregando serviços"
         message="Aguarde enquanto organizamos duração, comissão, preço e regras do catálogo."
         fullHeight={false}
@@ -389,58 +393,37 @@ export default function ServicosPage() {
   return (
     <div className="contents">
       <div className="mx-auto max-w-7xl space-y-4">
-        <section className="rounded-[24px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
-                <span>Catálogo operacional</span>
-                <button
-                  type="button"
-                  onClick={() => setAjudaOpen(true)}
-                  className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-zinc-300 bg-white text-zinc-500 transition hover:border-zinc-400 hover:text-zinc-700"
-                  aria-label="Abrir ajuda da página de serviços"
-                  title="Ajuda"
-                >
-                  <CircleHelp className="h-3.5 w-3.5" />
-                </button>
-              </div>
-              <h1 className="mt-2 text-2xl font-bold md:text-3xl">Serviços</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
-                Aqui ficam as regras que alimentam agenda, comandas, caixa,
-                vendas e comissões: preço, duração, custo, comissão por
-                profissional e agora também combos com vários serviços e um
-                preço final único.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <Link
-                href="/servicos/combos/novo"
-                className="inline-flex items-center justify-center rounded-xl border border-violet-200 bg-violet-50 px-4 py-2.5 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
+        <PainelPageHeader
+          eyebrow="Catalogo operacional"
+          title="Servicos"
+          description="Regras que alimentam agenda, comandas, caixa, vendas e comissoes: preco, duracao, custo, comissao, combos e exibicao no app."
+          actions={
+            <>
+              <button
+                type="button"
+                onClick={() => setAjudaOpen(true)}
+                className="inline-flex h-10 w-10 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-700 shadow-sm transition hover:border-zinc-300 hover:bg-zinc-50"
+                aria-label="Abrir ajuda da pagina de servicos"
+                title="Ajuda"
               >
+                <CircleHelp className="h-4 w-4" />
+              </button>
+              <PainelLinkButton href="/servicos/combos/novo" variant="secondary">
                 Criar combo
-              </Link>
-
+              </PainelLinkButton>
               {servicosExtrasLiberado ? (
-                <Link
-                  href="/servicos-extras"
-                  className="inline-flex items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
-                >
-                  Serviços extras
-                </Link>
+                <PainelLinkButton href="/servicos-extras" variant="secondary">
+                  Servicos extras
+                </PainelLinkButton>
               ) : null}
-
               {podeGerenciar ? (
-                <Link
-                  href="/servicos/novo"
-                  className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
-                >
-                  Novo serviço
-                </Link>
+                <PainelLinkButton href="/servicos/novo">
+                  Novo servico
+                </PainelLinkButton>
               ) : null}
-            </div>
-          </div>
-        </section>
+            </>
+          }
+        />
 
         <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-5">
           <ResumoCard
@@ -553,7 +536,7 @@ export default function ServicosPage() {
                         <StatusBadge ativo={ativo} />
                         <AppClienteBadge ativo={ativo} visivel={appClienteMarcado} />
                         {ehCombo ? (
-                          <span className="rounded-full bg-violet-100 px-2.5 py-1 text-xs font-semibold text-violet-700">
+                          <span className="rounded-full bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800">
                             Combo
                           </span>
                         ) : null}
@@ -580,7 +563,7 @@ export default function ServicosPage() {
                       ) : null}
 
                       {ehCombo && item.combo_resumo ? (
-                        <p className="mt-3 max-w-3xl text-sm leading-6 text-violet-700">
+                        <p className="mt-3 max-w-3xl text-sm leading-6 text-amber-800">
                           Itens do combo: {item.combo_resumo}
                         </p>
                       ) : null}

@@ -7,7 +7,7 @@ import AssinaturaPlanoAtual from "@/components/assinatura/AssinaturaPlanoAtual";
 import AssinaturaPlanosPagamento from "@/components/assinatura/AssinaturaPlanoPagamento";
 import AssinaturaStatusCard from "@/components/assinatura/AssinaturaStatusCard";
 import { useAssinaturaPage } from "@/components/assinatura/useAssinaturaPage";
-import AppLoading from "@/components/ui/AppLoading";
+import { PainelListLoading } from "@/components/painel-ui";
 
 export default function AssinaturaPage() {
   const {
@@ -57,7 +57,7 @@ export default function AssinaturaPage() {
 
   if (loading || !acessoCarregado) {
     return (
-      <AppLoading
+      <PainelListLoading
         title="Carregando assinatura"
         message="Aguarde enquanto consultamos plano, cobranças, renovação e histórico de pagamentos."
         fullHeight={false}
@@ -112,7 +112,7 @@ export default function AssinaturaPage() {
         <button
           type="button"
           onClick={abrirHistoricoModal}
-          className="rounded-2xl border border-violet-200 bg-violet-50 px-4.5 py-2 text-sm font-semibold text-violet-700 transition hover:bg-violet-100"
+          className="rounded-2xl border border-amber-200 bg-amber-50 px-4.5 py-2 text-sm font-semibold text-amber-800 transition hover:bg-amber-100"
         >
           Ver histórico de pagamentos
         </button>

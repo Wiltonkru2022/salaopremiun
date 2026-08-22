@@ -9,7 +9,11 @@ import {
   Boxes,
   Wallet,
 } from "lucide-react";
-import AppLoading from "@/components/ui/AppLoading";
+import {
+  PainelLinkButton,
+  PainelListLoading,
+  PainelPageHeader,
+} from "@/components/painel-ui";
 import AppModal from "@/components/ui/AppModal";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import PaginationControls from "@/components/ui/PaginationControls";
@@ -366,7 +370,7 @@ export default function ProdutosPage() {
 
   if (loading || !acessoCarregado) {
     return (
-      <AppLoading
+      <PainelListLoading
         title="Carregando produtos"
         message="Aguarde enquanto sincronizamos catálogo, margem, preço e situação do estoque."
         fullHeight={false}
@@ -387,30 +391,22 @@ export default function ProdutosPage() {
   return (
     <div className="contents">
       <div className="mx-auto max-w-7xl space-y-4">
-        <section className="rounded-[24px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="max-w-3xl">
-              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
-                {estoqueLiberado ? "Estoque e revenda" : "Revenda e margem"}
-              </div>
-              <h1 className="mt-2 text-2xl font-bold md:text-3xl">Produtos</h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-600">
-                {estoqueLiberado
-                  ? "O cadastro de produto precisa responder três perguntas rápido: quanto custa, quanto vende e se o estoque está ficando perigoso."
-                  : "O cadastro de produto segue liberado para revenda, custo e margem. O controle de estoque entra quando o salão sobe para Pro ou Premium."}
-              </p>
-            </div>
-
-            {podeGerenciar ? (
-              <Link
-                href="/produtos/novo"
-                className="inline-flex items-center justify-center rounded-xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
-              >
+        <PainelPageHeader
+          eyebrow={estoqueLiberado ? "Estoque e revenda" : "Revenda e margem"}
+          title="Produtos"
+          description={
+            estoqueLiberado
+              ? "Preco, custo, margem e sinal de estoque baixo em uma leitura rapida para venda e reposicao."
+              : "Revenda, custo e margem continuam liberados. O controle de estoque entra no Pro ou Premium."
+          }
+          actions={
+            podeGerenciar ? (
+              <PainelLinkButton href="/produtos/novo">
                 Novo produto
-              </Link>
-            ) : null}
-          </div>
-        </section>
+              </PainelLinkButton>
+            ) : null
+          }
+        />
 
         {!estoqueLiberado ? (
           <section className="rounded-[22px] border border-sky-200 bg-sky-50 p-3.5 text-sm text-sky-900 shadow-sm">

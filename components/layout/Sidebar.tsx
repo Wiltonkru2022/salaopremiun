@@ -18,7 +18,6 @@ import {
   type PlanoRecursos,
 } from "@/components/layout/navigation";
 import type { ResumoAssinatura } from "@/lib/assinatura-utils";
-import { getAssinaturaUrl } from "@/lib/site-urls";
 import {
   getWorkspaceWindowTarget,
   isPainelStandaloneWindow,
@@ -161,17 +160,15 @@ export default function Sidebar({
                           : "Assinatura vencendo"}
                     </p>
                     {canSeeAssinatura ? (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          onClose();
-                          window.location.assign(getRouteHref("/assinatura"));
-                        }}
+                      <Link
+                        href={getRouteHref("/assinatura")}
+                        prefetch
+                        onClick={onClose}
                         className="mt-2 inline-flex items-center gap-2 rounded-xl border border-current/10 bg-white px-2.5 py-2 text-[11px] font-black transition hover:bg-zinc-50"
                       >
                         <CreditCard size={13} />
                         Assinatura
-                      </button>
+                      </Link>
                     ) : null}
                   </div>
                 </div>
@@ -324,13 +321,6 @@ function SidebarLink({
 }
 
 function getRouteHref(href: string) {
-  if (
-    href === "/assinatura" ||
-    href.startsWith("/assinatura/") ||
-    href.startsWith("/assinatura?")
-  ) {
-    return getAssinaturaUrl(href);
-  }
-
-  return href;
+  if (/^https?:\/\//i.test(href)) return href;
+  return href.startsWith("/") ? href : `/${href}`;
 }

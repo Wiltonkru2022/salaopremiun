@@ -1,3 +1,4 @@
+﻿import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   BarChart3,
@@ -7,17 +8,18 @@ import {
   Link2,
   Megaphone,
   MessageCircle,
-  Pause,
-  Play,
   Plus,
   Sparkles,
-  TrendingUp,
 } from "lucide-react";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { canUsePlanFeature } from "@/lib/plans/access";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { atualizarStatusCampanhaAction, auditarCampanhasAction } from "./actions";
+import { auditarCampanhasAction } from "./actions";
 import PaginationLinks from "@/components/ui/PaginationLinks";
+import { PainelPageHeader } from "@/components/painel-ui";
+import CampanhaStatusToggle, {
+  CampanhaStatusBadge,
+} from "@/components/campanhas/CampanhaStatusToggle";
 
 export const metadata = {
   title: "Campanhas",
@@ -78,7 +80,7 @@ function campanhaWhatsAppMessage(cupom: Record<string, unknown>, link: string) {
   const mensagem = String(
     cupom.mensagem_cliente ||
       cupom.descricao ||
-      `Preparei uma campanha especial para você: ${titulo}.`
+      `Preparei uma campanha especial para vocÃª: ${titulo}.`
   ).trim();
   return `${mensagem}\n\nAgende pelo link:\n${link}`;
 }
@@ -361,7 +363,7 @@ export default async function CampanhasPage({
   if (!featureAccess.allowed) {
     redirect(
       `/comparar-planos?recurso=campanhas&erro=${encodeURIComponent(
-        featureAccess.reason || "Campanhas não está liberado no plano atual."
+        featureAccess.reason || "Campanhas nÃ£o estÃ¡ liberado no plano atual."
       )}`
     );
   }
@@ -378,16 +380,17 @@ export default async function CampanhasPage({
     return (
       <main className="space-y-5">
         <div className="rounded-[28px] border border-red-200 bg-red-50 p-6 text-red-800 shadow-sm">
-          <h1 className="text-xl font-black">Não foi possível carregar as campanhas</h1>
+          <h1 className="text-xl font-black">NÃ£o foi possÃ­vel carregar as campanhas</h1>
           <p className="mt-2 text-sm leading-6">
-            Os dados não foram substituídos por uma lista vazia. Atualize a página e tente novamente.
+            Os dados nÃ£o foram substituÃ­dos por uma lista vazia. Atualize a pÃ¡gina e tente novamente.
           </p>
-          <a
+          <Link
             href="/campanhas"
+            prefetch
             className="mt-4 inline-flex h-11 items-center rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white"
           >
             Tentar novamente
-          </a>
+          </Link>
         </div>
       </main>
     );
@@ -404,72 +407,37 @@ export default async function CampanhasPage({
     { label: "Campanhas ativas", value: data.kpis.ativas, icon: Sparkles },
     { label: "Cliques no link", value: data.kpis.cliques, icon: Link2 },
     { label: "Agendamentos", value: data.kpis.agendamentos, icon: Megaphone },
-    { label: "Conversão", value: `${data.kpis.conversao}%`, icon: BarChart3 },
+    { label: "ConversÃ£o", value: `${data.kpis.conversao}%`, icon: BarChart3 },
   ];
 
   return (
-    <main className="relative space-y-6 overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 -z-10 opacity-80">
-        <div className="absolute left-1/4 top-8 h-56 w-56 animate-pulse rounded-full bg-amber-200/35 blur-3xl" />
-        <div className="absolute right-4 top-40 h-72 w-72 animate-pulse rounded-full bg-rose-200/35 blur-3xl" />
-      </div>
+    <main className="space-y-5">
 
-      <section className="overflow-hidden rounded-[2rem] border border-zinc-200 bg-zinc-950 p-6 text-white shadow-[0_24px_70px_rgba(15,23,42,0.24)] md:p-8">
-        <div className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr] lg:items-center">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-amber-100">
-              <Sparkles size={14} />
-              Campanhas inteligentes
-            </span>
-            <h1 className="mt-5 text-4xl font-black tracking-tight md:text-5xl">
-              Campanhas
-            </h1>
-            <p className="mt-3 max-w-2xl text-base leading-7 text-zinc-300">
-              Crie links privados, vincule serviços, controle limites e acompanhe
-              o resultado sem deixar a promoção solta no app.
-            </p>
-            <a
+      <PainelPageHeader
+        eyebrow="Crescimento"
+        title="Campanhas"
+        description="Crie links privados, vincule servicos, controle limites e acompanhe resultados sem sair do fluxo do painel."
+        actions={
+          <>
+            <Link
               href="/campanhas/nova"
-              className="mt-6 inline-flex h-12 items-center gap-2 rounded-2xl bg-white px-5 text-sm font-black text-zinc-950 shadow-[0_0_28px_rgba(245,197,66,0.32)] transition hover:-translate-y-0.5"
+              prefetch
+              className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-950 bg-zinc-950 px-3 text-sm font-black text-white shadow-sm transition hover:bg-zinc-800"
             >
-              <Plus size={18} />
+              <Plus size={16} />
               Criar campanha
-            </a>
-            <form action={auditarCampanhasAction} className="mt-3">
+            </Link>
+            <form action={auditarCampanhasAction}>
               <button
-                className="inline-flex h-11 items-center gap-2 rounded-2xl border border-white/15 bg-white/10 px-4 text-sm font-black text-white transition hover:bg-white/15"
+                className="inline-flex h-10 items-center gap-2 rounded-lg border border-zinc-200 bg-white px-3 text-sm font-black text-zinc-800 shadow-sm transition hover:bg-zinc-50"
                 type="submit"
               >
-                Auditar campanhas antigas
+                Auditar antigas
               </button>
             </form>
-          </div>
-
-          <div className="rounded-[1.75rem] border border-white/10 bg-white/[0.06] p-4 backdrop-blur">
-            <div className="rounded-[1.4rem] bg-gradient-to-br from-amber-100 via-white to-rose-100 p-4 text-zinc-950">
-              <div className="flex items-center justify-between">
-                <span className="rounded-full bg-zinc-950 px-3 py-1 text-xs font-black text-white">
-                  celular do cliente
-                </span>
-                <TrendingUp className="text-emerald-600" />
-              </div>
-              <div className="mt-8 rounded-3xl bg-white p-4 shadow-xl">
-                <p className="text-xs font-black uppercase tracking-[0.14em] text-amber-700">
-                  Promo Escova Maio
-                </p>
-                <h3 className="mt-2 text-2xl font-black">Escova por R$ 60</h3>
-                <p className="mt-2 text-sm text-zinc-500">
-                  Link privado aberto. Cliente escolhe serviço, profissional e horário.
-                </p>
-                <div className="mt-4 h-3 overflow-hidden rounded-full bg-zinc-100">
-                  <div className="h-full w-3/4 rounded-full bg-zinc-950" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
+          </>
+        }
+      />
       {firstParam(params.ok) ? (
         <p className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-bold text-emerald-800">
           {firstParam(params.ok)}
@@ -502,7 +470,7 @@ export default async function CampanhasPage({
             <div>
               <h2 className="text-2xl font-black text-zinc-950">Lista de campanhas</h2>
               <p className="text-sm text-zinc-500">
-                Cards com status, link, validade, uso e serviços.
+                Cards com status, link, validade, uso e serviÃ§os.
               </p>
             </div>
           </div>
@@ -535,11 +503,12 @@ export default async function CampanhasPage({
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <span
-                          className={`rounded-full border px-3 py-1 text-xs font-black ${statusClass(label)}`}
-                        >
-                          {label}
-                        </span>
+                        <CampanhaStatusBadge
+                          id={String(cupom.id)}
+                          initialStatus={statusAtual}
+                          initialLabel={label}
+                          initialClassName={statusClass(label)}
+                        />
                         <span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-black text-zinc-600">
                           Somente por link
                         </span>
@@ -572,7 +541,7 @@ export default async function CampanhasPage({
                         Validade
                       </p>
                       <p className="mt-1 text-sm font-bold text-zinc-800">
-                        {formatDate(cupom.valido_de)} até {formatDate(cupom.valido_ate)}
+                        {formatDate(cupom.valido_de)} atÃ© {formatDate(cupom.valido_ate)}
                       </p>
                     </div>
                     <div className="rounded-2xl bg-zinc-50 p-4">
@@ -580,7 +549,7 @@ export default async function CampanhasPage({
                         Resultado
                       </p>
                       <p className="mt-1 text-sm font-bold text-zinc-800">
-                        {Number(cupom.cliques || 0)} cliques ·{" "}
+                        {Number(cupom.cliques || 0)} cliques Â·{" "}
                         {Number(cupom.agendamentos || 0)} agendamentos
                       </p>
                     </div>
@@ -616,13 +585,13 @@ export default async function CampanhasPage({
                               key={String(servico.id_servico)}
                               className="rounded-full bg-amber-50 px-3 py-1 text-xs font-black text-amber-800"
                             >
-                              {String(rel?.nome || "Serviço")}
+                              {String(rel?.nome || "ServiÃ§o")}
                             </span>
                           );
                         })
                       ) : (
                         <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-500">
-                          todos os serviços
+                          todos os serviÃ§os
                         </span>
                       )}
                     </div>
@@ -650,31 +619,17 @@ export default async function CampanhasPage({
                         <MessageCircle size={16} /> Enviar WhatsApp
                       </a>
                     ) : null}
-                    <form action={atualizarStatusCampanhaAction}>
-                      <input type="hidden" name="id" value={String(cupom.id)} />
-                      <input
-                        type="hidden"
-                        name="status"
-                        value={statusAtual === "ativa" ? "pausada" : "ativa"}
-                      />
-                      <button
-                        type="submit"
-                        className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-black text-white"
-                      >
-                        {statusAtual === "ativa" ? (
-                          <Pause size={16} />
-                        ) : (
-                          <Play size={16} />
-                        )}
-                        {statusAtual === "ativa" ? "Pausar" : "Ativar"}
-                      </button>
-                    </form>
-                    <a
+                    <CampanhaStatusToggle
+                      id={String(cupom.id)}
+                      initialStatus={statusAtual}
+                    />
+                    <Link
                       href={`/campanhas/${cupom.id}`}
+                      prefetch
                       className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-950"
                     >
-                      <BarChart3 size={16} /> Relatório
-                    </a>
+                      <BarChart3 size={16} /> RelatÃ³rio
+                    </Link>
                   </div>
                 </article>
               );
@@ -686,14 +641,15 @@ export default async function CampanhasPage({
                   Crie sua primeira campanha
                 </h3>
                 <p className="mt-2 text-sm text-zinc-500">
-                  Monte um link privado, escolha os serviços e acompanhe o resultado.
+                  Monte um link privado, escolha os serviÃ§os e acompanhe o resultado.
                 </p>
-                <a
+                <Link
                   href="/campanhas/nova"
+                  prefetch
                   className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white"
                 >
                   Criar campanha
-                </a>
+                </Link>
               </div>
             ) : null}
             <PaginationLinks
@@ -734,22 +690,23 @@ export default async function CampanhasPage({
               <Cake size={18} /> Aniversariantes
             </h2>
             <p className="mt-1 text-sm text-zinc-500">
-              {data.aniversariantes.length} cliente(s) neste mês.
+              {data.aniversariantes.length} cliente(s) neste mÃªs.
             </p>
             <div className="mt-4 rounded-2xl border border-amber-100 bg-amber-50 p-4">
               <p className="text-sm font-bold leading-6 text-amber-950">
-                Use o modelo de aniversário para criar um cupom de 10% para os clientes ativos deste mês.
+                Use o modelo de aniversÃ¡rio para criar um cupom de 10% para os clientes ativos deste mÃªs.
               </p>
-              <a
+              <Link
                 href="/campanhas/nova?template=aniversario"
+                prefetch
                 className={`mt-3 inline-flex h-10 items-center justify-center rounded-xl px-4 text-xs font-black ${
                   data.aniversariantes.length
                     ? "bg-zinc-950 text-white"
                     : "pointer-events-none bg-zinc-200 text-zinc-400"
                 }`}
               >
-                Criar cupom de aniversário
-              </a>
+                Criar cupom de aniversÃ¡rio
+              </Link>
             </div>
             <div className="mt-4 space-y-2">
               {data.aniversariantes.slice(0, 5).map((cliente) => (

@@ -1,5 +1,7 @@
 "use client";
 
+import clsx from "clsx";
+
 type Props = {
   title: string;
   message?: string;
@@ -10,30 +12,33 @@ type Props = {
 function toneClasses(theme: Props["theme"] = "painel") {
   if (theme === "admin") {
     return {
-      shell:
-        "border-zinc-800/80 bg-[linear-gradient(180deg,#18181b_0%,#0f172a_100%)] text-white shadow-[0_24px_80px_rgba(15,23,42,0.28)]",
+      shell: "border-zinc-800 bg-zinc-950 text-white",
+      badge: "border-amber-300/25 bg-amber-300/10 text-amber-200",
       line: "bg-white/10",
       lineSoft: "bg-white/5",
-      dot: "bg-amber-300",
+      text: "text-zinc-300",
+      eyebrow: "text-amber-200",
     };
   }
 
   if (theme === "profissional") {
     return {
-      shell:
-        "border-white/70 bg-[linear-gradient(180deg,rgba(255,255,255,0.96)_0%,rgba(249,250,251,0.94)_100%)] text-zinc-950 shadow-[0_24px_80px_rgba(15,23,42,0.09)]",
+      shell: "border-zinc-200 bg-white text-zinc-950",
+      badge: "border-amber-200 bg-amber-50 text-amber-800",
       line: "bg-zinc-200",
       lineSoft: "bg-zinc-100",
-      dot: "bg-amber-400",
+      text: "text-zinc-500",
+      eyebrow: "text-amber-700",
     };
   }
 
   return {
-    shell:
-      "border-white/80 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(247,249,252,0.96)_100%)] text-zinc-950 shadow-[0_24px_80px_rgba(15,23,42,0.08)]",
+    shell: "border-zinc-200 bg-white text-zinc-950",
+    badge: "border-amber-200 bg-amber-50 text-amber-800",
     line: "bg-zinc-200",
     lineSoft: "bg-zinc-100",
-    dot: "bg-violet-500",
+    text: "text-zinc-500",
+    eyebrow: "text-amber-700",
   };
 }
 
@@ -44,51 +49,84 @@ export default function AppLoading({
   theme = "painel",
 }: Props) {
   const tone = toneClasses(theme);
-  const shellSize =
-    theme === "painel"
-      ? "max-w-[1180px] min-h-[390px]"
-      : "max-w-[760px]";
+  const shellSize = theme === "painel" ? "max-w-[1180px]" : "max-w-[760px]";
 
   return (
     <div
       aria-busy="true"
       aria-label={message ? `${title}. ${message}` : title}
-      className={
+      className={clsx(
+        "w-full",
         fullHeight
-          ? "flex min-h-[52vh] w-full items-center justify-center p-5"
-          : "w-full p-5"
-      }
+          ? "flex min-h-[52vh] items-start justify-center px-3 py-4 sm:px-4"
+          : "px-0 py-0"
+      )}
     >
       <div
-        className={`w-full overflow-hidden rounded-[24px] border p-5 ${shellSize} ${tone.shell}`}
+        className={clsx(
+          "w-full overflow-hidden rounded-xl border p-4 shadow-sm sm:p-5",
+          shellSize,
+          tone.shell
+        )}
       >
-        <div className="flex flex-col gap-5">
-          <div className="flex items-center justify-end gap-1.5" aria-hidden="true">
-            <span className={`h-2.5 w-2.5 animate-bounce rounded-full ${tone.dot}`} />
-            <span
-              className={`h-2.5 w-2.5 animate-bounce rounded-full ${tone.dot}`}
-              style={{ animationDelay: "0.12s" }}
-            />
-            <span
-              className={`h-2.5 w-2.5 animate-bounce rounded-full ${tone.dot}`}
-              style={{ animationDelay: "0.24s" }}
-            />
-          </div>
-
-          <div className="grid flex-1 gap-3.5 xl:grid-cols-[1.15fr_0.85fr]">
-            <div className="space-y-3.5">
-              <div className={`h-14 animate-pulse rounded-[18px] ${tone.line}`} />
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className={`h-28 animate-pulse rounded-[20px] ${tone.lineSoft}`} />
-                <div className={`h-28 animate-pulse rounded-[20px] ${tone.lineSoft}`} />
+        <div className="flex flex-col gap-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="flex min-w-0 items-start gap-3">
+              <span
+                className={clsx(
+                  "mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border text-[11px] font-black uppercase tracking-[0.16em]",
+                  tone.badge
+                )}
+                aria-hidden="true"
+              >
+                SP
+              </span>
+              <div className="min-w-0">
+                <p
+                  className={clsx(
+                    "text-[10px] font-black uppercase tracking-[0.18em]",
+                    tone.eyebrow
+                  )}
+                >
+                  Preparando tela
+                </p>
+                <h2 className="mt-1 text-base font-black leading-tight tracking-normal sm:text-lg">
+                  {title}
+                </h2>
+                {message ? (
+                  <p className={clsx("mt-1 max-w-2xl text-sm leading-5", tone.text)}>
+                    {message}
+                  </p>
+                ) : null}
               </div>
-              <div className={`h-40 animate-pulse rounded-[22px] ${tone.lineSoft}`} />
             </div>
 
-            <div className="space-y-3.5">
-              <div className={`h-24 animate-pulse rounded-[20px] ${tone.line}`} />
-              <div className={`h-24 animate-pulse rounded-[20px] ${tone.lineSoft}`} />
-              <div className={`h-24 animate-pulse rounded-[20px] ${tone.lineSoft}`} />
+            <span
+              className={clsx(
+                "mt-1 hidden h-2 w-24 overflow-hidden rounded-full sm:block",
+                tone.lineSoft
+              )}
+              aria-hidden="true"
+            >
+              <span className="block h-full w-1/2 animate-pulse rounded-full bg-[var(--app-accent)]" />
+            </span>
+          </div>
+
+          <div className="grid gap-3 xl:grid-cols-[1.15fr_0.85fr]">
+            <div className="space-y-3">
+              <div className={clsx("h-12 animate-pulse rounded-lg", tone.line)} />
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className={clsx("h-24 animate-pulse rounded-lg", tone.lineSoft)} />
+                <div className={clsx("h-24 animate-pulse rounded-lg", tone.lineSoft)} />
+                <div className={clsx("h-24 animate-pulse rounded-lg", tone.lineSoft)} />
+              </div>
+              <div className={clsx("h-40 animate-pulse rounded-lg", tone.lineSoft)} />
+            </div>
+
+            <div className="space-y-3">
+              <div className={clsx("h-20 animate-pulse rounded-lg", tone.line)} />
+              <div className={clsx("h-20 animate-pulse rounded-lg", tone.lineSoft)} />
+              <div className={clsx("h-20 animate-pulse rounded-lg", tone.lineSoft)} />
             </div>
           </div>
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import Link from "next/link";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import clsx from "clsx";
 import {
@@ -23,7 +24,6 @@ import { getPainelPageMeta } from "@/components/layout/navigation";
 import type { ResumoAssinatura } from "@/lib/assinatura-utils";
 import NotificationBell from "@/components/layout/NotificationBell";
 import type { ShellNotification } from "@/lib/notifications/contracts";
-import { getAssinaturaUrl, getPainelUrl } from "@/lib/site-urls";
 
 type SearchResultType = "cliente" | "agendamento" | "comanda" | "servico";
 
@@ -61,7 +61,7 @@ const SEARCH_TYPE_META: Record<
   servico: {
     label: "Serviço",
     icon: Scissors,
-    className: "bg-fuchsia-50 text-fuchsia-700 ring-fuchsia-100",
+    className: "bg-amber-50 text-amber-800 ring-amber-100",
   },
 };
 
@@ -141,6 +141,7 @@ export default function Header({
   onOpenSidebar,
   onLogout,
 }: Props) {
+  const router = useRouter();
   const pathname = usePathname();
   const menuRef = useRef<HTMLDivElement | null>(null);
   const searchRef = useRef<HTMLDivElement | null>(null);
@@ -233,7 +234,12 @@ export default function Header({
   const goToSearchResult = (result: TopbarSearchResult) => {
     setSearchOpen(false);
     setSearchQuery("");
-    window.location.assign(getRouteHref(result.href));
+    const href = getRouteHref(result.href);
+    if (isExternalHref(href)) {
+      window.location.assign(href);
+      return;
+    }
+    router.push(href);
   };
 
   return (
@@ -392,8 +398,9 @@ export default function Header({
           ) : null}
         </div>
 
-        <a
-          href={canSeeAssinatura ? getRouteHref("/meu-plano") : "#"}
+        <Link
+          href={canSeeAssinatura ? getRouteHref("/meu-plano") : pathname}
+          prefetch
           aria-disabled={!canSeeAssinatura}
           className={clsx(
             "hidden min-w-0 shrink-0 items-center gap-1.5 rounded-2xl border border-zinc-200 bg-white px-2 py-1.5 text-sm lg:flex xl:gap-2 xl:px-2.5",
@@ -414,7 +421,7 @@ export default function Header({
           >
             {getStatusLabel(assinaturaStatus, resumoAssinatura)}
           </span>
-        </a>
+        </Link>
 
         <NotificationBell
           notifications={notifications}
@@ -471,53 +478,58 @@ export default function Header({
 
               <div className="mt-3 space-y-2">
                 {canSeePerfilSalao ? (
-                  <a
+                  <Link
                     href={getRouteHref("/perfil-salao")}
+                    prefetch
                     onClick={() => setMenuOpen(false)}
                     className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
                   >
                     <Building2 size={16} />
                     Perfil do salão
-                  </a>
+                  </Link>
                 ) : null}
 
                 {canSeeConfiguracoes ? (
-                  <a
+                  <Link
                     href={getRouteHref("/configuracoes")}
+                    prefetch
                     onClick={() => setMenuOpen(false)}
                     className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
                   >
                     <Settings size={16} />
                     Configurações
-                  </a>
+                  </Link>
                 ) : null}
 
                 {canSeeAssinatura ? (
                   <>
-                    <a
+                    <Link
                       href={getRouteHref("/meu-plano")}
+                      prefetch
                       onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
                     >
                       <CreditCard size={16} />
                       Meu plano
-                    </a>
-                    <a
+                    </Link>
+                    <Link
                       href={getRouteHref("/assinatura")}
+                      prefetch
                       onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
                     >
                       <CreditCard size={16} />
                       Assinatura
-                    </a>
-                    <a
+                    </Link>
+                    <Link
                       href={getRouteHref("/comparar-planos")}
+                      prefetch
                       onClick={() => setMenuOpen(false)}
                       className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
                     >
                       <CreditCard size={16} />
                       Comparar planos
-                    </a>
+                    </Link>
                   </>
                 ) : null}
 
@@ -539,13 +551,10 @@ export default function Header({
 }
 
 function getRouteHref(href: string) {
-  if (
-    href === "/assinatura" ||
-    href.startsWith("/assinatura?") ||
-    href.startsWith("/assinatura/")
-  ) {
-    return getAssinaturaUrl(href);
-  }
+  if (isExternalHref(href)) return href;
+  return href.startsWith("/") ? href : `/${href}`;
+}
 
-  return getPainelUrl(href);
+function isExternalHref(href: string) {
+  return /^https?:\/\//i.test(href);
 }

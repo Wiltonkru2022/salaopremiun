@@ -5,9 +5,9 @@ import {
   CalendarClock,
   ChevronRight,
   CreditCard,
-  SlidersHorizontal,
   Users,
 } from "lucide-react";
+import { PainelPageHeader } from "@/components/painel-ui";
 
 const configCards = [
   {
@@ -60,46 +60,18 @@ const configCards = [
 export default function ConfiguracoesPage() {
   return (
     <div className="space-y-5">
-      <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
-        <div className="bg-zinc-950 p-6 text-white sm:p-7">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div className="min-w-0">
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-[11px] font-black uppercase tracking-[0.22em] text-white/70">
-                <SlidersHorizontal size={14} />
-                Central de configurações
-              </div>
-              <h1 className="mt-4 max-w-3xl font-display text-3xl font-black tracking-[-0.04em] sm:text-[2.6rem]">
-                Configurações do salão
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-zinc-300">
-                Ajuste acessos, horários, notificações, caixa e regras de repasse
-                com segurança. Cada card abaixo abre uma área específica.
-              </p>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:min-w-[24rem]">
-              <div className="rounded-[20px] border border-white/10 bg-white/10 px-4 py-3">
-                <div className="text-2xl font-black">{configCards.length}</div>
-                <div className="mt-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/60">
-                  Módulos
-                </div>
-              </div>
-              <div className="rounded-[20px] border border-white/10 bg-white/10 px-4 py-3">
-                <div className="text-2xl font-black">1</div>
-                <div className="mt-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/60">
-                  Menu claro
-                </div>
-              </div>
-              <div className="rounded-[20px] border border-white/10 bg-white/10 px-4 py-3">
-                <div className="text-2xl font-black">100%</div>
-                <div className="mt-1 text-[11px] font-bold uppercase tracking-[0.16em] text-white/60">
-                  Por área
-                </div>
-              </div>
-            </div>
+      <PainelPageHeader
+        eyebrow="Central de configuracoes"
+        title="Configuracoes do salao"
+        description="Ajuste acessos, horarios, notificacoes, caixa e regras de repasse com seguranca. Cada card abre uma area especifica."
+        actions={
+          <div className="grid grid-cols-3 gap-2">
+            <HeaderMetric label="Modulos" value={String(configCards.length)} />
+            <HeaderMetric label="Menu" value="Claro" />
+            <HeaderMetric label="Areas" value="100%" />
           </div>
-        </div>
-      </section>
+        }
+      />
 
       <section className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
         {configCards.map((item) => {
@@ -134,6 +106,17 @@ export default function ConfiguracoesPage() {
           );
         })}
       </section>
+    </div>
+  );
+}
+
+function HeaderMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-right">
+      <div className="text-sm font-black text-zinc-950">{value}</div>
+      <div className="mt-0.5 text-[10px] font-black uppercase tracking-[0.14em] text-zinc-400">
+        {label}
+      </div>
     </div>
   );
 }
