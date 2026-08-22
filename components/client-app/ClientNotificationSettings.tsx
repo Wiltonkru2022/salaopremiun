@@ -2,117 +2,32 @@
 
 import { useState, useTransition } from "react";
 import { BellRing } from "lucide-react";
-import {
-  toggleClienteNotificationPreferenceAction,
-  type ClienteNotificationPreferenceKey,
-} from "@/app/app-cliente/perfil/configuracoes/actions";
+import { toggleClienteNotificationPreferenceAction } from "@/app/app-cliente/perfil/configuracoes/actions";
 import PushPermissionRuntime from "@/components/push/PushPermissionRuntime";
 
-type SettingsState = Record<ClienteNotificationPreferenceKey, boolean>;
-
-type ToggleRowProps = {
-  label: string;
-  helper?: string;
-  preferenceKey: ClienteNotificationPreferenceKey;
-  settings: SettingsState;
-  disabled?: boolean;
-  onToggle: (key: ClienteNotificationPreferenceKey, enabled: boolean) => void;
-};
-
-function ToggleRow({
-  label,
-  helper,
-  preferenceKey,
-  settings,
-  disabled,
-  onToggle,
-}: ToggleRowProps) {
-  const enabled = settings[preferenceKey];
-
-  return (
-    <button
-      type="button"
-      disabled={disabled}
-      onClick={() => onToggle(preferenceKey, !enabled)}
-      className="flex min-h-20 w-full items-center justify-between gap-4 border-b border-zinc-100 px-1 text-left disabled:cursor-not-allowed disabled:opacity-55"
-    >
-      <span>
-        <span className="block text-lg text-zinc-950">{label}</span>
-        {helper ? (
-          <span className="mt-1 block text-sm leading-5 text-zinc-500">
-            {helper}
-          </span>
-        ) : null}
-      </span>
-      <span
-        className={`relative h-9 w-16 shrink-0 rounded-full transition ${
-          enabled ? "bg-zinc-950" : "bg-zinc-200"
-        }`}
-      >
-        <span
-          className={`absolute top-1 h-7 w-7 rounded-full bg-white shadow-sm transition ${
-            enabled ? "left-8" : "left-1"
-          }`}
-        />
-      </span>
-    </button>
-  );
-}
-
 export default function ClientNotificationSettings({
-  initialSettings,
+  initialEnabled,
 }: {
-  initialSettings: SettingsState;
+  initialEnabled: boolean;
 }) {
-  const [settings, setSettings] = useState<SettingsState>(initialSettings);
+  const [enabled, setEnabled] = useState(initialEnabled);
   const [message, setMessage] = useState("");
   const [isPending, startTransition] = useTransition();
 
-  function applyCascade(
-    current: SettingsState,
-    key: ClienteNotificationPreferenceKey,
-    enabled: boolean
-  ) {
-    const next = { ...current, [key]: enabled };
-
-    if (key === "notificacoes_ativas" && !enabled) {
-      next.notificacao_app_ativa = false;
-      next.notificacao_email_ativa = false;
-    }
-
-    if (
-      (key === "notificacao_app_ativa" || key === "notificacao_email_ativa") &&
-      enabled
-    ) {
-      next.notificacoes_ativas = true;
-    }
-
-    return next;
-  }
-
-  function handleToggle(
-    key: ClienteNotificationPreferenceKey,
-    enabled: boolean
-  ) {
-    const previous = settings;
-    const optimistic = applyCascade(previous, key, enabled);
-
-    setSettings(optimistic);
+  function handleToggle() {
+    const previous = enabled;
+    const next = !previous;
+    setEnabled(next);
     setMessage("");
 
     startTransition(async () => {
-      const result = await toggleClienteNotificationPreferenceAction(
-        key,
-        enabled
-      );
-
+      const result = await toggleClienteNotificationPreferenceAction(next);
       if (!result.ok) {
-        setSettings(previous);
+        setEnabled(previous);
         setMessage(result.error || "Não foi possível salvar agora.");
         return;
       }
-
-      setMessage("Preferência salva.");
+      setMessage(next ? "Avisos do app ativados." : "Avisos do app desativados.");
     });
   }
 
@@ -121,46 +36,42 @@ export default function ClientNotificationSettings({
       <div className="mb-3 bg-zinc-50 px-3 py-3 text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
         Notificações
       </div>
-      <div className="mb-3 flex items-center justify-between gap-4 rounded-2xl border border-amber-100 bg-amber-50 px-4 py-4">
-        <div className="flex min-w-0 items-start gap-3">
+
+      <div className="rounded-2xl border border-amber-100 bg-amber-50 px-4 py-4">
+        <div className="flex items-start gap-3">
           <span className="mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white text-amber-700 shadow-sm">
             <BellRing size={20} />
           </span>
-          <div className="min-w-0">
-            <p className="text-base font-black text-zinc-950">
-              Notificações no celular
-            </p>
+          <div className="min-w-0 flex-1">
+            <p className="text-base font-black text-zinc-950">Notificações no celular</p>
             <p className="mt-1 text-sm leading-5 text-zinc-600">
-              Receba avisos de reserva, confirmação e reagendamento mesmo fora do app.
+              Receba avisos de reserva, confirmação, reagendamento e avaliação mesmo fora do app.
             </p>
           </div>
+          <PushPermissionRuntime audience="cliente_app" />
         </div>
-        <PushPermissionRuntime audience="cliente_app" />
       </div>
-      <ToggleRow
-        label="Ativar notificações"
-        helper="Liga ou desliga todos os avisos da sua conta no app cliente."
-        preferenceKey="notificacoes_ativas"
-        settings={settings}
+
+      <button
+        type="button"
         disabled={isPending}
-        onToggle={handleToggle}
-      />
-      <ToggleRow
-        label="Notificação do app"
-        helper="Avisos de reserva, reagendamento e avaliação."
-        preferenceKey="notificacao_app_ativa"
-        settings={settings}
-        disabled={isPending || !settings.notificacoes_ativas}
-        onToggle={handleToggle}
-      />
-      <ToggleRow
-        label="E-mail"
-        helper="Confirmações importantes no e-mail."
-        preferenceKey="notificacao_email_ativa"
-        settings={settings}
-        disabled={isPending || !settings.notificacoes_ativas}
-        onToggle={handleToggle}
-      />
+        onClick={handleToggle}
+        className="mt-3 flex min-h-20 w-full items-center justify-between gap-4 border-b border-zinc-100 px-1 text-left disabled:cursor-not-allowed disabled:opacity-55"
+      >
+        <span>
+          <span className="block text-lg text-zinc-950">Receber avisos do app</span>
+          <span className="mt-1 block text-sm leading-5 text-zinc-500">
+            Liga ou desliga os avisos enviados pelo Salão Premium para esta conta.
+          </span>
+        </span>
+        <span className={`relative h-9 w-16 shrink-0 rounded-full transition ${enabled ? "bg-zinc-950" : "bg-zinc-200"}`}>
+          <span className={`absolute top-1 h-7 w-7 rounded-full bg-white shadow-sm transition ${enabled ? "left-8" : "left-1"}`} />
+        </span>
+      </button>
+
+      <p className="mt-3 text-xs leading-5 text-zinc-500">
+        O botão acima controla os avisos da sua conta. A permissão do celular também precisa estar liberada para receber notificações fora do app.
+      </p>
 
       {message ? (
         <div className="mt-3 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold text-zinc-700">
