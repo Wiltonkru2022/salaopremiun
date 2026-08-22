@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Star } from "lucide-react";
+import { Star } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import PaginationLinks from "@/components/ui/PaginationLinks";
 import { listClienteAppWrittenReviews } from "@/lib/client-app/queries";
@@ -51,14 +51,6 @@ export default async function ClienteProfileReviewsPage({
   return (
     <ClientAppFrame title="Avaliações" subtitle="Avaliações escritas por você.">
       <section className="mx-auto max-w-3xl px-4 py-4 md:px-6">
-        <Link
-          href="/app-cliente/perfil"
-          className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-full bg-white text-zinc-950 shadow-sm"
-          aria-label="Voltar"
-        >
-          <ArrowLeft size={24} />
-        </Link>
-
         <h1 className="text-3xl font-black tracking-[-0.04em] text-zinc-950">
           Avaliações escritas por você
         </h1>
