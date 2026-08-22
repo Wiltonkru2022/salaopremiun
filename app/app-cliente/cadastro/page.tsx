@@ -35,25 +35,11 @@ export default async function CadastroClientePage({
 
   return (
     <ClientAuthShell backHref={salaoPublicPath || "/app-cliente/inicio"}>
-      <div className="space-y-4">
-        <div className="px-1 pb-1 pt-2">
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#9b6a14]">
-            Cadastro único
-          </p>
-          <h1 className="mt-2 text-[2rem] font-black leading-tight tracking-[-0.05em] text-zinc-950">
-            Crie sua conta
-          </h1>
-          <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Uma conta simples para reservar em salões e acompanhar seus horários.
-          </p>
-        </div>
-
-        <CadastroClienteForm
-          salaoId={salaoContext?.salao?.id || salaoId || null}
-          salaoNome={salaoContext?.salao?.nome || null}
-          next={next || salaoPublicPath}
-        />
-      </div>
+      <CadastroClienteForm
+        salaoId={salaoContext?.salao?.id || salaoId || null}
+        salaoNome={salaoContext?.salao?.nome || null}
+        next={next || salaoPublicPath}
+      />
     </ClientAuthShell>
   );
 }
