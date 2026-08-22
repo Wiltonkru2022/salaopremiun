@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowLeft, Bell, CalendarDays, CheckCircle2 } from "lucide-react";
+import { Bell, CalendarDays, CheckCircle2 } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import {
   markAllClienteNotificationsReadAction,
@@ -104,14 +104,6 @@ export default async function ClienteNotificationsPage({
   return (
     <ClientAppFrame title="Notificações" subtitle="Tudo que importa do seu atendimento.">
       <section className="mx-auto max-w-3xl px-4 py-4 md:px-6">
-        <Link
-          href="/app-cliente/perfil"
-          className="mb-6 inline-flex h-12 w-12 items-center justify-center rounded-full bg-white text-zinc-950 shadow-sm"
-          aria-label="Voltar"
-        >
-          <ArrowLeft size={24} />
-        </Link>
-
         <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <h1 className="text-3xl font-black tracking-[-0.04em] text-zinc-950">
@@ -202,22 +194,14 @@ export default async function ClienteNotificationsPage({
                     ) : null}
                     {isRead ? (
                       <form action={markClienteNotificationUnreadAction}>
-                        <input
-                          type="hidden"
-                          name="notificacao"
-                          value={notification.id}
-                        />
+                        <input type="hidden" name="notificacao" value={notification.id} />
                         <button className="h-10 rounded-xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-800">
                           Marcar como não lida
                         </button>
                       </form>
                     ) : (
                       <form action={markClienteNotificationReadAction}>
-                        <input
-                          type="hidden"
-                          name="notificacao"
-                          value={notification.id}
-                        />
+                        <input type="hidden" name="notificacao" value={notification.id} />
                         <button className="h-10 rounded-xl border border-zinc-200 bg-white px-4 text-sm font-black text-zinc-800">
                           Marcar como lida
                         </button>
