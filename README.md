@@ -80,7 +80,7 @@ Não existe dependência obrigatória de VPS auxiliar para manter o sistema func
 | Pagamentos | Asaas |
 | E-mail | Brevo |
 | WhatsApp | Meta WhatsApp API, quando configurada |
-| Push | Web Push + VAPID + `web-push` |
+| Push | Web Push + VAPID + `web-push` + Firebase Cloud Messaging Android via Capacitor |
 | Jobs | Supabase Cron/pg_cron + rotas Vercel |
 | Deploy | Vercel |
 | CI | GitHub Actions |
@@ -245,6 +245,31 @@ WEB_PUSH_PRIVATE_KEY=
 WEB_PUSH_SUBJECT=mailto:suporte@salaopremiun.com.br
 ```
 
+### Firebase Cloud Messaging / APK nativo
+
+As notificacoes nativas dos APKs Android usam Firebase Cloud Messaging no servidor e plugins Capacitor no app.
+Nao coloque segredo do Firebase no frontend. Na Vercel, configure uma das opcoes abaixo:
+
+```env
+# Opcao 1: JSON completo da conta de servico em uma unica variavel.
+FIREBASE_SERVICE_ACCOUNT_JSON=
+
+# Opcao 2: campos separados da conta de servico.
+FIREBASE_PROJECT_ID=
+FIREBASE_CLIENT_EMAIL=
+FIREBASE_PRIVATE_KEY=
+FIREBASE_PRIVATE_KEY_BASE64=
+```
+
+`FIREBASE_PRIVATE_KEY_BASE64` e a forma mais segura para a Vercel quando a chave privada tem que ir em uma linha so. O valor deve ser a chave privada inteira em Base64, sem aspas e sem quebras de linha manuais.
+
+Os arquivos `google-services.json` ficam nos projetos Android, um para cada app:
+
+```text
+apps/mobile-shells/cliente/android/app/google-services.json
+apps/mobile-shells/profissional/android/app/google-services.json
+```
+
 ## Desenvolvimento
 
 ### Aplicação Next.js
@@ -297,6 +322,81 @@ npm run ci:validate
 npm run launch:validate
 ```
 
+## Apps Android / APK e AAB
+
+Existem dois shells Android Capacitor:
+
+| App | Pasta | Package Android | URL aberta no app |
+| --- | --- | --- | --- |
+| Cliente | `apps/mobile-shells/cliente` | `br.com.salaopremiun.cliente` | `https://app.salaopremiun.com.br/app-cliente/` |
+| Profissional | `apps/mobile-shells/profissional` | `br.com.salaopremiun.profissional` | `https://app.salaopremiun.com.br/app-profissional/` |
+
+O que foi configurado neste ciclo:
+
+- Firebase Cloud Messaging para push nativo Android;
+- `@capacitor/push-notifications` para registrar o token FCM do aparelho;
+- `@capacitor/local-notifications` para mostrar notificacao tambem quando o app esta aberto em primeiro plano;
+- permissao Android `POST_NOTIFICATIONS` nos dois APKs;
+- canal padrao de notificacao Android via `default_notification_channel_id`;
+- registro de token em `/api/push/native/register`;
+- envio server-side usando `firebase-admin`;
+- armazenamento de aparelhos/tokens em `native_push_devices`;
+- apps cliente e profissional apontando para a producao em `app.salaopremiun.com.br`;
+- APKs release gerados e copiados para `.codex-artifacts/release-apk/`;
+- teste real confirmado: cliente e profissional recebem notificacao nativa.
+
+Artefatos locais gerados:
+
+```text
+.codex-artifacts/release-apk/salaopremiun-cliente-release.apk
+.codex-artifacts/release-apk/salaopremiun-profissional-release.apk
+
+apps/mobile-shells/cliente/android/app/build/outputs/apk/release/app-release.apk
+apps/mobile-shells/cliente/android/app/build/outputs/bundle/release/app-release.aab
+apps/mobile-shells/profissional/android/app/build/outputs/apk/release/app-release.apk
+apps/mobile-shells/profissional/android/app/build/outputs/bundle/release/app-release.aab
+```
+
+Comandos uteis:
+
+```bash
+npm --prefix apps/mobile-shells/cliente run sync
+npm --prefix apps/mobile-shells/cliente run apk:release
+npm --prefix apps/mobile-shells/cliente run aab:release
+
+npm --prefix apps/mobile-shells/profissional run sync
+npm --prefix apps/mobile-shells/profissional run apk:release
+npm --prefix apps/mobile-shells/profissional run aab:release
+```
+
+Para entregar para cliente ou publicar na Play Store, gere builds assinados com keystore de producao:
+
+- APK assinado: instalacao fora da Play Store;
+- AAB assinado: publicacao na Google Play.
+
+### Regra obrigatoria: mexeu em Android, gera novo APK/AAB
+
+Mudancas normais do PWA/web, API, banco ou Vercel aparecem nos apps porque eles carregam as URLs de producao. Mesmo assim, qualquer mudanca nativa exige novo build Android.
+
+**Se mexer em qualquer item abaixo, e obrigatorio gerar novo APK/AAB, instalar de novo e testar push:**
+
+- `apps/mobile-shells/**/android/**`;
+- `apps/mobile-shells/**/capacitor.config.ts`;
+- `google-services.json`;
+- Gradle, `build.gradle`, `settings.gradle` ou versoes de plugins nativos;
+- `AndroidManifest.xml`, permissoes, package/appId, nome do app, icone ou splash;
+- plugins Capacitor, especialmente Push Notifications e Local Notifications;
+- Firebase/FCM nativo, canais de notificacao ou comportamento de notificacao em primeiro plano;
+- assinatura, keystore, versionCode ou versionName.
+
+Depois de gerar APK/AAB novo, faca smoke test nos dois apps:
+
+- login profissional, exemplo de teste usado: CPF `86761918380`;
+- login cliente, exemplo de teste usado: CPF `06308175102`;
+- permitir notificacoes no Android;
+- criar/reagendar/cancelar agendamento que envolva o usuario testado;
+- confirmar que a notificacao chega com o app fechado e tambem com o app aberto.
+
 ## Testes e auditorias
 
 O projeto possui auditorias específicas para:
@@ -339,6 +439,29 @@ PWA → PushSubscription → Supabase → jobs/cron → Vercel → VAPID → nav
 ```
 
 Cliente e profissional possuem subscriptions separadas por audiência/dispositivo.
+
+### Push nativo Android
+
+```text
+APK Android
+        |
+        | Capacitor Push Notifications
+        v
+Firebase Cloud Messaging token
+        |
+        | POST /api/push/native/register
+        v
+Supabase native_push_devices
+        |
+        | jobs/rotas Vercel + firebase-admin
+        v
+Firebase Cloud Messaging
+        |
+        v
+Android recebe notificacao
+```
+
+Quando o app esta aberto em primeiro plano, o plugin de push recebe o evento e o app agenda uma notificacao local com `@capacitor/local-notifications`, para o aviso aparecer visualmente no Android.
 
 ## Domínios
 
