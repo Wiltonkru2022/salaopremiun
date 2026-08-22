@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { listNearbyClientAppSaloes } from "@/lib/client-app/queries";
 
+// publicRoute: busca publica de saloes publicados no app cliente.
 function parseCoordinate(value: string | null) {
   const numeric = Number(String(value || "").replace(",", "."));
   return Number.isFinite(numeric) ? numeric : null;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+// publicRoute: healthcheck publico usado por uptime/deploy.
 export async function GET() {
   return NextResponse.json(
     {

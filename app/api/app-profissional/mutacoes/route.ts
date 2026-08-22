@@ -4,6 +4,12 @@ import {
   clearProfissionalSession,
   verifyPassword,
 } from "@/lib/profissional-auth.server";
+import {
+  assertCanCreateAgendaInCurrentMonth,
+  assertCanCreateWithinLimit,
+  assertCanMutatePlanFeature,
+  PlanAccessError,
+} from "@/lib/plans/access";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
 
@@ -67,6 +73,56 @@ async function resolveTargetProfissional(params: {
   return requested;
 }
 
+async function assertProfessionalMutationPlanAccess(params: {
+  action: MutationAction;
+  idSalao: string;
+  body: Record<string, unknown>;
+}) {
+  if (params.action === "criar_agendamento") {
+    await assertCanMutatePlanFeature(params.idSalao, "agenda");
+    await assertCanCreateAgendaInCurrentMonth(params.idSalao);
+    return;
+  }
+
+  if (params.action === "criar_cliente") {
+    await assertCanMutatePlanFeature(params.idSalao, "clientes");
+    await assertCanCreateWithinLimit(params.idSalao, "clientes");
+    return;
+  }
+
+  if (params.action === "editar_cliente") {
+    await assertCanMutatePlanFeature(params.idSalao, "clientes");
+    return;
+  }
+
+  if (params.action === "criar_servico") {
+    await assertCanMutatePlanFeature(params.idSalao, "servicos");
+    await assertCanCreateWithinLimit(params.idSalao, "servicos");
+    return;
+  }
+
+  if (params.action === "editar_servico") {
+    await assertCanMutatePlanFeature(params.idSalao, "servicos");
+    return;
+  }
+
+  if (
+    params.action === "abrir_comanda" ||
+    params.action === "adicionar_item_comanda" ||
+    params.action === "fechar_comanda"
+  ) {
+    await assertCanMutatePlanFeature(params.idSalao, "comandas");
+
+    if (params.action === "adicionar_item_comanda") {
+      const tipo = text(params.body.tipo) || "servico";
+      await assertCanMutatePlanFeature(
+        params.idSalao,
+        tipo === "produto" ? "produtos" : "servicos"
+      );
+    }
+  }
+}
+
 export async function POST(request: Request) {
   let shouldClearSession = false;
 
@@ -94,6 +150,12 @@ export async function POST(request: Request) {
         { status: 400, headers: { "Cache-Control": "no-store" } }
       );
     }
+
+    await assertProfessionalMutationPlanAccess({
+      action,
+      idSalao: context.idSalao,
+      body,
+    });
 
     const result = await runAdminOperation({
       action: `app_profissional_mutacao_${action}`,
@@ -310,7 +372,12 @@ export async function POST(request: Request) {
       error instanceof Error
         ? error.message
         : "Não foi possível concluir a operação.";
-    const status = message === "FORBIDDEN_PROFISSIONAL" ? 403 : 400;
+    const status =
+      error instanceof PlanAccessError
+        ? error.status
+        : message === "FORBIDDEN_PROFISSIONAL"
+          ? 403
+          : 400;
     return NextResponse.json(
       {
         ok: false,

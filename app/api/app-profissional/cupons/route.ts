@@ -1,6 +1,11 @@
 import { randomUUID } from "crypto";
 import { NextResponse } from "next/server";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
+import {
+  assertCanMutatePlanFeature,
+  assertCanUsePlanFeature,
+  PlanAccessError,
+} from "@/lib/plans/access";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 function text(value: unknown) { return String(value ?? "").trim(); }
@@ -10,6 +15,7 @@ function digits(value: unknown) { return text(value).replace(/\D/g, ""); }
 export async function GET() {
   try {
     const context = await requireProfissionalAppContext();
+    await assertCanUsePlanFeature(context.idSalao, "campanhas");
     const payload = await runAdminOperation({
       action: "app_profissional_listar_cupons",
       actorId: context.idProfissional,
@@ -41,13 +47,14 @@ export async function GET() {
     });
     return NextResponse.json({ ok: true, ...payload }, { headers: { "Cache-Control": "private, no-store" } });
   } catch (error) {
-    return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Não foi possível carregar os cupons." }, { status: 400 });
+    return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Não foi possível carregar os cupons." }, { status: error instanceof PlanAccessError ? error.status : 400 });
   }
 }
 
 export async function POST(request: Request) {
   try {
     const context = await requireProfissionalAppContext();
+    await assertCanMutatePlanFeature(context.idSalao, "campanhas");
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
     const nome = text(body.nome);
     const descricao = text(body.descricao);
@@ -132,13 +139,14 @@ export async function POST(request: Request) {
     });
     return NextResponse.json({ ok: true, ...result }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Não foi possível criar o cupom." }, { status: 400 });
+    return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Não foi possível criar o cupom." }, { status: error instanceof PlanAccessError ? error.status : 400 });
   }
 }
 
 export async function PATCH(request: Request) {
   try {
     const context = await requireProfissionalAppContext();
+    await assertCanMutatePlanFeature(context.idSalao, "campanhas");
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
     const id = text(body.id);
     const ativo = body.ativo === true;
@@ -163,13 +171,14 @@ export async function PATCH(request: Request) {
 
     return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Não foi possível alterar o cupom." }, { status: 400 });
+    return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Não foi possível alterar o cupom." }, { status: error instanceof PlanAccessError ? error.status : 400 });
   }
 }
 
 export async function DELETE(request: Request) {
   try {
     const context = await requireProfissionalAppContext();
+    await assertCanMutatePlanFeature(context.idSalao, "campanhas");
     const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
     const id = text(body.id);
     if (!id) throw new Error("Cupom não informado.");
@@ -193,6 +202,6 @@ export async function DELETE(request: Request) {
 
     return NextResponse.json({ ok: true }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Não foi possível excluir o cupom." }, { status: 400 });
+    return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Não foi possível excluir o cupom." }, { status: error instanceof PlanAccessError ? error.status : 400 });
   }
 }

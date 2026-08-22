@@ -7,6 +7,7 @@ import {
   registerProfissionalLoginFailure,
 } from "@/lib/security/profissional-login-rate-limit";
 
+// publicRoute: endpoint de login do app profissional protegido por rate limit e senha.
 function normalizeCpf(value: unknown) {
   return String(value || "").replace(/\D/g, "");
 }

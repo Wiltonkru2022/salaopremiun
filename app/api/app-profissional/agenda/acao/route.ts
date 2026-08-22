@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
+import { assertCanMutatePlanFeature, PlanAccessError } from "@/lib/plans/access";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   buscarConfiguracaoAgendaProfissional,
@@ -43,6 +44,8 @@ export async function POST(request: Request) {
     if (!idAgendamento || !["confirmar", "confirmar_pix", "reagendar", "remover"].includes(action)) {
       return NextResponse.json({ ok: false, error: "Ação de agenda inválida." }, { status: 400 });
     }
+
+    await assertCanMutatePlanFeature(session.idSalao, "agenda");
 
     const result = await runAdminOperation({
       action: `app_profissional_pwa_${action}`,
@@ -300,7 +303,7 @@ export async function POST(request: Request) {
   } catch (error) {
     return NextResponse.json(
       { ok: false, error: error instanceof Error ? error.message : "Não foi possível atualizar o agendamento." },
-      { status: 400 }
+      { status: error instanceof PlanAccessError ? error.status : 400 }
     );
   }
 }

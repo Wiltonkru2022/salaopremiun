@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getClienteAppBookingAvailability } from "@/app/services/cliente-app/appointments";
 
+// publicRoute: consulta publica de horarios disponiveis para o app cliente.
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const idSalao = String(searchParams.get("salao") || "").trim();

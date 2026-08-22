@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requestStatusSubscription } from "@/lib/monitoring/status-subscriptions.server";
 
+// publicRoute: inscricao publica com double opt-in e resposta generica.
 export async function POST(req: Request) {
   const contentType = req.headers.get("content-type") || "";
   const email = contentType.includes("application/json")

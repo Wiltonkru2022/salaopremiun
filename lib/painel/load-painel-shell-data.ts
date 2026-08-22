@@ -7,19 +7,17 @@ import {
   buildPermissoesByNivel,
   sanitizePermissoesDb,
 } from "@/lib/auth/permissions";
+import { SELECT_USUARIOS_PERMISSOES } from "@/lib/db/selects";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
 import { buildShellNotifications } from "@/lib/notifications/shell-notifications";
 import { getPlanoAccessSnapshot } from "@/lib/plans/access";
 import { getPlanoCatalogo } from "@/lib/plans/catalog";
-import { PERMISSIONS } from "@/lib/permissions";
 import {
   getSecurityAccessDecision,
   getSecurityStatusMessage,
 } from "@/lib/security/user-security";
 
 type PermissoesDbRow = Record<string, boolean | string | null>;
-
-const permissionsSelect = ["id_usuario", "id_salao", ...Object.keys(PERMISSIONS)].join(", ");
 
 const loadPainelShellContextCached = unstable_cache(
   async (authUserId: string) => {
@@ -73,7 +71,7 @@ const loadPainelShellContextCached = unstable_cache(
       await Promise.all([
         supabaseAdmin
           .from("usuarios_permissoes")
-          .select(permissionsSelect)
+          .select(SELECT_USUARIOS_PERMISSOES)
           .eq("id_usuario", usuario.id)
           .eq("id_salao", usuario.id_salao)
           .maybeSingle(),

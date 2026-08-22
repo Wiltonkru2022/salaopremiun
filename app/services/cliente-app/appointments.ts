@@ -1,6 +1,10 @@
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { cancelarAgendamentoComComanda } from "@/lib/agenda/cancelarAgendamentoComComanda";
 import { canSalonAppearInClientApp } from "@/lib/client-app/eligibility";
+import {
+  assertCanCreateAgendaInCurrentMonth,
+  assertCanMutatePlanFeature,
+} from "@/lib/plans/access";
 import { notifySalonAboutClientBooking } from "@/lib/push-notifications";
 import { hasBlockedReviewLanguage } from "@/lib/content-moderation";
 import {
@@ -951,6 +955,19 @@ export async function createClienteAppAppointment(
     };
   }
 
+  try {
+    await assertCanMutatePlanFeature(idSalao, "agenda");
+    await assertCanCreateAgendaInCurrentMonth(idSalao);
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Este salao nao pode receber novos agendamentos agora.",
+    };
+  }
+
   return runAdminOperation({
     action: "cliente_app_book_appointment",
     actorId: idConta,
@@ -1694,6 +1711,26 @@ export async function confirmClienteAppAppointment(
         return { ok: false, error: "Agendamento não encontrado." };
       }
 
+      const elegibilidade = await canSalonAppearInClientApp(ownership.idSalao);
+      if (!elegibilidade.allowed) {
+        return {
+          ok: false,
+          error: "Este salão não está publicado no app cliente agora.",
+        };
+      }
+
+      try {
+        await assertCanMutatePlanFeature(ownership.idSalao, "agenda");
+      } catch (error) {
+        return {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Este salao nao pode confirmar agendamentos agora.",
+        };
+      }
+
       const status = ownership.status.toLowerCase();
       if (status === "cancelado") {
         return { ok: false, error: "Este agendamento foi cancelado." };
@@ -1793,6 +1830,18 @@ export async function joinClienteAppWaitlist(
     };
   }
 
+  try {
+    await assertCanMutatePlanFeature(idSalao, "agenda");
+  } catch (error) {
+    return {
+      ok: false,
+      error:
+        error instanceof Error
+          ? error.message
+          : "Este salao nao pode receber lista de espera agora.",
+    };
+  }
+
   return runAdminOperation({
     action: "cliente_app_join_waitlist",
     actorId: idConta,
@@ -1885,6 +1934,26 @@ export async function rescheduleClienteAppAppointment(
 
       if (!ownership) {
         return { ok: false, error: "Agendamento não encontrado." };
+      }
+
+      const elegibilidade = await canSalonAppearInClientApp(ownership.idSalao);
+      if (!elegibilidade.allowed) {
+        return {
+          ok: false,
+          error: "Este salão não está publicado no app cliente agora.",
+        };
+      }
+
+      try {
+        await assertCanMutatePlanFeature(ownership.idSalao, "agenda");
+      } catch (error) {
+        return {
+          ok: false,
+          error:
+            error instanceof Error
+              ? error.message
+              : "Este salao nao pode reagendar agendamentos agora.",
+        };
       }
 
       const status = ownership.status.toLowerCase();

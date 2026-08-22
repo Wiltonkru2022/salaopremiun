@@ -8,6 +8,12 @@ import { registrarLogSistema } from "@/lib/system-logs";
 
 export type Permissoes = Record<string, boolean>;
 
+const LEGACY_PERMISSION_ALIASES: Record<string, PermissionKey[]> = {
+  caixa_fechar: ["caixa_finalizar"],
+  comissoes_pagar: ["comissoes_editar", "comissoes_financeiro"],
+  estoque_movimentar: ["estoque_operar"],
+};
+
 function normalizeNivel(value: string | null | undefined): UserNivel | null {
   const nivel = String(value || "").trim().toLowerCase();
 
@@ -68,6 +74,15 @@ export function sanitizePermissoesDb(
   Object.entries(permissoesDb).forEach(([key, value]) => {
     if (ignora.has(key)) return;
 
+    if (permissoesValidas.has(key)) {
+      resultado[key] = Boolean(value);
+      return;
+    }
+
+    if (LEGACY_PERMISSION_ALIASES[key]) {
+      return;
+    }
+
     if (!permissoesValidas.has(key)) {
       console.warn(`Permissao ignorada por chave desconhecida: ${key}`);
       void registrarLogSistema({
@@ -83,8 +98,17 @@ export function sanitizePermissoesDb(
       });
       return;
     }
+  });
 
-    resultado[key] = Boolean(value);
+  Object.entries(permissoesDb).forEach(([key, value]) => {
+    const aliases = LEGACY_PERMISSION_ALIASES[key];
+    if (!aliases) return;
+
+    aliases.forEach((permission) => {
+      if (resultado[permission] === undefined) {
+        resultado[permission] = Boolean(value);
+      }
+    });
   });
 
   return resultado;

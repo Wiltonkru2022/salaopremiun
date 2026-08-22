@@ -3,6 +3,7 @@ import { getPublicStatusSnapshot } from "@/lib/monitoring/public-status.server";
 
 export const dynamic = "force-dynamic";
 
+// publicRoute: status operacional publico sem dados de cliente ou salao.
 export async function GET() {
   try {
     const snapshot = await getPublicStatusSnapshot();

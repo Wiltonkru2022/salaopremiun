@@ -1,6 +1,6 @@
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import type { SupabaseAdminClient } from "@/lib/supabase/admin";
-import { isSalaoStatusOperational } from "@/lib/plans/access";
+import { canUsePlanFeature, isSalaoStatusOperational } from "@/lib/plans/access";
 import { verifyPassword } from "@/lib/profissional-auth.server";
 import { recordSecurityLoginFailure } from "@/lib/security/login-attempts";
 import { emitSecurityEvent } from "@/lib/security/security-events";
@@ -164,6 +164,14 @@ async function buildProfissionalSession(params: {
 
   if (!isSalaoStatusOperational(salao.status)) {
     return { ok: false, error: "Salao inativo ou bloqueado." };
+  }
+
+  const appAccess = await canUsePlanFeature(profissional.id_salao, "app_profissional");
+  if (!appAccess.allowed) {
+    return {
+      ok: false,
+      error: appAccess.reason || "Plano atual nao libera o app profissional.",
+    };
   }
 
   const securityAccess = await getSecurityAccessDecision({
