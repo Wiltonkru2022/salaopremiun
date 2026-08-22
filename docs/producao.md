@@ -1,67 +1,150 @@
-# Checklist de Produção
+# Produção e Deploy
 
-Use este checklist antes de publicar ou trocar o ambiente de produção.
+Este documento descreve o caminho oficial de produção do SalãoPremium.
 
-## Variáveis Obrigatórias
+## Arquitetura de deploy
 
-- `NEXT_PUBLIC_SUPABASE_URL`: URL pública do projeto Supabase.
-- `NEXT_PUBLIC_SUPABASE_ANON_KEY`: chave anon pública do Supabase.
-- `SUPABASE_SERVICE_ROLE_KEY`: chave service role, somente no servidor.
-- `ASAAS_BASE_URL`: URL base da API Asaas. Produção: `https://api.asaas.com/v3`.
-- `ASAAS_API_KEY`: chave privada da API Asaas.
-- `ASAAS_WEBHOOK_TOKEN`: token validado pelo webhook Asaas.
-- `OPENAI_API_KEY`: chave usada pelo suporte inteligente.
-- `CRON_SECRET`: segredo usado em `/api/cron/renovar-assinaturas`.
-- `PASSWORD_REUSE_SECRET`: segredo para hash de reuso de senha por salão.
-- `PROFISSIONAL_SESSION_SECRET`: segredo HMAC dos cookies do app profissional.
-- `NEXT_PUBLIC_APP_URL`: URL pública do app.
+- Next.js e APIs: Vercel;
+- App Profissional: Vite PWA compilado durante o build principal;
+- banco/Auth/Storage: Supabase;
+- pagamentos: Asaas;
+- e-mail: Brevo;
+- push: Web Push/VAPID;
+- WhatsApp: Meta API quando configurada.
 
-## Git e Arquivos Locais
+## App Profissional em produção
 
-- `.env`, `.env.local`, `.cloudflared` e `tsconfig.tsbuildinfo` não devem ser versionados.
-- Caso algum segredo tenha sido versionado no passado, rotacione a chave no provedor correspondente.
-- Não publique arquivos de túnel local, certificado ou executáveis auxiliares.
+**Somente `apps/app-profissional-vite` é fonte de produção.**
 
-## Supabase
+`scripts/run-build.mjs` compila esse projeto e grava os assets em `public/app-profissional` antes do Next build. O proxy do host `app.salaopremiun.com.br` reescreve as rotas profissionais para o bundle Vite.
 
-- Conferir se as tabelas multi-tenant usam `id_salao`.
-- Conferir RLS/policies nas tabelas usadas pelo client.
-- Manter `SUPABASE_SERVICE_ROLE_KEY` apenas em rotas server-side.
-- Validar que ações administrativas verificam usuário, salão, status e nível.
+Não criar novamente páginas em `app/app-profissional`.
 
-## Asaas
+## Variáveis essenciais
 
-- Configurar o webhook para `/api/webhooks/asaas`.
-- Enviar o header esperado pelo sistema: `asaas-access-token` ou `access_token`.
-- Usar o mesmo valor de `ASAAS_WEBHOOK_TOKEN` no painel Asaas e no ambiente do app.
-- Conferir `ASAAS_BASE_URL` antes de trocar sandbox por produção.
+Consulte `.env.example` para a lista integral.
 
-## Cron
+### Supabase
 
-- Chamar `/api/cron/renovar-assinaturas` com header:
-
-```http
-Authorization: Bearer <CRON_SECRET>
+```env
+NEXT_PUBLIC_SUPABASE_URL=
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
+NEXT_PUBLIC_SUPABASE_ANON_KEY=
+SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-- Rodar em uma agenda diária ou mais frequente, conforme regra comercial.
-- Monitorar respostas com `ok: false` para salões sem customer, plano inválido ou cobrança pendente.
+### Segurança/sessões
 
-## Validação Final
+```env
+CRON_SECRET=
+PASSWORD_REUSE_SECRET=
+PROFISSIONAL_SESSION_SECRET=
+CLIENT_APP_RECOVERY_SECRET=
+```
+
+### Asaas
+
+```env
+ASAAS_BASE_URL=https://api.asaas.com/v3
+ASAAS_API_KEY=
+ASAAS_WEBHOOK_TOKEN=
+```
+
+### Brevo
+
+```env
+BREVO_API_KEY=
+BREVO_EMAIL_FROM=
+```
+
+### Web Push
+
+```env
+WEB_PUSH_PUBLIC_KEY=
+WEB_PUSH_PRIVATE_KEY=
+WEB_PUSH_SUBJECT=
+```
+
+### Domínios
+
+Revisar `APP_ROOT_HOST`, `APP_PAINEL_HOST`, `APP_PROFISSIONAL_HOST`, `APP_LOGIN_HOST`, `APP_CADASTRO_HOST`, `APP_ASSINATURA_HOST` e os equivalentes usados no ambiente.
+
+## Build oficial
+
+```bash
+npm ci
+npm run ci:validate
+```
+
+O `npm run build` já inclui:
+
+1. preparação de mídia do cliente;
+2. `npm ci` do Vite profissional;
+3. build do Vite profissional;
+4. typecheck principal;
+5. Next build.
+
+## Validações mínimas
 
 ```bash
 npm run lint
 npm run typecheck
+npm run typecheck:professional
+npm run audit:database-contract
+npm run audit:service-role
+npm run audit:api-guards
+npm run audit:critical-routes
+npm run audit:architecture-boundaries
+npm run audit:operational-coverage
+npm run test:operational
 npm run build
 ```
 
-Fluxos manuais recomendados:
+## Supabase
 
-- Criar salão.
-- Login no painel.
-- Iniciar trial.
-- Gerar cobrança PIX/boleto/cartão.
-- Receber webhook Asaas.
-- Login no app profissional.
-- Abrir suporte inteligente.
-- Criar, editar e excluir usuário como admin.
+- revisar `supabase/migrations`;
+- executar dry-run quando aplicável;
+- nunca apagar migration já aplicada para “remover” uma feature;
+- validar RLS e funções obrigatórias;
+- manter Service Role somente no servidor;
+- conferir backup/restore antes de migrations destrutivas.
+
+### Editor removido
+
+A migration histórica do editor permanece no histórico. Caso as tabelas/bucket do editor precisem ser eliminados do banco de produção, criar uma nova migration de remoção somente após backup e confirmação de que não existem dados necessários.
+
+## Asaas
+
+- webhook: `/api/webhooks/asaas`;
+- token precisa coincidir com o provedor;
+- separar sandbox e produção;
+- validar idempotência;
+- monitorar eventos com erro e reconciliação.
+
+## Crons
+
+Rotas cron exigem `CRON_SECRET` e devem registrar execução/resultado. Jobs não podem duplicar efeitos de webhook sem idempotência.
+
+## Smoke após deploy
+
+1. site público;
+2. login do painel;
+3. dashboard;
+4. App Cliente: login + reserva;
+5. App Profissional Vite: login + agenda + comandas;
+6. caixa/fechamento;
+7. assinatura;
+8. webhook em ambiente apropriado;
+9. Admin Master/saúde;
+10. push e e-mail quando configurados.
+
+## Rollback
+
+- código: rollback de deployment/commit;
+- banco: não “voltar” migration apagando arquivo; aplicar migration corretiva;
+- incidentes financeiros: preservar logs/idempotência antes de qualquer reparo;
+- Service Worker/PWA: considerar cache de versões anteriores e testar atualização.
+
+## Regra de promoção
+
+Nenhum release deve ser considerado pronto apenas porque o build passou. É necessário combinar build, auditorias, migrations, smoke e evidência operacional do deployment atual.

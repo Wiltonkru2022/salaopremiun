@@ -1,70 +1,37 @@
-# App profissional: Google OAuth
+# App Profissional — Google OAuth
 
-## Status
-Desativado no app profissional.
+> **Status: DESATIVADO / documento histórico.**
 
-O app profissional deve continuar usando CPF e senha isolados do Supabase Auth do painel. Isso evita conflito com o login SaaS/painel, que tambem usa Supabase Auth no mesmo projeto.
+O App Profissional oficial é o Vite em `apps/app-profissional-vite` e atualmente usa autenticação própria por CPF + senha através de `/api/app-profissional/auth/*`.
 
-## Historico
-Este documento fica preservado apenas como referencia tecnica caso no futuro seja criado um projeto Auth separado ou um dominio Auth dedicado para profissionais.
+## Decisão atual
 
-## Rotas do sistema
-- Inicio do OAuth: `/app-profissional/auth/google/start`
-- Callback do OAuth: `/app-profissional/auth/google/callback`
-- URL publica de callback: `https://app.salaopremiun.com.br/app-profissional/auth/google/callback`
-- URL curta no subdominio do app: `https://app.salaopremiun.com.br/auth/google/callback`
+Google OAuth **não** é um método de login do App Profissional.
 
-## Supabase Auth
-No painel do Supabase:
-- Acesse `Authentication > Providers > Google`.
-- Ative o provider Google.
-- Preencha `Client ID`.
-- Preencha `Client Secret`.
-- Salve.
+Motivos:
 
-Em `Authentication > URL Configuration`:
-- Site URL recomendado: `https://app.salaopremiun.com.br`
-- Redirect URL obrigatoria:
-  - `https://app.salaopremiun.com.br/app-profissional/auth/google/callback`
-  - `https://app.salaopremiun.com.br/auth/google/callback`
-  - Enquanto o `Site URL` continuar apontando para o login do painel, mantenha obrigatoriamente a URL com `/app-profissional/auth/google/callback`, porque ela ja aparece permitida no painel.
+- o painel já utiliza Supabase Auth e possui contexto administrativo diferente;
+- o profissional possui sessão e permissões próprias;
+- compartilhar o mesmo fluxo de Auth sem separação forte pode misturar sessões e superfícies;
+- a implementação Next antiga do profissional foi removida.
 
-## Google Cloud Console
-No OAuth Client usado pelo Supabase:
-- Tipo: Web application.
-- Authorized JavaScript origins:
-  - `https://app.salaopremiun.com.br`
-  - `https://salaopremiun.com.br`
-- Authorized redirect URIs:
-  - use a URL de callback do Supabase Auth, normalmente no formato:
-    - `https://<project-ref>.supabase.co/auth/v1/callback`
+As antigas rotas OAuth em `app/app-profissional/...` não existem mais e não devem ser recriadas a partir de documentação antiga.
 
-Importante: o Google normalmente redireciona primeiro para o callback do Supabase Auth. O Supabase entao redireciona para a rota do app definida em `redirectTo`.
+## Google Calendar
 
-## Nome exibido no Google
-Se a tela do Google mostrar `Prosseguir para <project-ref>.supabase.co`, isso vem do dominio de callback do Supabase Auth.
+A integração Google Calendar do painel continua sendo outro recurso, com suas próprias rotas e credenciais. Não confundir Google Calendar com login Google do profissional.
 
-Para melhorar:
-- Configure o OAuth consent screen no Google Cloud com nome `SalaoPremium`, logo, suporte e dominio autorizado `salaopremiun.com.br`.
-- Verifique/publica o app no Google Cloud se necessario.
+## Se OAuth profissional voltar no futuro
 
-Para remover o dominio `supabase.co` da tela:
-- Configure Custom Domain no Supabase para Auth, por exemplo `auth.salaopremiun.com.br`.
-- Depois adicione no Google Cloud o redirect URI do dominio customizado:
-  - `https://auth.salaopremiun.com.br/auth/v1/callback`
-- Mantenha tambem o callback original do Supabase enquanto testa.
+Exigir uma proposta técnica antes de implementar:
 
-## Teste operacional
-1. Entre no app profissional com CPF e senha.
-2. Abra `Perfil`.
-3. Clique em `Conectar conta Google`.
-4. Autorize no Google.
-5. Confirme se voltou para `Perfil` com mensagem de conta conectada.
-6. Saia da conta.
-7. Entre pela tela de login usando `Entrar com Google`.
+1. definir se haverá provedor/projeto Auth separado ou estratégia de sessão isolada;
+2. definir callback canônico no domínio do app;
+3. impedir que login profissional crie/contamine sessão administrativa do painel;
+4. mapear conta Google para `id_profissional` + `id_salao` de forma segura;
+5. revisar logout/revogação;
+6. adicionar rate limit, auditoria e logs sanitizados;
+7. testar isolamento entre dois salões;
+8. atualizar Vite, APIs, proxy, `.env.example`, documentação e E2E no mesmo PR.
 
-## Falhas comuns
-- Se voltar para login com erro Google, confira o provider no Supabase.
-- Se o Google bloquear a autorizacao, confira o redirect URI no Google Cloud.
-- Se conectar, mas nao logar depois, confira se a migration `202604230001_profissional_google_oauth.sql` foi aplicada.
-- Se o painel SaaS ficar logado com o usuario Google, revisar o callback profissional. Ele deve limpar a sessao Supabase depois de criar a sessao profissional.
+Até essa revisão existir, a regra é simples: **App Profissional = CPF + senha + sessão própria.**

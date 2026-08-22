@@ -1,57 +1,86 @@
-# Permissões
+# Permissões e Autorização
 
-## Níveis de usuário
+## Princípio
 
-- `admin`
-- `gerente`
-- `recepcao`
-- `profissional`
+Permissão visual melhora UX; autorização real acontece no servidor, RPC ou policy.
 
-## Estratégia
+```text
+UI pode ocultar botão
+        ↓
+API/Action valida sessão
+        ↓
+valida nível/permissão
+        ↓
+valida id_salao/recurso
+        ↓
+executa operação
+```
 
-O sistema usa duas camadas:
+## Painel do salão
 
-1. permissão por nível
-2. permissão customizada por usuário, quando necessário
+Níveis conhecidos incluem:
 
-## Exemplo de permissões
+- `admin`;
+- `gerente`;
+- `recepcao`;
+- `profissional`.
 
-- `dashboard_ver`
-- `agenda_ver`
-- `clientes_ver`
-- `profissionais_ver`
-- `servicos_ver`
-- `produtos_ver`
-- `estoque_ver`
-- `comandas_ver`
-- `vendas_ver`
-- `caixa_ver`
-- `caixa_editar`
-- `caixa_operar`
-- `caixa_finalizar`
-- `caixa_pagamentos`
-- `comissoes_ver`
-- `relatorios_ver`
-- `marketing_ver`
-- `configuracoes_ver`
-- `assinatura_ver`
+O sistema combina nível padrão e permissões customizadas quando necessário.
 
-## Regra base por nível
+Exemplos de permissões de negócio:
 
-### admin
-Acesso total
+- dashboard;
+- agenda;
+- clientes;
+- profissionais;
+- serviços;
+- produtos/estoque;
+- comandas/vendas;
+- caixa e pagamentos;
+- comissões;
+- relatórios;
+- marketing;
+- configurações;
+- assinatura.
 
-### gerente
-Acesso operacional e gerencial, sem controle total de sistema em alguns casos
+### Regras
 
-### recepcao
-Acesso a agenda, clientes, vendas e caixa conforme regra definida
+- `admin`: acesso amplo do salão, mas não vira Admin Master automaticamente;
+- `gerente`: operação/gestão conforme permissões;
+- `recepcao`: rotina de atendimento conforme permissões;
+- `profissional`: escopo restrito e, quando usa o PWA, também limitado pela sessão profissional.
 
-### profissional
-Acesso restrito ao que for necessário para operação individual
+## App Profissional Vite
 
-## Boas práticas
+O profissional recebe somente o contexto permitido pelas APIs do App Profissional. A aplicação deve validar capacidades como visão de agenda de terceiros, edição de cliente/serviço, comandas e ações financeiras no backend.
 
-- validar no client para UX
-- validar novamente no server para segurança
-- nunca confiar apenas no front-end
+Nunca autorizar uma RPC sensível apenas com `id_profissional` fornecido pelo navegador.
+
+## App Cliente
+
+Cliente não compartilha níveis administrativos. Suas permissões derivam da própria identidade, do vínculo com agendamentos e das regras públicas/privadas do salão.
+
+## Admin Master
+
+Admin Master possui autorização separada. Ser admin de um salão não concede acesso ao Admin Master.
+
+## Multi-tenant
+
+Toda operação de salão precisa confirmar:
+
+- salão da sessão;
+- salão do recurso;
+- status do usuário/profissional;
+- permissão para a ação.
+
+## Checklist para nova feature
+
+- [ ] qual superfície executa a ação?
+- [ ] qual sessão é válida?
+- [ ] existe `id_salao`?
+- [ ] precisa de `id_profissional`?
+- [ ] qual permissão/nível é exigido?
+- [ ] o servidor valida tudo novamente?
+- [ ] erro retorna `401/403` sem vazar dados?
+- [ ] ação crítica gera log?
+- [ ] teste multi-tenant cobre acesso cruzado?

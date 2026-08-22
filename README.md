@@ -1,82 +1,205 @@
 # SalãoPremium
 
-SaaS multi-tenant para gestão de salões, barbearias e profissionais de beleza. O projeto reúne site, painel do salão, App Cliente, App Profissional, Admin Master, assinaturas, pagamentos, notificações, blog, automações e integrações em uma base principal Next.js.
+> Plataforma SaaS multi-tenant para salões, barbearias e profissionais de beleza, com gestão operacional, App Cliente, App Profissional PWA, pagamentos, notificações, assinaturas e observabilidade em uma única arquitetura.
 
-## Arquitetura atual
+## Visão geral
+
+O SalãoPremium é composto por quatro superfícies principais que compartilham o mesmo backend de negócio e o mesmo banco principal, mas possuem responsabilidades e experiências diferentes.
+
+| Superfície | Tecnologia oficial | Código fonte | Função |
+| --- | --- | --- | --- |
+| Site + Painel do salão | Next.js / React / TypeScript | `app/`, `components/`, `lib/`, `services/` | Gestão completa do salão |
+| App Cliente | Next.js PWA | `app/app-cliente`, `components/client-app` | Descoberta, reservas, agenda, perfil e avaliações |
+| **App Profissional** | **Vite + React PWA** | **`apps/app-profissional-vite`** | Agenda, clientes, serviços, comandas, comissões e rotina do profissional |
+| Admin Master | Next.js | `app/(admin-master)` | Administração, saúde, segurança, planos, cobranças e suporte |
+
+### Fonte da verdade do App Profissional
+
+**O único App Profissional oficial é o Vite em `apps/app-profissional-vite`.**
+
+O antigo App Profissional implementado como páginas Next.js em `app/app-profissional` foi removido para evitar duas aplicações concorrendo pela mesma URL e gerar manutenção duplicada. O build oficial do Vite é publicado em `public/app-profissional` e o proxy do domínio `app.salaopremiun.com.br` reescreve as rotas do profissional para esse bundle.
 
 ```text
-Navegador / PWA
-      │
-      ▼
-Vercel / Next.js
-      │
-      ├── APIs e Server Actions
-      ├── webhooks Asaas
-      ├── Web Push / VAPID
-      ├── e-mails Brevo
-      └── rotas cron
-      │
-      ▼
-Supabase
-      ├── Postgres
-      ├── Auth
-      ├── Storage
-      ├── pg_cron / Cron
-      ├── pg_net
-      ├── filas e jobs
-      ├── telemetria
-      ├── segurança
-      └── incidentes / alertas
+apps/app-profissional-vite
+        │
+        │ npm run build:professional
+        ▼
+public/app-profissional
+        │
+        ▼
+/app-profissional/  →  PWA do profissional
 ```
 
-Não existe dependência de VPS auxiliar. APIs, jobs e processamento assíncrono são executados por Vercel + Supabase.
+> `apps/sistema-salao-premiun-vite` não é a implementação oficial do App Profissional e não deve ser usado como fonte de produção dessa superfície.
 
-## Stack
+## Arquitetura
+
+```text
+                         ┌──────────────────────────┐
+                         │        Usuários          │
+                         └────────────┬─────────────┘
+                                      │
+           ┌──────────────────────────┼───────────────────────────┐
+           │                          │                           │
+           ▼                          ▼                           ▼
+┌────────────────────┐    ┌────────────────────┐      ┌────────────────────┐
+│ Site / Painel      │    │ App Cliente       │      │ App Profissional   │
+│ Next.js            │    │ Next.js PWA       │      │ Vite + React PWA   │
+└─────────┬──────────┘    └─────────┬──────────┘      └─────────┬──────────┘
+          │                         │                           │
+          └─────────────────────────┼───────────────────────────┘
+                                    ▼
+                         ┌──────────────────────────┐
+                         │ Next.js / Vercel        │
+                         │ APIs + Server Actions   │
+                         │ Webhooks + Cron         │
+                         └────────────┬─────────────┘
+                                      │
+                    ┌─────────────────┼─────────────────┐
+                    ▼                 ▼                 ▼
+              ┌───────────┐     ┌───────────┐     ┌─────────────┐
+              │ Supabase  │     │   Asaas   │     │ Brevo/Meta  │
+              │ DB/Auth/  │     │ pagamentos│     │ e-mail/WA   │
+              │ Storage   │     │ webhooks  │     │             │
+              └───────────┘     └───────────┘     └─────────────┘
+```
+
+Não existe dependência obrigatória de VPS auxiliar para manter o sistema funcionando. A arquitetura de produção usa Vercel, Supabase e os provedores integrados.
+
+## Stack principal
 
 | Camada | Tecnologia |
 | --- | --- |
-| Frontend/backend web | Next.js App Router, React, TypeScript |
-| App Profissional | Vite/React PWA |
-| Estilo | Tailwind CSS + componentes próprios |
-| Banco principal | Supabase Postgres |
-| Auth | Supabase Auth + sessões SSR |
+| Web / backend | Next.js 16, React 19, TypeScript |
+| App Profissional | Vite, React 18, TypeScript, `vite-plugin-pwa` |
+| UI | Tailwind CSS, Lucide e componentes próprios |
+| Banco | Supabase PostgreSQL |
+| Auth do painel | Supabase Auth + sessão server-side |
+| Sessão profissional | API própria + cookie assinado com `PROFISSIONAL_SESSION_SECRET` |
 | Storage | Supabase Storage |
-| Blog | Supabase separado |
-| E-mail | Brevo |
 | Pagamentos | Asaas |
+| E-mail | Brevo |
+| WhatsApp | Meta WhatsApp API, quando configurada |
 | Push | Web Push + VAPID + `web-push` |
-| Jobs recorrentes | Supabase Cron/pg_cron + rotas cron Vercel |
+| Jobs | Supabase Cron/pg_cron + rotas Vercel |
 | Deploy | Vercel |
 | CI | GitHub Actions |
+| Testes | Vitest + Playwright + suítes E2E próprias |
 
-## Áreas principais
+## Módulos do produto
 
-- Site público e cadastro.
-- Painel do salão: agenda, caixa, clientes, serviços, profissionais, vendas, comissões e assinatura.
-- App Cliente: salão, reservas, agenda, notificações, perfil e avaliações.
-- App Profissional: agenda, clientes, comandas, suporte e notificações.
-- Admin Master: saúde, segurança, relatórios, salões, planos, cobranças, tickets, campanhas, blog e configurações.
+### Painel do salão
 
-## Estrutura
+- dashboard e indicadores;
+- agenda e bloqueios;
+- clientes;
+- profissionais e permissões;
+- catálogo de serviços;
+- produtos e estoque;
+- comandas e vendas;
+- caixa e pagamentos;
+- comissões;
+- campanhas e cupons;
+- relatórios;
+- assinatura e limites de plano;
+- integrações e configurações.
+
+### App Cliente
+
+- exploração de salões elegíveis;
+- perfil completo do salão;
+- profissionais, serviços, portfólio e avaliações;
+- reserva online em etapas;
+- favoritos;
+- agendamentos e reagendamento/cancelamento quando permitido;
+- notificações;
+- perfil do cliente;
+- cadastro com nome, nascimento, CPF, WhatsApp e e-mail opcional;
+- login com CPF + data de nascimento;
+- recuperação/alteração de e-mail com validação de identidade.
+
+### App Profissional — Vite PWA
+
+A aplicação oficial fica em `apps/app-profissional-vite` e contém, entre outras telas:
+
+- início;
+- agenda;
+- clientes;
+- serviços;
+- comandas;
+- cupons;
+- comissão;
+- avaliações;
+- notificações;
+- perfil;
+- configurações;
+- suporte e páginas auxiliares;
+- suporte a instalação PWA e cache/offline controlado.
+
+O frontend Vite conversa com APIs protegidas em `/api/app-profissional/*`. Credenciais administrativas do Supabase não entram no bundle público.
+
+### Admin Master
+
+- visão global dos salões;
+- planos e assinaturas;
+- cobranças e webhooks;
+- tickets e suporte;
+- saúde operacional;
+- incidentes e alertas;
+- segurança;
+- relatórios;
+- gestão de recursos administrativos.
+
+## Estrutura do repositório
 
 ```text
-app/                        páginas, APIs, layouts e Server Actions
-apps/app-profissional-vite/ PWA do profissional
-components/                 componentes reutilizáveis
-core/                       casos de uso e contratos de domínio
-lib/                        infraestrutura e regras compartilhadas
-services/                   serviços de negócio
-scripts/                    build, auditorias e manutenção
-supabase/                   migrations e configuração do banco principal
-supabase-blog/              banco/contratos do blog separado
-docs/                       documentação complementar
-public/                     assets e bundles públicos
-vercel.json                 configuração de crons/deploy
+app/
+├── (painel)/                    # Painel do salão
+├── (admin-master)/              # Administração global
+├── app-cliente/                 # App Cliente
+├── api/                         # APIs do sistema, inclusive App Profissional
+└── ...                          # Site, autenticação, assinatura e rotas públicas
+
+apps/
+└── app-profissional-vite/       # ÚNICO App Profissional oficial
+
+components/
+├── client-app/                  # UI do App Cliente
+└── ...                          # UI do painel/site
+
+core/                            # entidades, contratos e casos de uso
+lib/                             # infraestrutura e regras compartilhadas
+services/                        # serviços de negócio
+scripts/                         # build, auditorias, E2E e manutenção
+supabase/migrations/             # histórico imutável de migrations
+supabase-blog/                   # contratos do blog separado
+docs/                            # documentação canônica e histórica
+public/app-profissional/         # bundle gerado do Vite PWA
 ```
+
+## Editor de imagens removido
+
+O antigo editor visual acessado por `/salaopremiuneditor`, seus assets e o endpoint Pexels foram removidos do produto. A migration histórica `20260519210000_editor_ecossistema.sql` permanece versionada porque migrations já aplicadas não devem ser apagadas do histórico. Se no futuro for necessário remover também tabelas/bucket do banco, isso deve ser feito por **nova migration destrutiva, revisada e com backup**, nunca apagando a migration antiga.
+
+## Autenticação e isolamento
+
+O sistema possui contextos distintos:
+
+- **Painel/Admin:** autenticação baseada em Supabase Auth e vínculo com `usuarios`/salão.
+- **App Cliente:** identidade e sessão próprias do App Cliente; login atual por CPF + data de nascimento.
+- **App Profissional:** sessão própria validada por APIs `/api/app-profissional/auth/*` e escopo de profissional/salão.
+
+Regras obrigatórias:
+
+1. toda operação pertencente a um salão deve respeitar `id_salao`;
+2. autorização do frontend é somente UX — a autorização real acontece no servidor/RPC/policy;
+3. `SUPABASE_SERVICE_ROLE_KEY` nunca pode chegar ao navegador;
+4. RLS deve ser mantida nas superfícies que acessam o Data API;
+5. operações financeiras e mutações sensíveis precisam de validação server-side e idempotência quando aplicável.
 
 ## Variáveis de ambiente
 
-Use `.env.example` como referência. Nunca versione `.env` ou credenciais administrativas.
+A lista completa e atual fica em `.env.example`.
 
 ### Supabase
 
@@ -87,40 +210,32 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 ```
 
-`NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` é a chave preferida para navegador/PWA. `NEXT_PUBLIC_SUPABASE_ANON_KEY` permanece apenas como alias de compatibilidade enquanto pontos legados são migrados. `SUPABASE_SERVICE_ROLE_KEY` é exclusivamente de backend.
+A publishable key é pública por definição e pode ser usada nos clientes autorizados. A Service Role é exclusivamente server-side.
 
-### Brevo / trial
+### App Profissional Vite
+
+O build aceita as variáveis públicas abaixo e também os aliases equivalentes definidos pelo script de build:
 
 ```env
-BREVO_API_KEY=
-BREVO_EMAIL_FROM=
-CADASTRO_SALAO_EMAIL_FROM=
-CADASTRO_SALAO_EMAIL_REPLY_TO=
-TRIAL_EMAIL_FROM=
-TRIAL_EMAIL_REPLY_TO=
+VITE_SUPABASE_URL=
+VITE_SUPABASE_PUBLISHABLE_KEY=
+VITE_NEXT_APP_ORIGIN=
 ```
 
-O ciclo de trial roda diretamente pelo sistema: a rota cron consulta `assinaturas`, envia os avisos via Brevo e grava os marcadores de 3 dias, 1 dia, hoje e expirado no Supabase.
+Em produção, `scripts/run-build.mjs` reaproveita `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` para montar o bundle profissional.
 
-### Asaas
+### Pagamentos, e-mail e segurança
 
 ```env
 ASAAS_BASE_URL=https://api.asaas.com/v3
 ASAAS_API_KEY=
 ASAAS_WEBHOOK_TOKEN=
-```
-
-O webhook Asaas é processado diretamente pelo Next.js/Vercel. Idempotência e persistência continuam no banco principal.
-
-### Crons e segurança
-
-```env
+BREVO_API_KEY=
 CRON_SECRET=
 PASSWORD_REUSE_SECRET=
 PROFISSIONAL_SESSION_SECRET=
+CLIENT_APP_RECOVERY_SECRET=
 ```
-
-Segurança é gravada em `eventos_sistema`, `security_login_attempts`, `user_security_status`, `incidentes_sistema` e `alertas_sistema` no Supabase principal.
 
 ### Web Push
 
@@ -130,28 +245,9 @@ WEB_PUSH_PRIVATE_KEY=
 WEB_PUSH_SUBJECT=mailto:suporte@salaopremiun.com.br
 ```
 
-O fluxo é:
-
-```text
-PWA -> PushSubscription -> Supabase -> job/cron -> Vercel -> web-push/VAPID -> navegador
-```
-
-## Domínios
-
-| Domínio | Uso |
-| --- | --- |
-| `salaopremiun.com.br` | site público |
-| `www.salaopremiun.com.br` | redirecionamento/site |
-| `painel.salaopremiun.com.br` | painel e Admin Master |
-| `login.salaopremiun.com.br` | autenticação |
-| `cadastro.salaopremiun.com.br` | cadastro de salão |
-| `assinatura.salaopremiun.com.br` | assinatura/planos |
-| `app.salaopremiun.com.br` | apps/PWA |
-| `blog.salaopremiun.com.br` | blog |
-
-Não existe domínio de API ligado a servidor externo. As APIs públicas e internas fazem parte do deploy Next.js.
-
 ## Desenvolvimento
+
+### Aplicação Next.js
 
 ```bash
 npm install
@@ -159,105 +255,154 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Validação mínima antes de publicar:
+### App Profissional Vite isolado
 
 ```bash
-npm run lint
-npm run typecheck
+npm --prefix apps/app-profissional-vite install
+npm --prefix apps/app-profissional-vite run dev
+```
+
+O Vite usa porta própria e faz proxy de `/api` para o Next local através de `VITE_NEXT_APP_ORIGIN` quando configurado.
+
+## Build
+
+O comando oficial é:
+
+```bash
 npm run build
 ```
 
-Validação ampliada:
+O fluxo de `scripts/run-build.mjs` é:
+
+```text
+preparar mídia do App Cliente
+        ↓
+build do apps/app-profissional-vite
+        ↓
+gerar public/app-profissional
+        ↓
+typecheck
+        ↓
+Next.js build
+```
+
+Comandos úteis:
 
 ```bash
+npm run typecheck:professional
+npm run build:professional
+npm run lint
+npm run typecheck
+npm run ci:validate
 npm run launch:validate
 ```
 
-## Build do App Profissional
+## Testes e auditorias
 
-`scripts/run-build.mjs` compila o PWA profissional antes do Next.js. Ele aceita:
+O projeto possui auditorias específicas para:
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
-```
+- guards de API;
+- uso de Service Role;
+- rotas críticas;
+- contrato do banco/RPCs;
+- arquitetura;
+- cobertura operacional;
+- ações do Admin Master;
+- inventário de superfícies;
+- seleção de dados sensíveis;
+- segurança de dependências.
 
-Também aceita temporariamente os aliases `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `VITE_SUPABASE_ANON_KEY` e `VITE_SUPABASE_PUBLISHABLE_KEY`.
+E2E disponíveis incluem proxy/domínios, fluxo SaaS, App Cliente + App Profissional, resiliência de agendamento, offline profissional, sinal/pagamento e status operacional.
 
-O GitHub Actions usa somente URL e publishable key para o bundle público. Chaves administrativas não pertencem ao CI de frontend.
-
-## Banco, Auth e multi-tenancy
-
-O identificador estrutural é `id_salao`. Qualquer nova tabela ou operação pertencente a um salão deve respeitar esse escopo.
-
-Regras:
-
-- mudanças de schema devem vir por migration;
-- Service Role nunca deve chegar ao navegador;
-- APIs precisam validar sessão/permissão no servidor;
-- RLS deve ser usada onde o cliente acessa o Data API;
-- App Cliente e App Profissional precisam respeitar status do salão, plano e permissões;
-- o banco do blog é separado do banco principal.
-
-## Jobs e automações
-
-- `notification_jobs`: fila de notificações.
-- `push_subscriptions`: dispositivos/navegadores inscritos.
-- Supabase Cron: dispara processamento recorrente.
-- Vercel: executa as rotas de processamento.
-- `trial-alerts`: envia avisos de trial pela Brevo.
-- `security-cleanup`: aplica retenção no banco principal.
-- `renovar-assinaturas`: processa rotina comercial recorrente.
-
-## Observabilidade
-
-O sistema mantém telemetria no próprio Supabase:
-
-- `eventos_sistema`
-- `logs_sistema`
-- `incidentes_sistema`
-- `alertas_sistema`
-- `health_checks_sistema`
-- eventos de webhook e cron
-
-O Admin Master usa esses dados para Saúde, Segurança e Relatórios.
-
-## Integrações críticas
+## Integrações
 
 ### Asaas
 
-Assinaturas e cobranças são processadas pelo fluxo local. O webhook não depende de serviço intermediário.
+Usado em assinaturas, cobranças e webhooks. O processamento crítico permanece no backend e deve ser idempotente.
 
 ### Brevo
 
-Usado em recuperação de senha, recuperação e alteração de e-mail do App Cliente, boas-vindas, alertas de segurança, blog e avisos de trial.
+Usado em e-mails transacionais, recuperação, avisos e comunicações do produto.
+
+### Meta WhatsApp API
+
+Opcional. Tokens e `phone_number_id` são somente server-side.
 
 ### Google Calendar
 
-A integração de calendário continua independente da autenticação por e-mail/senha e deve respeitar os recursos liberados pelo plano.
+Integração do salão/painel, independente do App Profissional Vite. OAuth do profissional está desativado; veja `docs/app-profissional-google-oauth.md`.
 
-### Supabase Cron
+### Web Push
 
-Rotinas frequentes devem preferir funções SQL/pg_cron ou chamadas HTTP autenticadas para rotas Vercel, evitando manter processo permanente apenas para agendamento.
+```text
+PWA → PushSubscription → Supabase → jobs/cron → Vercel → VAPID → navegador
+```
 
-## Segurança
+Cliente e profissional possuem subscriptions separadas por audiência/dispositivo.
 
-- bloqueios de usuário ficam em `user_security_status`;
-- bloqueios de salão ficam no próprio salão;
-- tentativas de login ficam em `security_login_attempts`;
-- eventos de segurança entram em `eventos_sistema`;
-- incidentes críticos podem gerar `incidentes_sistema`/`alertas_sistema`;
-- limpeza de retenção é executada pelo cron local;
-- Admin Master pode auditar e desbloquear sem depender de infraestrutura externa.
+## Domínios
 
-## Publicação
+| Host | Uso esperado |
+| --- | --- |
+| `salaopremiun.com.br` | site público |
+| `www.salaopremiun.com.br` | site/redirect |
+| `login.salaopremiun.com.br` | login do painel |
+| `painel.salaopremiun.com.br` | painel e Admin Master |
+| `cadastro.salaopremiun.com.br` | cadastro de salão |
+| `assinatura.salaopremiun.com.br` | assinatura/planos |
+| `app.salaopremiun.com.br` | App Cliente e App Profissional |
+| `blog.salaopremiun.com.br` | blog |
+
+O proxy centraliza roteamento e garante que o host do App Profissional entregue o bundle Vite.
+
+## Banco e migrations
+
+- `supabase/migrations` é histórico versionado e não deve ser reescrito depois de aplicado.
+- mudanças de schema devem entrar como nova migration;
+- tabelas multi-tenant devem ser auditadas por `id_salao` e RLS;
+- funções críticas são verificadas por `npm run audit:database-contract`;
+- backups operacionais estão documentados em `docs/backup-operacional.md`.
+
+## Observabilidade
+
+A saúde operacional utiliza catálogo versionado, probes seguros, incidentes, alertas, eventos e checks persistidos no Supabase. Ausência de erro não é tratada automaticamente como prova de saúde.
+
+Principais comandos:
+
+```bash
+npm run audit:operational-coverage
+npm run test:operational
+npm run e2e:status
+```
+
+## Deploy e release
 
 Fluxo recomendado:
 
-1. criar branch;
-2. executar lint, typecheck e build;
-3. revisar migrations;
-4. abrir PR;
-5. validar preview Vercel quando necessário;
-6. mergear em `main`;
-7. confirmar deployment `READY` e logs de produção.
+1. revisar migrations e mudanças destrutivas;
+2. `npm run ci:validate`;
+3. testar Preview/Staging;
+4. executar os E2E necessários;
+5. mergear em `main`;
+6. confirmar build do App Profissional Vite e Next.js;
+7. confirmar deployment Vercel `READY`;
+8. executar smoke de produção e acompanhar saúde/webhooks.
+
+## Documentação
+
+Comece por [`docs/README.md`](docs/README.md). Os principais documentos são:
+
+- [`docs/system-map.md`](docs/system-map.md) — mapa operacional;
+- [`docs/app-cliente.md`](docs/app-cliente.md) — App Cliente;
+- [`docs/app-profissional.md`](docs/app-profissional.md) — App Profissional Vite;
+- [`docs/painel.md`](docs/painel.md) — Painel e Admin Master;
+- [`docs/auth.md`](docs/auth.md) — autenticação e sessões;
+- [`docs/producao.md`](docs/producao.md) — produção e deploy;
+- [`docs/production-checklists.md`](docs/production-checklists.md) — checklist de release;
+- [`docs/operational-health.md`](docs/operational-health.md) — saúde operacional;
+- [`docs/web-push.md`](docs/web-push.md) — notificações push;
+- [`docs/lgpd-security-review.md`](docs/lgpd-security-review.md) — segurança/LGPD.
+
+---
+
+**Regra de manutenção:** quando a arquitetura mudar, atualize primeiro este README e `docs/README.md`, depois os documentos específicos. Não mantenha duas implementações oficiais para a mesma superfície.
