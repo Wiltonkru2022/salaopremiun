@@ -6,7 +6,6 @@ import { ArrowLeft, Sparkles } from "lucide-react";
 import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 import ClientAppDrawerNav from "@/components/client-app/ClientAppDrawerNav";
 import ClientVisualNoticeRuntime from "@/components/client-app/ClientVisualNoticeRuntime";
-import PushPermissionRuntime from "@/components/push/PushPermissionRuntime";
 import {
   ClientMobileLayoutContext,
   type ClientMobileChromeState,
@@ -133,10 +132,7 @@ export default function ClientMobileAppLayout({
               </div>
 
               <div className="flex shrink-0 flex-col items-end gap-2">
-                <div className="flex items-center gap-2">
-                  <ClientAppDrawerNav />
-                  <PushPermissionRuntime audience="cliente_app" compact />
-                </div>
+                <ClientAppDrawerNav />
                 <nav className="hidden flex-wrap items-center gap-2 text-sm font-semibold text-zinc-700 md:flex">
                   <ClientAppPendingLink
                     href="/app-cliente/explorar"
