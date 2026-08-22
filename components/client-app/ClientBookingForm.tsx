@@ -351,6 +351,22 @@ export default function ClientBookingForm({
 
   useEffect(() => {
     if (!draftReady) return;
+
+    const frame = window.requestAnimationFrame(() => {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+
+      const scrollingElement = document.scrollingElement;
+      if (scrollingElement) {
+        scrollingElement.scrollTop = 0;
+        scrollingElement.scrollLeft = 0;
+      }
+    });
+
+    return () => window.cancelAnimationFrame(frame);
+  }, [draftReady, step]);
+
+  useEffect(() => {
+    if (!draftReady) return;
     writeClientBookingDraft({
       idSalao,
       profissionalId,
@@ -618,7 +634,7 @@ export default function ClientBookingForm({
               <input
                 value={buscaServico}
                 onChange={(event) => setBuscaServico(event.target.value)}
-              placeholder={ptBR.client.serviceSearch}
+                placeholder={ptBR.client.serviceSearch}
                 className="min-w-0 flex-1 bg-transparent text-lg text-white outline-none"
               />
             </label>
