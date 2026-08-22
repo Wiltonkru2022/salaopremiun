@@ -8,6 +8,7 @@ import {
   getPushRetryDelayMs,
   type PushFailureCategory,
 } from "@/lib/push-delivery-utils";
+import { sendNativePushToAudience } from "@/lib/native-push-notifications";
 
 export type PushAudience = "cliente_app" | "profissional_app" | "salao_painel";
 
@@ -298,6 +299,42 @@ async function filterProfissionalAppSubscriptionsByPreference(
   return rows.filter((row) =>
     enabledIds.has(String(row.id_profissional || "").trim())
   );
+}
+
+async function isProfissionalNativePushEnabled(idProfissional?: string | null) {
+  const id = String(idProfissional || "").trim();
+  if (!id) return false;
+
+  const { data, error } = await (getSupabaseAdmin() as any)
+    .from("profissionais")
+    .select("id, notificacoes_ativas, notificacao_app_ativa")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error) {
+    const message = String(error.message || "");
+    if (
+      message.includes("notificacoes_ativas") ||
+      message.includes("notificacao_app_ativa")
+    ) {
+      return true;
+    }
+    return false;
+  }
+
+  return data?.notificacoes_ativas !== false && data?.notificacao_app_ativa !== false;
+}
+
+async function sendPushToRowsSafely(rows: PushSubscriptionRow[], payload: PushPayload) {
+  if (!rows.length) return;
+
+  try {
+    await sendPushToRows(rows, payload);
+  } catch (error) {
+    console.error("[push] falha ao enviar Web Push", {
+      message: normalizeErrorMessage(error),
+    });
+  }
 }
 
 function pruneRecentPushes(now: number) {
@@ -731,11 +768,25 @@ export async function notifySalonAboutClientBooking(params: {
       const profissionais = await filterProfissionalAppSubscriptionsByPreference(
         profissionalResult.data as PushSubscriptionRow[]
       );
-      await sendPushToRows(profissionais, {
+      await sendPushToRowsSafely(profissionais, {
         title: "Pedido de horário para confirmar",
         body,
         url: `/app-profissional/agenda/${params.idAgendamento}`,
         tag: `agendamento-${params.idAgendamento}`,
+      });
+    }
+
+    if (await isProfissionalNativePushEnabled(params.idProfissional)) {
+      await sendNativePushToAudience({
+        audience: "profissional_app",
+        idSalao: params.idSalao,
+        idProfissional: params.idProfissional,
+        payload: {
+          title: "Pedido de horário para confirmar",
+          body,
+          url: `/app-profissional/agenda/${params.idAgendamento}`,
+          tag: `agendamento-${params.idAgendamento}`,
+        },
       });
     }
   } catch (error) {

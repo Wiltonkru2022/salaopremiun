@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Capacitor } from "@capacitor/core";
+import { PushNotifications } from "@capacitor/push-notifications";
 import { Bell, BellRing } from "lucide-react";
 
 type PushAudience = "cliente_app" | "profissional_app" | "salao_painel";
@@ -15,6 +17,111 @@ type PushStatus =
   | "saving";
 
 const SUBSCRIPTION_SAVE_TTL_MS = 12 * 60 * 60 * 1000;
+const NATIVE_TOKEN_SAVE_TTL_MS = 12 * 60 * 60 * 1000;
+
+type ListenerHandle = {
+  remove: () => Promise<void>;
+};
+
+function isNativePushRuntime() {
+  try {
+    return (
+      Capacitor.isNativePlatform() &&
+      Capacitor.isPluginAvailable("PushNotifications")
+    );
+  } catch {
+    return false;
+  }
+}
+
+function getNativeTokenCacheKey(audience: PushAudience, token: string) {
+  return `salaopremium:native-push-token:${audience}:${token}`;
+}
+
+function wasNativeTokenSavedRecently(audience: PushAudience, token: string) {
+  try {
+    const value = window.localStorage.getItem(getNativeTokenCacheKey(audience, token));
+    const lastSavedAt = Number(value || "0");
+    return Number.isFinite(lastSavedAt) && Date.now() - lastSavedAt < NATIVE_TOKEN_SAVE_TTL_MS;
+  } catch {
+    return false;
+  }
+}
+
+function markNativeTokenSaved(audience: PushAudience, token: string) {
+  try {
+    window.localStorage.setItem(getNativeTokenCacheKey(audience, token), String(Date.now()));
+  } catch {
+    // Cache local e apenas uma economia de chamadas.
+  }
+}
+
+function getSafeInternalUrl(value: unknown) {
+  const url = String(value || "").trim();
+  return url.startsWith("/") && !url.startsWith("//") ? url : "";
+}
+
+async function saveNativeToken(audience: PushAudience, token: string) {
+  if (wasNativeTokenSavedRecently(audience, token)) {
+    return new Response(JSON.stringify({ ok: true, cached: true }), { status: 200 });
+  }
+
+  return fetch("/api/push/native/register", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    credentials: "same-origin",
+    body: JSON.stringify({
+      audience,
+      token,
+      platform: Capacitor.getPlatform(),
+    }),
+  }).then((response) => {
+    if (response.ok) markNativeTokenSaved(audience, token);
+    return response;
+  });
+}
+
+async function registerNativePushToken(audience: PushAudience) {
+  let registrationHandle: ListenerHandle | null = null;
+  let errorHandle: ListenerHandle | null = null;
+  let timeoutId = 0;
+
+  try {
+    let resolveToken: ((token: string) => void) | null = null;
+    let rejectToken: ((error: unknown) => void) | null = null;
+    const tokenPromise = new Promise<string>((resolve, reject) => {
+      resolveToken = resolve;
+      rejectToken = reject;
+      timeoutId = window.setTimeout(() => reject(new Error("native_push_timeout")), 15000);
+    });
+
+    registrationHandle = await PushNotifications.addListener(
+      "registration",
+      (registration) => {
+        window.clearTimeout(timeoutId);
+        resolveToken?.(registration.value);
+      }
+    );
+
+    errorHandle = await PushNotifications.addListener(
+      "registrationError",
+      (error) => {
+        window.clearTimeout(timeoutId);
+        rejectToken?.(error);
+      }
+    );
+
+    await PushNotifications.register();
+    const token = await tokenPromise;
+
+    const response = await saveNativeToken(audience, token);
+    if (!response.ok) throw new Error("native_push_save_failed");
+  } finally {
+    window.clearTimeout(timeoutId);
+    await registrationHandle?.remove().catch(() => undefined);
+    await errorHandle?.remove().catch(() => undefined);
+  }
+}
 
 function getSubscriptionCacheKey(
   audience: PushAudience,
@@ -150,8 +257,44 @@ export default function PushPermissionRuntime({
 
   useEffect(() => {
     let active = true;
+    const nativeHandles: ListenerHandle[] = [];
 
     async function load() {
+      if (isNativePushRuntime()) {
+        const actionHandle = await PushNotifications.addListener(
+          "pushNotificationActionPerformed",
+          (event) => {
+            const url = getSafeInternalUrl(event.notification.data?.url);
+            if (url) window.location.assign(url);
+          }
+        ).catch(() => null);
+
+        if (actionHandle) nativeHandles.push(actionHandle);
+
+        const permissions = await PushNotifications.checkPermissions().catch(() => null);
+        if (!active) return;
+
+        if (permissions?.receive === "denied") {
+          setStatus("denied");
+          return;
+        }
+
+        if (permissions?.receive === "granted") {
+          setStatus("saving");
+          await registerNativePushToken(audience)
+            .then(() => {
+              if (active) setStatus("enabled");
+            })
+            .catch(() => {
+              if (active) setStatus("ready");
+            });
+          return;
+        }
+
+        setStatus("ready");
+        return;
+      }
+
       if (
         typeof window === "undefined" ||
         !("serviceWorker" in navigator) ||
@@ -234,14 +377,34 @@ export default function PushPermissionRuntime({
     load();
     return () => {
       active = false;
+      nativeHandles.forEach((handle) => {
+        handle.remove().catch(() => undefined);
+      });
     };
   }, [audience]);
 
   async function handleEnable() {
-    if (status !== "ready" || !publicKey) return;
+    if (status !== "ready") return;
     setStatus("saving");
 
     try {
+      if (isNativePushRuntime()) {
+        const permissions = await PushNotifications.requestPermissions();
+        if (permissions.receive !== "granted") {
+          setStatus(permissions.receive === "denied" ? "denied" : "ready");
+          return;
+        }
+
+        await registerNativePushToken(audience);
+        setStatus("enabled");
+        return;
+      }
+
+      if (!publicKey) {
+        setStatus("ready");
+        return;
+      }
+
       const permission = await Notification.requestPermission();
       if (permission !== "granted") {
         setStatus(permission === "denied" ? "denied" : "ready");

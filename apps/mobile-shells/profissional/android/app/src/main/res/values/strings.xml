@@ -1,0 +1,10 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Sal&#227;o Premiun Profissional</string>
+    <string name="title_activity_main">Sal&#227;o Premiun Profissional</string>
+    <string name="package_name">br.com.salaopremiun.profissional</string>
+    <string name="custom_url_scheme">br.com.salaopremiun.profissional</string>
+    <string name="default_notification_channel_id">salaopremiun_default</string>
+    <string name="default_notification_channel_name">Notifica&#231;&#245;es</string>
+    <string name="default_notification_channel_description">Alertas de agenda e atendimentos.</string>
+</resources>

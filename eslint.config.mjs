@@ -14,6 +14,8 @@ export default [
       "coverage/**",
       "out/**",
       "apps/**/dist/**",
+      "apps/mobile-shells/**/android/**",
+      "apps/mobile-shells/**/node_modules/**",
       "public/app-profissional/assets/**",
       "public/app-profissional/sw.js",
       "public/app-profissional/workbox-*.js",

@@ -26,6 +26,10 @@
     {
       "path": "/api/cron/trial-alerts",
       "schedule": "0 12 * * *"
+    },
+    {
+      "path": "/api/cron/notificacoes",
+      "schedule": "*/5 * * * *"
     }
   ]
 }

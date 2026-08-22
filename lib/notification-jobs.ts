@@ -3,8 +3,14 @@ import "server-only";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   sendPushToRows,
+  type PushSendResult,
   type PushAudience,
 } from "@/lib/push-notifications";
+import {
+  listNativePushDevices,
+  sendNativePushToRows,
+  type NativePushDeviceRow,
+} from "@/lib/native-push-notifications";
 import { getSalonTimeZone } from "@/lib/salon-timezone.server";
 import { loadSalonNotificationSettings } from "@/lib/salon-notification-settings";
 import {
@@ -225,6 +231,62 @@ async function findSubscriptionsForJob(job: NotificationJobRow) {
   return data as PushSubscriptionRow[];
 }
 
+async function findNativeDevicesForJob(job: NotificationJobRow) {
+  if (job.canal === "cliente_app") {
+    if (!job.cliente_app_conta_id) return [];
+    const enabled = await isClienteAppPushEnabled(job.cliente_app_conta_id);
+    if (!enabled) return [];
+    return listNativePushDevices({
+      audience: "cliente_app",
+      clienteAppContaId: job.cliente_app_conta_id,
+    });
+  }
+
+  if (job.canal === "profissional_app") {
+    if (!job.id_salao || !job.id_profissional) return [];
+    const enabled = await isProfissionalAppPushEnabled(job.id_profissional);
+    if (!enabled) return [];
+    return listNativePushDevices({
+      audience: "profissional_app",
+      idSalao: job.id_salao,
+      idProfissional: job.id_profissional,
+    });
+  }
+
+  if (job.canal === "salao_painel") {
+    if (!job.id_salao) return [];
+    return listNativePushDevices({
+      audience: "salao_painel",
+      idSalao: job.id_salao,
+    });
+  }
+
+  return [];
+}
+
+function emptyPushResult(): PushSendResult {
+  return { attempted: 0, sent: 0, failed: 0, ignored: 0, errors: [] };
+}
+
+async function sendWebPushSafely(
+  rows: PushSubscriptionRow[],
+  payload: Parameters<typeof sendPushToRows>[1]
+): Promise<PushSendResult> {
+  if (!rows.length) return emptyPushResult();
+
+  try {
+    return await sendPushToRows(rows, payload);
+  } catch {
+    return {
+      attempted: rows.length,
+      sent: 0,
+      failed: rows.length,
+      ignored: 0,
+      errors: [],
+    };
+  }
+}
+
 async function markJob(
   id: string,
   status: NotificationStatus,
@@ -291,8 +353,12 @@ export async function processPendingNotificationJobs(limit = 80) {
         continue;
       }
 
-      const rows = await findSubscriptionsForJob(job);
-      if (!rows.length) {
+      const [rows, nativeRows] = await Promise.all([
+        findSubscriptionsForJob(job),
+        findNativeDevicesForJob(job),
+      ]);
+
+      if (!rows.length && !nativeRows.length) {
         await markJob(job.id, "falhou", {
           erro_texto:
             job.canal === "profissional_app"
@@ -306,18 +372,31 @@ export async function processPendingNotificationJobs(limit = 80) {
         failed += 1;
         continue;
       }
-      const result = await sendPushToRows(rows, {
+
+      const pushPayload = {
         title: job.titulo,
         body: job.mensagem,
         url: job.url || "/",
         tag: `${job.tag || job.idempotency_key}-${job.id}`,
         renotify: true,
         requireInteraction: true,
-      });
+      };
 
-      if (result.sent === 0) {
+      const [webResult, nativeResult] = await Promise.all([
+        sendWebPushSafely(rows, pushPayload),
+        sendNativePushToRows(nativeRows as NativePushDeviceRow[], pushPayload),
+      ]);
+
+      const sentCount = webResult.sent + nativeResult.sent;
+      const failedCount = webResult.failed + nativeResult.failed;
+      const attemptedCount = webResult.attempted + nativeResult.attempted;
+
+      if (sentCount === 0) {
         await markJob(job.id, "falhou", {
-          erro_texto: "O provedor de push nao confirmou nenhum envio.",
+          erro_texto:
+            attemptedCount > 0 && failedCount > 0
+              ? "Os provedores de push nao confirmaram nenhum envio."
+              : "O provedor de push nao confirmou nenhum envio.",
           sent_count: 0,
         });
         processed += 1;
@@ -327,11 +406,11 @@ export async function processPendingNotificationJobs(limit = 80) {
 
       await markJob(job.id, "enviada", {
         enviada_em: new Date().toISOString(),
-        sent_count: result.sent,
+        sent_count: sentCount,
         erro_texto: null,
       });
       processed += 1;
-      sent += result.sent;
+      sent += sentCount;
     } catch (error) {
       failed += 1;
       await markJob(job.id, "falhou", {

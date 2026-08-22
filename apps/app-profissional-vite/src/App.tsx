@@ -1,8 +1,10 @@
 ﻿import { RefreshCw } from "lucide-react";
-import { useMemo, useState } from "react";
+import { PushNotifications } from "@capacitor/push-notifications";
+import { useEffect, useMemo, useState } from "react";
 import { ptBR } from "../../../core/i18n/pt-BR";
 import { AppShell, type View } from "./components/layout/AppShell";
 import { ProfessionalNotificationOnboarding } from "./components/ProfessionalNotificationOnboarding";
+import { isNativeProfessionalApp } from "./components/PushPermissionButton";
 import { Button } from "./components/ui/Button";
 import { Card } from "./components/ui/Card";
 import { useAuth } from "./contexts/AuthContext";
@@ -52,6 +54,43 @@ export function App() {
     view
   );
   const unreadNotifications = data.notificacoes.filter((item) => !item.lida).length;
+  const refreshData = data.refresh;
+
+  useEffect(() => {
+    if (!profissional || !isNativeProfessionalApp()) return;
+
+    let active = true;
+    let actionHandle: { remove: () => Promise<void> } | null = null;
+    let receivedHandle: { remove: () => Promise<void> } | null = null;
+
+    void PushNotifications.addListener("pushNotificationActionPerformed", (event) => {
+      const url = String(event.notification.data?.url || "");
+      setView(url.includes("/agenda") ? "agenda" : "notificacoes");
+      void refreshData();
+    }).then((handle) => {
+      if (active) {
+        actionHandle = handle;
+        return;
+      }
+      void handle.remove().catch(() => undefined);
+    });
+
+    void PushNotifications.addListener("pushNotificationReceived", () => {
+      void refreshData();
+    }).then((handle) => {
+      if (active) {
+        receivedHandle = handle;
+        return;
+      }
+      void handle.remove().catch(() => undefined);
+    });
+
+    return () => {
+      active = false;
+      if (actionHandle) void actionHandle.remove().catch(() => undefined);
+      if (receivedHandle) void receivedHandle.remove().catch(() => undefined);
+    };
+  }, [refreshData, profissional]);
 
   const subtitle = useMemo(() => {
     if (view === "agenda") {

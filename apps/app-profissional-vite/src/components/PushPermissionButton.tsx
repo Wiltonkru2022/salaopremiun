@@ -1,3 +1,5 @@
+import { Capacitor } from "@capacitor/core";
+import { PushNotifications } from "@capacitor/push-notifications";
 import { Bell, BellRing } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -56,9 +58,104 @@ async function saveProfessionalSubscription(subscription: PushSubscription) {
   return Boolean(response?.ok);
 }
 
+function isNativePushAvailable() {
+  return (
+    typeof window !== "undefined" &&
+    Capacitor.isNativePlatform() &&
+    Capacitor.isPluginAvailable("PushNotifications")
+  );
+}
+
+export function isNativeProfessionalApp() {
+  return typeof window !== "undefined" && Capacitor.isNativePlatform();
+}
+
+async function saveProfessionalNativeToken(token: string) {
+  const response = await fetch("/api/push/native/register", {
+    method: "POST",
+    credentials: "same-origin",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      audience: "profissional_app",
+      token,
+      platform: Capacitor.getPlatform(),
+      appId: "br.com.salaopremiun.profissional",
+    }),
+  }).catch(() => null);
+
+  return Boolean(response?.ok);
+}
+
+async function resolveProfessionalNativePushState(
+  requestPermission: boolean
+): Promise<ProfessionalPushState | null> {
+  if (!isNativePushAvailable()) return null;
+
+  let permissions = await PushNotifications.checkPermissions().catch(() => ({
+    receive: "prompt" as const,
+  }));
+
+  if (requestPermission && permissions.receive === "prompt") {
+    permissions = await PushNotifications.requestPermissions().catch(
+      () => permissions
+    );
+  }
+
+  if (permissions.receive === "denied") return "denied";
+  if (permissions.receive !== "granted") return "ready";
+
+  return new Promise<ProfessionalPushState>((resolve) => {
+    let settled = false;
+    let handles: Array<{ remove: () => Promise<void> }> = [];
+
+    const cleanup = () => {
+      window.clearTimeout(timeoutId);
+      handles.forEach((handle) => {
+        void handle.remove().catch(() => undefined);
+      });
+      handles = [];
+    };
+
+    const done = (next: ProfessionalPushState) => {
+      if (settled) return;
+      settled = true;
+      cleanup();
+      resolve(next);
+    };
+
+    const timeoutId = window.setTimeout(() => done("ready"), 12000);
+
+    const registrationHandle = PushNotifications.addListener(
+      "registration",
+      (token) => {
+        void saveProfessionalNativeToken(token.value).then((saved) => {
+          done(saved ? "enabled" : "ready");
+        });
+      }
+    );
+    const errorHandle = PushNotifications.addListener("registrationError", () => {
+      done("ready");
+    });
+
+    void Promise.all([registrationHandle, errorHandle])
+      .then((nextHandles) => {
+        handles = nextHandles;
+        if (settled) {
+          cleanup();
+          return;
+        }
+        void PushNotifications.register().catch(() => done("ready"));
+      })
+      .catch(() => done("ready"));
+  });
+}
+
 async function resolveProfessionalPushState(
   requestPermission: boolean
 ): Promise<ProfessionalPushState> {
+  const nativeState = await resolveProfessionalNativePushState(requestPermission);
+  if (nativeState) return nativeState;
+
   if (
     typeof window === "undefined" ||
     !("serviceWorker" in navigator) ||

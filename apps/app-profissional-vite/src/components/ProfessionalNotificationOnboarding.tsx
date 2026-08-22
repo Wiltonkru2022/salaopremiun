@@ -1,12 +1,16 @@
 import { BellRing, ShieldCheck, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { requestProfessionalPushPermission } from "./PushPermissionButton";
+import {
+  isNativeProfessionalApp,
+  requestProfessionalPushPermission,
+} from "./PushPermissionButton";
 
 const STORAGE_KEY = "salaopremium:profissional:push-onboarding:v1";
 
 function isStandaloneApp() {
   if (typeof window === "undefined") return false;
   return (
+    isNativeProfessionalApp() ||
     window.matchMedia("(display-mode: standalone)").matches ||
     (window.navigator as Navigator & { standalone?: boolean }).standalone === true
   );
@@ -27,7 +31,12 @@ export function ProfessionalNotificationOnboarding() {
 
   useEffect(() => {
     if (!isStandaloneApp()) return;
-    if (!("Notification" in window) || Notification.permission !== "default") return;
+    if (
+      !isNativeProfessionalApp() &&
+      (!("Notification" in window) || Notification.permission !== "default")
+    ) {
+      return;
+    }
 
     try {
       if (window.localStorage.getItem(STORAGE_KEY) === "1") return;
