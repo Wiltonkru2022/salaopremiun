@@ -160,10 +160,18 @@ export default function CaixaSidebar({
               />
               <SidebarInfo
                 label="Total da venda"
-                value={comandaSelecionada ? formatCurrency(totalComanda) : "R$ 0,00"}
+                value={
+                  comandaSelecionada ? formatCurrency(totalComanda) : "R$ 0,00"
+                }
               />
-              <SidebarInfo label="Total pago" value={formatCurrency(totalPago)} />
-              <SidebarInfo label="Falta receber" value={formatCurrency(faltaReceber)} />
+              <SidebarInfo
+                label="Total pago"
+                value={formatCurrency(totalPago)}
+              />
+              <SidebarInfo
+                label="Falta receber"
+                value={formatCurrency(faltaReceber)}
+              />
             </div>
 
             <button
@@ -182,11 +190,15 @@ export default function CaixaSidebar({
         open={pagamentosOpen}
         onClose={() => setPagamentosOpen(false)}
         closeDisabled={saving}
-        title={comandaSelecionada ? `Pagamento da comanda #${comandaSelecionada.numero}` : "Pagamento"}
+        title={
+          comandaSelecionada
+            ? `Pagamento da comanda #${comandaSelecionada.numero}`
+            : "Pagamento"
+        }
         maxWidthClassName="max-w-[520px]"
         panelClassName="max-h-[calc(100dvh-2rem)]"
         headerClassName="px-5 py-4 sm:px-6 sm:py-5"
-        bodyClassName="bg-white px-5 py-5 sm:px-6 sm:py-5"
+        bodyClassName="flex bg-white px-5 pb-0 pt-5 sm:px-6 sm:pt-5"
       >
         <CaixaPagamentos
           comandaSelecionada={comandaSelecionada}
@@ -263,13 +275,7 @@ export default function CaixaSidebar({
   );
 }
 
-function SidebarInfo({
-  label,
-  value,
-}: {
-  label: string;
-  value: string;
-}) {
+function SidebarInfo({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
       <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
