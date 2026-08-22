@@ -168,47 +168,14 @@ export default async function ClienteSalonPage({
             <div className="sp-mobile-fixed pointer-events-none fixed inset-x-0 top-0 z-[60] mx-auto flex max-w-3xl items-center justify-between px-5 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
               <Link
                 href="/app-cliente/explorar"
-                className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-black/70 text-white shadow-lg backdrop-blur-xl"
+                className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-zinc-200 bg-white/95 text-zinc-950 shadow-[0_8px_24px_rgba(15,23,42,0.12)] backdrop-blur-xl"
                 aria-label="Voltar"
               >
-                <ArrowLeft size={28} />
+                <ArrowLeft size={25} />
               </Link>
 
-              <div className="pointer-events-auto flex gap-2">
-                <ClientSalonShareButton salonName={salao.nome} compact />
-
-                {hasSession ? (
-                  <form action={toggleClienteSalonFavoriteAction}>
-                    <input type="hidden" name="salao" value={salao.id} />
-                    <input
-                      type="hidden"
-                      name="next_favorite"
-                      value={String(!isFavorite)}
-                    />
-                    <button
-                      type="submit"
-                      className="flex h-14 w-14 items-center justify-center rounded-full bg-black/70 text-white shadow-lg backdrop-blur-xl"
-                      aria-label={isFavorite ? "Remover dos favoritos" : "Favoritar salão"}
-                    >
-                      <Heart
-                        size={29}
-                        fill={isFavorite ? "currentColor" : "none"}
-                      />
-                    </button>
-                  </form>
-                ) : (
-                  <Link
-                    href={favoriteLoginUrl}
-                    className="flex h-14 w-14 items-center justify-center rounded-full bg-black/70 text-white shadow-lg backdrop-blur-xl"
-                    aria-label="Entrar para favoritar"
-                  >
-                    <Heart size={29} />
-                  </Link>
-                )}
-
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-black/70 text-white shadow-lg backdrop-blur-xl">
-                  <ClientAppDrawerNav isDark />
-                </div>
+              <div className="pointer-events-auto">
+                <ClientAppDrawerNav />
               </div>
             </div>
           </div>
