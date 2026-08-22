@@ -1,5 +1,4 @@
-import Link from "next/link";
-import { ArrowLeft, CalendarClock, CheckCircle2, Scissors, Star } from "lucide-react";
+import { CalendarClock, CheckCircle2, Scissors, Star } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientAppointmentReviewForm from "@/components/client-app/ClientAppointmentReviewForm";
 import { requireClienteAppContext } from "@/lib/client-context.server";
@@ -36,17 +35,9 @@ export default async function ClienteAppointmentReviewPage({
   return (
     <ClientAppFrame
       title="Avaliar atendimento"
-      subtitle="Sua opiniao ajuda o salão a melhorar"
+      subtitle="Sua opinião ajuda o salão a melhorar"
     >
-      <div className="space-y-4">
-        <Link
-          href="/app-cliente/agendamentos"
-          className="inline-flex items-center gap-2 text-sm font-bold text-zinc-700"
-        >
-          <ArrowLeft size={18} />
-          Voltar
-        </Link>
-
+      <div className="space-y-4 px-4 py-4 md:px-6">
         {query.status === "avaliado" ? (
           <div className="rounded-[1.4rem] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
             Avaliação enviada com sucesso.
@@ -64,16 +55,14 @@ export default async function ClienteAppointmentReviewPage({
               Avaliação já enviada
             </div>
             <p className="mt-2 text-sm leading-6">
-              Obrigado por avaliar este atendimento. Sua resposta já foi
-              registrada para o salão.
+              Obrigado por avaliar este atendimento. Sua resposta já foi registrada para o salão.
             </p>
           </section>
         ) : !appointment.podeAvaliar ? (
           <section className="rounded-[1.8rem] border border-amber-200 bg-amber-50 p-5 text-amber-800">
             <div className="text-base font-black">Ainda não está liberado</div>
             <p className="mt-2 text-sm leading-6">
-              A avaliação fica disponível depois que o atendimento for marcado
-              como finalizado.
+              A avaliação fica disponível depois que o atendimento for marcado como finalizado.
             </p>
           </section>
         ) : (
@@ -87,8 +76,7 @@ export default async function ClienteAppointmentReviewPage({
                 Como foi seu atendimento?
               </h1>
               <p className="mt-2 text-sm leading-6 text-zinc-300">
-                Responda em poucos segundos. O salão recebe seu feedback para
-                cuidar melhor dos próximos atendimentos.
+                Responda em poucos segundos. O salão recebe seu feedback para cuidar melhor dos próximos atendimentos.
               </p>
 
               <div className="mt-4 grid gap-3 rounded-[1.4rem] bg-white/10 p-4">
@@ -99,8 +87,7 @@ export default async function ClienteAppointmentReviewPage({
                 <div className="flex items-center gap-2 text-sm text-zinc-300">
                   <CalendarClock size={17} />
                   <span>
-                    {formatDate(appointment.data)} as{" "}
-                    {appointment.horaInicio.slice(0, 5)}
+                    {formatDate(appointment.data)} às {appointment.horaInicio.slice(0, 5)}
                   </span>
                 </div>
                 <div className="text-sm font-semibold text-white">
