@@ -1,7 +1,6 @@
 import Link from "next/link";
 import {
   ArrowRight,
-  Bell,
   CalendarDays,
   Clock3,
   Gift,
@@ -11,10 +10,12 @@ import {
 } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientAppDrawerNav from "@/components/client-app/ClientAppDrawerNav";
+import ClientNotificationBell from "@/components/client-app/ClientNotificationBell";
 import { validateClienteAppSession } from "@/lib/client-context.server";
 import {
   getClienteAppProfileData,
   listClienteAppAppointments,
+  listClienteAppNotifications,
 } from "@/lib/client-app/queries";
 
 export const metadata = {
@@ -38,7 +39,7 @@ function formatMonth(date: string) {
 
 export default async function AppClienteIndexPage() {
   const session = await validateClienteAppSession();
-  const [appointments, profile] = await Promise.all([
+  const [appointments, profile, unreadCount] = await Promise.all([
     session.context
       ? listClienteAppAppointments({
           idConta: session.context.idConta,
@@ -48,6 +49,14 @@ export default async function AppClienteIndexPage() {
     session.context
       ? getClienteAppProfileData({ idConta: session.context.idConta })
       : Promise.resolve(null),
+    session.context
+      ? listClienteAppNotifications({
+          idConta: session.context.idConta,
+          read: false,
+          page: 0,
+          limit: 1,
+        }).then((result) => result.total)
+      : Promise.resolve(0),
   ]);
 
   const nextAppointment =
@@ -70,13 +79,7 @@ export default async function AppClienteIndexPage() {
               Salão Premium
             </div>
             <div className="flex items-center gap-1">
-              <Link
-                href="/app-cliente/notificacoes"
-                className="flex h-11 w-11 items-center justify-center rounded-full text-[#f5c15a]"
-                aria-label="Notificações"
-              >
-                <Bell size={25} />
-              </Link>
+              <ClientNotificationBell unreadCount={unreadCount} dark />
               <ClientAppDrawerNav isDark />
             </div>
           </header>
