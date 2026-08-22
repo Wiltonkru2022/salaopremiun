@@ -75,23 +75,11 @@ export default async function LoginClientePage({
 
   return (
     <ClientAuthShell backHref={salaoPublicPath || "/app-cliente/inicio"}>
-      <div className="space-y-4">
+      <div className="space-y-3">
         <ClientSessionAutoRestore
           next={next || salaoPublicPath}
           clearOnLoad={logout === "1"}
         />
-
-        <div className="px-1 pb-1 pt-2">
-          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#9b6a14]">
-            Acesso da cliente
-          </p>
-          <h1 className="mt-2 text-[2rem] font-black leading-tight tracking-[-0.05em] text-zinc-950">
-            Bem-vinda de volta
-          </h1>
-          <p className="mt-2 text-sm leading-6 text-zinc-500">
-            Entre com CPF e data de nascimento para acessar seus agendamentos.
-          </p>
-        </div>
 
         <LoginClienteForm
           salaoId={salaoContext?.salao?.id || salaoId || null}
