@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import AppVersionBadge from "@/components/app-mobile/AppVersionBadge";
+import ClientAppDrawerNav from "@/components/client-app/ClientAppDrawerNav";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import { getClienteAppProfileData } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
@@ -40,8 +41,8 @@ export default async function ClientePerfilPage({ searchParams }: { searchParams
   const identity = profile.telefone || profile.email || session.email || "Conta Salão Premium";
 
   return <ClientAppFrame title="Perfil" subtitle="Sua conta no Salão Premium.">
-    <section className="mx-auto min-h-dvh max-w-3xl bg-white px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.2rem)] md:px-6">
-      <header className="flex items-start justify-between gap-3"><div><div className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#9b6110]"><Sparkles size={16} />Salão Premium Cliente</div><h1 className="mt-3 text-[2.15rem] font-black leading-none tracking-[-0.05em] text-zinc-950">Perfil</h1></div><Link href="/app-cliente/notificacoes" className="flex h-12 w-12 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-950 shadow-sm" aria-label="Notificações"><Bell size={23} /></Link></header>
+    <section className="mx-auto min-h-dvh max-w-3xl bg-white px-5 pb-28 pt-0 md:px-6">
+      <header className="sp-mobile-fixed sticky top-0 z-50 -mx-5 flex items-start justify-between gap-3 border-b border-zinc-100 bg-white/96 px-5 pb-3 pt-[calc(env(safe-area-inset-top)+0.9rem)] backdrop-blur-xl md:-mx-6 md:px-6"><div><div className="inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#9b6110]"><Sparkles size={16} />Salão Premium Cliente</div><h1 className="mt-2 text-[2rem] font-black leading-none tracking-[-0.05em] text-zinc-950">Perfil</h1></div><div className="flex items-center gap-1"><Link href="/app-cliente/notificacoes" className="flex h-12 w-12 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-950 shadow-sm" aria-label="Notificações"><Bell size={23} /></Link><ClientAppDrawerNav /></div></header>
 
       <div className="mt-6 flex items-center gap-4 rounded-[1.4rem] border border-zinc-100 bg-zinc-50 p-4">
         <div className="relative flex h-20 w-20 shrink-0 items-center justify-center rounded-full bg-zinc-950 text-3xl font-black text-white">{initial}<span className="absolute -bottom-1 -right-1 grid h-8 w-8 place-items-center rounded-full border-2 border-zinc-50 bg-amber-100 text-[#9b6110]"><UserRound size={16} /></span></div>
