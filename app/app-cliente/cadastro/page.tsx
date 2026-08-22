@@ -1,6 +1,6 @@
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import CadastroClienteForm from "@/components/client-app/auth/CadastroClienteForm";
+import ClientAuthShell from "@/components/client-app/auth/ClientAuthShell";
 import { getClienteSessionFromCookie } from "@/lib/cliente-auth.server";
 import { canSalonAppearInClientApp } from "@/lib/client-app/eligibility";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
@@ -34,50 +34,33 @@ export default async function CadastroClientePage({
       : null;
 
   return (
-    <div className="min-h-dvh overflow-x-hidden bg-[radial-gradient(circle_at_top,#fff2c5_0,#f5f5f5_42%,#e7ecf2_100%)]">
-      <div className="mx-auto flex min-h-dvh w-full max-w-md flex-col bg-[#f5f5f5]/95 shadow-[0_0_80px_rgba(15,23,42,0.08)]">
-        <header className="px-4 pt-4">
-          <Link
-            href={
-              salaoPublicPath
-                ? salaoPublicPath
-                : "/app-cliente/inicio"
-            }
-            className="inline-flex items-center gap-2 text-sm font-semibold text-zinc-600"
-          >
-            Voltar
-          </Link>
-        </header>
-
-        <main className="flex flex-1 items-start px-4 pb-6 pt-4">
-          <div className="w-full space-y-3.5">
-            <section className="overflow-hidden rounded-[1.5rem] bg-zinc-950 px-4 py-4 text-white shadow-[0_16px_34px_rgba(15,23,42,0.15)]">
-              <div className="flex items-center gap-3">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10">
-                  <img src="/favicon-preview.png" alt="" className="h-full w-full object-cover" />
-                </span>
-                <div className="min-w-0">
-                  <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-amber-100">
-                    Cadastro guiado
-                  </div>
-                  <h1 className="mt-2 text-[1.5rem] font-black leading-none">
-                    Criar conta de cliente
-                  </h1>
-                </div>
+    <ClientAuthShell backHref={salaoPublicPath || "/app-cliente/inicio"}>
+      <div className="space-y-3.5">
+        <section className="overflow-hidden rounded-[1.5rem] bg-zinc-950 px-4 py-4 text-white shadow-[0_16px_34px_rgba(15,23,42,0.15)]">
+          <div className="flex items-center gap-3">
+            <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10">
+              <img src="/favicon-preview.png" alt="" className="h-full w-full object-cover" />
+            </span>
+            <div className="min-w-0">
+              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-amber-100">
+                Cadastro guiado
               </div>
-              <p className="mt-2.5 text-sm leading-6 text-zinc-300">
-                Crie sua conta uma vez e escolha onde quer agendar depois.
-              </p>
-            </section>
-
-            <CadastroClienteForm
-              salaoId={salaoContext?.salao?.id || salaoId || null}
-              salaoNome={salaoContext?.salao?.nome || null}
-              next={next || salaoPublicPath}
-            />
+              <h1 className="mt-2 text-[1.5rem] font-black leading-none">
+                Criar conta de cliente
+              </h1>
+            </div>
           </div>
-        </main>
+          <p className="mt-2.5 text-sm leading-6 text-zinc-300">
+            Crie sua conta uma vez e escolha onde quer agendar depois.
+          </p>
+        </section>
+
+        <CadastroClienteForm
+          salaoId={salaoContext?.salao?.id || salaoId || null}
+          salaoNome={salaoContext?.salao?.nome || null}
+          next={next || salaoPublicPath}
+        />
       </div>
-    </div>
+    </ClientAuthShell>
   );
 }
