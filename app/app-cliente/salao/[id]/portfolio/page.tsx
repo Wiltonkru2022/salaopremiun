@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ImageIcon } from "lucide-react";
+import ClientAppDrawerNav from "@/components/client-app/ClientAppDrawerNav";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientSalonSectionTabs from "@/components/client-app/ClientSalonSectionTabs";
 import { getClientAppSalonDetail } from "@/lib/client-app/queries";
@@ -21,20 +22,26 @@ export default async function ClienteSalonPortfolioPage({
 
     return (
       <ClientAppFrame title={salao.nome} subtitle="Portfólio do salão">
-        <ClientSalonSectionTabs salonId={id} active="portfolio" />
-        <section className="mx-auto max-w-6xl px-4 py-5 md:px-6">
-          <Link
-            href={`/app-cliente/salao/${id}`}
-            className="mb-5 inline-flex h-11 w-11 items-center justify-center rounded-full bg-white text-zinc-950 shadow-sm"
-            aria-label="Voltar"
-          >
-            <ArrowLeft size={22} />
-          </Link>
+        <header className="sp-mobile-fixed sticky top-0 z-50 border-b border-zinc-100 bg-white/96 backdrop-blur-xl">
+          <div className="mx-auto flex max-w-6xl items-center gap-3 px-4 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] md:px-6">
+            <Link
+              href={`/app-cliente/salao/${id}`}
+              className="flex h-12 w-12 shrink-0 items-center justify-center -ml-2 rounded-full text-zinc-950"
+              aria-label="Voltar"
+            >
+              <ArrowLeft size={32} />
+            </Link>
+            <h1 className="min-w-0 flex-1 truncate text-[1.85rem] font-black leading-none tracking-[-0.05em] text-zinc-950">
+              Portfólio
+            </h1>
+            <ClientAppDrawerNav />
+          </div>
+        </header>
 
-          <h1 className="text-3xl font-black tracking-[-0.04em] text-zinc-950">
-            Portfólio
-          </h1>
-          <p className="mt-2 text-base leading-7 text-zinc-500">
+        <ClientSalonSectionTabs salonId={id} active="portfolio" stickyBelowHeader />
+
+        <section className="mx-auto max-w-6xl px-4 py-5 md:px-6">
+          <p className="text-base leading-7 text-zinc-500">
             Fotos reais publicadas pelo salão para você conhecer o trabalho.
           </p>
 
