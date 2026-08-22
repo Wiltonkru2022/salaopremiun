@@ -11,6 +11,7 @@ import {
   Sparkles,
   UserRound,
 } from "lucide-react";
+import ClientAppDrawerNav from "@/components/client-app/ClientAppDrawerNav";
 import ClientAppSalonCard from "@/components/client-app/ClientAppSalonCard";
 import type { ClientAppSalonListItem } from "@/lib/client-app/queries";
 
@@ -87,20 +88,23 @@ export default function ClientSalonDiscovery({
   }
 
   return (
-    <section className="min-h-dvh bg-[#050505] px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.35rem)] text-white">
+    <section className="min-h-dvh bg-[#050505] px-5 pb-28 pt-0 text-white">
       <div className="mx-auto max-w-md">
-        <header className="flex items-center justify-between">
+        <header className="sp-mobile-fixed sticky top-0 z-50 -mx-5 flex items-center justify-between border-b border-white/8 bg-[#050505]/96 px-5 pb-3 pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-xl">
           <div>
             <div className="text-[11px] font-black uppercase tracking-[0.2em] text-[#f5b83d]">Descubra seu próximo cuidado</div>
-            <h1 className="mt-1 text-[2.65rem] font-black tracking-[-0.06em]">Explorar</h1>
+            <h1 className="mt-1 text-[2.15rem] font-black tracking-[-0.06em]">Explorar</h1>
           </div>
-          <a
-            href="/app-cliente/notificacoes"
-            className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[#f5b83d]"
-            aria-label="Notificações"
-          >
-            <Bell size={27} />
-          </a>
+          <div className="flex items-center gap-1">
+            <a
+              href="/app-cliente/notificacoes"
+              className="flex h-12 w-12 items-center justify-center rounded-full border border-white/10 bg-white/5 text-[#f5b83d]"
+              aria-label="Notificações"
+            >
+              <Bell size={27} />
+            </a>
+            <ClientAppDrawerNav isDark />
+          </div>
         </header>
 
         <label className="mt-7 flex h-[68px] items-center gap-4 rounded-[1.35rem] border border-white/8 bg-[#151618] px-5 text-xl text-zinc-300 shadow-[0_16px_44px_rgba(0,0,0,0.28)]">
@@ -135,7 +139,7 @@ export default function ClientSalonDiscovery({
           })}
         </div>
 
-        <div id="client-salon-results" className="mt-9 flex items-end justify-between gap-3 scroll-mt-6">
+        <div id="client-salon-results" className="mt-9 flex items-end justify-between gap-3 scroll-mt-24">
           <div>
             <div className="text-xs font-black uppercase tracking-[0.16em] text-zinc-500">{localSearch ? "Resultados" : "Recomendados"}</div>
             <h2 className="mt-1 text-2xl font-black">{localSearch ? `${orderedSaloes.length} ${orderedSaloes.length === 1 ? "salão encontrado" : "salões encontrados"}` : "Salões para você"}</h2>
