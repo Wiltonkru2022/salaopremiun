@@ -1,13 +1,13 @@
 {
   "project_info": {
-    "project_number": "870870218904",
-    "project_id": "salaopremiun-1a48d",
-    "storage_bucket": "salaopremiun-1a48d.firebasestorage.app"
+    "project_number": "YOUR_FIREBASE_PROJECT_NUMBER",
+    "project_id": "YOUR_FIREBASE_PROJECT_ID",
+    "storage_bucket": "YOUR_FIREBASE_STORAGE_BUCKET"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:870870218904:android:d027d94f19db659980b8ed",
+        "mobilesdk_app_id": "YOUR_PROFESSIONAL_ANDROID_MOBILE_SDK_APP_ID",
         "android_client_info": {
           "package_name": "br.com.salaopremiun.profissional"
         }
@@ -15,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyAXXRbcHMn8HnwyFhA1cQkBHazj6hPSb48"
+          "current_key": "YOUR_FIREBASE_ANDROID_API_KEY"
         }
       ],
       "services": {

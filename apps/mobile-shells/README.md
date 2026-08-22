@@ -50,6 +50,10 @@ Cada app Android precisa do seu proprio `google-services.json` em:
 - `apps/mobile-shells/profissional/android/app/google-services.json`
 - `apps/mobile-shells/cliente/android/app/google-services.json`
 
+Esses arquivos reais ficam somente no ambiente local e estao ignorados pelo Git.
+Use os arquivos `google-services.example.json` como modelo quando precisar
+configurar outro ambiente de build.
+
 O servidor Next envia FCM usando Firebase Admin. Configure na Vercel uma destas
 opcoes:
 

@@ -34,6 +34,7 @@ coverage
 backups/
 **/dist/
 public/app-cliente-hero-video.mp4
+apps/mobile-shells/**/android/app/google-services.json
 
 .vercel
 .env*.local
