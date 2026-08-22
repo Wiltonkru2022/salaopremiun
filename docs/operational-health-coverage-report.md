@@ -1,136 +1,73 @@
-# Relatório de Cobertura Operacional — SalãoPremium
+# Relatório Histórico de Cobertura Operacional
 
-Data da implementação: 19/08/2026.
+> **Snapshot histórico de 19/08/2026. Não use os números deste arquivo como estado atual do sistema.** O catálogo e o código evoluem; para o estado corrente execute `npm run audit:operational-coverage` e consulte a Saúde do deployment atual.
 
-## Antes
+## Contexto do snapshot
 
-A arquitetura anterior não possuía um registro central capaz de medir matematicamente a cobertura operacional.
+Antes da implementação auditada, não havia registro central suficiente para calcular uma porcentagem confiável de cobertura. Portanto, o estado anterior foi corretamente descrito como **não mensurável**, e não como `0%` inventado.
 
-Evidências do snapshot auditado antes desta implementação:
+Naquele snapshot foi criado um catálogo versionado em `config/operational-components.json`, com identificação de componentes, criticidade, monitor/probe e dependências.
 
-- `health_checks_sistema`: 0 checks registrados;
-- 31 incidentes persistidos como abertos no snapshot solicitado;
-- 31 sem nova ocorrência havia mais de 6 horas;
-- 28 sem nova ocorrência havia mais de 24 horas;
-- telemetria recente concentrada principalmente no client;
-- limites de UI de eventos/incidentes/checks influenciavam a leitura de saúde;
-- não existia uma métrica confiável `componentes monitorados / componentes conhecidos`.
+## O que “cobertura” significa
 
-Por isso a cobertura anterior deve ser descrita como **não mensurável**, e não como `0%` ou qualquer porcentagem inventada.
+Cobertura estática significa que uma superfície conhecida possui monitor/probe/telemetria definida. Isso **não** significa disponibilidade 100%.
 
-## Depois — cobertura estática conhecida
+Disponibilidade runtime exige:
 
-O registro `config/operational-components.json` contém:
-
-- **43 componentes operacionais conhecidos**;
-- **18 componentes críticos**;
-- **43/43 com identidade de probe/monitor**;
-- **18/18 críticos com identidade de probe/monitor**.
-
-Cobertura estática do registro conhecido:
-
-- total: **100,0% (43/43)**;
-- crítica: **100,0% (18/18)**.
-
-Isso **não significa 100% de disponibilidade**.
-
-A cobertura operacional runtime depende de:
-
-1. migration aplicada;
+1. migration/configuração aplicável;
 2. registry sincronizado;
 3. probe realmente executado;
-4. health check dentro do TTL/freshness;
-5. evidência positiva válida para o componente.
+4. check dentro do TTL;
+5. evidência positiva válida;
+6. deployment/commit atual.
 
-Antes do primeiro ciclo pós-deploy, o estado correto é `Unknown / Estado desconhecido`.
+## Grupos monitorados
 
-## Grupos catalogados
+O catálogo inclui áreas como:
 
-- Plataforma;
-- Infraestrutura/Vercel;
-- Supabase Database, Data API, Auth, Storage e Realtime;
+- plataforma/Vercel;
+- Supabase Database/Data API/Auth/Storage/Realtime;
 - App Cliente;
 - App Profissional;
-- Administração/Admin Master;
-- Agenda;
-- Clientes/CRM;
-- Serviços;
-- Caixa/Comandas/Vendas;
-- Assinaturas e Cobranças;
-- Asaas API e Webhooks;
-- Brevo/E-mail;
-- WhatsApp Meta API;
-- Web Push/VAPID;
+- Painel/Admin Master;
+- agenda;
+- CRM;
+- serviços;
+- caixa/comandas/vendas;
+- assinaturas/cobranças;
+- Asaas/webhooks;
+- Brevo;
+- WhatsApp Meta;
+- Web Push;
 - Google Calendar;
-- Cron/Jobs.
+- cron/jobs.
 
-Nenhuma Edge Function é exibida como saudável porque os projetos Supabase inspecionados não possuem Edge Functions implantadas atualmente.
+### Atualização arquitetural posterior
+
+O App Profissional oficial passou a ser exclusivamente o Vite em `apps/app-profissional-vite`; a antiga árvore Next `app/app-profissional` foi removida. Auditorias/registry atuais devem mapear a superfície profissional para o Vite e para `/api/app-profissional/*`.
 
 ## Probes positivos
 
-Os componentes conhecidos possuem probes seguros por domínio, entre eles:
+O desenho prioriza:
 
 - HTTP read-only;
-- leitura canário `select id limit 1`;
-- Supabase Auth admin `listUsers` com `perPage=1`;
-- Storage `listBuckets`;
-- handshake real de Realtime com remoção do canal em seguida;
-- Asaas read-only account endpoint;
-- Brevo read-only account endpoint;
-- WhatsApp Meta read-only phone-id;
-- amostra de entregas push já existentes;
-- amostra de webhooks existentes;
+- leitura canário;
+- checks de Auth/Storage/Realtime;
+- endpoints read-only de provedores;
+- evidência de entregas/jobs existentes;
 - freshness de cron;
-- manifests PWA.
+- manifests/PWA.
 
-Não são criados clientes, agendamentos, cobranças, e-mails, pagamentos ou webhooks falsos como health check.
+Não criar dados comerciais falsos como healthcheck.
 
 ## Auditor de CI
 
-`npm run audit:operational-coverage` faz inventário do código e cruza superfícies críticas com o registro/telemetria.
+```bash
+npm run audit:operational-coverage
+```
 
-Critérios usados incluem:
+O auditor cruza superfícies críticas com o registro/sinais de observabilidade. Uma cobertura genérica de `platform.api` não substitui cobertura específica de auth, pagamento, webhook ou outro domínio crítico.
 
-- Route Handlers e métodos mutáveis;
-- `use server` / Server Actions;
-- chamadas de mutação no banco/RPC;
-- autenticação/sessão;
-- pagamentos/Asaas;
-- webhooks;
-- cron/jobs;
-- agenda/comandas/caixa;
-- padrões de código e rotas reais.
+## Validade deste documento
 
-Um componente genérico como `platform.api` não é suficiente para cobrir uma rota crítica de um domínio específico.
-
-Resultado da branch desta implementação:
-
-- auditor de cobertura: **PASS**;
-- superfícies críticas detectadas sem cobertura específica: **0**.
-
-## Validações executadas
-
-No checkout real da branch:
-
-- `npm run test:operational` — PASS;
-- `npm run audit:operational-coverage` — PASS;
-- `npm run lint` — PASS;
-- `npm run typecheck` — PASS;
-- `npm run typecheck:professional` — PASS;
-- `npm run build:professional` — PASS;
-- `npm run ci:audit` — PASS;
-- `npm run build` — PASS;
-- `npm run ci:validate` — PASS;
-- build de produção local + `npm run e2e:status` — PASS.
-
-## O que somente o rollout pode provar
-
-O relatório não declara antecipadamente:
-
-- uptime;
-- disponibilidade 100%;
-- 43/43 componentes operacionais;
-- recuperação dos 31 incidentes legados;
-- ausência definitiva do React #418 em produção.
-
-Esses itens exigem deployment atual + probes frescos + janela sem recorrência e reconciliação baseada em evidências.
+Este arquivo preserva a decisão e metodologia do snapshot. Resultados de PASS, contagem de componentes e incidentes daquela data não devem ser repetidos como prova de saúde atual.

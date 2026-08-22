@@ -1,37 +1,75 @@
-# Revisao LGPD e Seguranca
+# Revisão LGPD e Segurança
 
-## Dados sensiveis tratados
+## Dados tratados
 
-- Nome do responsavel.
-- E-mail.
-- WhatsApp/telefone.
-- CPF/CNPJ.
-- Endereco.
-- Dados operacionais do salao.
-- Dados financeiros de cobrancas.
-- Dados de profissionais e clientes do salao.
+O produto pode tratar:
 
-## Regras obrigatorias
+- nome;
+- e-mail;
+- WhatsApp/telefone;
+- CPF/CNPJ;
+- data de nascimento;
+- endereço;
+- dados de clientes/profissionais;
+- agenda e histórico operacional;
+- dados financeiros de cobranças/comandas;
+- dados técnicos de segurança e telemetria.
 
-- Senhas nunca podem ser salvas em texto puro.
-- Tokens Asaas, Supabase, OpenAI e cron nunca podem ir para logs.
-- Payloads de webhook devem ser mantidos somente enquanto forem uteis para auditoria.
-- Logs devem priorizar referencia tecnica, nao dado pessoal completo.
-- Qualquer uso de `service_role` precisa validar usuario, permissao e `id_salao` antes da operacao.
-- Suporte com IA deve receber contexto minimo necessario.
+A classificação e retenção devem considerar finalidade, necessidade e acesso.
 
-## Pontos para auditoria manual
+## Princípios obrigatórios
 
-- Revisar [components/clientes/ClienteForm.tsx](../components/clientes/ClienteForm.tsx) onde ha mencao a hash de senha futura.
-- Revisar rotas de usuario em `app/api/usuarios`.
-- Revisar rotas financeiras em `app/api/assinatura`, `app/api/caixa`, `app/api/comandas` e `app/api/vendas`.
-- Revisar payloads persistidos em `alertas_sistema`, `eventos_webhook`, `asaas_webhook_eventos` e `logs_sistema`.
-- Revisar prompt/contexto de `app/api/app-profissional/suporte`.
+- senhas nunca em texto puro;
+- Service Role, tokens Asaas/Brevo/Meta/OpenAI e segredos de cron/sessão nunca no client/log;
+- logs preferem IDs técnicos a PII completa;
+- acesso privilegiado valida sessão, permissão e tenant;
+- IA recebe contexto mínimo;
+- webhooks persistem somente o necessário para operação/auditoria;
+- exclusão/anonimização deve respeitar obrigações legais e relacionamentos financeiros.
 
-## Criterio de aceite
+## Arquitetura de segurança
 
-- `npm run audit:service-role` passa.
-- Fluxo multi-tenant bloqueia acesso cruzado.
-- Logs nao contem segredo ou senha.
-- Webhook sem token retorna `401` JSON e nunca redireciona.
-- Admin Master mostra acao recomendada para falhas de pagamento, webhook e cron.
+### Painel
+
+Supabase Auth + `usuarios` + `id_salao` + permissões.
+
+### App Cliente
+
+Contexto próprio. CPF/data de nascimento são dados de identificação e exigem especial cuidado em logs, recuperação e mensagens de erro.
+
+### App Profissional Vite
+
+Sessão própria via APIs `/api/app-profissional/auth/*`. O bundle público nunca recebe `PROFISSIONAL_SESSION_SECRET` nem Service Role.
+
+### Admin Master
+
+Guard próprio e auditoria para ações globais.
+
+## Multi-tenancy
+
+Qualquer uso de Service Role precisa validar explicitamente o salão/recurso antes da operação. RLS não deve ser desabilitada para “resolver” erro de permissão.
+
+## Pontos de auditoria
+
+- `app/api/usuarios` e ações administrativas;
+- rotas financeiras/assinatura/caixa/comandas/vendas;
+- `/api/app-profissional/*`;
+- fluxos de recuperação do App Cliente;
+- `alertas_sistema`, `eventos_webhook`, `asaas_webhook_eventos`, `logs_sistema`;
+- suporte com IA;
+- storage e URLs públicas;
+- políticas `SECURITY DEFINER`/`EXECUTE`.
+
+## Editor removido
+
+A antiga UI de editor de imagens, assets e endpoint Pexels foram removidos. A migration histórica do schema do editor permanece versionada; remoção física de dados/schema exige nova migration e revisão de retenção/backup.
+
+## Critério de aceite
+
+- `npm run audit:service-role` passa;
+- `npm run audit:api-guards` passa;
+- teste multi-tenant bloqueia cruzamento;
+- logs não contêm segredo/senha;
+- webhook inválido é rejeitado sem redirect para HTML;
+- PWA profissional contém apenas configuração pública;
+- Admin Master apresenta ações de incidente sem expor segredo.

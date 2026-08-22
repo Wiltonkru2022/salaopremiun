@@ -1,56 +1,46 @@
-# Auditoria Codex — SalãoPremium
+# Auditoria Codex — 04/08/2026
 
-Data: 2026-08-04
-Ambiente funcional: produção publicada
-Dados: salão temporário sintético, criado e excluído ao final.
+> **Documento histórico.** Ele registra o estado encontrado em 04/08/2026 e não é a arquitetura atual. Consulte `README.md` e `docs/README.md` para a fonte de verdade.
 
-## Resumo
+## Snapshot da época
 
-O cadastro de salão em quatro etapas, provisionamento de teste grátis, login, dashboard, módulos administrativos básicos, app cliente, app profissional, perfil/vitrine e exclusão segura foram exercitados. O link público do salão excluído retornou `Página não encontrada` e o painel voltou ao login.
+A execução auditou cadastro de salão, trial, login, dashboard, módulos administrativos, App Cliente, App Profissional, perfil público e exclusão segura usando dados sintéticos.
 
-Também foram executados os testes existentes de app cliente/profissional (relatório local anterior: aprovado) e auditorias estáticas. Lint terminou sem erros (um warning preexistente de dependência de hook em `apps/sistema-salao-premiun-vite/src/pages/ResourcePage.tsx`); typecheck passou.
+Naquele momento também existiam achados e módulos que mudaram posteriormente.
 
-## Correções aplicadas
+## Correções registradas na época
 
-### QA-001 — Endpoint Pexels do editor sem sessão
+### Endpoint Pexels do editor
 
-**Severidade:** Alto
-**Módulo:** segurança / painel
-**Arquivo:** `app/api/painel/editor/pexels/route.ts`
+O endpoint do antigo editor foi protegido por contexto autenticado para evitar consumo anônimo de cota externa.
 
-O endpoint consultava a API externa sem validar que a chamada vinha de uma sessão autenticada do painel. A rota agora usa `getPainelUserContext()` e responde `401` sem usuário e salão associados. Isso evita uso anônimo da cota externa e alinha a proteção ao restante do painel.
+**Atualização posterior:** o editor de imagens `/salaopremiuneditor`, seus assets e o endpoint Pexels foram removidos do produto. A migration histórica do editor permanece versionada por integridade do histórico do banco.
 
-### QA-002 — Auditorias estáticas não reconheciam guards existentes
+### Auditorias de guards
 
-**Severidade:** Médio (qualidade do verificador)
-**Arquivos:** `scripts/audit/api-guard-audit.mjs`, `scripts/audit/service-role-audit.mjs`
+Os auditores foram ampliados para reconhecer guards do App Cliente e do App Profissional.
 
-Os verificadores não reconheciam `requireMobileClientAccess` e `requireProfissionalAppContext`, gerando falsos positivos. Os padrões foram ampliados. Após a mudança: 128 rotas analisadas, 0 sem guard/motivo público; auditoria de `service_role` sem riscos altos/médios.
+## Mudança arquitetural posterior importante
 
-## Evidências verificadas
+A implementação Next antiga em `app/app-profissional` foi removida. O **único App Profissional oficial atual é o Vite PWA em `apps/app-profissional-vite`**.
 
-- `npm run audit:api-guards` — passou.
-- `npm run audit:service-role` — passou.
-- `npm run audit:critical-routes` — passou anteriormente.
-- `npm run audit:launch-readiness` — passou, com um warning de texto codificado.
-- `npm run lint` — 0 erros, 1 warning preexistente.
-- `npm run typecheck` — passou.
-- Fluxo app cliente/profissional existente — aprovado no relatório `.codex-app-flow-report.local.json`.
-- Pós-exclusão: painel redireciona para login; URL pública do salão temporário retorna 404 funcional.
+Portanto, qualquer referência antiga a páginas/componentes do App Profissional Next neste snapshot não deve orientar manutenção atual.
 
-## Falhas e pendências
+## Evidências históricas
 
-1. O preenchimento de CEP substituiu silenciosamente o logradouro digitado por um valor retornado pela consulta de CEP. Deve haver aviso ou opção de correção.
-2. A rota `/agenda` apresentou estado sem heading/conteúdo identificável durante a navegação automatizada; requer reteste dedicado com dados de cliente/profissional/serviço.
-3. A suíte smoke local falhou no login do painel por `ERR_NETWORK_ACCESS_DENIED` ao Supabase; não é evidência de falha do fluxo publicado.
-4. O roteiro completo (venda, estoque, caixa, comissão, relatórios, bloqueios, cancelamentos e estornos encadeados) ainda não está comprovado nesta execução publicada. Não declarar prontidão total para produção sem essa rodada.
-5. O auditor de launch-readiness detectou texto com possível mojibake em `app/services/cliente-app/auth.ts` (mensagem de credenciais inválidas).
-6. A suíte publicada de cliente/profissional falhou inicialmente porque o fixture Premium E2E estava vencido (`vencimento_em=2026-06-28`); o provisionador renovou o fixture para 2026-09-03, mas o app continuou em 404, indicando cache/estado publicado ainda não atualizado. Foi adicionada invalidação de `plano-access-snapshot` após confirmação de assinatura em `lib/webhooks/asaas/subscription-sync.ts`; o reteste publicado completo depende de novo deploy/cache refresh.
+Na execução original foram registrados resultados de lint/typecheck/auditorias e fluxo E2E. Esses resultados provam apenas aquele checkout/data, não o deployment atual.
 
-## Auditorias estáticas pendentes
+## Pendências históricas
 
-`npm run audit:architecture-boundaries` ainda falha por acesso Supabase direto e `any` em rotas de comprovante/sinal e módulos legados. São achados de arquitetura/manutenibilidade; não foram reescritos nesta rodada porque exigem extração para services sem alterar o contrato funcional.
+O snapshot mencionava pontos como CEP, rota de agenda, ambiente de smoke, roteiro financeiro completo, encoding de texto, fixtures expirados e fronteiras arquiteturais. Cada item precisa ser reavaliado contra o código atual antes de ser tratado como pendência aberta.
 
-## Limpeza
+## Regra
 
-O salão temporário criado para a execução foi excluído pelo fluxo oficial de “Excluir salão definitivamente”. A conta autenticada perdeu acesso e o slug público deixou de existir. Nenhum salão fixo de E2E foi alterado.
+Não use este arquivo para declarar “produção aprovada”. Execute as validações atuais:
+
+```bash
+npm run ci:validate
+npm run validate:release
+```
+
+E consulte a saúde do deployment corrente.

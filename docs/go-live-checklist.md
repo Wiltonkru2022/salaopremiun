@@ -1,90 +1,118 @@
-# Checklist de Go-Live do SalaoPremium
+# Checklist de Go-Live do SalãoPremium
 
-Este checklist deve ser revisado antes de vender assinaturas em producao.
+Use antes de liberar venda/uso real em produção.
 
-## 1. Ambientes e segredos
+## 1. Segredos e ambientes
 
-- Confirmar `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_ANON_KEY` na Vercel.
-- Confirmar `SUPABASE_SERVICE_ROLE_KEY` somente no ambiente server da Vercel.
-- Confirmar `ASAAS_API_KEY`, `ASAAS_BASE_URL` e `ASAAS_WEBHOOK_TOKEN`.
-- Confirmar `CRON_SECRET`.
-- Confirmar `PROFISSIONAL_SESSION_SECRET`.
-- Confirmar `OPENAI_API_KEY` se o suporte do app profissional estiver ativo.
-- Confirmar `APP_ROOT_DOMAIN` como dominio canonico dos cookies e manter `APP_BASE_DOMAIN` igual a ele, se ambos estiverem definidos.
-- Rodar `npm run validate` antes do deploy.
-- Rodar `npm run validate:release` contra staging ou producao antes de liberar venda.
+- [ ] Supabase público configurado;
+- [ ] `SUPABASE_SERVICE_ROLE_KEY` somente server-side;
+- [ ] `ASAAS_API_KEY`, `ASAAS_BASE_URL`, `ASAAS_WEBHOOK_TOKEN` corretos;
+- [ ] `BREVO_API_KEY` configurada se e-mail estiver ativo;
+- [ ] `CRON_SECRET` definido;
+- [ ] `PROFISSIONAL_SESSION_SECRET` forte;
+- [ ] `CLIENT_APP_RECOVERY_SECRET` definido;
+- [ ] VAPID configurado se push estiver ativo;
+- [ ] nenhum segredo inserido em variáveis `NEXT_PUBLIC_*`/`VITE_*`.
 
-## 2. Dominios e proxy
+## 2. Domínios e proxy
 
-- `salaopremiun.com.br` deve abrir site/Admin Master.
-- `/admin-master/login` deve abrir sem loop no dominio raiz.
-- `/api/webhooks/asaas` nunca pode redirecionar.
-- Subdominios esperados no proxy: `login`, `painel`, `app`, `cadastro`, `assinatura`.
-- Se algum subdominio nao for usado em producao, remover do DNS ou manter redirecionamento testado.
-- Rodar `npm run e2e:proxy`.
+- [ ] site raiz;
+- [ ] host `login`;
+- [ ] host `painel`;
+- [ ] host `app`;
+- [ ] host `cadastro`;
+- [ ] host `assinatura`;
+- [ ] blog, se ativo;
+- [ ] `/api/webhooks/asaas` não sofre redirect indevido;
+- [ ] `npm run e2e:proxy` passa.
 
-## 3. Supabase
+## 3. App Profissional oficial
 
-- Rodar `npx supabase db push --dry-run`.
-- Confirmar que o banco remoto esta atualizado.
-- Confirmar backups automaticos do projeto Supabase.
-- Testar restore em ambiente separado antes de vender em volume.
-- Confirmar RLS em tabelas multi-tenant.
-- Rodar `npm run audit:service-role`.
+- [ ] fonte é `apps/app-profissional-vite`;
+- [ ] `npm run typecheck:professional` passa;
+- [ ] `npm run build:professional` passa;
+- [ ] bundle foi publicado em `public/app-profissional`;
+- [ ] `app.salaopremiun.com.br/app-profissional/` abre o Vite;
+- [ ] não existe uma segunda UI Next concorrente;
+- [ ] login, agenda, clientes, serviços, comandas, comissões e logout funcionam;
+- [ ] instalação PWA/offline/push testados.
 
-## 4. Asaas e assinatura
+## 4. App Cliente
 
-- Usar sandbox para homologar `PAYMENT_CREATED`.
-- Homologar `PAYMENT_CONFIRMED`.
-- Homologar `PAYMENT_RECEIVED`.
-- Homologar `PAYMENT_OVERDUE`.
-- Homologar cancelamento/estorno/falha.
-- Homologar assinatura recorrente com `subscription`.
-- Confirmar que o webhook Asaas esta cadastrado como `https://salaopremiun.com.br/api/webhooks/asaas`.
-- Rodar o fluxo mutavel apenas com ambiente correto:
+- [ ] cadastro com CPF+nascimento+WhatsApp;
+- [ ] login CPF+nascimento;
+- [ ] recuperação de acesso;
+- [ ] explorar salões;
+- [ ] perfil do salão;
+- [ ] reserva completa com disponibilidade real;
+- [ ] agendamentos e notificações;
+- [ ] favoritar/compartilhar;
+- [ ] PWA/push em dispositivo real.
 
-```powershell
-$env:E2E_ALLOW_MUTATION="1"
-$env:E2E_RUN_ASAAS_CHECKOUT="1"
-$env:E2E_RUN_ASAAS_WEBHOOK="1"
-$env:E2E_RUN_MULTI_TENANT="1"
-npm run e2e:sales
+## 5. Supabase
+
+- [ ] `npx supabase db push --dry-run` revisado quando aplicável;
+- [ ] migrations remotas atualizadas;
+- [ ] backup/restore conhecido;
+- [ ] RLS multi-tenant revisada;
+- [ ] `npm run audit:database-contract` passa;
+- [ ] `npm run audit:service-role` passa.
+
+## 6. Asaas
+
+Homologar no ambiente correto:
+
+- [ ] criação;
+- [ ] confirmação/recebimento;
+- [ ] atraso;
+- [ ] cancelamento/estorno;
+- [ ] idempotência do webhook;
+- [ ] reconciliação de assinatura;
+- [ ] webhook apontando para `/api/webhooks/asaas`.
+
+## 7. Multi-tenant
+
+- [ ] criar/usar dois salões de teste;
+- [ ] usuário do salão A não lê/altera salão B;
+- [ ] profissional A não acessa dados do profissional/salão B;
+- [ ] cliente só altera recursos próprios;
+- [ ] Admin Master mantém escopo privilegiado auditado.
+
+## 8. Admin Master
+
+- [ ] login/guard;
+- [ ] saúde operacional;
+- [ ] webhooks;
+- [ ] assinaturas/cobranças;
+- [ ] salões e planos;
+- [ ] tickets;
+- [ ] alertas/incidentes;
+- [ ] ações críticas geram log.
+
+## 9. LGPD e segurança
+
+- [ ] nenhuma senha em log;
+- [ ] CPF/telefone/e-mail minimizados;
+- [ ] IA recebe apenas contexto necessário;
+- [ ] headers de segurança ativos;
+- [ ] cookies seguros;
+- [ ] dependências auditadas;
+- [ ] retenção de logs/dados definida.
+
+## 10. Operação comercial
+
+- [ ] planos/preços conferem com banco e site;
+- [ ] limites de plano testados;
+- [ ] termos e privacidade publicados;
+- [ ] processo de suporte definido;
+- [ ] rollback Vercel conhecido;
+- [ ] processo de indisponibilidade/pagamento definido;
+- [ ] responsável por incidentes e comunicação identificado.
+
+## Comando final
+
+```bash
+npm run validate:release
 ```
 
-## 5. Multi-tenant
-
-- Criar dois saloes de teste.
-- Entrar como usuario do salao A.
-- Tentar acessar/alterar dados do salao B.
-- Resultado esperado: `403` ou nenhum dado retornado.
-- Validar painel, API, app profissional e rotas de assinatura.
-
-## 6. Admin Master
-
-- Acessar `https://salaopremiun.com.br/admin-master/login`.
-- Validar usuario liberado em `admin_master_usuarios`.
-- Abrir `Saude operacional`.
-- Confirmar webhooks recentes.
-- Confirmar checkouts travados.
-- Confirmar saloes bloqueados.
-- Confirmar cron e alertas.
-- Rodar `npm run audit:admin-actions`.
-
-## 7. LGPD e seguranca
-
-- Nao registrar senha em log.
-- Nao enviar CPF/CNPJ completo para logs desnecessarios.
-- Evitar payload sensivel completo em `logs_sistema`.
-- Conferir dados enviados para OpenAI no suporte do app profissional.
-- Validar permissao de usuarios internos por nivel.
-- Validar que profissionais veem apenas dados do proprio salao.
-
-## 8. Operacao de venda
-
-- Planos e precos conferem com pagina publica.
-- Limites de usuarios/profissionais conferem com `planos_saas`.
-- Termos de uso e politica de privacidade publicados.
-- Usuario Admin Master principal criado.
-- Processo de suporte definido para falha de pagamento.
-- Processo de rollback Vercel identificado.
-- Processo de contato com cliente inadimplente definido.
+Go-live só deve ocorrer com evidência do deployment atual, não com resultado antigo.

@@ -1,41 +1,84 @@
 # Web Push
 
-Notificacoes de barra do celular usam a API Web Push/PWA.
+O SalãoPremium usa Web Push/PWA para notificações de navegador/dispositivo sem depender de VPS permanente.
 
-## Configuracao
+## Arquitetura
 
-1. Aplique a migration `push_subscriptions` no Supabase.
-2. Gere chaves VAPID:
-
-```bash
-npx web-push generate-vapid-keys
+```text
+App Cliente / App Profissional Vite
+              ↓
+       PushSubscription
+              ↓
+           Supabase
+              ↓
+      notification_jobs
+              ↓
+       Vercel + web-push
+              ↓
+            VAPID
+              ↓
+   serviço push do navegador
 ```
 
-3. Configure no ambiente server:
+## Configuração
 
-```bash
+```env
 WEB_PUSH_PUBLIC_KEY=
 WEB_PUSH_PRIVATE_KEY=
 WEB_PUSH_SUBJECT=mailto:suporte@salaopremiun.com.br
 ```
 
-Sem `WEB_PUSH_PUBLIC_KEY` e `WEB_PUSH_PRIVATE_KEY`, o botao de avisos fica oculto e o agendamento continua normal.
+Gerar chaves quando necessário:
 
-## Fluxos
+```bash
+npx web-push generate-vapid-keys
+```
 
-- Cliente cria agendamento no app cliente: o salao e o profissional recebem push para confirmar.
-- Profissional confirma no app profissional: o cliente recebe push de agendamento confirmado.
-- Em iOS, notificacoes web exigem o app instalado na tela inicial e permissao concedida.
+A chave pública pode ser entregue ao navegador. A privada fica somente no backend.
 
-## Validacao em producao
+## Audiências
 
-1. Confirme que `/api/push/public-key` responde com `ok: true` e uma chave publica.
-2. Abra o App Profissional no celular e ative as notificacoes; o navegador deve conceder permissao e registrar uma `PushSubscription`.
-3. Confirme no Supabase que existe uma linha ativa em `push_subscriptions` para o profissional/dispositivo usado no teste.
-4. Crie um agendamento pelo App Cliente para esse profissional e confirme que o profissional recebe a notificacao.
-5. Confirme o agendamento no App Profissional e confirme que o cliente recebe a notificacao.
-6. Teste reagendamento e cancelamento e acompanhe `notification_jobs` ate `enviada` ou `falhou`.
-7. Consulte `push_delivery_log` para validar `status`, `http_status`, `endpoint_host`, `notification_tag` e eventual `error_message`.
-8. Para endpoints expirados, `404` e `410` devem desativar a subscription; `401` e `403` devem permanecer ativos para diagnostico de VAPID/autenticacao.
-9. `429`, falhas de rede e respostas `5xx` devem usar retry com backoff antes de registrar falha final.
-10. Teste tambem com o PWA fechado e a tela do aparelho bloqueada.
+### Cliente
+
+Subscription vinculada ao contexto/dispositivo do App Cliente.
+
+### Profissional
+
+Subscription criada pelo **Vite PWA em `apps/app-profissional-vite`** e associada ao profissional/dispositivo permitido.
+
+Não misturar destinatário de cliente e profissional apenas por endpoint; persistir audiência/identidade suficiente para roteamento seguro.
+
+## Fluxos esperados
+
+- cliente cria/reserva → salão/profissional elegível recebe aviso;
+- profissional confirma/altera → cliente recebe evento correspondente;
+- reagendamento/cancelamento gera notificações conforme regra;
+- eventos duplicados precisam de dedupe/tag quando aplicável.
+
+## iOS
+
+Web Push em iOS exige PWA instalado na tela inicial e permissão concedida.
+
+## Validação
+
+1. `/api/push/public-key` retorna chave pública quando configurado;
+2. App Cliente registra subscription;
+3. App Profissional Vite registra subscription;
+4. `push_subscriptions` contém registro ativo correto;
+5. criar agendamento real de teste;
+6. profissional recebe push;
+7. confirmar/alterar e validar push do cliente;
+8. verificar `notification_jobs`;
+9. verificar `push_delivery_log`;
+10. testar PWA fechado/tela bloqueada.
+
+## Tratamento de erros
+
+- `404/410`: endpoint expirado, desativar subscription;
+- `401/403`: manter evidência para diagnosticar VAPID/autorização;
+- `429`, rede e `5xx`: retry com backoff antes da falha final;
+- nunca logar chave privada ou payload pessoal completo.
+
+## PWA e atualização
+
+Após release do App Profissional, confirmar que o service worker Vite atualizou e que uma versão antiga em cache não impede registro/entrega de push.

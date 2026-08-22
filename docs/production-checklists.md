@@ -1,68 +1,101 @@
-# Checklists De Producao
+# Checklists de Produção
 
-Use este arquivo junto com `npm run release:validate`. Release nao deve seguir se algum item critico estiver pendente.
+Use junto com `npm run release:validate`. Um release não deve seguir com item crítico pendente.
 
-## Checklist Geral
+## Geral
 
-- `npm run ci:validate` passou.
-- `npm run release:smoke` passou no ambiente alvo.
-- Variaveis obrigatorias de `.env.example` existem no provedor.
-- `NEXT_PUBLIC_APP_URL` aponta para o dominio canonico.
-- `ASAAS_BASE_URL` esta correto para sandbox ou producao.
-- `ASAAS_WEBHOOK_TOKEN` bate com o painel Asaas.
-- `CRON_SECRET`, `PASSWORD_REUSE_SECRET` e `PROFISSIONAL_SESSION_SECRET` foram definidos.
-- Headers de seguranca foram conferidos em producao.
-- AdminMaster consegue abrir saude, alertas, webhooks, saloes, tickets e financeiro.
+- [ ] `npm run ci:validate` passou;
+- [ ] smoke do ambiente alvo passou;
+- [ ] `.env.example` está refletido no provedor;
+- [ ] domínio canônico configurado;
+- [ ] Asaas no ambiente correto;
+- [ ] webhooks/cron com segredos corretos;
+- [ ] headers de segurança conferidos;
+- [ ] Admin Master acessível.
 
-## Checklist De Migrations Obrigatorias
+## Arquitetura das apps
 
-- Migrations aplicadas na ordem dos nomes em `supabase/migrations`.
-- Ambiente local, staging e producao estao na mesma versao.
-- `npm run audit:database-contract` passou.
-- `GET /api/admin-master/saude/rpcs` passou no ambiente alvo.
-- Nenhuma funcao antiga conflitante ficou ativa com nome usado pelo codigo.
-- Toda tabela multi-tenant tem `id_salao` quando o dominio exige isolamento.
-- RLS revisado para usuarios, clientes, profissionais, servicos, produtos, agendamentos, comandas, assinaturas, logs e tickets.
+- [ ] App Cliente = Next.js `app/app-cliente`;
+- [ ] App Profissional = Vite `apps/app-profissional-vite`;
+- [ ] não existe `app/app-profissional` concorrente;
+- [ ] build gerou `public/app-profissional`;
+- [ ] proxy entrega o Vite no host `app`;
+- [ ] Painel/Admin Master continuam no Next.js.
 
-## Checklist Agenda-Comanda-Caixa-Venda
+## Migrations
 
-- Agendamento cria ou sincroniza comanda pelo caminho oficial.
-- Alteracao de horario/profissional/status nao quebra comanda vinculada.
-- Caixa exige sessao aberta quando a regra comercial exigir.
-- Pagamento e fechamento sao idempotentes.
-- Cancelamento tem log e reverte efeitos quando aplicavel.
-- Estoque baixa somente uma vez por comanda fechada.
-- Comissao usa a mesma base exibida ao gestor.
+- [ ] sequência aplicada;
+- [ ] staging/produção alinhados;
+- [ ] `npm run audit:database-contract` passa;
+- [ ] healthcheck de RPCs passa;
+- [ ] RLS revisada;
+- [ ] migration histórica não foi apagada;
+- [ ] alteração destrutiva tem backup.
 
-## Checklist Assinatura E Webhook
+## Agenda → Comanda → Caixa → Venda
 
-- Trial nao inicia duplicado.
-- Cobranca pendente e reutilizada quando aplicavel.
-- Webhook registra fingerprint/evento antes dos efeitos comerciais.
-- Webhook falho vira alerta acionavel para AdminMaster.
-- Cron nao duplica acao comercial que o webhook ainda pode concluir.
-- Status do salao, assinatura e cobranca ficam coerentes apos Pix, boleto e cartao.
+- [ ] agendamento sincroniza pelo fluxo oficial;
+- [ ] alteração de agenda não corrompe comanda;
+- [ ] pagamento/fechamento idempotentes;
+- [ ] cancelamento/reabertura auditados;
+- [ ] estoque aplica uma vez;
+- [ ] comissão usa a base oficial;
+- [ ] status aparece igual no Painel, App Cliente e Vite profissional.
 
-## Checklist App Profissional
+## Assinatura e webhook
 
-- Cookie de profissional tem segredo forte, expiracao e escopo correto.
-- Profissional ve somente dados do proprio salao e escopo permitido.
-- Faturamento bate com comissoes fechadas do periodo.
-- Tickets aparecem tambem no suporte/AdminMaster.
-- Suporte IA tem limite de contexto, politica de seguranca e fallback humano.
+- [ ] trial não duplica;
+- [ ] cobrança pendente é reutilizada quando permitido;
+- [ ] webhook deduplica antes de efeitos;
+- [ ] falha vira alerta acionável;
+- [ ] cron não duplica webhook;
+- [ ] salão/assinatura/cobrança ficam coerentes.
 
-## Checklist UX Operacional
+## App Cliente
 
-- Nenhuma tela critica usa `window.confirm`.
-- Estados pendente, confirmado, atendido, aguardando pagamento, fechado e cancelado sao consistentes entre modulos.
-- Erros de API aparecem com mensagem humana e acao recomendada.
-- Cards financeiros mostram bruto, liquido, taxa, repasse e comissao quando relevante.
-- Itens bloqueados por plano/permissao explicam o motivo.
+- [ ] cadastro/login/recuperação;
+- [ ] perfil do salão com dados reais;
+- [ ] disponibilidade;
+- [ ] reserva;
+- [ ] agendamentos;
+- [ ] favoritos/avaliações;
+- [ ] push/PWA.
 
-## Checklist AdminMaster
+## App Profissional Vite
 
-- Cada botao tem endpoint real ou esta oculto.
-- Cada endpoint tem guard de AdminMaster.
-- Acoes de salao, plano, financeiro e usuario admin geram log.
-- Impersonacao, quando existir, exige auditoria forte.
-- Saude verifica RPCs, migrations, webhooks, cron, assinatura, dominio e logs recentes.
+- [ ] sessão/cookie seguro;
+- [ ] profissional vê somente escopo autorizado;
+- [ ] agenda;
+- [ ] clientes/serviços;
+- [ ] comandas;
+- [ ] comissão;
+- [ ] avaliações/notificações;
+- [ ] PWA/offline;
+- [ ] push;
+- [ ] logout;
+- [ ] Service Role ausente do bundle.
+
+## UX
+
+- [ ] estados têm nomes consistentes entre superfícies;
+- [ ] erro mostra ação humana;
+- [ ] financeiro mostra base/taxa/líquido quando relevante;
+- [ ] bloqueio de plano/permissão explica motivo;
+- [ ] cabeçalhos/barras fixas não escondem conteúdo;
+- [ ] versão mobile testada em aparelho real.
+
+## Admin Master
+
+- [ ] botões possuem ação real;
+- [ ] endpoints possuem guard;
+- [ ] ações críticas geram log;
+- [ ] saúde verifica banco/APIs/webhook/cron/deployment;
+- [ ] dados sensíveis não vazam na UI.
+
+## Pós-release
+
+- [ ] Vercel `READY`;
+- [ ] PWA profissional atualiza sem cache antigo;
+- [ ] probes frescos;
+- [ ] sem regressão de webhook/cron;
+- [ ] smoke das apps concluído.

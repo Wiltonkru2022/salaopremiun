@@ -1,20 +1,18 @@
-# Funcoes Obrigatorias Do Banco
+# Contrato do Banco — Funções e Tabelas Críticas
 
-Antes de publicar em producao, valide que as migrations foram aplicadas e que as funcoes abaixo existem no schema `public`.
-
-Use o healthcheck protegido do AdminMaster:
-
-```http
-GET /api/admin-master/saude/rpcs
-```
-
-Tambem rode:
+Antes de promover produção, valide que migrations e RPCs usadas pelo código existem no schema remoto.
 
 ```bash
 npm run audit:database-contract
 ```
 
-## Funcoes Criticas
+Healthcheck protegido do Admin Master:
+
+```http
+GET /api/admin-master/saude/rpcs
+```
+
+## Funções críticas
 
 - `fn_cadastrar_salao_transacional`
 - `fn_salvar_servico_catalogo_transacional`
@@ -51,7 +49,9 @@ npm run audit:database-contract
 - `fn_validar_rls_critico`
 - `fn_validar_funcoes_obrigatorias`
 
-## Tabelas Criticas
+A lista deve acompanhar o auditor do banco. Se o código começar a depender de nova RPC crítica, atualize migration, auditor e este documento no mesmo PR.
+
+## Tabelas críticas
 
 - `admin_master_usuarios`
 - `agenda_bloqueios`
@@ -72,12 +72,22 @@ npm run audit:database-contract
 - `tickets`
 - `usuarios`
 
-## Checklist De Integridade
+## App Profissional Vite
 
-- Toda chamada `.rpc()` existente no codigo aparece em alguma migration.
-- Toda funcao critica tem migration versionada.
-- Toda tabela multi-tenant critica tem politica RLS revisada.
-- Ambiente local, staging e producao estao com as mesmas migrations.
-- AdminMaster consegue executar o healthcheck de RPCs antes da promocao.
+O frontend profissional está em `apps/app-profissional-vite`, mas o contrato de banco continua server-side. O Vite não deve ganhar acesso privilegiado para substituir APIs/RPCs protegidas.
 
-Se esse healthcheck falhar, o deploy nao deve ser promovido.
+## Migrations de features removidas
+
+Migration aplicada é histórico. A remoção do editor de imagens não autoriza apagar `20260519210000_editor_ecossistema.sql`. Se o schema do editor precisar ser removido, crie nova migration de `DROP` revisada e com backup.
+
+## Checklist
+
+- [ ] `.rpc()` usada pelo código possui migration/contrato;
+- [ ] ambiente local/staging/produção usam a mesma sequência de migrations;
+- [ ] tabelas multi-tenant críticas possuem RLS/policies revisadas;
+- [ ] funções `SECURITY DEFINER` possuem `EXECUTE` mínimo necessário;
+- [ ] Service Role não chega aos clientes;
+- [ ] App Cliente e App Profissional não conseguem cruzar salões;
+- [ ] healthcheck do Admin Master passa.
+
+Se o contrato falhar, o release não deve ser promovido.

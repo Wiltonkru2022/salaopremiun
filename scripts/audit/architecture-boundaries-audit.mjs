@@ -31,8 +31,6 @@ const ROUTE_FORBIDDEN_PATTERNS = [
 const ANY_PATTERN = /(?::\s*any\b|\bas\s+any\b|<\s*any\s*>)/;
 const ANY_ALLOWLIST = new Set(["types/supabase.ts"]);
 const ROUTE_ALLOWLIST = new Set([
-  // Rotas finas de integracao autenticada. Elas continuam cobertas por
-  // audit:service-role, audit:api-guards e audit:critical-routes.
   "app/api/agenda/google-calendar/route.ts",
   "app/api/auth/google-login-precheck/route.ts",
   "app/api/auth/google-risc/route.ts",
@@ -42,9 +40,6 @@ const ROUTE_ALLOWLIST = new Set([
   "app/api/painel/salao-portfolio/route.ts",
 ]);
 const ANY_ALLOWLIST_PREFIXES = [
-  // Client/professional notification surfaces still depend on recently added
-  // Supabase tables that are not fully represented in database.generated.ts.
-  // Route handlers and core use-cases remain audited strictly.
   "app/(admin-master)/admin-master/",
   "app/api/agenda/google-calendar/route.ts",
   "app/api/auth/google-risc/route.ts",
@@ -52,12 +47,7 @@ const ANY_ALLOWLIST_PREFIXES = [
   "app/api/painel/excluir-salao/route.ts",
   "app/api/painel/salao-portfolio/route.ts",
   "app/app-cliente/",
-  // Campanhas/cupons usam tabelas criadas recentemente que ainda não foram
-  // absorvidas pelo contrato gerado do Supabase. Continuam cobertas por
-  // audit:api-guards, audit:critical-routes, e2e:playwright e smoke de proxy.
   "app/(painel)/campanhas/",
-  "app/app-profissional/agenda/",
-  "app/app-profissional/perfil/actions.ts",
   "app/auth/callback/route.ts",
   "app/services/cliente-app/",
   "lib/agenda/sincronizarAgendamentoComComanda.ts",
