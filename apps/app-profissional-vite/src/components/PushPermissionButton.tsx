@@ -73,7 +73,7 @@ async function resolveProfessionalPushState(
   const publicKey = await loadPublicKey();
   if (!publicKey) return "unsupported";
 
-  let permission = Notification.permission;
+  let permission: NotificationPermission = Notification.permission;
   if (requestPermission && permission === "default") {
     permission = await Notification.requestPermission().catch(
       () => "default" as NotificationPermission
