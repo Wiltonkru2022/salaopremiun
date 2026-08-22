@@ -10,6 +10,7 @@ import {
   Star,
 } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
+import ClientAppDrawerNav from "@/components/client-app/ClientAppDrawerNav";
 import { validateClienteAppSession } from "@/lib/client-context.server";
 import {
   getClienteAppProfileData,
@@ -61,20 +62,23 @@ export default async function AppClienteIndexPage() {
 
   return (
     <ClientAppFrame title="Início" subtitle="Salão Premium">
-      <section className="min-h-dvh bg-[#050505] px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.25rem)] text-white">
+      <section className="min-h-dvh bg-[#050505] px-5 pb-28 pt-0 text-white">
         <div className="mx-auto max-w-md">
-          <header className="flex items-center justify-between">
+          <header className="sp-mobile-fixed sticky top-0 z-50 -mx-5 flex items-center justify-between border-b border-white/8 bg-[#050505]/96 px-5 pb-3 pt-[calc(env(safe-area-inset-top)+1rem)] backdrop-blur-xl">
             <div className="inline-flex items-center gap-2 text-[13px] font-black uppercase tracking-[0.24em] text-[#f5c15a]">
               <Sparkles size={22} />
               Salão Premium
             </div>
-            <Link
-              href="/app-cliente/notificacoes"
-              className="flex h-11 w-11 items-center justify-center rounded-full text-[#f5c15a]"
-              aria-label="Notificações"
-            >
-              <Bell size={25} />
-            </Link>
+            <div className="flex items-center gap-1">
+              <Link
+                href="/app-cliente/notificacoes"
+                className="flex h-11 w-11 items-center justify-center rounded-full text-[#f5c15a]"
+                aria-label="Notificações"
+              >
+                <Bell size={25} />
+              </Link>
+              <ClientAppDrawerNav isDark />
+            </div>
           </header>
 
           <h1 className="mt-12 text-[2.55rem] font-black leading-tight tracking-[-0.05em]">
