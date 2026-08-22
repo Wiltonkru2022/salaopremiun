@@ -101,7 +101,7 @@ export default function ClientMobileAppLayout({
   return (
     <ClientMobileLayoutContext.Provider value={contextValue}>
       <div
-        className={`app-cliente-root min-h-dvh overflow-x-hidden ${
+        className={`app-cliente-root min-h-dvh overflow-x-clip ${
           isDarkRoute ? "bg-[#050505] text-white" : "bg-white text-zinc-950"
         }`}
       >
