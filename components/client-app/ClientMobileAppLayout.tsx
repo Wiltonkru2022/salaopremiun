@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
-import { Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 import ClientAppDrawerNav from "@/components/client-app/ClientAppDrawerNav";
 import ClientVisualNoticeRuntime from "@/components/client-app/ClientVisualNoticeRuntime";
@@ -19,15 +19,14 @@ const HIDDEN_CHROME_ROUTES = [
   "/app-cliente/onboarding",
 ];
 
-const CUSTOM_HEADER_ROUTES = [
+const EXACT_CUSTOM_HEADER_ROUTES = new Set([
   "/app-cliente",
   "/app-cliente/inicio",
   "/app-cliente/explorar",
-  "/app-cliente/salao",
   "/app-cliente/agenda",
   "/app-cliente/agendamentos",
   "/app-cliente/perfil",
-];
+]);
 
 const INLINE_MENU_ROUTES = new Set([
   "/app-cliente",
@@ -52,10 +51,9 @@ export default function ClientMobileAppLayout({
   const hideChrome = HIDDEN_CHROME_ROUTES.some((route) =>
     pathname.startsWith(route)
   );
-  const hasCustomHeader = CUSTOM_HEADER_ROUTES.some((route) =>
-    pathname === route || pathname.startsWith(`${route}/`)
-  );
   const usesOwnSalonHeader = pathname.startsWith("/app-cliente/salao/");
+  const hasCustomHeader =
+    EXACT_CUSTOM_HEADER_ROUTES.has(pathname) || usesOwnSalonHeader;
   const hasInlineMenu = INLINE_MENU_ROUTES.has(pathname);
   const isReservationRoute =
     pathname.startsWith("/app-cliente/salao/") && pathname.includes("/reserva");
@@ -84,6 +82,14 @@ export default function ClientMobileAppLayout({
     };
   }, [isDarkRoute]);
 
+  function goBack() {
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+    window.location.href = "/app-cliente";
+  }
+
   if (hideChrome) {
     return (
       <div className="app-cliente-root min-h-dvh bg-[#f7f7f5] text-zinc-900">
@@ -103,7 +109,16 @@ export default function ClientMobileAppLayout({
 
         <div className="relative mx-auto flex min-h-dvh max-w-6xl flex-col pb-6 md:pb-4">
           {!hasCustomHeader ? (
-            <header className="sp-mobile-fixed fixed inset-x-0 top-0 z-50 mx-auto flex max-w-6xl items-center justify-between gap-2 border-b border-zinc-100 bg-white/95 px-3 py-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] shadow-[0_12px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl sm:gap-3 sm:px-4 md:top-3 md:rounded-[1.5rem] md:border md:pt-3">
+            <header className="sp-mobile-fixed fixed inset-x-0 top-0 z-50 mx-auto flex max-w-6xl items-center gap-2 border-b border-zinc-100 bg-white/96 px-3 py-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] shadow-[0_12px_30px_rgba(15,23,42,0.06)] backdrop-blur-xl sm:gap-3 sm:px-4 md:top-3 md:rounded-[1.5rem] md:border md:pt-3">
+              <button
+                type="button"
+                onClick={goBack}
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-zinc-950 md:hidden"
+                aria-label="Voltar"
+              >
+                <ArrowLeft size={28} />
+              </button>
+
               <div className="min-w-0 flex-1">
                 <div className="inline-flex max-w-full items-center gap-1.5 truncate rounded-full bg-amber-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-amber-800 sm:tracking-[0.14em]">
                   <Sparkles size={12} />
