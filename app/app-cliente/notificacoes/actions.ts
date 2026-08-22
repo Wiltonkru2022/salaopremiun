@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -15,6 +16,12 @@ async function loadOwnedNotification(idConta: string, id: string) {
 
   if (error || !data?.id) return null;
   return data as { id: string; metadata?: Record<string, unknown> | null };
+}
+
+function revalidateClienteNotificationSurfaces() {
+  revalidatePath("/app-cliente");
+  revalidatePath("/app-cliente/perfil");
+  revalidatePath("/app-cliente/notificacoes");
 }
 
 export async function markClienteNotificationReadAction(formData: FormData) {
@@ -38,7 +45,20 @@ export async function markClienteNotificationReadAction(formData: FormData) {
     .eq("cliente_app_conta_id", session.idConta)
     .eq("canal", "cliente_app");
 
-  revalidatePath("/app-cliente/notificacoes");
+  revalidateClienteNotificationSurfaces();
+}
+
+export async function openClienteNotificationAction(formData: FormData) {
+  await markClienteNotificationReadAction(formData);
+
+  const requestedDestination = String(formData.get("destino") || "").trim();
+  const destination =
+    requestedDestination === "/app-cliente" ||
+    requestedDestination.startsWith("/app-cliente/")
+      ? requestedDestination
+      : "/app-cliente/notificacoes";
+
+  redirect(destination);
 }
 
 export async function markClienteNotificationUnreadAction(formData: FormData) {
@@ -62,7 +82,7 @@ export async function markClienteNotificationUnreadAction(formData: FormData) {
     .eq("cliente_app_conta_id", session.idConta)
     .eq("canal", "cliente_app");
 
-  revalidatePath("/app-cliente/notificacoes");
+  revalidateClienteNotificationSurfaces();
 }
 
 export async function markAllClienteNotificationsReadAction() {
@@ -92,5 +112,5 @@ export async function markAllClienteNotificationsReadAction() {
       )
   );
 
-  revalidatePath("/app-cliente/notificacoes");
+  revalidateClienteNotificationSurfaces();
 }
