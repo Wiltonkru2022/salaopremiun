@@ -4,13 +4,14 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Bell, Check, ChevronRight, MapPin, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { ONBOARDING_DONE_KEY } from "@/components/client-app/ClientInstallOnboardingGate";
+import { requestClientPushPermission } from "@/components/push/requestClientPushPermission";
 
 const steps = [
   {
     title: "Bem-vindo ao Salão Premium",
     text: "Encontre salões, veja serviços, escolha profissionais e agende sem precisar ligar.",
     icon: Sparkles,
-    action: "Comecar",
+    action: "Começar",
   },
   {
     title: "Veja salões perto de você",
@@ -20,9 +21,9 @@ const steps = [
   },
   {
     title: "Nunca perca um agendamento",
-    text: "Receba lembretes, mudancas de horário e avisos importantes do seu atendimento.",
+    text: "Ative as notificações para receber lembretes, mudanças de horário e avisos importantes mesmo com o app fechado.",
     icon: Bell,
-    action: "Finalizar",
+    action: "Ativar notificações",
   },
 ];
 
@@ -43,6 +44,7 @@ function canRequestGeolocation() {
 
 export default function ClientOnboarding() {
   const [step, setStep] = useState(0);
+  const [enablingPush, setEnablingPush] = useState(false);
   const router = useRouter();
   const searchParams = useSearchParams();
   const current = steps[step];
@@ -67,8 +69,13 @@ export default function ClientOnboarding() {
         { maximumAge: 60_000, timeout: 5000 }
       );
     }
-    if (step === 2 && "Notification" in window) {
-      await Notification.requestPermission().catch(() => undefined);
+
+    if (step === 2) {
+      setEnablingPush(true);
+      await requestClientPushPermission().catch(() => "failed");
+      setEnablingPush(false);
+      finishFlow();
+      return;
     }
 
     if (isLast) {
@@ -125,15 +132,25 @@ export default function ClientOnboarding() {
         <p className="mt-6 max-w-lg text-xl leading-9 text-zinc-500">
           {current.text}
         </p>
+        {isLast ? (
+          <p className="mt-5 max-w-md rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold leading-6 text-amber-900">
+            Ao tocar em ativar, o Android ou navegador mostrará a permissão oficial de notificações. Você pode alterar isso depois em Configurações.
+          </p>
+        ) : null}
       </section>
 
       <button
         type="button"
         onClick={() => void continueFlow()}
-        className="mb-4 inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-zinc-950 text-base font-black text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)]"
+        disabled={enablingPush}
+        className="mb-4 inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-zinc-950 text-base font-black text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)] disabled:opacity-65"
       >
-        {step === 0 ? "Próximo" : current.action}
-        <ChevronRight size={20} />
+        {enablingPush
+          ? "Ativando..."
+          : step === 0
+            ? "Próximo"
+            : current.action}
+        {!enablingPush ? <ChevronRight size={20} /> : null}
       </button>
     </main>
   );
