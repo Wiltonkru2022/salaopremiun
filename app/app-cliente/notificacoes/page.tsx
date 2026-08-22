@@ -5,6 +5,7 @@ import {
   markAllClienteNotificationsReadAction,
   markClienteNotificationReadAction,
   markClienteNotificationUnreadAction,
+  openClienteNotificationAction,
 } from "@/app/app-cliente/notificacoes/actions";
 import { listClienteAppNotifications } from "@/lib/client-app/queries";
 import { requireClienteAppContext } from "@/lib/client-context.server";
@@ -146,7 +147,7 @@ export default async function ClienteNotificationsPage({
                 <article
                   key={notification.id}
                   className={`rounded-[1.4rem] border bg-white p-4 shadow-sm transition ${
-                    isRead ? "border-zinc-200" : "border-cyan-200"
+                    isRead ? "border-zinc-200" : "border-amber-200 shadow-[0_12px_32px_rgba(245,189,66,0.08)]"
                   }`}
                 >
                   <div className="flex gap-3">
@@ -154,7 +155,7 @@ export default async function ClienteNotificationsPage({
                       className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${
                         isRead
                           ? "bg-zinc-100 text-zinc-950"
-                          : "bg-cyan-50 text-cyan-800"
+                          : "bg-amber-50 text-amber-800"
                       }`}
                     >
                       <Icon size={22} />
@@ -168,7 +169,7 @@ export default async function ClienteNotificationsPage({
                           className={`shrink-0 rounded-full px-2.5 py-1 text-[11px] font-bold ${
                             isRead
                               ? "bg-zinc-100 text-zinc-500"
-                              : "bg-cyan-50 text-cyan-800"
+                              : "bg-amber-50 text-amber-800"
                           }`}
                         >
                           {isRead ? "Lida" : "Nova"}
@@ -185,12 +186,13 @@ export default async function ClienteNotificationsPage({
 
                   <div className="mt-4 flex flex-wrap gap-2 pl-0 sm:pl-15">
                     {notification.url ? (
-                      <Link
-                        href={notification.url}
-                        className="inline-flex h-10 items-center rounded-xl bg-zinc-950 px-4 text-sm font-black text-white"
-                      >
-                        Abrir
-                      </Link>
+                      <form action={openClienteNotificationAction}>
+                        <input type="hidden" name="notificacao" value={notification.id} />
+                        <input type="hidden" name="destino" value={notification.url} />
+                        <button className="inline-flex h-10 items-center rounded-xl bg-zinc-950 px-4 text-sm font-black text-white">
+                          {isRead ? "Abrir" : "Abrir e marcar como lida"}
+                        </button>
+                      </form>
                     ) : null}
                     {isRead ? (
                       <form action={markClienteNotificationUnreadAction}>
