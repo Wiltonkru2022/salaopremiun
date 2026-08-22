@@ -6,6 +6,7 @@ import { ArrowLeft, Sparkles } from "lucide-react";
 import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 import ClientAppDrawerNav from "@/components/client-app/ClientAppDrawerNav";
 import ClientVisualNoticeRuntime from "@/components/client-app/ClientVisualNoticeRuntime";
+import ClientNotificationOnboardingPrompt from "@/components/client-app/ClientNotificationOnboardingPrompt";
 import {
   ClientMobileLayoutContext,
   type ClientMobileChromeState,
@@ -105,6 +106,7 @@ export default function ClientMobileAppLayout({
         }`}
       >
         <ClientVisualNoticeRuntime />
+        <ClientNotificationOnboardingPrompt />
 
         <div className="relative mx-auto flex min-h-dvh max-w-6xl flex-col pb-6 md:pb-4">
           {!hasCustomHeader ? (
