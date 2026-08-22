@@ -29,7 +29,7 @@
     },
     {
       "path": "/api/cron/notificacoes",
-      "schedule": "*/5 * * * *"
+      "schedule": "0 10 * * *"
     }
   ]
 }

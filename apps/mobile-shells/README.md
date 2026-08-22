@@ -64,3 +64,8 @@ opcoes:
 
 Tambem mantenha `CRON_SECRET` configurado, porque `/api/cron/notificacoes`
 processa os lembretes e jobs pendentes.
+
+Em projetos Vercel no plano Hobby, cron jobs no `vercel.json` so podem rodar
+uma vez por dia. Para manter o processamento frequente de notificacoes, tambem
+configure o secret `CRON_SECRET` no GitHub Actions; o workflow
+`Notification Cron` chama `/api/cron/notificacoes` a cada 5 minutos.
