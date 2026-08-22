@@ -46,10 +46,14 @@ export default async function ClienteSalonDetailsPage({ params }: { params: Prom
 
     return <ClientAppFrame title={salao.nome} subtitle="Contato e funcionamento">
       <section className="min-h-dvh bg-[#050505] pb-36 text-white">
-        <div className="relative min-h-[390px] overflow-hidden px-5 pb-6 pt-[calc(env(safe-area-inset-top)+1rem)]">
+        <div className="sp-mobile-fixed fixed inset-x-0 top-0 z-[60] mx-auto flex max-w-md items-center justify-between px-5 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)] pointer-events-none">
+          <Link href={`/app-cliente/salao/${id}`} className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-black/70 text-white shadow-lg backdrop-blur-xl" aria-label="Voltar"><ArrowLeft size={25} /></Link>
+          <div className="pointer-events-auto flex h-12 w-12 items-center justify-center rounded-full bg-black/70 shadow-lg backdrop-blur-xl"><ClientAppDrawerNav isDark /></div>
+        </div>
+
+        <div className="relative min-h-[390px] overflow-hidden px-5 pb-6 pt-[calc(env(safe-area-inset-top)+5rem)]">
           {salao.fotoCapaUrl ? <img src={salao.fotoCapaUrl} alt={`Capa de ${salao.nome}`} className="absolute inset-0 h-full w-full object-cover opacity-60" /> : <div className="absolute inset-0 bg-gradient-to-br from-zinc-950 via-zinc-800 to-[#6d531d]" />}
           <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/45 to-[#050505]" />
-          <div className="relative z-10 flex items-center justify-between"><Link href={`/app-cliente/salao/${id}`} className="flex h-12 w-12 items-center justify-center rounded-full bg-black/45 text-white backdrop-blur" aria-label="Voltar"><ArrowLeft size={25} /></Link><div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/45"><ClientAppDrawerNav isDark /></div></div>
           <div className="relative z-10 mt-12 flex items-end gap-4">
             <div className="grid h-24 w-24 shrink-0 place-items-center overflow-hidden rounded-3xl border border-white/15 bg-black/50 text-2xl font-black shadow-xl">{salao.logoUrl ? <img src={salao.logoUrl} alt={`Logo de ${salao.nome}`} className="h-full w-full object-cover" /> : salao.nome.slice(0,2).toUpperCase()}</div>
             <div className="min-w-0 flex-1"><h1 className="text-[1.9rem] font-black leading-tight tracking-[-0.04em]">{salao.nome}</h1><div className="mt-2 flex items-center gap-2 text-sm text-zinc-100">{notaMedia !== null ? <><Star size={17} className="text-[#f6b93f]" fill="currentColor" /><span className="font-bold">{notaMedia.toFixed(1)}</span><span>· {reviews.length} {reviews.length === 1 ? "avaliação" : "avaliações"}</span></> : <span className="text-zinc-300">Ainda sem avaliações</span>}</div>{salao.enderecoCompleto ? <div className="mt-2 flex items-start gap-2 text-sm leading-5 text-zinc-200"><MapPin size={17} className="mt-0.5 shrink-0" /><span>{salao.enderecoCompleto}</span></div> : null}</div>
