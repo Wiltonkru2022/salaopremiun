@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, MessageCircle, Star } from "lucide-react";
 
+import ClientAppDrawerNav from "@/components/client-app/ClientAppDrawerNav";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientSalonSectionTabs from "@/components/client-app/ClientSalonSectionTabs";
 import PaginationLinks from "@/components/ui/PaginationLinks";
@@ -66,29 +67,29 @@ export default async function ClienteSalonReviewsPage({
     return (
       <ClientAppFrame title={salao.nome} subtitle="Avaliações reais">
         <section className="min-h-dvh bg-white pb-32 text-zinc-950">
-          <div className="mx-auto max-w-3xl px-5 pt-[calc(env(safe-area-inset-top)+1.1rem)]">
-            <header className="mb-6 flex items-center gap-4">
+          <header className="sp-mobile-fixed sticky top-0 z-50 border-b border-zinc-100 bg-white/96 backdrop-blur-xl">
+            <div className="mx-auto flex max-w-3xl items-center gap-3 px-5 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
               <Link
                 href={`/app-cliente/salao/${id}`}
-                className="-ml-2 flex h-12 w-12 items-center justify-center"
+                className="-ml-2 flex h-12 w-12 shrink-0 items-center justify-center"
                 aria-label="Voltar"
               >
                 <ArrowLeft size={34} />
               </Link>
-              <div className="min-w-0">
-                <h1 className="text-[2rem] font-black leading-none tracking-[-0.05em]">
-                  Avaliações
-                </h1>
-                <p className="mt-2 truncate text-base text-zinc-500">
-                  Opiniões de clientes do {salao.nome}.
-                </p>
-              </div>
-            </header>
-          </div>
+              <h1 className="min-w-0 flex-1 truncate text-[1.85rem] font-black leading-none tracking-[-0.05em]">
+                Avaliações
+              </h1>
+              <ClientAppDrawerNav />
+            </div>
+          </header>
 
-          <ClientSalonSectionTabs salonId={id} active="avaliacoes" />
+          <ClientSalonSectionTabs salonId={id} active="avaliacoes" stickyBelowHeader />
 
           <div className="mx-auto max-w-3xl px-5 py-6">
+            <p className="mb-5 text-base text-zinc-500">
+              Opiniões de clientes do {salao.nome}.
+            </p>
+
             <div className="rounded-[1.5rem] border border-zinc-100 bg-white p-6 shadow-[0_18px_45px_rgba(15,23,42,0.08)]">
               <div className="text-center">
                 <div className="text-[4.5rem] font-light leading-none text-zinc-800">
