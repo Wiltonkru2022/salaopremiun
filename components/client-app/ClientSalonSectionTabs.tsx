@@ -8,6 +8,7 @@ type TabKey = "servicos" | "avaliacoes" | "portfolio" | "detalhes";
 type ClientSalonSectionTabsProps = {
   salonId: string;
   active: "servicos" | "reserva" | "avaliacoes" | "portfolio" | "detalhes";
+  stickyBelowHeader?: boolean;
 };
 
 const tabs = [
@@ -36,7 +37,11 @@ function getProfileSections() {
   return { services, professionals, reviews, portfolio, about };
 }
 
-export default function ClientSalonSectionTabs({ salonId, active }: ClientSalonSectionTabsProps) {
+export default function ClientSalonSectionTabs({
+  salonId,
+  active,
+  stickyBelowHeader = false,
+}: ClientSalonSectionTabsProps) {
   const pathname = usePathname();
   const basePath = `/app-cliente/salao/${salonId}`;
   const isMainProfile = pathname === basePath || pathname === `${basePath}/`;
@@ -117,7 +122,14 @@ export default function ClientSalonSectionTabs({ salonId, active }: ClientSalonS
 
   return (
     <>
-      <nav className="sticky top-0 z-30 border-b border-zinc-200 bg-white/96 px-4 backdrop-blur-md md:px-6" aria-label="Seções do salão">
+      <nav
+        className={`sticky z-30 border-b border-zinc-200 bg-white/96 px-4 backdrop-blur-md md:px-6 ${
+          stickyBelowHeader
+            ? "top-[calc(env(safe-area-inset-top)+4.5rem)]"
+            : "top-0"
+        }`}
+        aria-label="Seções do salão"
+      >
         <div className="mx-auto grid max-w-6xl grid-cols-4 items-stretch text-[0.98rem] font-semibold text-zinc-500">
           {tabs.map((tab) => {
             const selected = isMainProfile ? activeKey === tab.key : active === tab.key;
