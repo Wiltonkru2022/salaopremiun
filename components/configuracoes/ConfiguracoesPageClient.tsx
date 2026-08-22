@@ -182,7 +182,7 @@ export default function ConfiguracoesPageClient({
   const [configForm, setConfigForm] = useState<ConfigSalaoForm>(EMPTY_CONFIG);
 
   const [usuarios, setUsuarios] = useState<UsuarioSistema[]>([]);
-  const [limiteUsuarios, setLimiteUsuarios] = useState(0);
+  const [limiteUsuarios, setLimiteUsuarios] = useState<number | null>(null);
 
   const [usuarioModalOpen, setUsuarioModalOpen] = useState(false);
   const [taxasModalOpen, setTaxasModalOpen] = useState(false);
@@ -385,7 +385,7 @@ export default function ConfiguracoesPageClient({
       return;
     }
 
-    setLimiteUsuarios(0);
+    setLimiteUsuarios(null);
   }, [planoAccess?.limites?.usuarios, salaoForm.status]);
 
   useEffect(() => {
@@ -730,12 +730,16 @@ export default function ConfiguracoesPageClient({
   }, [usuarios]);
 
   const podeCriarUsuario = useMemo(() => {
-    if (limiteUsuarios <= 0) return false;
+    if (limiteUsuarios == null) return true;
     return usuariosAtivosCount < limiteUsuarios;
   }, [usuariosAtivosCount, limiteUsuarios]);
 
-  const limiteUsuariosPlano = planoAccess?.limites?.usuarios ?? limiteUsuarios;
+  const limiteUsuariosPlano = planoAccess
+    ? planoAccess.limites?.usuarios ?? null
+    : limiteUsuarios;
   const usoUsuariosPlano = planoAccess?.uso?.usuarios ?? usuariosAtivosCount;
+  const limiteUsuariosLabel =
+    limiteUsuariosPlano == null ? "Ilimitado" : String(limiteUsuariosPlano);
   const usuariosRecursoLiberado = planoAccess?.recursos?.usuarios !== false;
   const atingiuLimiteUsuarios =
     !usuarioEditandoId &&
@@ -914,8 +918,8 @@ export default function ConfiguracoesPageClient({
       return "Teste grátis: limite máximo de 1 usuário.";
     }
 
-    if (limiteUsuarios <= 0) {
-      return "Plano sem limite configurado ou não encontrado.";
+    if (limiteUsuarios == null) {
+      return "Usuários ilimitados pelo plano atual.";
     }
 
     return `Plano ${String(salaoForm.plano || "-").toUpperCase()} • Limite de ${limiteUsuarios} usuário(s).`;
@@ -974,7 +978,7 @@ export default function ConfiguracoesPageClient({
             />
             <ConfigMetricCard
               label="Usuários"
-              value={`${usuariosAtivosCount}/${limiteUsuariosPlano || "-"}`}
+              value={`${usuariosAtivosCount}/${limiteUsuariosLabel}`}
               detail="Ativos dentro do limite do plano"
               icon={<Users size={18} />}
             />
@@ -1711,7 +1715,7 @@ export default function ConfiguracoesPageClient({
                 Limite de usuários
               </div>
               <div className="mt-1.5 text-lg font-bold text-zinc-900">
-                {limiteUsuariosPlano ?? "-"}
+                {limiteUsuariosLabel}
               </div>
               <div className="mt-1 text-xs text-zinc-500">{textoPlanoUsuarios}</div>
             </div>
@@ -1968,7 +1972,7 @@ export default function ConfiguracoesPageClient({
                   Limite do plano
                 </div>
                 <div className="mt-2 text-lg font-bold text-zinc-900">
-                  {limiteUsuariosPlano ?? "-"} usuário(s)
+                  {limiteUsuariosLabel}
                 </div>
                 <div className="mt-1 text-sm text-zinc-500">
                   Cadastrados ativos: {usoUsuariosPlano}

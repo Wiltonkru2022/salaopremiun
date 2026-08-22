@@ -1,4 +1,5 @@
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
+import { getPlanoCatalogo } from "@/lib/plans/catalog";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { unstable_cache } from "next/cache";
 
@@ -237,12 +238,24 @@ function normalizePlano(plano?: string | null) {
   return codigo;
 }
 
-function isUnlimited(value?: number | null) {
-  return value == null || value === 999;
+function parseNumericLimit(value?: number | null) {
+  if (value == null) return undefined;
+
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric) || numeric <= 0) return undefined;
+  if (numeric >= 999) return null;
+  return numeric;
 }
 
-function normalizeLimit(value?: number | null) {
-  return isUnlimited(value) ? null : Number(value ?? 0);
+function resolveLimit(
+  fallback: number | null,
+  ...limits: Array<number | null | undefined>
+) {
+  for (const limit of limits) {
+    if (limit !== undefined) return limit;
+  }
+
+  return fallback;
 }
 
 function getPlanoRecursoLimit(
@@ -250,7 +263,9 @@ function getPlanoRecursoLimit(
   recursoCodigo: string
 ) {
   const row = recursosRows.find((item) => item.recurso_codigo === recursoCodigo);
-  return normalizeLimit(row?.limite_numero ?? null);
+  if (!row) return undefined;
+  if (row.limite_numero == null) return null;
+  return parseNumericLimit(row.limite_numero);
 }
 
 function getExtraRecursoLimit(extrasRows: ExtraRow[], recursoCodigo: string) {
@@ -259,7 +274,8 @@ function getExtraRecursoLimit(extrasRows: ExtraRow[], recursoCodigo: string) {
       item.recurso_codigo === recursoCodigo &&
       item.limite_numero != null
   );
-  return normalizeLimit(row?.limite_numero ?? null);
+  if (!row) return undefined;
+  return parseNumericLimit(row.limite_numero);
 }
 
 export function getPlanoRecursoLabel(recurso: string) {
@@ -303,6 +319,7 @@ async function getPlanoAccessSnapshotUncached(
   const planoCodigo = normalizePlano(assinaturaRow?.plano || salaoRow?.plano);
   const planoCodigoEfetivo =
     resumo.emTesteGratis && resumo.ativa ? "premium" : planoCodigo;
+  const planoCatalogo = getPlanoCatalogo(planoCodigoEfetivo);
 
   const { data: plano } = await supabaseAdmin
     .from("planos_saas")
@@ -404,27 +421,35 @@ async function getPlanoAccessSnapshotUncached(
   const recursosRowsNormalized = (recursosRows || []) as PlanoRecursoRow[];
   const extrasRowsNormalized = (extrasRows || []) as ExtraRow[];
 
-  const limiteUsuarios =
-    getExtraRecursoLimit(extrasRowsNormalized, "usuarios") ??
-    assinaturaRow?.limite_usuarios ??
-    salaoRow?.limite_usuarios ??
-    planoRow?.limite_usuarios ??
-    null;
-  const limiteProfissionais =
-    getExtraRecursoLimit(extrasRowsNormalized, "profissionais") ??
-    assinaturaRow?.limite_profissionais ??
-    salaoRow?.limite_profissionais ??
-    planoRow?.limite_profissionais ??
-    null;
-  const limiteClientes =
-    getExtraRecursoLimit(extrasRowsNormalized, "clientes") ??
-    getPlanoRecursoLimit(recursosRowsNormalized, "clientes");
-  const limiteServicos =
-    getExtraRecursoLimit(extrasRowsNormalized, "servicos") ??
-    getPlanoRecursoLimit(recursosRowsNormalized, "servicos");
-  const limiteAgendamentosMensais =
-    getExtraRecursoLimit(extrasRowsNormalized, "agendamentos_mensais") ??
-    getPlanoRecursoLimit(recursosRowsNormalized, "agendamentos_mensais");
+  const limiteUsuarios = resolveLimit(
+    planoCatalogo.limites.usuarios,
+    getExtraRecursoLimit(extrasRowsNormalized, "usuarios"),
+    parseNumericLimit(assinaturaRow?.limite_usuarios),
+    parseNumericLimit(salaoRow?.limite_usuarios),
+    parseNumericLimit(planoRow?.limite_usuarios)
+  );
+  const limiteProfissionais = resolveLimit(
+    planoCatalogo.limites.profissionais,
+    getExtraRecursoLimit(extrasRowsNormalized, "profissionais"),
+    parseNumericLimit(assinaturaRow?.limite_profissionais),
+    parseNumericLimit(salaoRow?.limite_profissionais),
+    parseNumericLimit(planoRow?.limite_profissionais)
+  );
+  const limiteClientes = resolveLimit(
+    planoCatalogo.limites.clientes,
+    getExtraRecursoLimit(extrasRowsNormalized, "clientes"),
+    getPlanoRecursoLimit(recursosRowsNormalized, "clientes")
+  );
+  const limiteServicos = resolveLimit(
+    planoCatalogo.limites.servicos,
+    getExtraRecursoLimit(extrasRowsNormalized, "servicos"),
+    getPlanoRecursoLimit(recursosRowsNormalized, "servicos")
+  );
+  const limiteAgendamentosMensais = resolveLimit(
+    planoCatalogo.limites.agendamentosMensais,
+    getExtraRecursoLimit(extrasRowsNormalized, "agendamentos_mensais"),
+    getPlanoRecursoLimit(recursosRowsNormalized, "agendamentos_mensais")
+  );
 
   return {
     idSalao,
@@ -438,8 +463,8 @@ async function getPlanoAccessSnapshotUncached(
       ? "Assinatura ou salão bloqueado para novas operações."
       : null,
     limites: {
-      usuarios: normalizeLimit(limiteUsuarios),
-      profissionais: normalizeLimit(limiteProfissionais),
+      usuarios: limiteUsuarios,
+      profissionais: limiteProfissionais,
       clientes: limiteClientes,
       servicos: limiteServicos,
       agendamentosMensais: limiteAgendamentosMensais,
