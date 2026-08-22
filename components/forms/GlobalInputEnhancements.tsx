@@ -87,6 +87,14 @@ function hasExistingPasswordToggle(input: HTMLInputElement) {
   });
 }
 
+function isPasswordInputHidden(input: HTMLInputElement) {
+  if (input.closest("details:not([open]), [hidden]")) return true;
+  if (input.getClientRects().length === 0) return true;
+
+  const style = window.getComputedStyle(input);
+  return style.display === "none" || style.visibility === "hidden";
+}
+
 export default function GlobalInputEnhancements() {
   const [passwords, setPasswords] = useState<PasswordOverlay[]>([]);
   const sequenceRef = useRef(0);
@@ -104,6 +112,7 @@ export default function GlobalInputEnhancements() {
     const next: PasswordOverlay[] = [];
     for (const input of candidates) {
       if (!input.isConnected || input.type === "hidden") continue;
+      if (isPasswordInputHidden(input)) continue;
       if (!input.dataset.spPassword && hasExistingPasswordToggle(input)) continue;
 
       input.dataset.spPassword = "true";
@@ -176,13 +185,14 @@ export default function GlobalInputEnhancements() {
     document.addEventListener("input", onInputCapture, true);
     document.addEventListener("focusin", onFocusCapture, true);
     document.addEventListener("formdata", onFormData as EventListener, true);
+    document.addEventListener("toggle", schedulePasswordScan, true);
 
     const observer = new MutationObserver(schedulePasswordScan);
     observer.observe(document.body, {
       childList: true,
       subtree: true,
       attributes: true,
-      attributeFilter: ["type"],
+      attributeFilter: ["type", "open", "hidden"],
     });
 
     window.addEventListener("resize", schedulePasswordScan);
@@ -193,6 +203,7 @@ export default function GlobalInputEnhancements() {
       document.removeEventListener("input", onInputCapture, true);
       document.removeEventListener("focusin", onFocusCapture, true);
       document.removeEventListener("formdata", onFormData as EventListener, true);
+      document.removeEventListener("toggle", schedulePasswordScan, true);
       observer.disconnect();
       window.removeEventListener("resize", schedulePasswordScan);
       document.removeEventListener("scroll", schedulePasswordScan, true);
