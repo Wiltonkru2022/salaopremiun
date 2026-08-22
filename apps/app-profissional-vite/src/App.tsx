@@ -2,6 +2,7 @@
 import { useMemo, useState } from "react";
 import { ptBR } from "../../../core/i18n/pt-BR";
 import { AppShell, type View } from "./components/layout/AppShell";
+import { ProfessionalNotificationOnboarding } from "./components/ProfessionalNotificationOnboarding";
 import { Button } from "./components/ui/Button";
 import { Card } from "./components/ui/Card";
 import { useAuth } from "./contexts/AuthContext";
@@ -36,7 +37,7 @@ const titles: Record<View, string> = {
   suporte: ptBR.professional.support,
   duvidas: ptBR.professional.questions,
   instalar: "Instalar",
-  privacidade: "Privacidade"
+  privacidade: "Privacidade",
 };
 
 export function App() {
@@ -45,40 +46,144 @@ export function App() {
   const [selectedDate, setSelectedDate] = useState(toISODate(new Date()));
   const data = useProfissionalData(
     profissional?.id,
-    profissional?.podeVerAgendaTodos ?? profissional?.pode_ver_agenda_todos ?? String(profissional?.nivel_acesso || "").toLowerCase() === "todos",
+    profissional?.podeVerAgendaTodos ??
+      profissional?.pode_ver_agenda_todos ??
+      String(profissional?.nivel_acesso || "").toLowerCase() === "todos",
     view
   );
+  const unreadNotifications = data.notificacoes.filter((item) => !item.lida).length;
 
   const subtitle = useMemo(() => {
-    if (view === "agenda") return new Intl.DateTimeFormat("pt-BR", { weekday: "long", day: "2-digit", month: "long" }).format(new Date(selectedDate + "T12:00:00"));
-    if (view === "comandas") return `${data.comandas.filter((item) => item.status === "aberta").length} abertas`;
-    if (view === "notificacoes") return `${data.notificacoes.filter((item) => !item.lida).length} não lidas`;
+    if (view === "agenda") {
+      return new Intl.DateTimeFormat("pt-BR", {
+        weekday: "long",
+        day: "2-digit",
+        month: "long",
+      }).format(new Date(selectedDate + "T12:00:00"));
+    }
+    if (view === "comandas") {
+      return `${data.comandas.filter((item) => item.status === "aberta").length} abertas`;
+    }
+    if (view === "notificacoes") return `${unreadNotifications} não lidas`;
     if (view === "comissao") return "Repasse e produção";
     if (view === "perfil") return "Dados, horários e suporte";
     if (view === "cupons") return "Benefícios privados para suas clientes";
     return profissional?.nome || "";
-  }, [view, selectedDate, data.comandas, data.notificacoes, profissional?.nome]);
+  }, [
+    view,
+    selectedDate,
+    data.comandas,
+    unreadNotifications,
+    profissional?.nome,
+  ]);
 
-  if (authLoading) return <div className="grid min-h-screen place-items-center bg-zinc-950 text-sm font-black uppercase tracking-[0.22em] text-white">Carregando</div>;
+  if (authLoading) {
+    return (
+      <div className="grid min-h-screen place-items-center bg-zinc-950 text-sm font-black uppercase tracking-[0.22em] text-white">
+        Carregando
+      </div>
+    );
+  }
   if (!profissional) return <LoginPage />;
 
   return (
-    <AppShell view={view} setView={setView} title={titles[view]} subtitle={subtitle || ""}>
-      {data.error ? <Card className="mb-4 border-red-200 bg-red-50 text-red-700"><div className="text-sm font-bold">{data.error}</div></Card> : null}
+    <AppShell
+      view={view}
+      setView={setView}
+      title={titles[view]}
+      subtitle={subtitle || ""}
+      unreadNotifications={unreadNotifications}
+    >
+      <ProfessionalNotificationOnboarding />
+
+      {data.error ? (
+        <Card className="mb-4 border-red-200 bg-red-50 text-red-700">
+          <div className="text-sm font-bold">{data.error}</div>
+        </Card>
+      ) : null}
+
       <div className="mb-4 flex items-center justify-between gap-3">
-        <div className="min-w-0 text-xs font-black uppercase tracking-[0.12em] text-zinc-400">{data.loading ? ptBR.common.syncing : data.isOnline ? `${ptBR.common.online}${data.lastSyncedAt ? ` · ${new Date(data.lastSyncedAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}` : ""}` : ptBR.professional.offlineWarning}</div>
-        <Button variant="secondary" className="h-10 px-3" onClick={() => data.refresh()}><RefreshCw size={16} />Atualizar</Button>
+        <div className="min-w-0 text-xs font-black uppercase tracking-[0.12em] text-zinc-400">
+          {data.loading
+            ? ptBR.common.syncing
+            : data.isOnline
+              ? `${ptBR.common.online}${
+                  data.lastSyncedAt
+                    ? ` · ${new Date(data.lastSyncedAt).toLocaleTimeString("pt-BR", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                      })}`
+                    : ""
+                }`
+              : ptBR.professional.offlineWarning}
+        </div>
+        <Button variant="secondary" className="h-10 px-3" onClick={() => data.refresh()}>
+          <RefreshCw size={16} />
+          Atualizar
+        </Button>
       </div>
 
-      {view === "inicio" ? <InicioPage nome={profissional.nome_exibicao || profissional.nome} agendamentos={data.agendamentos} clientes={data.clientes} servicos={data.servicos} comandas={data.comandas} goTo={setView} /> : null}
-      {view === "agenda" ? <AgendaPage agendamentos={data.agendamentos} clientes={data.clientes} servicos={data.servicos} profissionais={data.profissionais} profissionalAtual={profissional} selectedDate={selectedDate} setSelectedDate={setSelectedDate} actions={data.actions} /> : null}
-      {view === "clientes" ? <ClientesPage clientes={data.clientes} agendamentos={data.agendamentos} comandas={data.comandas} onSave={data.actions.salvarCliente} onEdit={data.actions.editarCliente} /> : null}
-      {view === "servicos" ? <ServicosPage servicos={data.servicos} onSave={data.actions.salvarServico} onEdit={data.actions.editarServico} /> : null}
-      {view === "comandas" ? <ComandasPage clientes={data.clientes} servicos={data.servicos} comandas={data.comandas} itens={data.itensComanda} actions={data.actions} /> : null}
+      {view === "inicio" ? (
+        <InicioPage
+          nome={profissional.nome_exibicao || profissional.nome}
+          agendamentos={data.agendamentos}
+          clientes={data.clientes}
+          servicos={data.servicos}
+          comandas={data.comandas}
+          goTo={setView}
+        />
+      ) : null}
+      {view === "agenda" ? (
+        <AgendaPage
+          agendamentos={data.agendamentos}
+          clientes={data.clientes}
+          servicos={data.servicos}
+          profissionais={data.profissionais}
+          profissionalAtual={profissional}
+          selectedDate={selectedDate}
+          setSelectedDate={setSelectedDate}
+          actions={data.actions}
+        />
+      ) : null}
+      {view === "clientes" ? (
+        <ClientesPage
+          clientes={data.clientes}
+          agendamentos={data.agendamentos}
+          comandas={data.comandas}
+          onSave={data.actions.salvarCliente}
+          onEdit={data.actions.editarCliente}
+        />
+      ) : null}
+      {view === "servicos" ? (
+        <ServicosPage
+          servicos={data.servicos}
+          onSave={data.actions.salvarServico}
+          onEdit={data.actions.editarServico}
+        />
+      ) : null}
+      {view === "comandas" ? (
+        <ComandasPage
+          clientes={data.clientes}
+          servicos={data.servicos}
+          comandas={data.comandas}
+          itens={data.itensComanda}
+          actions={data.actions}
+        />
+      ) : null}
       {view === "cupons" ? <CuponsPage clientes={data.clientes} /> : null}
       {view === "comissao" ? <ComissaoPage comissoes={data.comissoes} /> : null}
-      {view === "avaliacoes" ? <AvaliacoesPage avaliacoes={data.avaliacoes} onDelete={data.actions.excluirAvaliacao} /> : null}
-      {view === "notificacoes" ? <NotificacoesPage notificacoes={data.notificacoes} onRead={data.actions.marcarNotificacaoLida} /> : null}
+      {view === "avaliacoes" ? (
+        <AvaliacoesPage
+          avaliacoes={data.avaliacoes}
+          onDelete={data.actions.excluirAvaliacao}
+        />
+      ) : null}
+      {view === "notificacoes" ? (
+        <NotificacoesPage
+          notificacoes={data.notificacoes}
+          onRead={data.actions.marcarNotificacaoLida}
+        />
+      ) : null}
       {view === "perfil" ? <PerfilPage profissional={profissional} goTo={setView} /> : null}
       {view === "configuracoes" ? <ConfiguracoesPage /> : null}
       {view === "suporte" ? <SuportePage /> : null}
