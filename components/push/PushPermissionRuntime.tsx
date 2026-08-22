@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { Capacitor } from "@capacitor/core";
+import { LocalNotifications } from "@capacitor/local-notifications";
 import { PushNotifications } from "@capacitor/push-notifications";
 import { Bell, BellRing } from "lucide-react";
 
@@ -18,6 +19,7 @@ type PushStatus =
 
 const SUBSCRIPTION_SAVE_TTL_MS = 12 * 60 * 60 * 1000;
 const NATIVE_TOKEN_SAVE_TTL_MS = 12 * 60 * 60 * 1000;
+const NATIVE_NOTIFICATION_CHANNEL_ID = "salaopremiun_default";
 
 type ListenerHandle = {
   remove: () => Promise<void>;
@@ -32,6 +34,49 @@ function isNativePushRuntime() {
   } catch {
     return false;
   }
+}
+
+function isNativeLocalNotificationsRuntime() {
+  try {
+    return (
+      Capacitor.isNativePlatform() &&
+      Capacitor.isPluginAvailable("LocalNotifications")
+    );
+  } catch {
+    return false;
+  }
+}
+
+function getNotificationId() {
+  return Math.max(1, Math.floor(Date.now() % 2147483000));
+}
+
+async function showForegroundNativeNotification(notification: {
+  title?: string;
+  body?: string;
+  data?: Record<string, unknown>;
+}) {
+  if (!isNativeLocalNotificationsRuntime()) return;
+
+  const title = String(notification.title || "SalaoPremiun").trim();
+  const body = String(notification.body || "Voce tem uma nova notificacao.").trim();
+  const url = getSafeInternalUrl(notification.data?.url);
+
+  await LocalNotifications.schedule({
+    notifications: [
+      {
+        id: getNotificationId(),
+        title,
+        body,
+        largeBody: body,
+        channelId: NATIVE_NOTIFICATION_CHANNEL_ID,
+        foreground: true,
+        autoCancel: true,
+        extra: { url },
+        isExactNotification: false,
+      },
+    ],
+  }).catch(() => undefined);
 }
 
 function getNativeTokenCacheKey(audience: PushAudience, token: string) {
@@ -270,6 +315,29 @@ export default function PushPermissionRuntime({
         ).catch(() => null);
 
         if (actionHandle) nativeHandles.push(actionHandle);
+
+        const receivedHandle = await PushNotifications.addListener(
+          "pushNotificationReceived",
+          (notification) => {
+            void showForegroundNativeNotification({
+              title: notification.title,
+              body: notification.body,
+              data: notification.data as Record<string, unknown> | undefined,
+            });
+          }
+        ).catch(() => null);
+
+        if (receivedHandle) nativeHandles.push(receivedHandle);
+
+        const localActionHandle = await LocalNotifications.addListener(
+          "localNotificationActionPerformed",
+          (event) => {
+            const url = getSafeInternalUrl(event.notification.extra?.url);
+            if (url) window.location.assign(url);
+          }
+        ).catch(() => null);
+
+        if (localActionHandle) nativeHandles.push(localActionHandle);
 
         const permissions = await PushNotifications.checkPermissions().catch(() => null);
         if (!active) return;

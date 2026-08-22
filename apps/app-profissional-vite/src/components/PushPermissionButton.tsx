@@ -1,4 +1,5 @@
 import { Capacitor } from "@capacitor/core";
+import { LocalNotifications } from "@capacitor/local-notifications";
 import { PushNotifications } from "@capacitor/push-notifications";
 import { Bell, BellRing } from "lucide-react";
 import { useEffect, useState } from "react";
@@ -10,6 +11,53 @@ export type ProfessionalPushState =
   | "enabled"
   | "denied"
   | "unsupported";
+
+const NATIVE_NOTIFICATION_CHANNEL_ID = "salaopremiun_default";
+
+function getSafeInternalUrl(value: unknown) {
+  const url = String(value || "").trim();
+  return url.startsWith("/") && !url.startsWith("//") ? url : "";
+}
+
+function isNativeLocalNotificationsAvailable() {
+  return (
+    typeof window !== "undefined" &&
+    Capacitor.isNativePlatform() &&
+    Capacitor.isPluginAvailable("LocalNotifications")
+  );
+}
+
+function getNotificationId() {
+  return Math.max(1, Math.floor(Date.now() % 2147483000));
+}
+
+async function showForegroundNativeNotification(notification: {
+  title?: string;
+  body?: string;
+  data?: Record<string, unknown>;
+}) {
+  if (!isNativeLocalNotificationsAvailable()) return;
+
+  const title = String(notification.title || "SalaoPremiun").trim();
+  const body = String(notification.body || "Voce tem uma nova notificacao.").trim();
+  const url = getSafeInternalUrl(notification.data?.url);
+
+  await LocalNotifications.schedule({
+    notifications: [
+      {
+        id: getNotificationId(),
+        title,
+        body,
+        largeBody: body,
+        channelId: NATIVE_NOTIFICATION_CHANNEL_ID,
+        foreground: true,
+        autoCancel: true,
+        extra: { url },
+        isExactNotification: false,
+      },
+    ],
+  }).catch(() => undefined);
+}
 
 function arrayBufferToBase64Url(value: ArrayBuffer | null) {
   if (!value) return "";
@@ -217,6 +265,62 @@ export async function requestProfessionalPushPermission() {
 
 export function PushPermissionButton({ expanded = false }: { expanded?: boolean }) {
   const [state, setState] = useState<ProfessionalPushState>("checking");
+
+  useEffect(() => {
+    if (!isNativePushAvailable()) return undefined;
+
+    let active = true;
+    const handles: Array<{ remove: () => Promise<void> }> = [];
+
+    void PushNotifications.addListener(
+      "pushNotificationReceived",
+      (notification) => {
+        void showForegroundNativeNotification({
+          title: notification.title,
+          body: notification.body,
+          data: notification.data as Record<string, unknown> | undefined,
+        });
+      }
+    )
+      .then((handle) => {
+        if (active) handles.push(handle);
+        else void handle.remove().catch(() => undefined);
+      })
+      .catch(() => undefined);
+
+    void PushNotifications.addListener(
+      "pushNotificationActionPerformed",
+      (event) => {
+        const url = getSafeInternalUrl(event.notification.data?.url);
+        if (url) window.location.assign(url);
+      }
+    )
+      .then((handle) => {
+        if (active) handles.push(handle);
+        else void handle.remove().catch(() => undefined);
+      })
+      .catch(() => undefined);
+
+    void LocalNotifications.addListener(
+      "localNotificationActionPerformed",
+      (event) => {
+        const url = getSafeInternalUrl(event.notification.extra?.url);
+        if (url) window.location.assign(url);
+      }
+    )
+      .then((handle) => {
+        if (active) handles.push(handle);
+        else void handle.remove().catch(() => undefined);
+      })
+      .catch(() => undefined);
+
+    return () => {
+      active = false;
+      handles.forEach((handle) => {
+        void handle.remove().catch(() => undefined);
+      });
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
