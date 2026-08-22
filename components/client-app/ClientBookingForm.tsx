@@ -490,7 +490,7 @@ export default function ClientBookingForm({
   return (
     <form
       action={formAction}
-      className="min-h-dvh bg-[#050505] px-5 pb-28 pt-[calc(env(safe-area-inset-top)+1.25rem)] text-white"
+      className="min-h-dvh bg-[#050505] px-5 pb-28 pt-0 text-white"
     >
       <input type="hidden" name="salao" value={idSalao} />
       <input type="hidden" name="servico" value={primaryService?.id || ""} />
@@ -504,7 +504,7 @@ export default function ClientBookingForm({
       <input type="hidden" name="cupom" value={codigoCupom} />
 
       <div className="mx-auto max-w-md">
-        <header className="mb-7 flex items-center justify-between">
+        <header className="sp-mobile-fixed sticky top-0 z-[60] -mx-5 mb-7 flex items-center justify-between border-b border-white/10 bg-[#050505]/96 px-5 pb-4 pt-[calc(env(safe-area-inset-top)+1.1rem)] shadow-[0_10px_30px_rgba(0,0,0,0.28)] backdrop-blur-xl">
           <button
             type="button"
             onClick={() => {
@@ -518,7 +518,7 @@ export default function ClientBookingForm({
           >
             <ArrowLeft size={34} />
           </button>
-          <h1 className="text-[1.65rem] font-black leading-tight tracking-[-0.03em]">
+          <h1 className="truncate px-2 text-[1.65rem] font-black leading-tight tracking-[-0.03em]">
             {step === "resumo" ? ptBR.client.confirmBooking : ptBR.client.booking}
           </h1>
           <div
