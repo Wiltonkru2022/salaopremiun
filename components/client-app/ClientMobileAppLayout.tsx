@@ -29,6 +29,15 @@ const CUSTOM_HEADER_ROUTES = [
   "/app-cliente/perfil",
 ];
 
+const INLINE_MENU_ROUTES = new Set([
+  "/app-cliente",
+  "/app-cliente/inicio",
+  "/app-cliente/explorar",
+  "/app-cliente/agenda",
+  "/app-cliente/agendamentos",
+  "/app-cliente/perfil",
+]);
+
 export default function ClientMobileAppLayout({
   children,
 }: {
@@ -46,6 +55,8 @@ export default function ClientMobileAppLayout({
   const hasCustomHeader = CUSTOM_HEADER_ROUTES.some((route) =>
     pathname === route || pathname.startsWith(`${route}/`)
   );
+  const usesOwnSalonHeader = pathname.startsWith("/app-cliente/salao/");
+  const hasInlineMenu = INLINE_MENU_ROUTES.has(pathname);
   const isReservationRoute =
     pathname.startsWith("/app-cliente/salao/") && pathname.includes("/reserva");
   const isDarkSalonInfoRoute =
@@ -134,7 +145,9 @@ export default function ClientMobileAppLayout({
                 </nav>
               </div>
             </header>
-          ) : null}
+          ) : usesOwnSalonHeader || hasInlineMenu ? null : (
+            <ClientAppDrawerNav isDark={isDarkRoute} floating />
+          )}
 
           <main
             className={`flex-1 pb-4 ${
