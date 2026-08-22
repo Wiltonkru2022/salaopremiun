@@ -165,19 +165,60 @@ export default async function ClienteSalonPage({
             )}
             <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/5 to-black/45" />
 
-            <div className="sp-mobile-fixed pointer-events-none fixed inset-x-0 top-0 z-[60] mx-auto flex max-w-3xl items-center justify-between px-5 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
-              <Link
-                href="/app-cliente/explorar"
-                className="pointer-events-auto flex h-11 w-11 items-center justify-center rounded-full border border-zinc-200 bg-white/95 text-zinc-950 shadow-[0_8px_24px_rgba(15,23,42,0.12)] backdrop-blur-xl"
-                aria-label="Voltar"
-              >
-                <ArrowLeft size={25} />
-              </Link>
+            <header className="sp-mobile-fixed fixed inset-x-0 top-0 z-[70] border-b border-zinc-200/80 bg-white/96 shadow-[0_8px_24px_rgba(15,23,42,0.08)] backdrop-blur-xl">
+              <div className="mx-auto grid max-w-3xl grid-cols-[44px_minmax(0,1fr)_auto] items-center gap-2 px-4 pb-2.5 pt-[calc(env(safe-area-inset-top)+0.55rem)]">
+                <Link
+                  href="/app-cliente/explorar"
+                  className="flex h-11 w-11 items-center justify-center rounded-full text-zinc-950 transition active:bg-zinc-100"
+                  aria-label="Voltar"
+                >
+                  <ArrowLeft size={27} />
+                </Link>
 
-              <div className="pointer-events-auto">
-                <ClientAppDrawerNav />
+                <div className="min-w-0 px-1">
+                  <p className="truncate text-[0.98rem] font-black tracking-[-0.035em] text-zinc-950">
+                    Salão Premium
+                  </p>
+                  <p className="truncate text-[10px] font-black uppercase tracking-[0.14em] text-[#9b6a14]">
+                    {salao.nome}
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  {hasSession ? (
+                    <form action={toggleClienteSalonFavoriteAction}>
+                      <input type="hidden" name="salao" value={salao.id} />
+                      <input
+                        type="hidden"
+                        name="next_favorite"
+                        value={String(!isFavorite)}
+                      />
+                      <button
+                        type="submit"
+                        className="flex h-11 w-11 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-zinc-950 shadow-sm transition hover:bg-zinc-100"
+                        aria-label={isFavorite ? "Remover dos favoritos" : "Favoritar salão"}
+                      >
+                        <Heart
+                          size={23}
+                          fill={isFavorite ? "currentColor" : "none"}
+                        />
+                      </button>
+                    </form>
+                  ) : (
+                    <Link
+                      href={favoriteLoginUrl}
+                      className="flex h-11 w-11 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-zinc-950 shadow-sm transition hover:bg-zinc-100"
+                      aria-label="Entrar para favoritar"
+                    >
+                      <Heart size={23} />
+                    </Link>
+                  )}
+
+                  <ClientSalonShareButton salonName={salao.nome} compact tone="light" />
+                  <ClientAppDrawerNav />
+                </div>
               </div>
-            </div>
+            </header>
           </div>
 
           <div className="relative mx-auto max-w-3xl px-4 sm:px-6">
