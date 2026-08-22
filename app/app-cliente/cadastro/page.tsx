@@ -35,25 +35,18 @@ export default async function CadastroClientePage({
 
   return (
     <ClientAuthShell backHref={salaoPublicPath || "/app-cliente/inicio"}>
-      <div className="space-y-3.5">
-        <section className="overflow-hidden rounded-[1.5rem] bg-zinc-950 px-4 py-4 text-white shadow-[0_16px_34px_rgba(15,23,42,0.15)]">
-          <div className="flex items-center gap-3">
-            <span className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10">
-              <img src="/favicon-preview.png" alt="" className="h-full w-full object-cover" />
-            </span>
-            <div className="min-w-0">
-              <div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.12em] text-amber-100">
-                Cadastro guiado
-              </div>
-              <h1 className="mt-2 text-[1.5rem] font-black leading-none">
-                Criar conta de cliente
-              </h1>
-            </div>
-          </div>
-          <p className="mt-2.5 text-sm leading-6 text-zinc-300">
-            Crie sua conta uma vez e escolha onde quer agendar depois.
+      <div className="space-y-4">
+        <div className="px-1 pb-1 pt-2">
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#9b6a14]">
+            Cadastro único
           </p>
-        </section>
+          <h1 className="mt-2 text-[2rem] font-black leading-tight tracking-[-0.05em] text-zinc-950">
+            Crie sua conta
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-zinc-500">
+            Uma conta simples para reservar em salões e acompanhar seus horários.
+          </p>
+        </div>
 
         <CadastroClienteForm
           salaoId={salaoContext?.salao?.id || salaoId || null}
