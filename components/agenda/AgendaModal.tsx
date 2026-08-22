@@ -222,13 +222,13 @@ export default function AgendaModal(props: Props) {
           <div className="flex flex-wrap gap-2">
             <Link
               href="/comparar-planos"
-              className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+              className="inline-flex items-center justify-center rounded-lg border border-zinc-300 bg-white px-4 py-2.5 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
             >
               Comparar planos
             </Link>
             <Link
               href={getAssinaturaUrl(`/assinatura?plano=${upgradeTarget}`)}
-              className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+              className="inline-flex items-center justify-center rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-bold text-white transition hover:bg-zinc-800"
             >
               Fazer upgrade
             </Link>
@@ -268,7 +268,7 @@ export default function AgendaModal(props: Props) {
           {overlays}
 
           {!aviso.open && !showComandaDecisionModal && statusPickerOpen ? (
-            <div className="rounded-[24px] border border-zinc-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+            <div className="rounded-lg border border-zinc-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
                 Status do agendamento
               </div>
@@ -287,8 +287,8 @@ export default function AgendaModal(props: Props) {
                     onClick={() => setDraftStatus(option.value)}
                     className={
                       draftStatus === option.value
-                        ? "flex min-h-12 w-full items-center rounded-2xl border border-amber-300 bg-amber-50 px-4 py-3 text-left text-sm font-semibold text-amber-800 shadow-[0_10px_24px_rgba(142,106,47,0.12)] transition duration-200"
-                        : "flex min-h-12 w-full items-center rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-left text-sm font-medium text-zinc-700 transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
+                        ? "flex min-h-12 w-full items-center rounded-lg border border-amber-300 bg-amber-50 px-4 py-3 text-left text-sm font-bold text-amber-800 shadow-[0_10px_24px_rgba(142,106,47,0.12)] transition duration-200"
+                        : "flex min-h-12 w-full items-center rounded-lg border border-zinc-200 bg-white px-4 py-3 text-left text-sm font-semibold text-zinc-700 transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
                     }
                   >
                     {option.label}
@@ -303,7 +303,7 @@ export default function AgendaModal(props: Props) {
                     setDraftStatus(status);
                     setStatusPickerOpen(false);
                   }}
-                  className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+                  className="rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50"
                 >
                   Cancelar
                 </button>
@@ -313,7 +313,7 @@ export default function AgendaModal(props: Props) {
                     setStatus(draftStatus);
                     setStatusPickerOpen(false);
                   }}
-                  className="rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95"
+                  className="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-95"
                 >
                   Confirmar
                 </button>
@@ -338,7 +338,7 @@ export default function AgendaModal(props: Props) {
                   <button
                     type="button"
                     onClick={onBack}
-                    className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+                    className="rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50"
                   >
                     Voltar
                   </button>
@@ -347,7 +347,7 @@ export default function AgendaModal(props: Props) {
                 <button
                   type="submit"
                   disabled={saving || atingiuLimiteAgendamentos}
-                  className="rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
+                  className="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
                 >
                   {saving ? "Salvando..." : "Salvar"}
                 </button>
@@ -363,12 +363,12 @@ export default function AgendaModal(props: Props) {
     <>
       {overlays}
 
-      <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/55 p-3 backdrop-blur-sm">
-        <div className="flex h-[min(88vh,760px)] w-full max-w-[1080px] flex-col overflow-hidden rounded-[24px] border border-white/30 bg-white shadow-2xl">
+      <div className="fixed inset-0 z-[90] flex items-center justify-center bg-zinc-950/45 p-3 backdrop-blur-[2px]">
+        <div className="flex h-[min(88vh,760px)] w-full max-w-[1080px] flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl">
           <div className="border-b border-zinc-200 bg-white px-4 py-3 md:px-5">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="mb-2 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.12em] text-zinc-500">
+                <div className="mb-2 inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-zinc-500">
                   {mode === "agendamento" ? (
                     <>
                       <CalendarDays size={12} />
@@ -426,7 +426,7 @@ export default function AgendaModal(props: Props) {
                 <button
                   type="button"
                   onClick={onClose}
-                  className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+                  className="rounded-lg border border-zinc-200 bg-white px-4 py-2.5 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50"
                 >
                   Fechar
                 </button>
@@ -434,7 +434,7 @@ export default function AgendaModal(props: Props) {
                 <button
                   type="submit"
                   disabled={saving || atingiuLimiteAgendamentos}
-                  className="rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
+                  className="rounded-lg bg-zinc-900 px-4 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
                 >
                   {saving ? "Salvando..." : "Salvar"}
                 </button>

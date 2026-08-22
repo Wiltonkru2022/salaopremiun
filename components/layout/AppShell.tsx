@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
@@ -56,6 +56,8 @@ type Props = {
 };
 
 const FULL_SCREEN_PAINEL_PATHS = new Set(["/agenda", "/caixa"]);
+const SHELL_NOTIFICATIONS_REFRESH_EVENT =
+  "salaopremium:shell-notifications:refresh";
 
 function getSafePainelReturnTo(value: string | null) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
@@ -124,6 +126,51 @@ export default function AppShell({
   useEffect(() => {
     setShellNotifications(notifications);
   }, [notifications]);
+
+  const refreshShellNotifications = useCallback(async () => {
+    try {
+      const response = await fetch("/api/shell-notifications", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+      const payload = (await response.json().catch(() => null)) as {
+        notifications?: ShellNotification[];
+      } | null;
+
+      if (response.ok && Array.isArray(payload?.notifications)) {
+        setShellNotifications(payload.notifications);
+      }
+    } catch {
+      // O sino nao deve interromper o uso do painel se a rede oscilar.
+    }
+  }, []);
+
+  useEffect(() => {
+    function refreshWhenVisible() {
+      if (document.visibilityState === "visible") {
+        void refreshShellNotifications();
+      }
+    }
+
+    window.addEventListener("focus", refreshWhenVisible);
+    window.addEventListener("visibilitychange", refreshWhenVisible);
+    window.addEventListener(
+      SHELL_NOTIFICATIONS_REFRESH_EVENT,
+      refreshWhenVisible
+    );
+
+    const intervalId = window.setInterval(refreshWhenVisible, 30000);
+
+    return () => {
+      window.removeEventListener("focus", refreshWhenVisible);
+      window.removeEventListener("visibilitychange", refreshWhenVisible);
+      window.removeEventListener(
+        SHELL_NOTIFICATIONS_REFRESH_EVENT,
+        refreshWhenVisible
+      );
+      window.clearInterval(intervalId);
+    };
+  }, [refreshShellNotifications]);
 
   async function handleLogout() {
     await monitorClientOperation(

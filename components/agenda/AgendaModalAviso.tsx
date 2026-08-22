@@ -1,5 +1,6 @@
 "use client";
 
+import AppModal from "@/components/ui/AppModal";
 import type { AvisoState } from "./useAgendaModal";
 
 type Props = {
@@ -19,37 +20,53 @@ export default function AgendaModalAviso({
     aviso.tone === "success"
       ? "border-emerald-200 bg-emerald-50 text-emerald-700"
       : aviso.tone === "warning"
-      ? "border-amber-200 bg-amber-50 text-amber-800"
-      : aviso.tone === "danger"
-      ? "border-red-200 bg-red-50 text-red-700"
-      : "border-zinc-200 bg-zinc-50 text-zinc-700";
+        ? "border-amber-200 bg-amber-50 text-amber-800"
+        : aviso.tone === "danger"
+          ? "border-rose-200 bg-rose-50 text-rose-700"
+          : "border-zinc-200 bg-zinc-50 text-zinc-700";
 
   const content = (
-    <div className="w-full rounded-[24px] bg-white p-5 shadow-2xl">
-      <div className={`rounded-2xl border px-4 py-4 ${avisoClasses}`}>
-        <div className="text-base font-bold">{aviso.title}</div>
-        <div className="mt-2 text-sm leading-6">{aviso.message}</div>
-      </div>
-
-      <div className="mt-5 flex justify-end">
-        <button
-          type="button"
-          onClick={onClose}
-          className="rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white"
-        >
-          Entendi
-        </button>
-      </div>
+    <div className={`rounded-lg border px-4 py-4 ${avisoClasses}`}>
+      <div className="text-base font-black">{aviso.title}</div>
+      <div className="mt-2 text-sm leading-6">{aviso.message}</div>
     </div>
   );
 
   if (variant === "sidebar") {
-    return content;
+    return (
+      <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+        {content}
+        <div className="mt-4 flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-bold text-white"
+          >
+            Entendi
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/45 p-4">
-      <div className="w-full max-w-md">{content}</div>
-    </div>
+    <AppModal
+      open={aviso.open}
+      onClose={onClose}
+      title={aviso.title}
+      maxWidthClassName="max-w-md"
+      zIndexClassName="z-[140]"
+      footer={
+        <button
+          type="button"
+          onClick={onClose}
+          className="inline-flex h-10 items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-bold text-white"
+        >
+          Entendi
+        </button>
+      }
+    >
+      {content}
+    </AppModal>
   );
 }

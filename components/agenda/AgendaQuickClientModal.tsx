@@ -1,6 +1,7 @@
 "use client";
 
-import { Phone, UserRound, X } from "lucide-react";
+import { Phone, UserRound } from "lucide-react";
+import AppModal from "@/components/ui/AppModal";
 
 type Props = {
   open: boolean;
@@ -26,67 +27,23 @@ export default function AgendaQuickClientModal({
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[115] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-[480px] overflow-hidden rounded-[24px] border border-white/20 bg-white shadow-2xl">
-        <div className="flex items-start justify-between gap-4 border-b border-zinc-200 bg-zinc-50/70 px-5 py-4">
-          <div>
-            <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
-              Cadastro rápido
-            </div>
-            <h3 className="mt-1 text-lg font-bold text-zinc-900">
-              Nova cliente
-            </h3>
-            <p className="mt-1 text-sm text-zinc-500">
-              Cadastre em poucos segundos e continue o agendamento sem sair do fluxo.
-            </p>
-          </div>
-
+    <AppModal
+      open={open}
+      onClose={onClose}
+      title="Nova cliente"
+      description="Cadastre em poucos segundos e continue o agendamento sem sair do fluxo."
+      eyebrow="Cadastro rapido"
+      maxWidthClassName="max-w-[480px]"
+      zIndexClassName="z-[115]"
+      closeDisabled={saving}
+      closeOnBackdropClick={!saving}
+      footer={
+        <>
           <button
             type="button"
             onClick={onClose}
-            className="inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800"
-          >
-            <X size={16} />
-          </button>
-        </div>
-
-        <div className="space-y-4 px-5 py-5">
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-zinc-700">
-              Nome da cliente
-            </label>
-            <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-3">
-              <UserRound size={15} className="text-zinc-400" />
-              <input
-                value={name}
-                onChange={(event) => onNameChange(event.target.value)}
-                placeholder="Ex.: Maria Silva"
-                className="h-12 w-full bg-transparent text-sm text-zinc-900 outline-none placeholder:text-zinc-400"
-              />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <label className="text-xs font-semibold text-zinc-700">
-              WhatsApp
-            </label>
-            <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-3">
-              <Phone size={15} className="text-zinc-400" />
-              <input
-                value={whatsapp}
-                onChange={(event) => onWhatsappChange(event.target.value)}
-                placeholder="Ex.: (11) 99999-9999"
-                className="h-12 w-full bg-transparent text-sm text-zinc-900 outline-none placeholder:text-zinc-400"
-              />
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col-reverse gap-2 border-t border-zinc-200 px-5 py-4 sm:flex-row sm:justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+            disabled={saving}
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
           >
             Voltar
           </button>
@@ -95,12 +52,40 @@ export default function AgendaQuickClientModal({
             type="button"
             onClick={() => void onSubmit()}
             disabled={saving}
-            className="rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:opacity-95 disabled:opacity-60"
+            className="inline-flex h-10 items-center justify-center rounded-lg bg-zinc-900 px-4 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
           >
             {saving ? "Salvando..." : "Salvar cliente"}
           </button>
-        </div>
+        </>
+      }
+    >
+      <div className="space-y-4">
+        <label className="block text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
+          Nome da cliente
+          <div className="mt-2 flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 transition focus-within:border-zinc-950 focus-within:bg-white">
+            <UserRound size={15} className="text-zinc-400" />
+            <input
+              value={name}
+              onChange={(event) => onNameChange(event.target.value)}
+              placeholder="Ex.: Maria Silva"
+              className="h-11 w-full bg-transparent text-sm font-semibold text-zinc-900 outline-none placeholder:text-zinc-400"
+            />
+          </div>
+        </label>
+
+        <label className="block text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
+          WhatsApp
+          <div className="mt-2 flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 transition focus-within:border-zinc-950 focus-within:bg-white">
+            <Phone size={15} className="text-zinc-400" />
+            <input
+              value={whatsapp}
+              onChange={(event) => onWhatsappChange(event.target.value)}
+              placeholder="Ex.: (11) 99999-9999"
+              className="h-11 w-full bg-transparent text-sm font-semibold text-zinc-900 outline-none placeholder:text-zinc-400"
+            />
+          </div>
+        </label>
       </div>
-    </div>
+    </AppModal>
   );
 }

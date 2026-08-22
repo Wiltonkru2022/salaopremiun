@@ -842,20 +842,20 @@ export default function ComissoesPage() {
 
       {comissaoAberta ? (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/55 p-4 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/45 p-4 backdrop-blur-[2px]"
           role="dialog"
           aria-modal="true"
           aria-labelledby="comissao-detalhe-title"
           onClick={() => setComissaoAbertaId(null)}
         >
           <div
-            className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-zinc-200 bg-white shadow-2xl"
+            className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-lg border border-zinc-200 bg-white shadow-2xl"
             onClick={(event) => event.stopPropagation()}
           >
             <div className="border-b border-zinc-200 px-5 py-4">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500">
+                  <div className="text-[11px] font-black uppercase tracking-[0.18em] text-zinc-500">
                     Memória da comissão
                   </div>
                   <h2
@@ -871,7 +871,7 @@ export default function ComissoesPage() {
                 <button
                   type="button"
                   onClick={() => setComissaoAbertaId(null)}
-                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-xl font-semibold text-zinc-700 transition hover:bg-zinc-100"
+                  className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg border border-zinc-200 bg-zinc-50 text-xl font-bold text-zinc-700 transition hover:bg-zinc-100"
                   aria-label="Fechar detalhes da comissão"
                 >
                   ×
@@ -900,7 +900,7 @@ export default function ComissoesPage() {
                 />
               </div>
 
-              <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
+              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-4">
                 <div className="text-xs font-bold uppercase tracking-[0.16em] text-zinc-500">
                   Cálculo aplicado
                 </div>
@@ -950,7 +950,7 @@ export default function ComissoesPage() {
               </div>
 
               <div className="grid gap-2.5 sm:grid-cols-2">
-                <div className="rounded-[20px] border border-zinc-200 bg-white p-3">
+                <div className="rounded-lg border border-zinc-200 bg-white p-3">
                   <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-500">
                     Origem
                   </div>
@@ -968,7 +968,7 @@ export default function ComissoesPage() {
                   ) : null}
                 </div>
 
-                <div className="rounded-[20px] border border-zinc-200 bg-white p-3">
+                <div className="rounded-lg border border-zinc-200 bg-white p-3">
                   <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-500">
                     Status
                   </div>
@@ -987,7 +987,7 @@ export default function ComissoesPage() {
                 </div>
               </div>
 
-              <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 p-3">
+              <div className="rounded-lg border border-zinc-200 bg-zinc-50 p-3">
                 <div className="text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-500">
                   Observações do cálculo
                 </div>
@@ -1010,7 +1010,7 @@ export default function ComissoesPage() {
                     });
                     setComissaoAbertaId(null);
                   }}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 text-sm font-bold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 text-sm font-bold text-rose-700 transition hover:bg-rose-100 disabled:opacity-50"
                 >
                   <XCircle size={16} />
                   Cancelar
@@ -1026,7 +1026,7 @@ export default function ComissoesPage() {
                     void marcarComoPago(comissaoAberta.id);
                     setComissaoAbertaId(null);
                   }}
-                  className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-50"
+                  className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-zinc-950 px-4 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-50"
                 >
                   <CheckCircle2 size={16} />
                   Pagar comissão

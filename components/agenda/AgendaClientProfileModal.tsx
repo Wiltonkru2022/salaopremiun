@@ -65,7 +65,7 @@ function ProfileStat({
   tone?: "default" | "success";
 }) {
   return (
-    <div className="rounded-[18px] border border-zinc-200 bg-zinc-50 px-4 py-3">
+    <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-3">
       <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
         {label}
       </div>
@@ -99,7 +99,7 @@ function ProfileBody({
   loading: boolean;
 }) {
   return (
-    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
       <div className="border-b border-zinc-200 bg-zinc-50/70 px-5 py-4">
         <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
           Perfil da cliente
@@ -117,13 +117,13 @@ function ProfileBody({
 
       <div className="min-h-0 flex-1 overflow-y-auto px-5 py-5">
         {loading ? (
-          <div className="space-y-3 rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-5" aria-busy="true">
+          <div className="space-y-3 rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-5" aria-busy="true">
             <div className="h-4 w-36 animate-pulse rounded-full bg-zinc-200" />
             <div className="h-14 animate-pulse rounded-2xl bg-zinc-100" />
             <div className="h-14 animate-pulse rounded-2xl bg-zinc-100" />
           </div>
         ) : historico.length === 0 ? (
-          <div className="rounded-[20px] border border-zinc-200 bg-zinc-50 px-4 py-8 text-center text-sm text-zinc-500">
+          <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-8 text-center text-sm text-zinc-500">
             Ainda não encontramos agendamentos anteriores dessa cliente.
           </div>
         ) : (
@@ -159,7 +159,7 @@ function ProfileBody({
               {historico.map((item) => (
                 <div
                   key={item.id}
-                  className="rounded-[20px] border border-zinc-200 bg-white px-4 py-3"
+                  className="rounded-lg border border-zinc-200 bg-white px-4 py-3"
                 >
                   <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                     <div className="min-w-0">
@@ -194,7 +194,7 @@ function ProfileBody({
                       href={`/api/painel/agendamentos/${item.id}/comprovante`}
                       target="_blank"
                       rel="noreferrer"
-                      className="mt-3 inline-flex h-10 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800"
+                      className="mt-3 inline-flex h-10 items-center justify-center rounded-lg bg-zinc-950 px-4 text-sm font-bold text-white transition hover:bg-zinc-800"
                     >
                       Abrir comprovante
                     </a>
@@ -246,12 +246,12 @@ export default function AgendaClientProfileModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-      <div className="relative flex max-h-[88vh] w-full max-w-[860px] flex-col overflow-hidden rounded-[24px] border border-white/20 bg-white shadow-2xl">
+    <div className="fixed inset-0 z-[120] flex items-center justify-center bg-zinc-950/45 p-4 backdrop-blur-[2px]">
+      <div className="relative flex max-h-[88vh] w-full max-w-[860px] flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl">
         <button
           type="button"
           onClick={onClose}
-          className="absolute right-5 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-2xl border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800"
+          className="absolute right-5 top-4 z-10 inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-500 transition hover:bg-zinc-50 hover:text-zinc-800"
         >
           <X size={16} />
         </button>

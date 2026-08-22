@@ -1843,12 +1843,12 @@ export default function ConfiguracoesPageClient({
       </div>
 
       {usuarioModalOpen ? (
-        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/55 p-4 backdrop-blur-md">
-          <div className="w-full max-w-xl overflow-hidden rounded-[28px] border border-white/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.25)]">
+        <div className="fixed inset-0 z-[90] flex items-center justify-center bg-zinc-950/45 p-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-xl overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl">
             <div className="border-b border-zinc-200 bg-white px-5 py-4 text-zinc-950">
               <div className="flex items-start justify-between gap-4">
                 <div>
-                  <div className="inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em] text-zinc-600">
+                  <div className="inline-flex items-center gap-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-black uppercase tracking-[0.18em] text-zinc-600">
                     <UserCog size={14} />
                     Usuário
                   </div>
@@ -1864,7 +1864,7 @@ export default function ConfiguracoesPageClient({
                 <button
                   type="button"
                   onClick={fecharModalUsuario}
-                  className="rounded-2xl border border-zinc-200 bg-white p-2 text-zinc-700 transition hover:bg-zinc-50"
+                  className="rounded-lg border border-zinc-200 bg-white p-2 text-zinc-700 transition hover:bg-zinc-50"
                 >
                   <X size={16} />
                 </button>
@@ -1898,7 +1898,7 @@ export default function ConfiguracoesPageClient({
               </Field>
 
               {editandoUsuarioAdmin ? (
-                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4">
+                <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-4">
                   <div className="text-sm font-semibold text-zinc-900">
                     Senha protegida
                   </div>
@@ -1963,7 +1963,7 @@ export default function ConfiguracoesPageClient({
                 </Field>
               </div>
 
-              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4">
+              <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-4 py-4">
                 <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
                   Limite do plano
                 </div>
@@ -1979,11 +1979,11 @@ export default function ConfiguracoesPageClient({
               </div>
 
               {!usuariosRecursoLiberado ? (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
                   Usuários do sistema não estão liberados no plano atual.
                 </div>
               ) : !usuarioEditandoId && atingiuLimiteUsuarios ? (
-                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
+                <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-900">
                   O limite de usuários do plano atual foi atingido. Compare os planos ou faça upgrade para liberar novos acessos.
                 </div>
               ) : null}
@@ -1994,7 +1994,7 @@ export default function ConfiguracoesPageClient({
                 type="button"
                 onClick={fecharModalUsuario}
                 disabled={savingUsuario}
-                className="rounded-2xl border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-60"
+                className="rounded-lg border border-zinc-300 bg-white px-5 py-2.5 text-sm font-bold text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-60"
               >
                 Cancelar
               </button>
@@ -2007,7 +2007,7 @@ export default function ConfiguracoesPageClient({
                   !usuariosRecursoLiberado ||
                   (!usuarioEditandoId && atingiuLimiteUsuarios)
                 }
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
               >
                 {savingUsuario ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
                 {usuarioEditandoId ? "Salvar alterações" : "Criar usuário"}
@@ -2018,11 +2018,11 @@ export default function ConfiguracoesPageClient({
       ) : null}
 
       {deleteModalOpen ? (
-        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/55 p-4 backdrop-blur-md">
-          <div className="w-full max-w-md overflow-hidden rounded-[26px] border border-white/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.25)]">
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-zinc-950/45 p-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-md overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl">
             <div className="border-b border-rose-200 bg-rose-50 px-5 py-4 text-rose-800">
               <div className="flex items-center gap-3">
-                <div className="rounded-2xl bg-white p-3 ring-1 ring-rose-200">
+                <div className="rounded-lg bg-white p-3 ring-1 ring-rose-200">
                   <AlertTriangle size={20} />
                 </div>
                 <div>
@@ -2049,7 +2049,7 @@ export default function ConfiguracoesPageClient({
                 type="button"
                 onClick={fecharExcluirUsuario}
                 disabled={deletingUsuario}
-                className="rounded-2xl border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-60"
+                className="rounded-lg border border-zinc-300 bg-white px-5 py-2.5 text-sm font-bold text-zinc-700 transition hover:bg-zinc-100 disabled:opacity-60"
               >
                 Cancelar
               </button>
@@ -2058,7 +2058,7 @@ export default function ConfiguracoesPageClient({
                 type="button"
                 onClick={excluirUsuario}
                 disabled={deletingUsuario}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-rose-600 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-rose-600 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
               >
                 {deletingUsuario ? <Loader2 className="animate-spin" size={16} /> : <Trash2 size={16} />}
                 Excluir usuário
@@ -2069,8 +2069,8 @@ export default function ConfiguracoesPageClient({
       ) : null}
 
       {taxasModalOpen ? (
-        <div className="fixed inset-0 z-[96] flex items-center justify-center bg-black/55 p-4 backdrop-blur-md">
-          <div className="w-full max-w-4xl overflow-hidden rounded-[28px] border border-white/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.25)]">
+        <div className="fixed inset-0 z-[96] flex items-center justify-center bg-zinc-950/45 p-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-4xl overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-zinc-200 bg-zinc-50 px-5 py-4">
               <div>
                 <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-400">
@@ -2087,7 +2087,7 @@ export default function ConfiguracoesPageClient({
               <button
                 type="button"
                 onClick={() => setTaxasModalOpen(false)}
-                className="rounded-2xl border border-zinc-300 bg-white p-2 text-zinc-600 transition hover:bg-zinc-100"
+                className="rounded-lg border border-zinc-300 bg-white p-2 text-zinc-600 transition hover:bg-zinc-100"
               >
                 <X size={18} />
               </button>
@@ -2120,7 +2120,7 @@ export default function ConfiguracoesPageClient({
               <button
                 type="button"
                 onClick={() => setTaxasModalOpen(false)}
-                className="rounded-2xl border border-zinc-300 bg-white px-5 py-2.5 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-100"
+                className="rounded-lg border border-zinc-300 bg-white px-5 py-2.5 text-sm font-bold text-zinc-700 transition hover:bg-zinc-100"
               >
                 Fechar
               </button>
@@ -2132,7 +2132,7 @@ export default function ConfiguracoesPageClient({
                   void salvarFinanceiro();
                 }}
                 disabled={savingFinanceiro}
-                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
+                className="inline-flex items-center justify-center gap-2 rounded-lg bg-zinc-900 px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
               >
                 {savingFinanceiro ? <Loader2 className="animate-spin" size={16} /> : <Save size={16} />}
                 Salvar taxas
@@ -2143,8 +2143,8 @@ export default function ConfiguracoesPageClient({
       ) : null}
 
       {feedbackModalOpen ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4 backdrop-blur-md">
-          <div className="w-full max-w-md overflow-hidden rounded-[26px] border border-white/10 bg-white shadow-[0_30px_80px_rgba(0,0,0,0.3)]">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950/50 p-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-md overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl">
             <div
               className={`border-b px-5 py-4 ${
                 feedbackModalType === "erro"
@@ -2153,7 +2153,7 @@ export default function ConfiguracoesPageClient({
               }`}
             >
               <div className="flex items-center gap-3">
-                <div className="rounded-2xl bg-white p-3 ring-1 ring-current/20">
+                <div className="rounded-lg bg-white p-3 ring-1 ring-current/20">
                   {feedbackModalType === "erro" ? (
                     <AlertTriangle size={20} />
                   ) : (
@@ -2178,7 +2178,7 @@ export default function ConfiguracoesPageClient({
               <button
                 type="button"
                 onClick={fecharFeedbackModal}
-                className={`rounded-2xl px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 ${
+                className={`rounded-lg px-5 py-2.5 text-sm font-bold text-white transition hover:opacity-95 ${
                   feedbackModalType === "erro" ? "bg-rose-600" : "bg-zinc-900"
                 }`}
               >

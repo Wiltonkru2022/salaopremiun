@@ -305,8 +305,8 @@ export default function CaixaPagamentos({
       </div>
 
       {confirmarExcedenteOpen ? (
-        <div className="fixed inset-0 z-[170] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-[540px] rounded-[28px] border border-white/20 bg-white p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[170] flex items-center justify-center bg-zinc-950/45 p-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-[540px] rounded-lg border border-zinc-200 bg-white p-5 shadow-2xl">
             <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
               Excedente no pagamento
             </div>
@@ -325,7 +325,7 @@ export default function CaixaPagamentos({
                 type="button"
                 disabled={saving}
                 onClick={() => handleConfirmarExcedente("troco")}
-                className="rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-left transition hover:bg-zinc-50"
+                className="rounded-lg border border-zinc-300 bg-white px-4 py-3 text-left transition hover:bg-zinc-50"
               >
                 <div className="text-sm font-semibold text-zinc-900">
                   {destinoExcedentePendente === "troco"
@@ -341,7 +341,7 @@ export default function CaixaPagamentos({
                 type="button"
                 disabled={!comandaSelecionada?.id_cliente || saving}
                 onClick={() => handleConfirmarExcedente("credito_cliente")}
-                className="rounded-2xl border border-emerald-300 bg-emerald-50 px-4 py-3 text-left transition hover:bg-emerald-100 disabled:opacity-60"
+                className="rounded-lg border border-emerald-300 bg-emerald-50 px-4 py-3 text-left transition hover:bg-emerald-100 disabled:opacity-60"
               >
                 <div className="text-sm font-semibold text-emerald-900">
                   {destinoExcedentePendente === "credito_cliente"
@@ -359,7 +359,7 @@ export default function CaixaPagamentos({
                 type="button"
                 disabled={saving}
                 onClick={() => setConfirmarExcedenteOpen(false)}
-                className="rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-medium text-zinc-700 transition hover:bg-zinc-50"
+                className="inline-flex h-10 items-center justify-center rounded-lg border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50"
               >
                 Voltar
               </button>

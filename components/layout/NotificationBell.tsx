@@ -179,9 +179,11 @@ export default function NotificationBell({
 
   const markAsRead = useCallback(
     (id: string) => {
+      const notification = allNotifications.find((item) => item.id === id);
+      if (notification?.critical || notification?.persistUntilResolved) return;
       if (!readIds.includes(id)) persistReadIds([...readIds, id]);
     },
-    [persistReadIds, readIds]
+    [allNotifications, persistReadIds, readIds]
   );
 
   const markAllAsRead = () => {
@@ -207,6 +209,25 @@ export default function NotificationBell({
 
   const unreadCount = useMemo(
     () => allNotifications.filter((notification) => !isRead(notification)).length,
+    [allNotifications, isRead]
+  );
+
+  const actionRequiredCount = useMemo(
+    () =>
+      allNotifications.filter(
+        (notification) => notification.critical || notification.persistUntilResolved
+      ).length,
+    [allNotifications]
+  );
+
+  const dismissibleUnreadCount = useMemo(
+    () =>
+      allNotifications.filter(
+        (notification) =>
+          !notification.critical &&
+          !notification.persistUntilResolved &&
+          !isRead(notification)
+      ).length,
     [allNotifications, isRead]
   );
 
@@ -254,23 +275,30 @@ export default function NotificationBell({
       </button>
 
       {open ? (
-        <div className="absolute right-0 top-[calc(100%+0.75rem)] z-[110] w-[min(360px,calc(100vw-1.5rem))] rounded-[22px] border border-zinc-200 bg-white p-3 shadow-[0_24px_60px_rgba(15,23,42,0.14)]">
+        <div className="absolute right-0 top-[calc(100%+0.75rem)] z-[110] w-[min(360px,calc(100vw-1.5rem))] rounded-lg border border-zinc-200 bg-white p-3 shadow-[0_24px_60px_rgba(15,23,42,0.14)]">
           <div className="flex items-center justify-between px-2 pb-2">
             <div>
               <div className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
                 Central
               </div>
-              <div className="font-display text-lg font-bold text-zinc-950">
+              <div className="font-display text-lg font-black text-zinc-950">
                 Notificacoes
               </div>
               <div className="mt-1 text-[11px] text-zinc-400">
-                Pendentes e criticos ficam visiveis ate a resolucao.
+                Pendencias reais somem quando voce resolver na tela indicada.
               </div>
             </div>
-            <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-bold text-zinc-600">
+            <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-black text-zinc-600">
               {unreadCount}
             </span>
           </div>
+
+          {actionRequiredCount > 0 ? (
+            <div className="mb-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-[11px] font-bold leading-5 text-amber-900">
+              {actionRequiredCount} pendencia(s) nao podem ser apenas marcadas como lidas.
+              Abra a Agenda, Caixa ou Assinatura para resolver.
+            </div>
+          ) : null}
 
           <div className="scroll-premium max-h-[390px] space-y-2 overflow-y-auto pr-1">
             {visibleNotifications.length ? (
@@ -285,7 +313,7 @@ export default function NotificationBell({
                 />
               ))
             ) : (
-              <div className="rounded-[18px] border border-zinc-100 bg-zinc-50 p-4 text-sm text-zinc-500">
+              <div className="rounded-lg border border-zinc-100 bg-zinc-50 p-4 text-sm text-zinc-500">
                 Tudo quieto por aqui. Quando houver horario para confirmar,
                 assinatura vencendo, aniversario ou alerta do caixa, aparece aqui.
               </div>
@@ -296,10 +324,10 @@ export default function NotificationBell({
             <button
               type="button"
               onClick={markAllAsRead}
-              disabled={unreadCount === 0}
-              className="rounded-full border border-zinc-200 px-3 py-1.5 text-xs font-bold text-zinc-600 transition hover:border-zinc-950 hover:text-zinc-950 disabled:cursor-not-allowed disabled:opacity-40"
+              disabled={dismissibleUnreadCount === 0}
+              className="rounded-lg border border-zinc-200 px-3 py-1.5 text-xs font-black text-zinc-600 transition hover:border-zinc-950 hover:text-zinc-950 disabled:cursor-not-allowed disabled:opacity-40"
             >
-              Marcar lidas
+              Dispensar avisos
             </button>
             {onOpenHelp ? (
               <button
@@ -308,7 +336,7 @@ export default function NotificationBell({
                   setOpen(false);
                   onOpenHelp();
                 }}
-                className="rounded-full bg-zinc-950 px-3 py-1.5 text-xs font-bold text-white transition hover:bg-zinc-800"
+                className="rounded-lg bg-zinc-950 px-3 py-1.5 text-xs font-black text-white transition hover:bg-zinc-800"
               >
                 Abrir ajuda guiada
               </button>
@@ -364,7 +392,7 @@ function NotificationItem({
   );
 
   const className =
-    "flex items-start gap-3 rounded-[18px] border border-zinc-100 bg-zinc-50/80 p-3 transition hover:border-zinc-200 hover:bg-white";
+    "flex items-start gap-3 rounded-lg border border-zinc-100 bg-zinc-50/80 p-3 transition hover:border-zinc-200 hover:bg-white";
 
   if (!notification.href) {
     return (

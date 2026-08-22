@@ -33,13 +33,14 @@ export default function ConfirmActionModal({
       description={description}
       maxWidthClassName="max-w-md"
       closeDisabled={loading}
+      closeOnBackdropClick={!loading}
       footer={
         <>
           <button
             type="button"
             onClick={onClose}
             disabled={loading}
-            className="rounded-lg border border-zinc-200 bg-white px-4 py-2 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
           >
             {cancelLabel}
           </button>
@@ -49,8 +50,8 @@ export default function ConfirmActionModal({
             disabled={loading}
             className={
               tone === "danger"
-                ? "rounded-lg border border-red-600 bg-red-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-700 disabled:opacity-60"
-                : "rounded-lg border border-zinc-900 bg-zinc-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:opacity-60"
+                ? "inline-flex h-10 items-center justify-center rounded-lg border border-rose-600 bg-rose-600 px-4 text-sm font-bold text-white transition hover:bg-rose-700 disabled:opacity-60"
+                : "inline-flex h-10 items-center justify-center rounded-lg border border-zinc-900 bg-zinc-900 px-4 text-sm font-bold text-white transition hover:bg-zinc-800 disabled:opacity-60"
             }
           >
             {loading ? "Processando..." : confirmLabel}
@@ -58,7 +59,9 @@ export default function ConfirmActionModal({
         </>
       }
     >
-      <p className="text-sm leading-6 text-zinc-600">{description}</p>
+      <p className="text-sm leading-6 text-zinc-600">
+        Revise a acao antes de continuar.
+      </p>
     </AppModal>
   );
 }

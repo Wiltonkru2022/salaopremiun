@@ -225,6 +225,91 @@ const loadPainelShellContextCached = unstable_cache(
   }
 );
 
+async function loadFreshPainelShellNotifications({
+  idSalao,
+  resumoAssinatura,
+}: {
+  idSalao: string;
+  resumoAssinatura: ReturnType<typeof getResumoAssinatura> | null;
+}) {
+  const supabaseAdmin = getSupabaseAdmin();
+  const [{ data: agendamentosPendentes }, { data: notificacoesOperacionais }] =
+    await Promise.all([
+      (supabaseAdmin as any)
+        .from("agendamentos")
+        .select("id, status, data, hora_inicio, origem, cliente_id, codigo_cupom, id_cupom_salao, desconto_cupom_valor, clientes(nome), servicos(nome)")
+        .eq("id_salao", idSalao)
+        .in("status", ["pendente", "confirmado"])
+        .eq("origem", "app_cliente")
+        .order("data", { ascending: true })
+        .order("hora_inicio", { ascending: true })
+        .limit(12),
+      (supabaseAdmin as any)
+        .from("notification_jobs")
+        .select("id, tipo, titulo, mensagem, url, status, enviar_em, created_at")
+        .eq("id_salao", idSalao)
+        .eq("canal", "salao_painel")
+        .in("status", ["pendente", "enviada"])
+        .order("created_at", { ascending: false })
+        .limit(8),
+    ]);
+
+  const notifications = buildShellNotifications({
+    resumoAssinatura,
+    clientes: [],
+    agendamentos: ((agendamentosPendentes || []) as Array<Record<string, any>>).map(
+      (agendamento) => {
+        const cliente = Array.isArray(agendamento.clientes)
+          ? agendamento.clientes[0]
+          : agendamento.clientes;
+        const servico = Array.isArray(agendamento.servicos)
+          ? agendamento.servicos[0]
+          : agendamento.servicos;
+
+        return {
+          id: String(agendamento.id || ""),
+          status: String(agendamento.status || ""),
+          data: String(agendamento.data || ""),
+          hora_inicio: String(agendamento.hora_inicio || ""),
+          origem: String(agendamento.origem || ""),
+          cliente_id: String(agendamento.cliente_id || ""),
+          cliente_nome: String(cliente?.nome || "").trim() || null,
+          servico_nome: String(servico?.nome || "").trim() || null,
+          codigo_cupom: String(agendamento.codigo_cupom || "").trim() || null,
+          id_cupom_salao: String(agendamento.id_cupom_salao || "").trim() || null,
+          desconto_cupom_valor: agendamento.desconto_cupom_valor ?? null,
+        };
+      }
+    ),
+    movimentosCaixa: [],
+    onboarding: null,
+    tickets: [],
+  });
+
+  for (const item of ((notificacoesOperacionais || []) as Array<Record<string, unknown>>)) {
+    const tipo = String(item.tipo || "");
+    notifications.push({
+      id: `notification-job-${String(item.id || "")}`,
+      title: String(item.titulo || "Notificacao do salao"),
+      description: String(item.mensagem || "Nova notificacao operacional."),
+      tone: tipo === "avaliacao_ruim" ? "warning" : "info",
+      category: tipo.includes("avaliacao") ? "agenda" : "sistema",
+      severity: tipo === "avaliacao_ruim" ? "high" : "medium",
+      eventType: tipo || "notification_job",
+      href: String(item.url || "/dashboard"),
+      actionLabel: tipo === "avaliacao_ruim" ? "Ver atendimento" : "Abrir",
+      destination: "internal",
+      icon: tipo.includes("avaliacao") ? "agenda" : "alert",
+      sourceModule: "notification_jobs",
+      sourceEntity: "notification_jobs",
+      sourceEntityId: String(item.id || ""),
+      expiresAt: item.enviar_em ? String(item.enviar_em) : null,
+    });
+  }
+
+  return notifications;
+}
+
 export async function loadPainelShellData() {
   const supabase = await createClient();
   const {
@@ -253,6 +338,11 @@ export async function loadPainelShellData() {
     redirect(buildLoginRedirectUrl("usuario_inativo"));
   }
 
+  const notifications = await loadFreshPainelShellNotifications({
+    idSalao: result.data.idSalao,
+    resumoAssinatura: result.data.resumoAssinatura,
+  });
+
   return {
     ok: true as const,
     data: {
@@ -272,7 +362,7 @@ export async function loadPainelShellData() {
       assinaturaStatus: result.data.assinaturaStatus,
       resumoAssinatura: result.data.resumoAssinatura,
       planoRecursos: result.data.planoRecursos,
-      notifications: result.data.notifications,
+      notifications,
     },
   };
 }

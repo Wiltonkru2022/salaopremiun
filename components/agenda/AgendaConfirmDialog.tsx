@@ -1,5 +1,6 @@
 "use client";
 
+import AppModal from "@/components/ui/AppModal";
 import type { AgendaPageConfirmState } from "./page-types";
 
 type Props = {
@@ -19,23 +20,28 @@ export default function AgendaConfirmDialog({
 
   const confirmToneButton =
     modal.tone === "danger"
-      ? "bg-red-600 hover:bg-red-500"
+      ? "bg-rose-600 hover:bg-rose-700"
       : modal.tone === "warning"
-      ? "bg-amber-600 hover:bg-amber-500"
-      : "bg-zinc-950 hover:bg-zinc-800";
+        ? "bg-amber-600 hover:bg-amber-700"
+        : "bg-zinc-950 hover:bg-zinc-800";
 
   return (
-    <div className="fixed inset-0 z-[530] flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
-        <div className="text-lg font-bold text-zinc-950">{modal.title}</div>
-        <div className="mt-2 text-sm leading-6 text-zinc-600">{modal.message}</div>
-
-        <div className="mt-6 flex justify-end gap-3">
+    <AppModal
+      open={modal.open}
+      onClose={onClose}
+      title={modal.title}
+      description={modal.message}
+      maxWidthClassName="max-w-md"
+      zIndexClassName="z-[530]"
+      closeDisabled={loading}
+      closeOnBackdropClick={!loading}
+      footer={
+        <>
           <button
             type="button"
             disabled={loading}
             onClick={onClose}
-            className="rounded-2xl border border-zinc-200 px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+            className="inline-flex h-10 items-center justify-center rounded-lg border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
           >
             Fechar
           </button>
@@ -44,12 +50,16 @@ export default function AgendaConfirmDialog({
             type="button"
             disabled={loading}
             onClick={onConfirm}
-            className={`rounded-2xl px-5 py-3 text-sm font-semibold text-white transition disabled:opacity-60 ${confirmToneButton}`}
+            className={`inline-flex h-10 items-center justify-center rounded-lg px-4 text-sm font-bold text-white transition disabled:opacity-60 ${confirmToneButton}`}
           >
             {loading ? "Processando..." : modal.confirmLabel}
           </button>
-        </div>
-      </div>
-    </div>
+        </>
+      }
+    >
+      <p className="text-sm leading-6 text-zinc-600">
+        Confirme para aplicar esta acao na agenda.
+      </p>
+    </AppModal>
   );
 }

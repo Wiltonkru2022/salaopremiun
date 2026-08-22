@@ -40,7 +40,6 @@ export default function AgendaSlotActionsModal({
       description={`${date} as ${time}`}
       eyebrow="Ação rápida do horário"
       maxWidthClassName="max-w-3xl"
-      panelClassName="rounded-[22px]"
       bodyClassName="px-5 py-4"
       headerClassName="px-5 py-4"
     >

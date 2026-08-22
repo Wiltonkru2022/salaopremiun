@@ -231,7 +231,7 @@ export function buildShellNotifications({
       severity: "high",
       eventType: "client_app_appointments_pending_confirmation",
       href: buildAgendaHref(primeiro),
-      actionLabel: "Abrir agenda e cliente",
+      actionLabel: "Resolver na agenda",
       destination: "internal",
       icon: "agenda",
       sourceModule: "agenda",

@@ -56,6 +56,11 @@ async function notifyReleasedSlotToWaitlist(params: {
   });
 }
 
+function requestShellNotificationsRefresh() {
+  if (typeof window === "undefined") return;
+  window.dispatchEvent(new Event("salaopremium:shell-notifications:refresh"));
+}
+
 type UseAgendaMutationsParams = {
   supabase: ReturnType<typeof import("@/lib/supabase/client").createClient>;
   idSalao: string;
@@ -194,6 +199,7 @@ export function useAgendaMutations({
         setEditingItem(null);
         setEditingBlock(null);
         await loadAgenda();
+        requestShellNotificationsRefresh();
       } catch (error: unknown) {
         console.error(error);
         abrirAviso(
@@ -377,7 +383,7 @@ export function useAgendaMutations({
         }
       }
 
-      void loadAgenda();
+      void loadAgenda().then(requestShellNotificationsRefresh);
     },
     [
       agendamentos,
@@ -609,6 +615,7 @@ export function useAgendaMutations({
             throw new Error(String(payload.error || "Não foi possível cancelar o agendamento."));
           }
           await loadAgenda();
+          requestShellNotificationsRefresh();
         },
       });
     },
@@ -667,6 +674,7 @@ export function useAgendaMutations({
       }
 
       await loadAgenda();
+      requestShellNotificationsRefresh();
     },
     [
       bloquearSeAssinaturaInvalida,
@@ -701,6 +709,7 @@ export function useAgendaMutations({
           setModalOpen(false);
           setEditingItem(null);
           await loadAgenda();
+          requestShellNotificationsRefresh();
         },
       });
     },

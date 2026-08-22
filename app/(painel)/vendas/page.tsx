@@ -1281,11 +1281,11 @@ export default function VendasPage() {
       </div>
 
       {detalheOpen && detalheVenda ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm">
-          <div className="flex h-[min(92vh,820px)] w-full max-w-[1180px] flex-col overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950/45 p-4 backdrop-blur-[2px]">
+          <div className="flex h-[min(92vh,820px)] w-full max-w-[1180px] flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl">
             <div className="flex items-start justify-between gap-4 border-b border-zinc-200 bg-white px-5 py-4">
               <div className="min-w-0">
-                <div className="mb-2 inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
+                <div className="mb-2 inline-flex rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
                   Detalhes da venda
                 </div>
                 <h2 className="truncate text-[1.35rem] font-black tracking-[-0.03em] text-zinc-900">
@@ -1312,7 +1312,7 @@ export default function VendasPage() {
               <div className="grid h-full min-h-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_330px]">
                 <div className="min-h-0 overflow-y-auto p-4 agenda-scroll md:p-5">
                   <div className="space-y-3.5">
-                    <div className="rounded-[20px] border border-zinc-200 bg-white">
+                    <div className="rounded-lg border border-zinc-200 bg-white">
                       <div className="border-b border-zinc-200 px-4 py-3.5">
                         <div className="flex items-center gap-2 text-lg font-bold text-zinc-900">
                           <Receipt size={18} />
@@ -1360,7 +1360,7 @@ export default function VendasPage() {
                     </div>
 
                     {comboSummaryDetalhe.length > 0 ? (
-                      <div className="rounded-[20px] border border-amber-100 bg-amber-50 p-4">
+                      <div className="rounded-lg border border-amber-100 bg-amber-50 p-4">
                         <div className="mb-3.5 flex items-start justify-between gap-4">
                           <div>
                             <div className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-600">
@@ -1387,7 +1387,7 @@ export default function VendasPage() {
                           {comboSummaryDetalhe.map((combo) => (
                             <div
                               key={combo.comboName}
-                              className="rounded-[20px] border border-amber-200 bg-white p-3.5 shadow-sm"
+                              className="rounded-lg border border-amber-200 bg-white p-3.5 shadow-sm"
                             >
                               <div className="flex items-center justify-between gap-3">
                                 <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-800">
@@ -1412,7 +1412,7 @@ export default function VendasPage() {
                       </div>
                     ) : null}
 
-                    <div className="rounded-[20px] border border-zinc-200 bg-white p-4">
+                    <div className="rounded-lg border border-zinc-200 bg-white p-4">
                       <div className="mb-3.5 flex items-center gap-2 text-lg font-bold text-zinc-900">
                         <FileText size={18} />
                         Pagamentos
@@ -1453,7 +1453,7 @@ export default function VendasPage() {
 
                 <div className="min-h-0 overflow-y-auto border-t border-zinc-200 bg-zinc-50 p-4 agenda-scroll xl:border-l xl:border-t-0">
                   <div className="space-y-4">
-                    <div className="rounded-[20px] border border-zinc-200 bg-white p-4 shadow-sm">
+                    <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
                       <div className="mb-3.5 text-lg font-bold text-zinc-900">Resumo</div>
 
                       <div className="space-y-3">
@@ -1511,7 +1511,7 @@ export default function VendasPage() {
                       </div>
                     </div>
 
-                    <div className="rounded-[20px] border border-zinc-200 bg-white p-4 shadow-sm">
+                    <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
                       <div className="mb-3.5 text-lg font-bold text-zinc-900">Ações</div>
 
                       <div className="grid grid-cols-1 gap-3">
@@ -1524,7 +1524,7 @@ export default function VendasPage() {
                               salaoInfo
                             )
                           }
-                          className="flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                          className="flex items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
                         >
                           <Printer size={16} />
                           Imprimir cupom
@@ -1537,7 +1537,7 @@ export default function VendasPage() {
                               setDetalheOpen(false);
                               abrirModalReabrir(detalheVenda.comanda as ComandaVenda);
                             }}
-                            className="flex items-center justify-center gap-2 rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold text-amber-700 transition hover:bg-amber-100"
+                            className="flex items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-700 transition hover:bg-amber-100"
                           >
                             <RotateCcw size={16} />
                             Mandar para o caixa
@@ -1551,7 +1551,7 @@ export default function VendasPage() {
                               setDetalheOpen(false);
                               abrirModalExcluir(detalheVenda.comanda as ComandaVenda);
                             }}
-                            className="flex items-center justify-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-700 transition hover:bg-rose-100"
+                            className="flex items-center justify-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700 transition hover:bg-rose-100"
                           >
                             <Trash2 size={16} />
                             Cancelar venda
@@ -1568,8 +1568,8 @@ export default function VendasPage() {
       ) : null}
 
       {reabrirModalOpen && vendaSelecionada ? (
-        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-[28px] border border-zinc-200 bg-white shadow-2xl">
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-zinc-950/45 p-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-lg overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl">
             <div className="border-b border-zinc-200 px-6 py-5">
               <h2 className="text-xl font-bold text-zinc-900">Mandar venda para o caixa</h2>
               <p className="mt-1 text-sm text-zinc-500">
@@ -1586,7 +1586,7 @@ export default function VendasPage() {
                 value={motivoReabertura}
                 onChange={(e) => setMotivoReabertura(e.target.value)}
                 placeholder="Ex.: cliente pediu ajuste, correção de pagamento..."
-                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
               />
             </div>
 
@@ -1595,7 +1595,7 @@ export default function VendasPage() {
                 type="button"
                 onClick={() => setReabrirModalOpen(false)}
                 disabled={saving}
-                className="rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+                className="rounded-lg border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
               >
                 Voltar
               </button>
@@ -1604,7 +1604,7 @@ export default function VendasPage() {
                 type="button"
                 onClick={confirmarReabrirVenda}
                 disabled={saving}
-                className="rounded-2xl bg-amber-600 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
+                className="rounded-lg bg-amber-600 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
               >
                 {saving ? "Reabrindo..." : "Confirmar e mandar para o caixa"}
               </button>
@@ -1614,8 +1614,8 @@ export default function VendasPage() {
       ) : null}
 
       {excluirModalOpen && vendaSelecionada ? (
-        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-[28px] border border-zinc-200 bg-white shadow-2xl">
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-zinc-950/45 p-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-lg overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl">
             <div className="border-b border-zinc-200 px-6 py-5">
               <h2 className="text-xl font-bold text-zinc-900">Cancelar venda</h2>
               <p className="mt-1 text-sm text-zinc-500">
@@ -1632,7 +1632,7 @@ export default function VendasPage() {
                 value={motivoExclusao}
                 onChange={(e) => setMotivoExclusao(e.target.value)}
                 placeholder="Descreva o motivo do cancelamento da venda..."
-                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
               />
             </div>
 
@@ -1641,7 +1641,7 @@ export default function VendasPage() {
                 type="button"
                 onClick={() => setExcluirModalOpen(false)}
                 disabled={saving}
-                className="rounded-2xl border border-zinc-300 bg-white px-5 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+                className="rounded-lg border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
               >
                 Voltar
               </button>
@@ -1650,7 +1650,7 @@ export default function VendasPage() {
                 type="button"
                 onClick={confirmarExcluirVenda}
                 disabled={saving}
-                className="rounded-2xl bg-rose-600 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
+                className="rounded-lg bg-rose-600 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
               >
                 {saving ? "Cancelando..." : "Confirmar cancelamento"}
               </button>
