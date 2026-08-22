@@ -718,7 +718,7 @@ export default function ClientBookingForm({
                 {ptBR.client.incompatibleServices}
               </p>
             ) : null}
-            <div className="pointer-events-none fixed inset-x-0 bottom-[5.15rem] z-40 bg-[#050505] px-5 pb-4 pt-4 before:pointer-events-none before:absolute before:inset-x-0 before:-top-10 before:h-10 before:bg-gradient-to-t before:from-[#050505] before:to-transparent before:content-[''] md:bottom-0">
+            <div className="pointer-events-none fixed inset-x-0 bottom-0 z-50 border-t border-white/10 bg-[#050505] px-5 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 shadow-[0_-12px_30px_rgba(0,0,0,0.45)]">
               <div className="pointer-events-auto mx-auto max-w-md">
                 <button
                   type="button"
