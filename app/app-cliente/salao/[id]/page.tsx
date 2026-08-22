@@ -165,16 +165,16 @@ export default async function ClienteSalonPage({
             )}
             <div className="absolute inset-0 bg-gradient-to-b from-black/45 via-black/5 to-black/45" />
 
-            <div className="absolute left-5 right-5 top-[calc(env(safe-area-inset-top)+1rem)] flex items-center justify-between">
+            <div className="sp-mobile-fixed pointer-events-none fixed inset-x-0 top-0 z-[60] mx-auto flex max-w-3xl items-center justify-between px-5 pb-3 pt-[calc(env(safe-area-inset-top)+0.75rem)]">
               <Link
                 href="/app-cliente/explorar"
-                className="flex h-14 w-14 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur"
+                className="pointer-events-auto flex h-14 w-14 items-center justify-center rounded-full bg-black/70 text-white shadow-lg backdrop-blur-xl"
                 aria-label="Voltar"
               >
                 <ArrowLeft size={28} />
               </Link>
 
-              <div className="flex gap-2">
+              <div className="pointer-events-auto flex gap-2">
                 <ClientSalonShareButton salonName={salao.nome} compact />
 
                 {hasSession ? (
@@ -187,7 +187,7 @@ export default async function ClienteSalonPage({
                     />
                     <button
                       type="submit"
-                      className="flex h-14 w-14 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur"
+                      className="flex h-14 w-14 items-center justify-center rounded-full bg-black/70 text-white shadow-lg backdrop-blur-xl"
                       aria-label={isFavorite ? "Remover dos favoritos" : "Favoritar salão"}
                     >
                       <Heart
@@ -199,14 +199,14 @@ export default async function ClienteSalonPage({
                 ) : (
                   <Link
                     href={favoriteLoginUrl}
-                    className="flex h-14 w-14 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur"
+                    className="flex h-14 w-14 items-center justify-center rounded-full bg-black/70 text-white shadow-lg backdrop-blur-xl"
                     aria-label="Entrar para favoritar"
                   >
                     <Heart size={29} />
                   </Link>
                 )}
 
-                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur">
+                <div className="flex h-14 w-14 items-center justify-center rounded-full bg-black/70 text-white shadow-lg backdrop-blur-xl">
                   <ClientAppDrawerNav isDark />
                 </div>
               </div>
@@ -401,7 +401,7 @@ export default async function ClienteSalonPage({
             ) : null}
 
             <div className="-mx-4 mt-7 bg-white sm:-mx-6">
-              <ClientSalonSectionTabs salonId={id} active="servicos" />
+              <ClientSalonSectionTabs salonId={id} active="servicos" stickyBelowHeader />
             </div>
 
             <section id="servicos" className="mt-7 rounded-[1.75rem] bg-white p-5 shadow-sm ring-1 ring-black/5 sm:p-6">
