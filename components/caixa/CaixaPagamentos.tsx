@@ -150,10 +150,19 @@ export default function CaixaPagamentos({
     <>
       <div className="flex min-h-full flex-col">
         <div className="space-y-4 pb-4">
-          <div className="text-center">
-            <div className="text-sm text-slate-500">Falta a receber</div>
-            <div className="mt-2 text-5xl font-bold tracking-[-0.05em] text-emerald-700">
-              {formatCurrency(faltaReceber)}
+          <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <div className="flex items-center justify-between gap-4">
+              <div className="min-w-0">
+                <div className="text-xs font-bold uppercase tracking-[0.12em] text-emerald-700">
+                  Falta a receber
+                </div>
+                <div className="mt-1 text-sm text-emerald-800">
+                  Valor pendente da comanda
+                </div>
+              </div>
+              <div className="shrink-0 text-right text-2xl font-black tracking-normal text-emerald-700">
+                {formatCurrency(faltaReceber)}
+              </div>
             </div>
           </div>
 
@@ -164,14 +173,14 @@ export default function CaixaPagamentos({
 
             <div className="mt-3 space-y-2">
               {pagamentos.length === 0 ? (
-                <div className="flex min-h-[72px] items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 px-4 text-sm text-slate-400">
+                <div className="flex min-h-[64px] items-center justify-center rounded-lg border border-dashed border-slate-200 bg-slate-50 px-4 text-sm text-slate-400">
                   Nenhum pagamento lancado ainda.
                 </div>
               ) : (
                 pagamentos.map((pagamento) => (
                   <div
                     key={pagamento.id}
-                    className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3"
+                    className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div className="min-w-0">
@@ -219,12 +228,12 @@ export default function CaixaPagamentos({
 
           {podeEditar ? (
             <div className="space-y-4">
-              <div className="grid gap-3 sm:grid-cols-2">
+              <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_180px]">
                 <Field label="Forma de pagamento">
                   <select
                     value={formaPagamento}
                     onChange={(e) => setFormaPagamento(e.target.value)}
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-slate-900"
+                    className="h-12 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-slate-900"
                   >
                     {FORMAS_PAGAMENTO.map((item) => (
                       <option key={item.value} value={item.value}>
@@ -248,28 +257,30 @@ export default function CaixaPagamentos({
                       max="12"
                       value={parcelas}
                       onChange={(e) => setParcelas(e.target.value)}
-                      className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-slate-900"
+                      className="h-12 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-slate-900"
                     />
                   </Field>
                 ) : null}
 
-                <Field label="Observação opcional">
-                  <input
-                    value={observacaoPagamento}
-                    onChange={(e) => setObservacaoPagamento(e.target.value)}
-                    placeholder="Ex.: observações sobre o pagamento"
-                    className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-slate-900"
-                  />
-                </Field>
+                <div className="sm:col-span-2">
+                  <Field label="Observação opcional">
+                    <input
+                      value={observacaoPagamento}
+                      onChange={(e) => setObservacaoPagamento(e.target.value)}
+                      placeholder="Ex.: observações sobre o pagamento"
+                      className="h-12 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-slate-900"
+                    />
+                  </Field>
+                </div>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
+              <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-600">
                 {creditoClienteDisponivel > 0
                   ? `${clienteNome} tem ${formatCurrency(creditoClienteDisponivel)} de credito disponivel.`
                   : `${clienteNome} ainda nao tem credito disponivel.`}
               </div>
 
-              <div className="grid gap-3 rounded-2xl border border-sky-100 bg-sky-50/60 px-4 py-3 text-sm text-slate-600 sm:grid-cols-2">
+              <div className="grid gap-3 rounded-lg border border-sky-100 bg-sky-50/60 px-4 py-3 text-sm text-slate-600 sm:grid-cols-2">
                 <div className="flex items-center gap-2">
                   <Info size={15} className="text-sky-600" />
                   <span>
@@ -290,22 +301,31 @@ export default function CaixaPagamentos({
           </div>
         </div>
 
-        <div className="sticky bottom-0 z-20 -mx-5 mt-auto flex shrink-0 flex-col-reverse gap-2 border-t border-slate-200 bg-white/95 px-5 py-3 shadow-[0_-14px_34px_rgba(15,23,42,0.08)] backdrop-blur sm:-mx-6 sm:flex-row sm:justify-end sm:px-6">
-          <button
-            type="button"
-            onClick={onCancelar}
-            className="inline-flex h-11 flex-1 items-center justify-center rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50 sm:flex-none"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={handleAdicionarPagamento}
-            disabled={saving || !comandaSelecionada || valorBaseDigitado <= 0}
-            className="inline-flex h-11 flex-1 items-center justify-center rounded-2xl bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-zinc-300 sm:min-w-[180px] sm:flex-none"
-          >
-            {saving ? "Processando..." : "Lancar recebimento"}
-          </button>
+        <div className="sticky bottom-0 z-20 -mx-5 mt-auto shrink-0 border-t border-slate-200 bg-white px-5 py-3 sm:-mx-6 sm:px-6">
+          <div className="mb-3 flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm">
+            <span className="font-semibold text-slate-500">Falta receber</span>
+            <strong className="text-base text-emerald-700">
+              {formatCurrency(faltaReceber)}
+            </strong>
+          </div>
+
+          <div className="grid grid-cols-[0.85fr_1.25fr] gap-2">
+            <button
+              type="button"
+              onClick={onCancelar}
+              className="inline-flex h-11 items-center justify-center rounded-lg border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleAdicionarPagamento}
+              disabled={saving || !comandaSelecionada || valorBaseDigitado <= 0}
+              className="inline-flex h-11 items-center justify-center rounded-lg bg-zinc-950 px-4 text-sm font-semibold text-white transition hover:bg-zinc-800 disabled:cursor-not-allowed disabled:bg-slate-200 disabled:text-slate-500"
+            >
+              {saving ? "Processando..." : "Lancar recebimento"}
+            </button>
+          </div>
         </div>
       </div>
 
@@ -409,7 +429,7 @@ function MoneyField({
         value={value}
         onChange={(e) => onChange(moneyMask(e.target.value))}
         placeholder="R$ 0,00"
-        className="h-12 w-full rounded-2xl border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-slate-900"
+        className="h-12 w-full rounded-lg border border-slate-200 bg-white px-4 text-sm text-slate-700 outline-none transition focus:border-slate-900"
       />
     </Field>
   );
@@ -417,7 +437,7 @@ function MoneyField({
 
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3">
+    <div className="rounded-lg border border-slate-200 bg-slate-50 px-4 py-3">
       <div className="text-[11px] font-semibold uppercase tracking-[0.12em] text-slate-400">
         {label}
       </div>
