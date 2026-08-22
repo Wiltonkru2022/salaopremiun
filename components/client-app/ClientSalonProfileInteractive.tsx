@@ -72,9 +72,11 @@ export function ClientSalonLiveDistance({
 export function ClientSalonShareButton({
   salonName,
   compact = false,
+  tone = "dark",
 }: {
   salonName: string;
   compact?: boolean;
+  tone?: "dark" | "light";
 }) {
   const [copied, setCopied] = useState(false);
 
@@ -97,18 +99,23 @@ export function ClientSalonShareButton({
     }
   }
 
+  const compactClass =
+    tone === "light"
+      ? "flex h-11 w-11 items-center justify-center rounded-full border border-zinc-200 bg-zinc-50 text-zinc-950 shadow-sm transition hover:bg-zinc-100"
+      : "flex h-14 w-14 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur";
+
   return (
     <button
       type="button"
       onClick={share}
       className={
         compact
-          ? "flex h-14 w-14 items-center justify-center rounded-full bg-black/55 text-white backdrop-blur"
+          ? compactClass
           : "flex min-h-14 flex-col items-center justify-center gap-1 rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-900 shadow-sm"
       }
       aria-label="Compartilhar salão"
     >
-      {copied ? <Check size={compact ? 26 : 22} /> : <Share2 size={compact ? 27 : 22} />}
+      {copied ? <Check size={compact ? 23 : 22} /> : <Share2 size={compact ? 23 : 22} />}
       {!compact ? <span>{copied ? "Copiado" : "Compartilhar"}</span> : null}
     </button>
   );
