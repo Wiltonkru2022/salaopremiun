@@ -60,11 +60,11 @@ export default async function AdminMasterWhatsappRecargasPage() {
   const { data: saloes } = salaoIds.length
     ? await supabase.from("saloes").select("id, nome, responsavel").in("id", salaoIds)
     : { data: [] };
-  const salaoMap = new Map(
+  const salaoMap = new Map<string, string>(
     (saloes || []).map((salao: Record<string, unknown>) => [
       String(salao.id),
       String(salao.nome || salao.responsavel || "Salao"),
-    ])
+    ] as [string, string])
   );
 
   const falhasPagas = rows.filter(
@@ -157,7 +157,7 @@ export default async function AdminMasterWhatsappRecargasPage() {
                       <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-black ${statusStyle(status)}`}>
                         {status}
                       </span>
-                      {row.erro_texto ? <div className="mt-2 max-w-[260px] text-xs leading-5 text-rose-600">Falha registrada para suporte.</div> : null}
+                      {Boolean(row.erro_texto) ? <div className="mt-2 max-w-[260px] text-xs leading-5 text-rose-600">Falha registrada para suporte.</div> : null}
                     </td>
                     <td className="px-4 py-4 text-xs leading-6 text-zinc-600">
                       <div>{dateTime(String(row.criado_em || ""))}</div>
