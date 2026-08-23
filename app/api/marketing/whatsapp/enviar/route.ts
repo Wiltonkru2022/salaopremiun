@@ -36,6 +36,8 @@ export async function POST(request: Request) {
       mensagem: message,
       tipo: "manual_marketing",
       template,
+      tipoInterno: "marketing",
+      idempotencyKey: request.headers.get("x-idempotency-key"),
     });
 
     return NextResponse.json({ ok: true, result }, { status: 200 });

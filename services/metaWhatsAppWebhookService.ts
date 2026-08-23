@@ -25,6 +25,16 @@ function mapMetaStatus(status: string | null) {
   }
 }
 
+function buildStatusTimestamps(status: string | null) {
+  const mapped = mapMetaStatus(status);
+  const now = new Date().toISOString();
+
+  if (mapped === "entregue") return { entregue_em: now };
+  if (mapped === "lido") return { lido_em: now };
+  if (mapped === "falhou") return { falhou_em: now };
+  return {};
+}
+
 export async function processMetaWhatsAppWebhook(params: {
   body: Record<string, unknown>;
   events: WebhookEvent[];
@@ -79,6 +89,7 @@ export async function processMetaWhatsAppWebhook(params: {
           .update({
             status: mapMetaStatus(event.providerStatus),
             erro_texto: erroTexto,
+            ...buildStatusTimestamps(event.providerStatus),
           })
           .eq("id", envioId);
 

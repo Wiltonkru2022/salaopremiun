@@ -116,6 +116,260 @@ type ClienteAppMigracaoTokensTable = {
 type PublicSchema = Database["public"];
 type BaseTables = PublicSchema["Tables"];
 
+type WhatsappEnviosTable = Omit<
+  BaseTables["whatsapp_envios"],
+  "Row" | "Insert" | "Update"
+> & {
+  Row: BaseTables["whatsapp_envios"]["Row"] & {
+    categoria_meta: string | null;
+    custo_meta_estimado_centavos: number;
+    entregue_em: string | null;
+    estornado: boolean;
+    estornado_em: string | null;
+    falhou_em: string | null;
+    id_credito_movimentacao: string | null;
+    idempotency_key: string | null;
+    lido_em: string | null;
+    margem_centavos: number;
+    preco_venda_centavos: number;
+    sem_custo: boolean;
+    tipo_interno: string | null;
+    wamid: string | null;
+  };
+  Insert: BaseTables["whatsapp_envios"]["Insert"] & {
+    categoria_meta?: string | null;
+    custo_meta_estimado_centavos?: number;
+    entregue_em?: string | null;
+    estornado?: boolean;
+    estornado_em?: string | null;
+    falhou_em?: string | null;
+    id_credito_movimentacao?: string | null;
+    idempotency_key?: string | null;
+    lido_em?: string | null;
+    margem_centavos?: number;
+    preco_venda_centavos?: number;
+    sem_custo?: boolean;
+    tipo_interno?: string | null;
+    wamid?: string | null;
+  };
+  Update: BaseTables["whatsapp_envios"]["Update"] & {
+    categoria_meta?: string | null;
+    custo_meta_estimado_centavos?: number;
+    entregue_em?: string | null;
+    estornado?: boolean;
+    estornado_em?: string | null;
+    falhou_em?: string | null;
+    id_credito_movimentacao?: string | null;
+    idempotency_key?: string | null;
+    lido_em?: string | null;
+    margem_centavos?: number;
+    preco_venda_centavos?: number;
+    sem_custo?: boolean;
+    tipo_interno?: string | null;
+    wamid?: string | null;
+  };
+};
+
+type WhatsappTarifasTable = {
+  Row: {
+    id: string;
+    tipo_interno: string;
+    categoria_meta: string;
+    nome: string;
+    descricao: string;
+    custo_base_meta_centavos: number;
+    preco_venda_centavos: number;
+    margem_centavos: number;
+    ativo: boolean;
+    ordem: number;
+    criado_em: string;
+    atualizado_em: string;
+  };
+  Insert: {
+    id?: string;
+    tipo_interno: string;
+    categoria_meta: string;
+    nome: string;
+    descricao: string;
+    custo_base_meta_centavos?: number;
+    preco_venda_centavos?: number;
+    ativo?: boolean;
+    ordem?: number;
+    criado_em?: string;
+    atualizado_em?: string;
+  };
+  Update: {
+    id?: string;
+    tipo_interno?: string;
+    categoria_meta?: string;
+    nome?: string;
+    descricao?: string;
+    custo_base_meta_centavos?: number;
+    preco_venda_centavos?: number;
+    ativo?: boolean;
+    ordem?: number;
+    criado_em?: string;
+    atualizado_em?: string;
+  };
+  Relationships: [];
+};
+
+type WhatsappCreditosSaloesTable = {
+  Row: {
+    id: string;
+    id_salao: string;
+    saldo_centavos: number;
+    total_recarregado_centavos: number;
+    total_consumido_centavos: number;
+    alerta_saldo_baixo_centavos: number;
+    ultima_recarga_em: string | null;
+    ultima_notificacao_saldo_baixo_em: string | null;
+    criado_em: string;
+    atualizado_em: string;
+  };
+  Insert: {
+    id?: string;
+    id_salao: string;
+    saldo_centavos?: number;
+    total_recarregado_centavos?: number;
+    total_consumido_centavos?: number;
+    alerta_saldo_baixo_centavos?: number;
+    ultima_recarga_em?: string | null;
+    ultima_notificacao_saldo_baixo_em?: string | null;
+    criado_em?: string;
+    atualizado_em?: string;
+  };
+  Update: {
+    id?: string;
+    id_salao?: string;
+    saldo_centavos?: number;
+    total_recarregado_centavos?: number;
+    total_consumido_centavos?: number;
+    alerta_saldo_baixo_centavos?: number;
+    ultima_recarga_em?: string | null;
+    ultima_notificacao_saldo_baixo_em?: string | null;
+    criado_em?: string;
+    atualizado_em?: string;
+  };
+  Relationships: [];
+};
+
+type WhatsappCreditosMovimentacoesTable = {
+  Row: {
+    id: string;
+    id_salao: string;
+    tipo: string;
+    valor_centavos: number;
+    saldo_antes_centavos: number;
+    saldo_depois_centavos: number;
+    categoria: string | null;
+    tipo_interno: string | null;
+    id_mensagem: string | null;
+    id_agendamento: string | null;
+    id_movimentacao_origem: string | null;
+    id_admin_usuario: string | null;
+    descricao: string | null;
+    referencia_externa: string | null;
+    criado_em: string;
+  };
+  Insert: {
+    id?: string;
+    id_salao: string;
+    tipo: string;
+    valor_centavos: number;
+    saldo_antes_centavos: number;
+    saldo_depois_centavos: number;
+    categoria?: string | null;
+    tipo_interno?: string | null;
+    id_mensagem?: string | null;
+    id_agendamento?: string | null;
+    id_movimentacao_origem?: string | null;
+    id_admin_usuario?: string | null;
+    descricao?: string | null;
+    referencia_externa?: string | null;
+    criado_em?: string;
+  };
+  Update: {
+    id?: string;
+    id_salao?: string;
+    tipo?: string;
+    valor_centavos?: number;
+    saldo_antes_centavos?: number;
+    saldo_depois_centavos?: number;
+    categoria?: string | null;
+    tipo_interno?: string | null;
+    id_mensagem?: string | null;
+    id_agendamento?: string | null;
+    id_movimentacao_origem?: string | null;
+    id_admin_usuario?: string | null;
+    descricao?: string | null;
+    referencia_externa?: string | null;
+    criado_em?: string;
+  };
+  Relationships: [];
+};
+
+type WhatsappCreditosRecargasTable = {
+  Row: {
+    id: string;
+    id_salao: string;
+    status: string;
+    valor_centavos: number;
+    billing_type: string;
+    idempotency_key: string | null;
+    external_reference: string;
+    asaas_customer_id: string | null;
+    asaas_payment_id: string | null;
+    invoice_url: string | null;
+    bank_slip_url: string | null;
+    pix_copia_cola: string | null;
+    qr_code_base64: string | null;
+    response_json: Json;
+    pago_em: string | null;
+    criado_em: string;
+    atualizado_em: string;
+  };
+  Insert: {
+    id?: string;
+    id_salao: string;
+    status?: string;
+    valor_centavos: number;
+    billing_type?: string;
+    idempotency_key?: string | null;
+    external_reference: string;
+    asaas_customer_id?: string | null;
+    asaas_payment_id?: string | null;
+    invoice_url?: string | null;
+    bank_slip_url?: string | null;
+    pix_copia_cola?: string | null;
+    qr_code_base64?: string | null;
+    response_json?: Json;
+    pago_em?: string | null;
+    criado_em?: string;
+    atualizado_em?: string;
+  };
+  Update: {
+    id?: string;
+    id_salao?: string;
+    status?: string;
+    valor_centavos?: number;
+    billing_type?: string;
+    idempotency_key?: string | null;
+    external_reference?: string;
+    asaas_customer_id?: string | null;
+    asaas_payment_id?: string | null;
+    invoice_url?: string | null;
+    bank_slip_url?: string | null;
+    pix_copia_cola?: string | null;
+    qr_code_base64?: string | null;
+    response_json?: Json;
+    pago_em?: string | null;
+    criado_em?: string;
+    atualizado_em?: string;
+  };
+  Relationships: [];
+};
+
 type ClientesAuthTable = Omit<
   BaseTables["clientes_auth"],
   "Row" | "Insert" | "Update"
@@ -132,6 +386,7 @@ type ExtendedTables = Omit<
   | "saloes"
   | "clientes_app_auth"
   | "clientes_auth"
+  | "whatsapp_envios"
 > & {
   servicos: BaseTables["servicos"] & ServicosTableExtensions;
   servicos_combo_itens: ServicosComboItensTable;
@@ -143,13 +398,58 @@ type ExtendedTables = Omit<
   cliente_app_migracao_tokens: ClienteAppMigracaoTokensTable;
   security_login_attempts: SecurityLoginAttemptsTable;
   user_security_status: UserSecurityStatusTable;
+  whatsapp_envios: WhatsappEnviosTable;
   whatsapp_pacote_compras: WhatsappPacoteComprasTable;
+  whatsapp_tarifas: WhatsappTarifasTable;
+  whatsapp_creditos_saloes: WhatsappCreditosSaloesTable;
+  whatsapp_creditos_movimentacoes: WhatsappCreditosMovimentacoesTable;
+  whatsapp_creditos_recargas: WhatsappCreditosRecargasTable;
 };
 
 type ExtendedFunctions = PublicSchema["Functions"] & {
   fn_dashboard_resumo_painel: { Args: never; Returns: Json };
   reservar_credito_whatsapp: { Args: { p_id_salao: string; p_quantidade?: number }; Returns: string };
   estornar_credito_whatsapp: { Args: { p_credito_id: string; p_quantidade?: number }; Returns: undefined };
+  fn_whatsapp_creditos_resumo: { Args: { p_id_salao: string }; Returns: Json };
+  fn_whatsapp_creditos_registrar_recarga: {
+    Args: {
+      p_id_salao: string;
+      p_valor_centavos: number;
+      p_referencia_externa: string;
+      p_descricao?: string;
+    };
+    Returns: string;
+  };
+  fn_whatsapp_creditos_debitar: {
+    Args: {
+      p_id_salao: string;
+      p_tipo_interno: string;
+      p_idempotency_key: string;
+      p_id_mensagem?: string | null;
+      p_id_agendamento?: string | null;
+      p_descricao?: string | null;
+    };
+    Returns: Json;
+  };
+  fn_whatsapp_creditos_estornar: {
+    Args: {
+      p_id_salao: string;
+      p_movimentacao_id: string;
+      p_idempotency_key: string;
+      p_descricao?: string | null;
+    };
+    Returns: Json;
+  };
+  fn_whatsapp_creditos_ajuste_admin: {
+    Args: {
+      p_id_salao: string;
+      p_valor_centavos: number;
+      p_motivo: string;
+      p_id_admin_usuario: string;
+      p_referencia_externa?: string | null;
+    };
+    Returns: string;
+  };
 };
 
 type ExtendedPublicSchema = Omit<PublicSchema, "Tables" | "Functions"> & {

@@ -129,6 +129,29 @@ export async function processarWebhookAsaasUseCase(params: {
       };
     }
 
+    if (externalReference?.startsWith("whatsapp_credit_topup:")) {
+      const result = await params.service.processarRecargaWhatsapp({
+        supabaseAdmin,
+        paymentId,
+        payment,
+        paymentStatus,
+        event,
+        agoraIso,
+        externalReference,
+      });
+
+      await params.service.atualizarStatusEvento(
+        supabaseAdmin,
+        webhookEventId,
+        "processado"
+      );
+
+      return {
+        status: 200,
+        body: result,
+      };
+    }
+
     let resolved;
 
     try {

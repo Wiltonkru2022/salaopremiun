@@ -1,12 +1,10 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
 
-type CompraWhatsappRow = {
+type RecargaWhatsappRow = {
   id: string;
   id_salao: string;
-  id_pacote: string;
   status?: string | null;
-  valor?: number | string | null;
-  quantidade_creditos?: number | null;
+  valor_centavos?: number | null;
 };
 
 function isPagamentoConfirmado(status?: string | null, event?: string | null) {
@@ -23,16 +21,14 @@ function isPagamentoConfirmado(status?: string | null, event?: string | null) {
   );
 }
 
-function mapCompraStatus(status?: string | null, event?: string | null) {
-  if (isPagamentoConfirmado(status, event)) {
-    return "pago";
-  }
+function mapRecargaStatus(status?: string | null, event?: string | null) {
+  if (isPagamentoConfirmado(status, event)) return "pago";
 
   const normalizedStatus = String(status || "").toUpperCase();
   const normalizedEvent = String(event || "").toUpperCase();
 
   if (normalizedStatus === "OVERDUE" || normalizedEvent === "PAYMENT_OVERDUE") {
-    return "vencido";
+    return "expirado";
   }
 
   if (
@@ -48,14 +44,11 @@ function mapCompraStatus(status?: string | null, event?: string | null) {
   return "pendente";
 }
 
-function parseCompraId(externalReference?: string | null) {
+function parseRecargaId(externalReference?: string | null) {
   const raw = String(externalReference || "").trim();
-  if (!raw.startsWith("whatsapp_package:")) {
-    return null;
-  }
-
-  const [, compraId] = raw.split(":");
-  return compraId?.trim() || null;
+  if (!raw.startsWith("whatsapp_credit_topup:")) return null;
+  const [, recargaId] = raw.split(":");
+  return recargaId?.trim() || null;
 }
 
 function getPagamentoConfirmadoEm(payment: Record<string, unknown>, agoraIso: string) {
@@ -64,15 +57,13 @@ function getPagamentoConfirmadoEm(payment: Record<string, unknown>, agoraIso: st
     String(payment.paymentDate || "").trim() ||
     String(payment.confirmedDate || "").trim();
 
-  if (!raw) {
-    return agoraIso;
-  }
+  if (!raw) return agoraIso;
 
   const parsed = new Date(raw);
   return Number.isNaN(parsed.getTime()) ? agoraIso : parsed.toISOString();
 }
 
-export async function processarWebhookPacoteWhatsapp(params: {
+export async function processarWebhookRecargaWhatsapp(params: {
   supabaseAdmin: SupabaseClient;
   paymentId: string;
   payment: Record<string, unknown>;
@@ -81,38 +72,36 @@ export async function processarWebhookPacoteWhatsapp(params: {
   agoraIso: string;
   externalReference: string | null;
 }) {
-  const compraId = parseCompraId(params.externalReference);
+  const recargaId = parseRecargaId(params.externalReference);
 
-  if (!compraId) {
+  if (!recargaId) {
     return {
       ok: true,
       ignored: true,
-      reason: "whatsapp_package_reference_invalid",
+      reason: "whatsapp_credit_topup_reference_invalid",
     };
   }
 
-  const { data: compra, error: compraError } = await params.supabaseAdmin
-    .from("whatsapp_pacote_compras")
-    .select("id, id_salao, id_pacote, status, valor, quantidade_creditos")
-    .eq("id", compraId)
+  const { data: recarga, error: recargaError } = await params.supabaseAdmin
+    .from("whatsapp_creditos_recargas")
+    .select("id, id_salao, status, valor_centavos")
+    .eq("id", recargaId)
     .maybeSingle();
 
-  if (compraError) {
-    throw compraError;
-  }
+  if (recargaError) throw recargaError;
 
-  const compraRow = compra as CompraWhatsappRow | null;
+  const recargaRow = recarga as RecargaWhatsappRow | null;
 
-  if (!compraRow?.id) {
+  if (!recargaRow?.id) {
     return {
       ok: true,
       ignored: true,
-      reason: "whatsapp_package_not_found",
+      reason: "whatsapp_credit_topup_not_found",
     };
   }
 
-  const proximoStatus = mapCompraStatus(params.paymentStatus, params.event);
-  const jaPago = String(compraRow.status || "").toLowerCase() === "pago";
+  const proximoStatus = mapRecargaStatus(params.paymentStatus, params.event);
+  const jaPago = String(recargaRow.status || "").toLowerCase() === "pago";
   const pagamentoConfirmado = isPagamentoConfirmado(
     params.paymentStatus,
     params.event
@@ -122,7 +111,7 @@ export async function processarWebhookPacoteWhatsapp(params: {
     : null;
 
   const { error: updateError } = await params.supabaseAdmin
-    .from("whatsapp_pacote_compras")
+    .from("whatsapp_creditos_recargas")
     .update({
       status: proximoStatus,
       asaas_payment_id: params.paymentId,
@@ -131,68 +120,41 @@ export async function processarWebhookPacoteWhatsapp(params: {
       response_json: params.payment,
       pago_em: pagoEm,
     })
-    .eq("id", compraRow.id);
+    .eq("id", recargaRow.id);
 
-  if (updateError) {
-    throw updateError;
-  }
+  if (updateError) throw updateError;
 
   if (!pagamentoConfirmado || jaPago) {
     return {
       ok: true,
-      kind: "whatsapp_package",
+      kind: "whatsapp_credit_topup",
       status: proximoStatus,
-      compraId: compraRow.id,
+      recargaId: recargaRow.id,
     };
   }
 
-  const creditos = Math.max(Number(compraRow.quantidade_creditos || 0), 0);
+  const valorCentavos = Math.max(Number(recargaRow.valor_centavos || 0), 0);
 
-  const { error: insertCreditosError } = await params.supabaseAdmin
-    .from("whatsapp_pacote_saloes")
-    .insert({
-      id_salao: compraRow.id_salao,
-      id_pacote: compraRow.id_pacote,
-      creditos_total: creditos,
-      creditos_usados: 0,
-      creditos_saldo: creditos,
-      status: "ativo",
-      comprado_em: params.agoraIso,
-    });
-
-  if (insertCreditosError) {
-    throw insertCreditosError;
-  }
-
-  const valorCentavos = Math.max(
-    Math.round(Number(compraRow.valor || 0) * 100),
-    0
+  const rpcResult = await params.supabaseAdmin.rpc(
+    "fn_whatsapp_creditos_registrar_recarga",
+    {
+      p_id_salao: recargaRow.id_salao,
+      p_valor_centavos: valorCentavos,
+      p_referencia_externa: `asaas:${params.paymentId}`,
+      p_descricao: "Recarga via PIX",
+    }
   );
 
-  if (valorCentavos > 0) {
-    const recargaResult = await params.supabaseAdmin.rpc(
-      "fn_whatsapp_creditos_registrar_recarga",
-      {
-        p_id_salao: compraRow.id_salao,
-        p_valor_centavos: valorCentavos,
-        p_referencia_externa: `whatsapp_package:${compraRow.id}`,
-        p_descricao: "Recarga migrada de pacote WhatsApp",
-      }
-    );
-
-    if (recargaResult.error) {
-      throw recargaResult.error;
-    }
-  }
+  if (rpcResult.error) throw rpcResult.error;
 
   const { error: extraError } = await params.supabaseAdmin
     .from("saloes_recursos_extras")
     .upsert(
       {
-        id_salao: compraRow.id_salao,
+        id_salao: recargaRow.id_salao,
         recurso_codigo: "whatsapp",
         habilitado: true,
-        origem: "whatsapp_pacote",
+        origem: "whatsapp_creditos",
         expira_em: null,
       },
       {
@@ -200,15 +162,13 @@ export async function processarWebhookPacoteWhatsapp(params: {
       }
     );
 
-  if (extraError) {
-    throw extraError;
-  }
+  if (extraError) throw extraError;
 
   return {
     ok: true,
-    kind: "whatsapp_package",
+    kind: "whatsapp_credit_topup",
     status: "pago",
-    compraId: compraRow.id,
-    creditosLiberados: creditos,
+    recargaId: recargaRow.id,
+    valorCentavos,
   };
 }

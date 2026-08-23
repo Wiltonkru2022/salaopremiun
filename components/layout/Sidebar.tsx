@@ -59,7 +59,7 @@ const GROUPS: Array<{ label: string; hrefs: string[] }> = [
   },
   {
     label: "Crescimento",
-    hrefs: ["/marketing", "/novidades", "/suporte"],
+    hrefs: ["/whatsapp-creditos", "/marketing", "/novidades", "/suporte"],
   },
 ];
 
@@ -248,16 +248,26 @@ function SidebarLink({
   const isExternalHref = /^https?:\/\//i.test(href);
   const linkClassName = clsx(
     "group/item flex min-w-0 items-center gap-2 rounded-[14px] px-2.5 py-2.5 ring-1 ring-transparent transition-all duration-200",
-    active
-      ? "bg-amber-50 text-zinc-950 ring-amber-200 shadow-sm"
-      : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950"
+    item.highlight && active
+      ? "bg-emerald-50 text-zinc-950 ring-emerald-200 shadow-sm"
+      : item.highlight
+        ? "bg-emerald-50/70 text-emerald-950 ring-emerald-100 hover:bg-emerald-50 hover:ring-emerald-200"
+        : active
+          ? "bg-amber-50 text-zinc-950 ring-amber-200 shadow-sm"
+          : "text-zinc-600 hover:bg-zinc-50 hover:text-zinc-950"
   );
   const content = (
     <>
       <span
         className={clsx(
           "flex h-8 w-8 shrink-0 items-center justify-center rounded-[11px] transition",
-          active ? "bg-zinc-950 text-white" : "bg-transparent"
+          item.highlight && active
+            ? "bg-emerald-600 text-white"
+            : item.highlight
+              ? "bg-white text-emerald-700"
+              : active
+                ? "bg-zinc-950 text-white"
+                : "bg-transparent"
         )}
       >
         <Icon size={18} />

@@ -2148,7 +2148,7 @@ export async function getAdminMasterSection(
           detail:
             "Salões com poucos créditos podem parar comunicação automática; use pacotes antes de falhar atendimento.",
           tone: saldosBaixos > 0 ? "amber" : "green",
-          href: "/admin-master/whatsapp/pacotes",
+          href: "/admin-master/whatsapp/tarifas",
         },
         {
           label: "Templates",
@@ -2171,7 +2171,7 @@ export async function getAdminMasterSection(
         "sinal",
         "acao",
       ],
-      actions: ["Ver pacotes WhatsApp", "Ver templates WhatsApp", "Abrir logs", "Auditar"],
+      actions: ["Creditos e tarifas", "Ver pacotes WhatsApp", "Ver templates WhatsApp", "Abrir logs", "Auditar"],
     };
   }
 

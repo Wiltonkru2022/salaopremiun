@@ -8,6 +8,7 @@ import {
   CreditCard,
   LayoutDashboard,
   Megaphone,
+  MessageCircle,
   Package,
   Receipt,
   Scissors,
@@ -33,6 +34,7 @@ export type PainelNavItem = {
   niveis?: string[];
   sidebar?: boolean;
   openInNewTab?: boolean;
+  highlight?: boolean;
 };
 
 const NAV_PLAN_FEATURE_MAP: Record<string, string> = {
@@ -47,6 +49,7 @@ const NAV_PLAN_FEATURE_MAP: Record<string, string> = {
   "/caixa": "caixa",
   "/comissoes": "comissoes_basicas",
   "/relatorio-financeiro": "relatorios_basicos",
+  "/whatsapp-creditos": "whatsapp",
   "/marketing": "marketing",
   "/novidades": "dashboard",
 };
@@ -149,6 +152,16 @@ export const painelNavigationItems: PainelNavItem[] = [
     description: "Resultado, indicadores e leitura financeira.",
     icon: BarChart3,
     permissionKey: "relatorios_ver",
+  },
+  {
+    href: "/whatsapp-creditos",
+    label: "WhatsApp e Creditos",
+    shortLabel: "WhatsApp",
+    description: "Carteira, tarifas, recargas e extrato de envios.",
+    icon: MessageCircle,
+    permissionKey: "marketing_ver",
+    niveis: ["admin"],
+    highlight: true,
   },
   {
     href: "/marketing",
