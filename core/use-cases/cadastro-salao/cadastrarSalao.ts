@@ -31,6 +31,40 @@ const cadastroSalaoSchema = z.object({
   origem: optionalString,
 });
 
+function allDigitsEqual(value: string) {
+  return /^([0-9])\1+$/.test(value);
+}
+
+function validarCpf(cpf: string) {
+  if (!/^\d{11}$/.test(cpf) || allDigitsEqual(cpf)) return false;
+  const calc = (base: string, factor: number) => {
+    let total = 0;
+    for (const digit of base) total += Number(digit) * factor--;
+    const resto = (total * 10) % 11;
+    return resto === 10 ? 0 : resto;
+  };
+  const d1 = calc(cpf.slice(0, 9), 10);
+  if (d1 !== Number(cpf[9])) return false;
+  const d2 = calc(cpf.slice(0, 10), 11);
+  return d2 === Number(cpf[10]);
+}
+
+function validarCnpj(cnpj: string) {
+  if (!/^\d{14}$/.test(cnpj) || allDigitsEqual(cnpj)) return false;
+  const calcular = (base: string, pesos: number[]) => {
+    const total = base
+      .split("")
+      .reduce((acc, digit, index) => acc + Number(digit) * pesos[index], 0);
+    const resto = total % 11;
+    return resto < 2 ? 0 : 11 - resto;
+  };
+  const base = cnpj.slice(0, 12);
+  const d1 = calcular(base, [5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  if (d1 !== Number(cnpj[12])) return false;
+  const d2 = calcular(`${base}${d1}`, [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2]);
+  return d2 === Number(cnpj[13]);
+}
+
 export class CadastroSalaoUseCaseError extends Error {
   constructor(
     message: string,
@@ -55,11 +89,15 @@ export async function cadastrarSalaoUseCase(params: {
       throw new CadastroSalaoUseCaseError("Informe o CPF ou CNPJ.", 400);
     }
 
-    if (payload.cpfCnpjLimpo.length !== 11 && payload.cpfCnpjLimpo.length !== 14) {
-      throw new CadastroSalaoUseCaseError(
-        "Informe um CPF com 11 dígitos ou CNPJ com 14 dígitos.",
-        400
-      );
+    const documentoValido =
+      payload.cpfCnpjLimpo.length === 11
+        ? validarCpf(payload.cpfCnpjLimpo)
+        : payload.cpfCnpjLimpo.length === 14
+          ? validarCnpj(payload.cpfCnpjLimpo)
+          : false;
+
+    if (!documentoValido) {
+      throw new CadastroSalaoUseCaseError("Informe um CPF ou CNPJ válido.", 400);
     }
 
     const duplicidade = await params.service.verificarDuplicidade(payload);
@@ -104,7 +142,6 @@ export async function cadastrarSalaoUseCase(params: {
       authUserId: user.id,
       payload,
     });
-    const trial = await params.service.ativarTrialInicial(idSalao);
 
     await params.service.registrarCadastro({
       idSalao,
@@ -118,7 +155,8 @@ export async function cadastrarSalaoUseCase(params: {
       body: {
         ok: true,
         id_salao: idSalao,
-        assinatura: trial,
+        onboarding_pendente: true,
+        assinatura: null,
       },
     };
   } catch (error) {
@@ -126,9 +164,7 @@ export async function cadastrarSalaoUseCase(params: {
       await params.service.excluirUsuarioAuth(authUserId).catch(() => undefined);
     }
 
-    if (error instanceof CadastroSalaoUseCaseError) {
-      throw error;
-    }
+    if (error instanceof CadastroSalaoUseCaseError) throw error;
 
     if (error instanceof CadastroSalaoServiceError) {
       throw new CadastroSalaoUseCaseError(error.message, error.status);
