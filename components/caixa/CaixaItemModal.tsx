@@ -1,6 +1,7 @@
 "use client";
 
 import type { Dispatch, SetStateAction } from "react";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import AppModal from "@/components/ui/AppModal";
 import type {
   CatalogoExtra,
@@ -60,6 +61,13 @@ export default function CaixaItemModal({
   onClose,
   onSave,
 }: Props) {
+  const { snapshot } = usePainelSession();
+  const moduloProdutosDesativado = snapshot?.produtosModuloAtivo === false;
+  const produtoIndisponivel = produtoBloqueado || moduloProdutosDesativado;
+  const motivoProdutoIndisponivel = moduloProdutosDesativado
+    ? "Produtos e Estoque estão desativados para este salão. O administrador pode ativar a funcionalidade na página Produtos."
+    : "Venda de produtos no caixa fica liberada a partir do plano Pro.";
+
   const {
     assistentesFiltrados,
     buscaAssistente,
@@ -91,14 +99,18 @@ export default function CaixaItemModal({
     itemModal,
     setItemModal,
     servicosCatalogo,
-    produtosCatalogo,
+    produtosCatalogo: moduloProdutosDesativado ? [] : produtosCatalogo,
     extrasCatalogo,
     profissionaisCatalogo,
   });
 
   if (!open) return null;
 
-  const canSave = !saving && !!comandaSelecionada && podeEditar;
+  const canSave =
+    !saving &&
+    !!comandaSelecionada &&
+    podeEditar &&
+    !(produtoIndisponivel && itemModal.tipoItem === "produto");
 
   return (
     <AppModal
@@ -133,209 +145,211 @@ export default function CaixaItemModal({
             {saving
               ? "Salvando..."
               : itemModal.mode === "edit"
-              ? "Salvar alterações"
-              : "Adicionar item"}
+                ? "Salvar alterações"
+                : "Adicionar item"}
           </button>
         </>
       }
     >
       <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
-            {TIPOS_ITEM.map((tipo) => (
-              <button
-                key={tipo}
-                type="button"
-                onClick={() => selecionarTipoItem(tipo)}
-                disabled={produtoBloqueado && tipo === "produto"}
-                title={
-                  produtoBloqueado && tipo === "produto"
-                    ? "Venda de produtos no caixa fica liberada a partir do plano Pro."
-                    : undefined
-                }
-                className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-400 ${
-                  itemModal.tipoItem === tipo
-                    ? "border-zinc-900 bg-zinc-900 text-white"
-                    : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
-                }`}
-              >
-                {getTipoLabel(tipo)}
-              </button>
-            ))}
+        <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
+          {TIPOS_ITEM.map((tipo) => (
+            <button
+              key={tipo}
+              type="button"
+              onClick={() => selecionarTipoItem(tipo)}
+              disabled={produtoIndisponivel && tipo === "produto"}
+              title={
+                produtoIndisponivel && tipo === "produto"
+                  ? motivoProdutoIndisponivel
+                  : undefined
+              }
+              className={`rounded-2xl border px-4 py-2.5 text-sm font-semibold transition disabled:cursor-not-allowed disabled:border-zinc-200 disabled:bg-zinc-100 disabled:text-zinc-400 ${
+                itemModal.tipoItem === tipo
+                  ? "border-zinc-900 bg-zinc-900 text-white"
+                  : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+              }`}
+            >
+              {getTipoLabel(tipo)}
+            </button>
+          ))}
+        </div>
+
+        {produtoIndisponivel ? (
+          <div className="text-xs font-medium text-amber-700">
+            {motivoProdutoIndisponivel}
           </div>
-          {produtoBloqueado ? (
-            <div className="text-xs font-medium text-amber-700">
-              Venda de produtos no caixa fica liberada a partir do plano Pro.
-            </div>
-          ) : null}
+        ) : null}
 
-          {itemModal.tipoItem !== "ajuste" ? (
-            <div className="relative">
-              <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                Buscar {getTipoLabel(itemModal.tipoItem).toLowerCase()}
-              </label>
+        {itemModal.tipoItem !== "ajuste" ? (
+          <div className="relative">
+            <label className="mb-2 block text-sm font-semibold text-zinc-700">
+              Buscar {getTipoLabel(itemModal.tipoItem).toLowerCase()}
+            </label>
 
-              <input
-                value={buscaCatalogo}
-                onChange={(e) => atualizarBuscaCatalogo(e.target.value)}
-                onFocus={() => setDropdownCatalogoOpen(true)}
-                placeholder={getCatalogoPlaceholder(itemModal.tipoItem)}
-                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
-              />
+            <input
+              value={buscaCatalogo}
+              onChange={(e) => atualizarBuscaCatalogo(e.target.value)}
+              onFocus={() => setDropdownCatalogoOpen(true)}
+              placeholder={getCatalogoPlaceholder(itemModal.tipoItem)}
+              disabled={produtoIndisponivel && itemModal.tipoItem === "produto"}
+              className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900 disabled:cursor-not-allowed disabled:bg-zinc-100 disabled:text-zinc-400"
+            />
 
-              {dropdownCatalogoOpen && opcoesCatalogoFiltradas.length > 0 ? (
-                <div className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl">
-                  {opcoesCatalogoFiltradas.map((item) => (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => selecionarCatalogo(item.id)}
-                      className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left transition hover:bg-zinc-50"
-                    >
-                      <div className="font-medium text-zinc-900">{item.nome}</div>
-                      <div className="text-sm font-semibold text-zinc-600">
-                        {(itemModal.tipoItem === "servico"
-                          ? getServicoPrice(item as CatalogoServico)
-                          : itemModal.tipoItem === "produto"
+            {dropdownCatalogoOpen && opcoesCatalogoFiltradas.length > 0 ? (
+              <div className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl">
+                {opcoesCatalogoFiltradas.map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => selecionarCatalogo(item.id)}
+                    className="flex w-full items-center justify-between rounded-xl px-3 py-3 text-left transition hover:bg-zinc-50"
+                  >
+                    <div className="font-medium text-zinc-900">{item.nome}</div>
+                    <div className="text-sm font-semibold text-zinc-600">
+                      {(itemModal.tipoItem === "servico"
+                        ? getServicoPrice(item as CatalogoServico)
+                        : itemModal.tipoItem === "produto"
                           ? getProdutoPrice(item as CatalogoProduto)
                           : getExtraPrice(item as CatalogoExtra)
-                        ).toLocaleString("pt-BR", {
-                          style: "currency",
-                          currency: "BRL",
-                        })}
-                      </div>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
-          ) : null}
-
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                Descrição
-              </label>
-              <input
-                value={itemModal.descricao}
-                onChange={(e) => atualizarDescricao(e.target.value)}
-                placeholder="Descrição do item"
-                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
-              />
-            </div>
-
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                Quantidade
-              </label>
-              <input
-                type="number"
-                min="1"
-                value={itemModal.quantidade}
-                onChange={(e) => atualizarQuantidade(e.target.value)}
-                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                Valor unitário
-              </label>
-              <input
-                value={itemModal.valorUnitario}
-                onChange={(e) => atualizarValorUnitario(e.target.value)}
-                placeholder="0,00"
-                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
-              />
-            </div>
-
-            <div className="relative">
-              <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                Profissional
-              </label>
-
-              <input
-                value={buscaProfissional}
-                onChange={(e) => atualizarBuscaProfissional(e.target.value)}
-                onFocus={() => setDropdownProfissionalOpen(true)}
-                placeholder="Digite o nome do profissional"
-                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
-              />
-
-              {dropdownProfissionalOpen ? (
-                <div className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl">
-                  <button
-                    type="button"
-                    onClick={limparProfissional}
-                    className="w-full rounded-xl px-3 py-3 text-left text-sm text-zinc-600 transition hover:bg-zinc-50"
-                  >
-                    Sem profissional
+                      ).toLocaleString("pt-BR", {
+                        style: "currency",
+                        currency: "BRL",
+                      })}
+                    </div>
                   </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+        ) : null}
 
-                  {profissionaisFiltrados.map((prof) => (
-                    <button
-                      key={prof.id}
-                      type="button"
-                      onClick={() => selecionarProfissional(prof.id, prof.nome || "")}
-                      className="w-full rounded-xl px-3 py-3 text-left transition hover:bg-zinc-50"
-                    >
-                      <div className="font-medium text-zinc-900">{prof.nome}</div>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-zinc-700">
+              Descrição
+            </label>
+            <input
+              value={itemModal.descricao}
+              onChange={(e) => atualizarDescricao(e.target.value)}
+              placeholder="Descrição do item"
+              className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
+            />
+          </div>
 
-            <div className="relative">
-              <label className="mb-2 block text-sm font-semibold text-zinc-700">
-                Assistente
-              </label>
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-zinc-700">
+              Quantidade
+            </label>
+            <input
+              type="number"
+              min="1"
+              value={itemModal.quantidade}
+              onChange={(e) => atualizarQuantidade(e.target.value)}
+              className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
+            />
+          </div>
+        </div>
 
-              <input
-                value={buscaAssistente}
-                onChange={(e) => atualizarBuscaAssistente(e.target.value)}
-                onFocus={() => setDropdownAssistenteOpen(true)}
-                placeholder="Digite o nome do assistente"
-                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
-              />
+        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+          <div>
+            <label className="mb-2 block text-sm font-semibold text-zinc-700">
+              Valor unitário
+            </label>
+            <input
+              value={itemModal.valorUnitario}
+              onChange={(e) => atualizarValorUnitario(e.target.value)}
+              placeholder="0,00"
+              className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
+            />
+          </div>
 
-              {dropdownAssistenteOpen ? (
-                <div className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl">
+          <div className="relative">
+            <label className="mb-2 block text-sm font-semibold text-zinc-700">
+              Profissional
+            </label>
+
+            <input
+              value={buscaProfissional}
+              onChange={(e) => atualizarBuscaProfissional(e.target.value)}
+              onFocus={() => setDropdownProfissionalOpen(true)}
+              placeholder="Digite o nome do profissional"
+              className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
+            />
+
+            {dropdownProfissionalOpen ? (
+              <div className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl">
+                <button
+                  type="button"
+                  onClick={limparProfissional}
+                  className="w-full rounded-xl px-3 py-3 text-left text-sm text-zinc-600 transition hover:bg-zinc-50"
+                >
+                  Sem profissional
+                </button>
+
+                {profissionaisFiltrados.map((prof) => (
                   <button
+                    key={prof.id}
                     type="button"
-                    onClick={limparAssistente}
-                    className="w-full rounded-xl px-3 py-3 text-left text-sm text-zinc-600 transition hover:bg-zinc-50"
+                    onClick={() => selecionarProfissional(prof.id, prof.nome || "")}
+                    className="w-full rounded-xl px-3 py-3 text-left transition hover:bg-zinc-50"
                   >
-                    Sem assistente
+                    <div className="font-medium text-zinc-900">{prof.nome}</div>
                   </button>
-
-                  {assistentesFiltrados.map((prof) => (
-                    <button
-                      key={prof.id}
-                      type="button"
-                      onClick={() => selecionarAssistente(prof.id, prof.nome || "")}
-                      className="w-full rounded-xl px-3 py-3 text-left transition hover:bg-zinc-50"
-                    >
-                      <div className="font-medium text-zinc-900">{prof.nome}</div>
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-            </div>
+                ))}
+              </div>
+            ) : null}
           </div>
 
-          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3.5">
-            <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
-              Total do item
-            </div>
-            <div className="mt-1 text-2xl font-bold text-zinc-900">
-              {totalPreviewItem.toLocaleString("pt-BR", {
-                style: "currency",
-                currency: "BRL",
-              })}
-            </div>
+          <div className="relative">
+            <label className="mb-2 block text-sm font-semibold text-zinc-700">
+              Assistente
+            </label>
+
+            <input
+              value={buscaAssistente}
+              onChange={(e) => atualizarBuscaAssistente(e.target.value)}
+              onFocus={() => setDropdownAssistenteOpen(true)}
+              placeholder="Digite o nome do assistente"
+              className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
+            />
+
+            {dropdownAssistenteOpen ? (
+              <div className="absolute z-20 mt-2 max-h-64 w-full overflow-y-auto rounded-2xl border border-zinc-200 bg-white p-2 shadow-xl">
+                <button
+                  type="button"
+                  onClick={limparAssistente}
+                  className="w-full rounded-xl px-3 py-3 text-left text-sm text-zinc-600 transition hover:bg-zinc-50"
+                >
+                  Sem assistente
+                </button>
+
+                {assistentesFiltrados.map((prof) => (
+                  <button
+                    key={prof.id}
+                    type="button"
+                    onClick={() => selecionarAssistente(prof.id, prof.nome || "")}
+                    className="w-full rounded-xl px-3 py-3 text-left transition hover:bg-zinc-50"
+                  >
+                    <div className="font-medium text-zinc-900">{prof.nome}</div>
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
+        </div>
+
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3.5">
+          <div className="text-xs uppercase tracking-[0.18em] text-zinc-500">
+            Total do item
+          </div>
+          <div className="mt-1 text-2xl font-bold text-zinc-900">
+            {totalPreviewItem.toLocaleString("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+            })}
+          </div>
+        </div>
       </div>
     </AppModal>
   );
