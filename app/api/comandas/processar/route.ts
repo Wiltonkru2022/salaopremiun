@@ -12,6 +12,11 @@ import {
   getPlanoAccessSnapshot,
   PlanAccessError,
 } from "@/lib/plans/access";
+import {
+  assertProdutosModuloAtivo,
+  assertSalaoOnboardingConcluido,
+  SalaoOperationalStateError,
+} from "@/lib/saloes/operational-state";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   parseProcessarComandaInput,
@@ -23,28 +28,14 @@ import type { AcaoComanda } from "@/types/comandas";
 
 function requireComandaActionPermission(idSalao: string, acao: AcaoComanda) {
   if (acao === "criar_por_agendamento") {
-    return requireSalaoAnyPermission(idSalao, [
-      "comandas_ver",
-      "caixa_editar",
-      "caixa_operar",
-    ]);
+    return requireSalaoAnyPermission(idSalao, ["comandas_ver", "caixa_editar", "caixa_operar"]);
   }
-
   if (acao === "salvar_base" || acao === "adicionar_item" || acao === "editar_item" || acao === "remover_item") {
-    return requireSalaoAnyPermission(idSalao, [
-      "comandas_ver",
-      "caixa_editar",
-    ]);
+    return requireSalaoAnyPermission(idSalao, ["comandas_ver", "caixa_editar"]);
   }
-
   if (acao === "enviar_pagamento") {
-    return requireSalaoAnyPermission(idSalao, [
-      "comandas_ver",
-      "caixa_editar",
-      "caixa_pagamentos",
-    ]);
+    return requireSalaoAnyPermission(idSalao, ["comandas_ver", "caixa_editar", "caixa_pagamentos"]);
   }
-
   return requireSalaoPermission(idSalao, "comandas_ver");
 }
 
@@ -58,30 +49,25 @@ export async function POST(req: NextRequest) {
     acao = input.acao;
 
     const permissionMembership = await requireComandaActionPermission(idSalao, input.acao);
+    await assertSalaoOnboardingConcluido(idSalao);
     await assertCanMutatePlanFeature(idSalao, "comandas");
 
     if (acao === "adicionar_item" || acao === "editar_item") {
       const snapshot = await getPlanoAccessSnapshot(idSalao);
 
       if (input.item?.tipo_item === "servico" && !snapshot.recursos.servicos) {
-        throw new PlanAccessError(
-          "Serviços não estão liberados no plano atual.",
-          "SERVICES_PLAN_REQUIRED"
-        );
+        throw new PlanAccessError("Serviços não estão liberados no plano atual.", "SERVICES_PLAN_REQUIRED");
       }
 
-      if (input.item?.tipo_item === "produto" && !snapshot.recursos.produtos) {
-        throw new PlanAccessError(
-          "Venda de produtos não está liberada no plano atual.",
-          "PRODUCT_SALES_PLAN_REQUIRED"
-        );
+      if (input.item?.tipo_item === "produto") {
+        await assertProdutosModuloAtivo(idSalao);
+        if (!snapshot.recursos.produtos) {
+          throw new PlanAccessError("Venda de produtos não está liberada no plano atual.", "PRODUCT_SALES_PLAN_REQUIRED");
+        }
       }
 
       if (input.item?.tipo_item === "extra" && !snapshot.recursos.servicos_extras) {
-        throw new PlanAccessError(
-          "Serviços extras não estão liberados no plano atual.",
-          "EXTRAS_PLAN_REQUIRED"
-        );
+        throw new PlanAccessError("Serviços extras não estão liberados no plano atual.", "EXTRAS_PLAN_REQUIRED");
       }
     }
 
@@ -95,34 +81,19 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     if (error instanceof ZodError) {
       const firstIssue = error.issues[0];
-      return NextResponse.json(
-        {
-          error: firstIssue?.message || "Payload invalido.",
-          issues: error.flatten(),
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: firstIssue?.message || "Payload invalido.", issues: error.flatten() }, { status: 400 });
     }
-
     if (error instanceof AuthzError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: error.status }
-      );
+      return NextResponse.json({ error: error.message }, { status: error.status });
     }
-
+    if (error instanceof SalaoOperationalStateError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+    }
     if (error instanceof PlanAccessError) {
-      return NextResponse.json(
-        { error: error.message, code: error.code },
-        { status: error.status }
-      );
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
     }
-
     if (error instanceof ProcessarComandaUseCaseError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: error.status }
-      );
+      return NextResponse.json({ error: error.message }, { status: error.status });
     }
 
     if (idSalao) {
@@ -136,32 +107,19 @@ export async function POST(req: NextRequest) {
               key: `comandas:processar:${acao || "desconhecida"}:${idSalao}`,
               module: "comandas",
               title: "Processamento de comanda falhou",
-              description:
-                error instanceof Error
-                  ? error.message
-                  : "Erro interno ao processar comanda.",
+              description: error instanceof Error ? error.message : "Erro interno ao processar comanda.",
               severity: "alta",
               idSalao,
-              details: {
-                acao: COMANDA_ACTIONS.includes(acao as never) ? acao : null,
-                route: "/api/comandas/processar",
-                acoes_suportadas: COMANDA_ACTIONS,
-              },
+              details: { acao: COMANDA_ACTIONS.includes(acao as never) ? acao : null, route: "/api/comandas/processar", acoes_suportadas: COMANDA_ACTIONS },
             });
           },
         });
       } catch (incidentError) {
-        console.error(
-          "Falha ao registrar incidente operacional de comandas:",
-          incidentError
-        );
+        console.error("Falha ao registrar incidente operacional de comandas:", incidentError);
       }
     }
 
     console.error("Erro geral ao processar comanda:", error);
-    return NextResponse.json(
-      { error: "Erro interno ao processar comanda." },
-      { status: resolveComandaHttpStatus(error) }
-    );
+    return NextResponse.json({ error: "Erro interno ao processar comanda." }, { status: resolveComandaHttpStatus(error) });
   }
 }
