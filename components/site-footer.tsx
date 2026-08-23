@@ -76,8 +76,8 @@ export default function SiteFooter() {
             <h4 className="text-base font-bold">Contato</h4>
             <ul className="mt-3 space-y-2.5 text-sm text-zinc-500">
               <li>
-                <a href="https://wa.me/5567984341742" className="hover:text-zinc-950">
-                  WhatsApp: (67) 98434-1742
+                <a href="https://wa.me/5567981431155" className="hover:text-zinc-950">
+                  WhatsApp: (67) 98143-1155
                 </a>
               </li>
               <li>Atendimento comercial e suporte em PT-BR</li>
