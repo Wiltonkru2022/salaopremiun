@@ -21,6 +21,7 @@ const routeService = createSalaoMutacaoRouteService({
   title: "Processamento de produto falhou",
   fallbackMessage: "Erro interno ao processar produto.",
   route: "/api/produtos/processar",
+  requiresProductsModule: true,
   getAction: (acaoRaw) =>
     ["salvar", "alterar_status", "excluir"].includes(acaoRaw) ? acaoRaw : null,
 });
@@ -66,7 +67,7 @@ export async function POST(req: NextRequest) {
 
     if (error instanceof AuthzError) {
       return NextResponse.json(
-        { error: error.message },
+        { error: error.message, code: error.code },
         { status: error.status }
       );
     }
