@@ -9,6 +9,8 @@ type AutomaticEvent =
   | "agendamento_cancelado"
   | "pagamento_confirmado";
 
+type AutomaticPreferenceEvent = AutomaticEvent | "lembrete_agendamento";
+
 type AutomaticJobRow = {
   id: string;
   id_salao: string;
@@ -59,6 +61,27 @@ function appointmentIdFromNotificationKey(value?: string | null) {
     key
   );
   return match?.[1] || null;
+}
+
+async function isAutomationEnabled(
+  idSalao: string,
+  event: AutomaticPreferenceEvent
+) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await (supabase as any)
+    .from("whatsapp_automacoes_saloes")
+    .select(event)
+    .eq("id_salao", idSalao)
+    .maybeSingle();
+
+  if (error) {
+    if (String(error.message || "").includes("whatsapp_automacoes_saloes")) {
+      return true;
+    }
+    throw new Error(error.message);
+  }
+
+  return data?.[event] !== false;
 }
 
 async function loadAppointmentContext(idSalao: string, idAgendamento: string) {
@@ -154,11 +177,15 @@ async function loadComandaContext(idSalao: string, idComanda: string) {
 }
 
 async function sendAppointmentEvent(params: {
-  event: AutomaticEvent | "lembrete_agendamento";
+  event: AutomaticPreferenceEvent;
   idSalao: string;
   idAgendamento: string;
   idempotencyKey: string;
 }) {
+  if (!(await isAutomationEnabled(params.idSalao, params.event))) {
+    return { skipped: true, reason: "automation_disabled" as const };
+  }
+
   const ctx = await loadAppointmentContext(params.idSalao, params.idAgendamento);
   if (!ctx.clienteWhatsApp) throw new Error("Cliente sem WhatsApp cadastrado.");
 
@@ -256,6 +283,10 @@ async function sendAppointmentEvent(params: {
 }
 
 async function sendComandaPaymentEvent(job: AutomaticJobRow) {
+  if (!(await isAutomationEnabled(job.id_salao, "pagamento_confirmado"))) {
+    return { skipped: true, reason: "automation_disabled" as const };
+  }
+
   if (!job.id_comanda) throw new Error("Comanda ausente no job WhatsApp.");
   const ctx = await loadComandaContext(job.id_salao, job.id_comanda);
   if (!ctx.clienteWhatsApp) throw new Error("Cliente sem WhatsApp cadastrado.");
