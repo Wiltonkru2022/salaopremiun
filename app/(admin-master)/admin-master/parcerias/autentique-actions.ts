@@ -18,12 +18,12 @@ export async function enviarContratoAutentique(formData: FormData) {
 
   const { data: contrato, error } = await supabase
     .from("parceria_contratos")
-    .select("id,numero,status,conteudo_snapshot,signatario_email,provedor_documento_id")
+    .select("id,numero,status,conteudo_snapshot,signatario_email,envelope_externo_id")
     .eq("id", idContrato)
     .single();
 
   if (error || !contrato) throw new Error(error?.message || "Contrato não encontrado.");
-  if (contrato.provedor_documento_id) {
+  if (contrato.envelope_externo_id) {
     throw new Error("Este contrato já foi enviado ao provedor de assinatura.");
   }
   if (!contrato.signatario_email) {
@@ -41,12 +41,12 @@ export async function enviarContratoAutentique(formData: FormData) {
     .update({
       status: "enviado_assinatura",
       provedor_assinatura: "autentique",
-      provedor_documento_id: envio.documentId,
-      assinatura_url: envio.signatureUrl,
-      enviado_assinatura_em: new Date().toISOString(),
-      evidencias_json: {
+      envelope_externo_id: envio.documentId,
+      url_assinatura: envio.signatureUrl,
+      evidencia_assinatura: {
         signature_public_id: envio.signaturePublicId,
         envio: "api",
+        enviado_em: new Date().toISOString(),
       },
     })
     .eq("id", idContrato);
@@ -73,30 +73,30 @@ export async function sincronizarContratoAutentique(formData: FormData) {
 
   const { data: contrato, error } = await supabase
     .from("parceria_contratos")
-    .select("id,numero,provedor_assinatura,provedor_documento_id,evidencias_json")
+    .select("id,numero,provedor_assinatura,envelope_externo_id,evidencia_assinatura")
     .eq("id", idContrato)
     .single();
 
   if (error || !contrato) throw new Error(error?.message || "Contrato não encontrado.");
-  if (contrato.provedor_assinatura !== "autentique" || !contrato.provedor_documento_id) {
+  if (contrato.provedor_assinatura !== "autentique" || !contrato.envelope_externo_id) {
     throw new Error("Contrato ainda não foi enviado pelo Autentique.");
   }
 
-  const remoto = await consultarDocumentoAutentique(contrato.provedor_documento_id);
+  const remoto = await consultarDocumentoAutentique(contrato.envelope_externo_id);
   const status = remoto.signedAt ? "assinado" : remoto.rejectedAt ? "recusado" : "enviado_assinatura";
 
   const { error: updateError } = await supabase
     .from("parceria_contratos")
     .update({
       status,
-      assinatura_url: remoto.signatureUrl || undefined,
+      url_assinatura: remoto.signatureUrl || undefined,
       assinado_em: remoto.signedAt,
-      documento_assinado_url: remoto.signedFileUrl,
-      evidencias_json: {
-        ...(contrato.evidencias_json || {}),
+      evidencia_assinatura: {
+        ...(contrato.evidencia_assinatura || {}),
         viewed_at: remoto.viewedAt,
         rejected_at: remoto.rejectedAt,
         signed_at: remoto.signedAt,
+        signed_file_url: remoto.signedFileUrl,
         ultima_sincronizacao: new Date().toISOString(),
       },
     })
