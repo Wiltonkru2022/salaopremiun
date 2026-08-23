@@ -37,13 +37,11 @@ export type PainelSessionSnapshot = {
   planoLimites?: PainelPlanoLimites;
   planoUso?: PainelPlanoUso;
   assinaturaStatus?: string | null;
+  produtosModuloAtivo?: boolean;
 };
 
 export function readPainelSessionSnapshot(): PainelSessionSnapshot | null {
-  if (typeof window === "undefined") {
-    return null;
-  }
-
+  if (typeof window === "undefined") return null;
   try {
     const raw = window.localStorage.getItem(PAINEL_SESSION_STORAGE_KEY);
     if (!raw) return null;
