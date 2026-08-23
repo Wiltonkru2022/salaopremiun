@@ -28,7 +28,7 @@ async function validarEstadoOperacional(
   idSalao: string,
   config: SalaoMutacaoConfig
 ) {
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getSupabaseAdmin() as any;
   const { data, error } = await supabaseAdmin
     .from("saloes")
     .select("onboarding_concluido, produtos_modulo_ativo")
