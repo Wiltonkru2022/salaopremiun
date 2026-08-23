@@ -70,9 +70,10 @@ export async function expireWhatsappPixRecargas(options: ExpirePixOptions = {}) 
         await supabase
           .from("whatsapp_creditos_recargas")
           .update({
-            status: "processando",
+            status: "falhou",
             pago_em: now,
-            erro_texto: "Pagamento confirmado no Asaas aguardando conciliacao de credito.",
+            erro_texto:
+              "Pagamento confirmado no Asaas, mas o credito ainda nao foi conciliado. Reprocessar pelo AdminMaster.",
             atualizado_em: now,
           })
           .eq("id", id)
