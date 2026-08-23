@@ -30,6 +30,10 @@
     {
       "path": "/api/cron/notificacoes",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/whatsapp-pix-expiracao",
+      "schedule": "0 * * * *"
     }
   ]
 }
