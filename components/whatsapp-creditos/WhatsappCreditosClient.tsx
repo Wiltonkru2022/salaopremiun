@@ -1,15 +1,18 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   AlertTriangle,
+  CalendarCheck,
   CheckCircle2,
+  Clock3,
   Copy,
   CreditCard,
   MessageCircle,
   ReceiptText,
-  Send,
+  RefreshCw,
   ShieldCheck,
+  UserRoundCheck,
   Wallet,
   X,
 } from "lucide-react";
@@ -37,9 +40,84 @@ type CheckoutState = {
   reused?: boolean;
 } | null;
 
+type AutomationKey =
+  | "confirmacao_agendamento"
+  | "lembrete_agendamento"
+  | "agendamento_alterado"
+  | "agendamento_cancelado"
+  | "profissional_confirmado"
+  | "pagamento_confirmado";
+
+type AutomationPreferences = Record<AutomationKey, boolean>;
+
+type AutomationItem = {
+  key: AutomationKey;
+  title: string;
+  description: string;
+  example: string;
+  icon: typeof CalendarCheck;
+};
+
 const PRESET_AMOUNTS = [2000, 5000, 10000, 20000];
 
-const statusTone: Record<WhatsAppCreditoStatus, "success" | "warning" | "danger" | "default"> = {
+const AUTOMATIONS: AutomationItem[] = [
+  {
+    key: "confirmacao_agendamento",
+    title: "Confirmação de agendamento",
+    description: "Avisa a cliente assim que o horário for confirmado.",
+    example: "Seu agendamento foi confirmado para a data e horário escolhidos.",
+    icon: CalendarCheck,
+  },
+  {
+    key: "lembrete_agendamento",
+    title: "Lembrete de agendamento",
+    description: "Lembra a cliente antes do horário marcado.",
+    example: "Passando para lembrar do seu atendimento de hoje.",
+    icon: Clock3,
+  },
+  {
+    key: "agendamento_alterado",
+    title: "Alteração de agendamento",
+    description: "Avisa quando data, horário ou profissional forem alterados.",
+    example: "Seu agendamento foi atualizado. Confira os novos dados.",
+    icon: RefreshCw,
+  },
+  {
+    key: "agendamento_cancelado",
+    title: "Cancelamento de agendamento",
+    description: "Informa a cliente quando um horário for cancelado.",
+    example: "Seu agendamento foi cancelado. Você pode marcar um novo horário.",
+    icon: X,
+  },
+  {
+    key: "profissional_confirmado",
+    title: "Profissional confirmado",
+    description: "Confirma quem realizará o atendimento da cliente.",
+    example: "O profissional do seu próximo atendimento está confirmado.",
+    icon: UserRoundCheck,
+  },
+  {
+    key: "pagamento_confirmado",
+    title: "Pagamento confirmado",
+    description: "Avisa a cliente quando o pagamento for confirmado.",
+    example: "Recebemos a confirmação do seu pagamento.",
+    icon: CheckCircle2,
+  },
+];
+
+const DEFAULT_AUTOMATIONS: AutomationPreferences = {
+  confirmacao_agendamento: true,
+  lembrete_agendamento: true,
+  agendamento_alterado: true,
+  agendamento_cancelado: true,
+  profissional_confirmado: true,
+  pagamento_confirmado: true,
+};
+
+const statusTone: Record<
+  WhatsAppCreditoStatus,
+  "success" | "warning" | "danger" | "default"
+> = {
   ativo: "success",
   configuracao_pendente: "warning",
   saldo_baixo: "warning",
@@ -54,9 +132,9 @@ function formatMoney(valueCentavos: number) {
 }
 
 function formatDate(value?: string | null) {
-  if (!value) return "Ainda nao houve";
+  if (!value) return "Ainda não houve";
   const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "Ainda nao houve";
+  if (Number.isNaN(date.getTime())) return "Ainda não houve";
   return date.toLocaleString("pt-BR", {
     day: "2-digit",
     month: "2-digit",
@@ -67,9 +145,9 @@ function formatDate(value?: string | null) {
 
 function movementTitle(item: WhatsAppMovimentacaoPainel) {
   if (item.descricao) return item.descricao;
-  if (item.tipo === "recarga") return "Recarga de creditos";
+  if (item.tipo === "recarga") return "Recarga de créditos";
   if (item.tipo === "consumo") return "Envio WhatsApp";
-  if (item.tipo === "estorno") return "Estorno automatico";
+  if (item.tipo === "estorno") return "Estorno automático";
   return "Ajuste administrativo";
 }
 
@@ -107,10 +185,62 @@ export default function WhatsAppCreditosClient({
   const [checkout, setCheckout] = useState<CheckoutState>(null);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [automations, setAutomations] =
+    useState<AutomationPreferences>(DEFAULT_AUTOMATIONS);
+  const [automationsLoading, setAutomationsLoading] = useState(true);
+  const [automationError, setAutomationError] = useState<string | null>(null);
+  const [savingAutomation, setSavingAutomation] = useState<AutomationKey | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const customCents = useMemo(() => parseCustomCents(customAmount), [customAmount]);
   const rechargeAmount = customAmount.trim() ? customCents : selectedAmount;
+  const visibleTarifas = useMemo(
+    () =>
+      data.tarifas.filter(
+        (tarifa) =>
+          tarifa.tipoInterno !== "codigo_verificacao" &&
+          tarifa.tipoInterno !== "marketing" &&
+          tarifa.categoriaMeta !== "authentication" &&
+          tarifa.categoriaMeta !== "marketing"
+      ),
+    [data.tarifas]
+  );
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadAutomations() {
+      try {
+        const response = await fetch("/api/whatsapp-creditos/automacoes", {
+          cache: "no-store",
+        });
+        const payload = (await response.json().catch(() => null)) as
+          | { preferences?: AutomationPreferences; error?: string }
+          | null;
+
+        if (!response.ok || !payload?.preferences) {
+          throw new Error(payload?.error || "Não foi possível carregar as mensagens automáticas.");
+        }
+
+        if (!cancelled) setAutomations(payload.preferences);
+      } catch (loadError) {
+        if (!cancelled) {
+          setAutomationError(
+            loadError instanceof Error
+              ? loadError.message
+              : "Não foi possível carregar as mensagens automáticas."
+          );
+        }
+      } finally {
+        if (!cancelled) setAutomationsLoading(false);
+      }
+    }
+
+    void loadAutomations();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   function openExtract() {
     document.getElementById("whatsapp-extrato")?.scrollIntoView({
@@ -140,7 +270,7 @@ export default function WhatsAppCreditosClient({
         const payload = (await response.json().catch(() => null)) as unknown;
 
         if (!response.ok || !isCheckoutPayload(payload)) {
-          throw new Error(getPayloadError(payload) || "Nao foi possivel gerar a recarga.");
+          throw new Error(getPayloadError(payload) || "Não foi possível gerar a recarga.");
         }
 
         setCheckout(payload);
@@ -148,7 +278,7 @@ export default function WhatsAppCreditosClient({
         setError(
           checkoutError instanceof Error
             ? checkoutError.message
-            : "Nao foi possivel gerar a recarga."
+            : "Não foi possível gerar a recarga."
         );
       }
     });
@@ -161,7 +291,40 @@ export default function WhatsAppCreditosClient({
       setCopied(true);
       window.setTimeout(() => setCopied(false), 1800);
     } catch {
-      setError("Nao foi possivel copiar o PIX agora.");
+      setError("Não foi possível copiar o PIX agora.");
+    }
+  }
+
+  async function toggleAutomation(key: AutomationKey, enabled: boolean) {
+    const previous = automations;
+    setAutomationError(null);
+    setSavingAutomation(key);
+    setAutomations((current) => ({ ...current, [key]: enabled }));
+
+    try {
+      const response = await fetch("/api/whatsapp-creditos/automacoes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key, enabled }),
+      });
+      const payload = (await response.json().catch(() => null)) as
+        | { preferences?: AutomationPreferences; error?: string }
+        | null;
+
+      if (!response.ok || !payload?.preferences) {
+        throw new Error(payload?.error || "Não foi possível salvar esta preferência.");
+      }
+
+      setAutomations(payload.preferences);
+    } catch (saveError) {
+      setAutomations(previous);
+      setAutomationError(
+        saveError instanceof Error
+          ? saveError.message
+          : "Não foi possível salvar esta preferência."
+      );
+    } finally {
+      setSavingAutomation(null);
     }
   }
 
@@ -169,15 +332,13 @@ export default function WhatsAppCreditosClient({
     <div className="space-y-4">
       <PainelPageHeader
         eyebrow="WhatsApp"
-        title="WhatsApp e Creditos"
-        description="Envie confirmacoes, lembretes e mensagens aos seus clientes com controle total de gastos."
+        title="WhatsApp e Créditos"
+        description="Coloque créditos e escolha quais avisos o SalãoPremium deve enviar automaticamente aos seus clientes."
         actions={
-          <>
-            <PainelStatusBadge tone={statusTone[data.status]} className="gap-1.5">
-              {data.status === "ativo" ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
-              {data.statusLabel}
-            </PainelStatusBadge>
-          </>
+          <PainelStatusBadge tone={statusTone[data.status]} className="gap-1.5">
+            {data.status === "ativo" ? <CheckCircle2 size={14} /> : <AlertTriangle size={14} />}
+            {data.statusLabel}
+          </PainelStatusBadge>
         }
       />
 
@@ -193,12 +354,12 @@ export default function WhatsAppCreditosClient({
                 {formatMoney(data.resumo.saldoCentavos)}
               </div>
               <p className="mt-2 max-w-xl text-sm leading-6 text-zinc-500">
-                Saldo disponivel para envios pagos pelo WhatsApp.
+                Créditos disponíveis para os avisos enviados aos seus clientes.
               </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 <PainelButton type="button" onClick={() => setRechargeOpen(true)}>
                   <CreditCard size={16} />
-                  Adicionar creditos
+                  Adicionar créditos
                 </PainelButton>
                 <PainelButton type="button" variant="secondary" onClick={openExtract}>
                   <ReceiptText size={16} />
@@ -209,10 +370,10 @@ export default function WhatsAppCreditosClient({
 
             <div className="grid gap-2 p-5 sm:grid-cols-2">
               <Metric label="Gasto em 7 dias" value={formatMoney(data.resumo.gasto7dCentavos)} />
-              <Metric label="Gasto no mes" value={formatMoney(data.resumo.gastoMesCentavos)} />
-              <Metric label="Mensagens no mes" value={String(data.resumo.mensagensMes)} />
+              <Metric label="Gasto no mês" value={formatMoney(data.resumo.gastoMesCentavos)} />
+              <Metric label="Mensagens no mês" value={String(data.resumo.mensagensMes)} />
               <Metric label="Mensagens pagas" value={String(data.resumo.mensagensPagasMes)} />
-              <Metric label="Ultima recarga" value={formatDate(data.resumo.ultimaRecargaEm)} className="sm:col-span-2" />
+              <Metric label="Última recarga" value={formatDate(data.resumo.ultimaRecargaEm)} className="sm:col-span-2" />
             </div>
           </div>
         </PainelSurface>
@@ -220,7 +381,7 @@ export default function WhatsAppCreditosClient({
         <PainelSurface className="p-5">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
             <ShieldCheck size={15} />
-            Status da integracao
+            Status do WhatsApp
           </div>
           <h2 className="mt-2 text-xl font-black text-zinc-950">{data.statusLabel}</h2>
           <p className="mt-2 text-sm leading-6 text-zinc-500">{data.statusDescription}</p>
@@ -252,14 +413,17 @@ export default function WhatsAppCreditosClient({
         </PainelSurface>
       </section>
 
-      <section className="grid gap-4 xl:grid-cols-[0.9fr_1.1fr]">
+      <section className="grid gap-4 xl:grid-cols-[0.8fr_1.2fr]">
         <PainelSurface className="p-5">
           <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
             <MessageCircle size={15} />
-            Quanto custa cada mensagem?
+            Quanto custa cada aviso?
           </div>
+          <p className="mt-2 text-sm leading-6 text-zinc-500">
+            Você vê somente os avisos usados pelo seu salão. Recursos internos do SalãoPremium não aparecem aqui.
+          </p>
           <div className="mt-4 divide-y divide-zinc-100">
-            {data.tarifas.map((tarifa) => (
+            {visibleTarifas.map((tarifa) => (
               <div key={tarifa.id} className="grid gap-3 py-3 sm:grid-cols-[1fr_auto] sm:items-center">
                 <div className="min-w-0">
                   <div className="text-sm font-black text-zinc-950">{tarifa.nome}</div>
@@ -277,66 +441,82 @@ export default function WhatsAppCreditosClient({
 
         <PainelSurface className="overflow-hidden">
           <div className="border-b border-zinc-200 p-5">
-            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
-              <Send size={15} />
-              Modelos de mensagem
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-emerald-700">
+              <CheckCircle2 size={15} />
+              Mensagens automáticas
             </div>
             <h2 className="mt-2 text-xl font-black text-zinc-950">
-              Templates aprovados e disponiveis
+              Escolha quais avisos seus clientes recebem
             </h2>
+            <p className="mt-2 text-sm leading-6 text-zinc-500">
+              O SalãoPremium cuida do envio. Você só precisa ativar ou desativar cada aviso.
+            </p>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-zinc-50 text-[11px] font-black uppercase tracking-[0.14em] text-zinc-400">
-                <tr>
-                  <th className="px-4 py-3">Nome do modelo</th>
-                  <th className="px-4 py-3">Categoria</th>
-                  <th className="px-4 py-3">Idioma</th>
-                  <th className="px-4 py-3">Status</th>
-                  <th className="px-4 py-3">Ultima edicao</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100">
-                {data.templates.length ? (
-                  data.templates.map((template) => (
-                    <tr key={template.id} className="align-top">
-                      <td className="max-w-[260px] px-4 py-3">
-                        <div className="font-black text-zinc-950">{template.nome}</div>
-                        <div className="mt-1 line-clamp-1 text-xs text-zinc-500">
-                          {template.conteudo}
+          <div className="divide-y divide-zinc-100">
+            {automationsLoading ? (
+              <div className="px-5 py-8 text-sm text-zinc-500">Carregando preferências...</div>
+            ) : (
+              AUTOMATIONS.map((item) => {
+                const Icon = item.icon;
+                const enabled = automations[item.key];
+                const saving = savingAutomation === item.key;
+
+                return (
+                  <div key={item.key} className="grid gap-4 px-5 py-4 sm:grid-cols-[1fr_auto] sm:items-center">
+                    <div className="flex min-w-0 gap-3">
+                      <div className={`mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${enabled ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-500"}`}>
+                        <Icon size={18} />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <div className="font-black text-zinc-950">{item.title}</div>
+                          <span className={`rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.12em] ${enabled ? "bg-emerald-50 text-emerald-700" : "bg-zinc-100 text-zinc-500"}`}>
+                            {enabled ? "Ativado" : "Desativado"}
+                          </span>
                         </div>
-                      </td>
-                      <td className="px-4 py-3 font-semibold text-zinc-700">{template.categoria}</td>
-                      <td className="px-4 py-3 text-zinc-600">Portuguese (BR)</td>
-                      <td className="px-4 py-3">
-                        <span className="rounded-full border border-emerald-200 bg-emerald-50 px-2 py-1 text-xs font-black text-emerald-700">
-                          {template.status}
-                        </span>
-                      </td>
-                      <td className="px-4 py-3 text-zinc-600">{formatDate(template.criadoEm)}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <tr>
-                    <td className="px-4 py-6 text-sm text-zinc-500" colSpan={5}>
-                      Nenhum modelo cadastrado ainda.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                        <div className="mt-1 text-sm leading-6 text-zinc-500">{item.description}</div>
+                        <details className="mt-2 text-xs text-zinc-500">
+                          <summary className="cursor-pointer font-bold text-zinc-700">Ver exemplo</summary>
+                          <div className="mt-2 rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 leading-5">
+                            {item.example}
+                          </div>
+                        </details>
+                      </div>
+                    </div>
+
+                    <button
+                      type="button"
+                      role="switch"
+                      aria-checked={enabled}
+                      disabled={saving}
+                      onClick={() => void toggleAutomation(item.key, !enabled)}
+                      className={`relative h-7 w-12 shrink-0 rounded-full transition disabled:cursor-wait disabled:opacity-60 ${enabled ? "bg-emerald-600" : "bg-zinc-300"}`}
+                      aria-label={`${enabled ? "Desativar" : "Ativar"} ${item.title}`}
+                    >
+                      <span className={`absolute top-1 h-5 w-5 rounded-full bg-white shadow-sm transition ${enabled ? "left-6" : "left-1"}`} />
+                    </button>
+                  </div>
+                );
+              })
+            )}
           </div>
+
+          {automationError ? (
+            <div className="border-t border-rose-100 bg-rose-50 px-5 py-3 text-sm font-bold text-rose-700">
+              {automationError}
+            </div>
+          ) : null}
         </PainelSurface>
       </section>
 
       <PainelSurface id="whatsapp-extrato" className="overflow-hidden">
         <div className="border-b border-zinc-200 p-5">
           <div className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
-            Extrato visual
+            Extrato
           </div>
           <h2 className="mt-2 text-xl font-black text-zinc-950">
-            Ultimas movimentacoes
+            Últimas movimentações
           </h2>
         </div>
         <div className="divide-y divide-zinc-100">
@@ -347,7 +527,6 @@ export default function WhatsAppCreditosClient({
                   <div className="font-black text-zinc-950">{movementTitle(item)}</div>
                   <div className="mt-1 text-xs leading-5 text-zinc-500">
                     {formatDate(item.criadoEm)}
-                    {item.categoria ? ` | ${item.categoria}` : ""}
                   </div>
                 </div>
                 <div className={item.valorCentavos >= 0 ? "font-black text-emerald-700" : "font-black text-rose-700"}>
@@ -358,7 +537,7 @@ export default function WhatsAppCreditosClient({
             ))
           ) : (
             <div className="px-5 py-8 text-sm text-zinc-500">
-              Nenhuma movimentacao registrada ainda.
+              Nenhuma movimentação registrada ainda.
             </div>
           )}
         </div>
@@ -373,7 +552,7 @@ export default function WhatsAppCreditosClient({
                   Recarga WhatsApp
                 </div>
                 <h2 className="mt-2 text-xl font-black text-zinc-950">
-                  Adicionar creditos
+                  Adicionar créditos
                 </h2>
                 <p className="mt-1 text-sm leading-6 text-zinc-500">
                   Escolha o valor e gere o PIX. O saldo entra quando o pagamento for confirmado.

@@ -7,7 +7,10 @@ type AutomaticEvent =
   | "confirmacao_agendamento"
   | "agendamento_alterado"
   | "agendamento_cancelado"
+  | "profissional_confirmado"
   | "pagamento_confirmado";
+
+type AutomaticPreferenceEvent = AutomaticEvent | "lembrete_agendamento";
 
 type AutomaticJobRow = {
   id: string;
@@ -59,6 +62,27 @@ function appointmentIdFromNotificationKey(value?: string | null) {
     key
   );
   return match?.[1] || null;
+}
+
+async function isAutomationEnabled(
+  idSalao: string,
+  event: AutomaticPreferenceEvent
+) {
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await (supabase as any)
+    .from("whatsapp_automacoes_saloes")
+    .select(event)
+    .eq("id_salao", idSalao)
+    .maybeSingle();
+
+  if (error) {
+    if (String(error.message || "").includes("whatsapp_automacoes_saloes")) {
+      return true;
+    }
+    throw new Error(error.message);
+  }
+
+  return data?.[event] !== false;
 }
 
 async function loadAppointmentContext(idSalao: string, idAgendamento: string) {
@@ -154,11 +178,15 @@ async function loadComandaContext(idSalao: string, idComanda: string) {
 }
 
 async function sendAppointmentEvent(params: {
-  event: AutomaticEvent | "lembrete_agendamento";
+  event: AutomaticPreferenceEvent;
   idSalao: string;
   idAgendamento: string;
   idempotencyKey: string;
 }) {
+  if (!(await isAutomationEnabled(params.idSalao, params.event))) {
+    return { skipped: true, reason: "automation_disabled" as const };
+  }
+
   const ctx = await loadAppointmentContext(params.idSalao, params.idAgendamento);
   if (!ctx.clienteWhatsApp) throw new Error("Cliente sem WhatsApp cadastrado.");
 
@@ -169,13 +197,7 @@ async function sendAppointmentEvent(params: {
       tipo: "confirmacao_agendamento",
       tipoInterno: "agendamento_confirmacao",
       template: "confirmacao_agendamento",
-      templateVariables: [
-        ctx.clienteNome,
-        dateBR(ctx.data),
-        timeBR(ctx.hora),
-        ctx.profissionalNome,
-        ctx.servicoNome,
-      ],
+      templateVariables: [ctx.clienteNome, dateBR(ctx.data), timeBR(ctx.hora), ctx.profissionalNome, ctx.servicoNome],
       idAgendamento: ctx.id,
       idempotencyKey: params.idempotencyKey,
     });
@@ -188,13 +210,7 @@ async function sendAppointmentEvent(params: {
       tipo: "lembrete_agendamento",
       tipoInterno: "lembrete_agendamento",
       template: "lembrete_agendamento",
-      templateVariables: [
-        ctx.clienteNome,
-        dateBR(ctx.data),
-        timeBR(ctx.hora),
-        ctx.profissionalNome,
-        ctx.servicoNome,
-      ],
+      templateVariables: [ctx.clienteNome, dateBR(ctx.data), timeBR(ctx.hora), ctx.profissionalNome, ctx.servicoNome],
       idAgendamento: ctx.id,
       idempotencyKey: params.idempotencyKey,
     });
@@ -207,13 +223,7 @@ async function sendAppointmentEvent(params: {
       tipo: "agendamento_alterado",
       tipoInterno: "agendamento_alteracao",
       template: "agendamento_alterado",
-      templateVariables: [
-        ctx.clienteNome,
-        dateBR(ctx.data),
-        timeBR(ctx.hora),
-        ctx.profissionalNome,
-        ctx.servicoNome,
-      ],
+      templateVariables: [ctx.clienteNome, dateBR(ctx.data), timeBR(ctx.hora), ctx.profissionalNome, ctx.servicoNome],
       idAgendamento: ctx.id,
       idempotencyKey: params.idempotencyKey,
     });
@@ -226,13 +236,20 @@ async function sendAppointmentEvent(params: {
       tipo: "agendamento_cancelado",
       tipoInterno: "agendamento_cancelamento",
       template: "agendamento_cancelado",
-      templateVariables: [
-        ctx.clienteNome,
-        dateBR(ctx.data),
-        timeBR(ctx.hora),
-        ctx.servicoNome,
-        ctx.profissionalNome,
-      ],
+      templateVariables: [ctx.clienteNome, dateBR(ctx.data), timeBR(ctx.hora), ctx.servicoNome, ctx.profissionalNome],
+      idAgendamento: ctx.id,
+      idempotencyKey: params.idempotencyKey,
+    });
+  }
+
+  if (params.event === "profissional_confirmado") {
+    return sendManualMarketingWhatsApp({
+      idSalao: params.idSalao,
+      destino: ctx.clienteWhatsApp,
+      tipo: "profissional_confirmado",
+      tipoInterno: "profissional_confirmado",
+      template: "profissional_confirmado",
+      templateVariables: [ctx.clienteNome, ctx.profissionalNome, dateBR(ctx.data), timeBR(ctx.hora), ctx.servicoNome],
       idAgendamento: ctx.id,
       idempotencyKey: params.idempotencyKey,
     });
@@ -256,6 +273,10 @@ async function sendAppointmentEvent(params: {
 }
 
 async function sendComandaPaymentEvent(job: AutomaticJobRow) {
+  if (!(await isAutomationEnabled(job.id_salao, "pagamento_confirmado"))) {
+    return { skipped: true, reason: "automation_disabled" as const };
+  }
+
   if (!job.id_comanda) throw new Error("Comanda ausente no job WhatsApp.");
   const ctx = await loadComandaContext(job.id_salao, job.id_comanda);
   if (!ctx.clienteWhatsApp) throw new Error("Cliente sem WhatsApp cadastrado.");
@@ -289,9 +310,7 @@ export async function processPendingAutomaticWhatsAppEvents(limit = 25) {
   const now = new Date().toISOString();
   const { data, error } = await (supabase as any)
     .from("whatsapp_automatic_jobs")
-    .select(
-      "id, id_salao, id_agendamento, id_comanda, evento, idempotency_key, tentativas"
-    )
+    .select("id, id_salao, id_agendamento, id_comanda, evento, idempotency_key, tentativas")
     .eq("status", "pendente")
     .lte("enviar_em", now)
     .order("enviar_em", { ascending: true })
@@ -354,9 +373,7 @@ export async function processPendingAutomaticWhatsAppEvents(limit = 25) {
         .from("whatsapp_automatic_jobs")
         .update({
           status: retry ? "pendente" : "falhou",
-          enviar_em: retry
-            ? new Date(Date.now() + attempts * 5 * 60_000).toISOString()
-            : now,
+          enviar_em: retry ? new Date(Date.now() + attempts * 5 * 60_000).toISOString() : now,
           erro_texto: message.slice(0, 1000),
           processado_em: retry ? null : new Date().toISOString(),
           atualizado_em: new Date().toISOString(),
