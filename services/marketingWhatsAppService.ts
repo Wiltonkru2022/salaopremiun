@@ -2,18 +2,33 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { assertCanMutatePlanFeature } from "@/lib/plans/access";
-import { sendMetaWhatsAppTextMessage } from "@/lib/whatsapp/meta-cloud";
+import {
+  sendMetaWhatsAppTemplateMessage,
+  sendMetaWhatsAppTextMessage,
+} from "@/lib/whatsapp/meta-cloud";
 import type { Json } from "@/types/database.generated";
 
 type SendManualMarketingWhatsAppParams = {
   idSalao: string;
   destino: string;
-  mensagem: string;
+  mensagem?: string | null;
   tipo?: string;
   tipoInterno?: string;
   template?: string | null;
+  templateVariables?: Array<string | number | boolean | null | undefined>;
   idAgendamento?: string | null;
   idempotencyKey?: string | null;
+};
+
+type WhatsAppTemplateConfig = {
+  id: string;
+  nome: string;
+  nomeMeta: string;
+  idioma: string;
+  categoriaMeta: string | null;
+  tipoInterno: string | null;
+  conteudo: string;
+  variaveis: unknown;
 };
 
 type MetaSendResult = {
@@ -68,6 +83,90 @@ function getDebitNumber(data: Record<string, unknown>, key: string) {
   return Number.isFinite(value) ? Math.trunc(value) : 0;
 }
 
+function normalizeTemplateValues(
+  values?: Array<string | number | boolean | null | undefined>
+) {
+  return (values || []).map((value) => String(value ?? "").trim());
+}
+
+function getTemplateVariableCount(variaveis: unknown) {
+  if (!Array.isArray(variaveis)) return 0;
+
+  return variaveis.reduce((max, item, index) => {
+    if (!item || typeof item !== "object" || Array.isArray(item)) {
+      return Math.max(max, index + 1);
+    }
+
+    const position = Number((item as Record<string, unknown>).position || 0);
+    return Math.max(max, Number.isFinite(position) ? position : index + 1);
+  }, 0);
+}
+
+function renderTemplateMessage(template: WhatsAppTemplateConfig, values: string[]) {
+  return normalizeMensagem(
+    template.conteudo.replace(/\{\{\s*(\d+)\s*\}\}/g, (match, position) => {
+      const value = values[Number(position) - 1];
+      return value || match;
+    })
+  );
+}
+
+async function findTemplateByColumn(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  column: string,
+  value: string
+) {
+  const { data, error } = await (supabaseAdmin as any)
+    .from("whatsapp_templates")
+    .select(
+      "id, nome, nome_meta, idioma, categoria_meta, tipo_interno, conteudo, variaveis_json"
+    )
+    .eq("ativo", true)
+    .eq(column, value)
+    .order("atualizado_em", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message || "Nao foi possivel carregar o template WhatsApp.");
+  }
+
+  return data as Record<string, unknown> | null;
+}
+
+async function loadWhatsAppTemplateConfig(
+  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  template?: string | null
+): Promise<WhatsAppTemplateConfig | null> {
+  const name = String(template || "").trim();
+  if (!name) return null;
+
+  const row =
+    (await findTemplateByColumn(supabaseAdmin, "nome_meta", name)) ||
+    (await findTemplateByColumn(supabaseAdmin, "nome", name)) ||
+    (await findTemplateByColumn(supabaseAdmin, "tipo_interno", name));
+
+  if (!row?.id) {
+    throw new Error(`Template WhatsApp nao encontrado ou inativo: ${name}.`);
+  }
+
+  const nomeMeta = String(row.nome_meta || row.nome || name).trim();
+  if (!nomeMeta) {
+    throw new Error("Template WhatsApp sem nome Meta configurado.");
+  }
+
+  return {
+    id: String(row.id),
+    nome: String(row.nome || nomeMeta),
+    nomeMeta,
+    idioma: String(row.idioma || "pt_BR").trim() || "pt_BR",
+    categoriaMeta: row.categoria_meta ? String(row.categoria_meta) : null,
+    tipoInterno: row.tipo_interno ? String(row.tipo_interno) : null,
+    conteudo: String(row.conteudo || ""),
+    variaveis: row.variaveis_json || [],
+  };
+}
+
 export async function sendManualMarketingWhatsApp({
   idSalao,
   destino,
@@ -75,6 +174,7 @@ export async function sendManualMarketingWhatsApp({
   tipo = "manual",
   tipoInterno,
   template = null,
+  templateVariables,
   idAgendamento = null,
   idempotencyKey = null,
 }: SendManualMarketingWhatsAppParams) {
@@ -82,14 +182,33 @@ export async function sendManualMarketingWhatsApp({
 
   const supabaseAdmin = getSupabaseAdmin();
   const destinoNormalizado = normalizeDestino(destino);
-  const mensagemNormalizada = normalizeMensagem(mensagem);
   const envioId = randomUUID();
-  const tipoInternoResolvido = resolveTipoInterno(tipo, tipoInterno);
+  const templateConfig = await loadWhatsAppTemplateConfig(supabaseAdmin, template);
+  const templateValues = normalizeTemplateValues(templateVariables);
+  const tipoInternoResolvido =
+    templateConfig?.tipoInterno || resolveTipoInterno(tipo, tipoInterno);
+  const templateNomeMeta = templateConfig?.nomeMeta || template || null;
+  const mensagemNormalizada = templateConfig
+    ? normalizeMensagem(mensagem || renderTemplateMessage(templateConfig, templateValues))
+    : normalizeMensagem(mensagem || "");
   const idempotency =
     String(idempotencyKey || "").trim() || `whatsapp_envio:${envioId}`;
 
   if (!destinoNormalizado) {
     throw new Error("Numero de destino obrigatorio.");
+  }
+
+  if (templateConfig) {
+    const expectedVariables = getTemplateVariableCount(templateConfig.variaveis);
+    const missingVariable = Array.from({ length: expectedVariables }).some(
+      (_, index) => !templateValues[index]
+    );
+
+    if (missingVariable) {
+      throw new Error(
+        `Template ${templateConfig.nomeMeta} exige ${expectedVariables} variavel(is).`
+      );
+    }
   }
 
   if (!mensagemNormalizada) {
@@ -130,7 +249,7 @@ export async function sendManualMarketingWhatsApp({
         id_salao: idSalao,
         tipo,
         destino: destinoNormalizado,
-        template,
+        template: templateNomeMeta,
         mensagem: mensagemNormalizada,
         status: "processando",
         custo_creditos: 0,
@@ -142,7 +261,17 @@ export async function sendManualMarketingWhatsApp({
           request: {
             destino: destinoNormalizado,
             mensagem: mensagemNormalizada,
+            template: templateNomeMeta,
+            template_variables: templateValues,
           },
+          template_config: templateConfig
+            ? {
+                id: templateConfig.id,
+                nome: templateConfig.nome,
+                nome_meta: templateConfig.nomeMeta,
+                idioma: templateConfig.idioma,
+              }
+            : null,
           tipo_interno: tipoInternoResolvido,
         } as Json,
       })
@@ -197,6 +326,8 @@ export async function sendManualMarketingWhatsApp({
           request: {
             destino: destinoNormalizado,
             mensagem: mensagemNormalizada,
+            template: templateNomeMeta,
+            template_variables: templateValues,
           },
           debito,
           tipo_interno: tipoInternoResolvido,
@@ -210,10 +341,17 @@ export async function sendManualMarketingWhatsApp({
       );
     }
 
-    const providerResult = (await sendMetaWhatsAppTextMessage({
-      to: destinoNormalizado,
-      body: mensagemNormalizada,
-    })) as MetaSendResult;
+    const providerResult = (templateConfig
+      ? await sendMetaWhatsAppTemplateMessage({
+          to: destinoNormalizado,
+          name: templateConfig.nomeMeta,
+          languageCode: templateConfig.idioma,
+          bodyParameters: templateValues,
+        })
+      : await sendMetaWhatsAppTextMessage({
+          to: destinoNormalizado,
+          body: mensagemNormalizada,
+        })) as MetaSendResult;
 
     const providerMessageId = getProviderMessageId(providerResult);
     providerAccepted = true;
@@ -231,6 +369,8 @@ export async function sendManualMarketingWhatsApp({
           request: {
             destino: destinoNormalizado,
             mensagem: mensagemNormalizada,
+            template: templateNomeMeta,
+            template_variables: templateValues,
           },
           tipo_interno: tipoInternoResolvido,
           response: providerResult,
@@ -279,6 +419,7 @@ export async function sendManualMarketingWhatsApp({
             credito_movimentacao_id: creditoMovimentacaoId,
             failed_at: new Date().toISOString(),
             tipo_interno: tipoInternoResolvido,
+            template: templateNomeMeta,
           } as Json,
         })
         .eq("id", envioId);

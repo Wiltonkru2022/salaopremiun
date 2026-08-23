@@ -1,0 +1,173 @@
+#Nome do modelo:
+agendamento_alterado
+
+#Cabeçalho:
+Agendamento atualizado
+
+
+#Corpo
+Olá, {{1}}! 🔄 Seu agendamento foi atualizado.
+
+📅 Nova data: {{2}}
+⏰ Novo horário: {{3}}
+👤 Profissional: {{4}}
+✂️ Serviço: {{5}}
+
+Confira os novos dados do seu atendimento.
+
+
+
+#Variáveis
+{{1}} = cliente
+{{2}} = data
+{{3}} = horário
+{{4}} = profissional
+{{5}} = serviço
+
+
+-------------------------------------------------------------------
+
+#Nome do modelo:
+lembrete_agendamento
+
+#Cabeçalho:
+Lembrete de agendamento
+
+
+#Corpo
+Olá, {{1}}! ⏰ Passando para lembrar que você tem um agendamento marcado para {{2}}, às {{3}}, com {{4}}.
+
+✂️ Serviço: {{5}}.
+
+Esperamos você! 😊
+
+
+
+#Variáveis
+{{1}} = cliente
+{{2}} = data
+{{3}} = horário
+{{4}} = profissional
+{{5}} = serviço
+
+
+
+
+---------------------------------------------------------------------
+
+
+#Nome do modelo:
+agendamento_cancelado
+
+#Cabeçalho:
+Agendamento cancelado
+
+
+#Corpo
+Olá, {{1}}. Seu agendamento do dia {{2}}, às {{3}}, foi cancelado. ❌
+
+✂️ Serviço: {{4}}
+👤 Profissional: {{5}}
+
+Se desejar, você poderá realizar um novo agendamento.
+
+
+
+#Variáveis
+{{1}} = nome da cliente
+{{2}} = data que estava marcada
+{{3}} = horário que estava marcado
+{{4}} = serviço
+{{5}} = profissional
+
+
+
+-------------------------------------------------------------------
+
+
+#Nome do modelo:
+profissional_confirmado
+
+#Cabeçalho:
+Profissional confirmado
+
+
+#Corpo
+Olá, {{1}}! 👋 O profissional do seu próximo atendimento está confirmado.
+
+👤 Profissional: {{2}}
+📅 Data: {{3}}
+⏰ Horário: {{4}}
+✂️ Serviço: {{5}}
+
+Até o seu atendimento! 😊
+
+
+
+#Variáveis
+{{1}} = nome da cliente
+{{2}} = nome do profissional
+{{3}} = data
+{{4}} = horário
+{{5}} = serviço
+
+
+-----------------------------------------------------------------------
+
+
+#Nome do modelo:
+pagamento_confirmado
+
+#Cabeçalho:
+Pagamento confirmado
+
+
+#Corpo
+Olá, {{1}}! ✅ Recebemos a confirmação do seu pagamento.
+
+💰 Valor: R$ {{2}}
+🧾 Referência: {{3}}
+📅 Data: {{4}}
+
+Seu pagamento foi registrado com sucesso.
+
+
+
+#Variáveis
+{{1}} = nome da cliente
+{{2}} = valor pago
+{{3}} = referência do pagamento/agendamento
+{{4}} = data do pagamento
+
+
+-----------------------------------------------------------------------
+
+
+
+#Nome do modelo:
+aviso_atualizacao_acesso
+
+#Cabeçalho:
+Atualização importante
+
+
+#Corpo
+Olá, {{1}}! 👋
+
+Fizemos uma atualização na forma de acesso ao SalãoPremium.
+
+Para continuar utilizando sua conta normalmente, abra o aplicativo e confira as novas instruções disponíveis na tela de acesso.
+
+Se precisar de ajuda, fale com nosso suporte pelo WhatsApp.
+
+
+
+#Variáveis
+{{1}} = Maria
+
+
+
+--------------------------------------------------------------------------
+
+
+codigo_verificacao

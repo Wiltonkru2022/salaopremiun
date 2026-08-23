@@ -6,6 +6,8 @@ type Body = {
   to?: string;
   message?: string;
   template?: string | null;
+  templateVariables?: Array<string | number | boolean | null>;
+  tipoInterno?: string | null;
 };
 
 export async function POST(request: Request) {
@@ -15,6 +17,10 @@ export async function POST(request: Request) {
     const to = String(body.to || "").trim();
     const message = String(body.message || "").trim();
     const template = body.template ? String(body.template).trim() : null;
+    const tipoInterno = body.tipoInterno ? String(body.tipoInterno).trim() : null;
+    const templateVariables = Array.isArray(body.templateVariables)
+      ? body.templateVariables
+      : [];
 
     if (!to) {
       return NextResponse.json(
@@ -23,7 +29,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (!message) {
+    if (!message && !template) {
       return NextResponse.json(
         { error: "Mensagem obrigatoria." },
         { status: 400 }
@@ -36,7 +42,8 @@ export async function POST(request: Request) {
       mensagem: message,
       tipo: "manual_marketing",
       template,
-      tipoInterno: "marketing",
+      templateVariables,
+      tipoInterno: tipoInterno || "marketing",
       idempotencyKey: request.headers.get("x-idempotency-key"),
     });
 

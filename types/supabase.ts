@@ -170,6 +170,39 @@ type WhatsappEnviosTable = Omit<
   };
 };
 
+type WhatsappTemplatesTable = Omit<
+  BaseTables["whatsapp_templates"],
+  "Row" | "Insert" | "Update"
+> & {
+  Row: BaseTables["whatsapp_templates"]["Row"] & {
+    atualizado_em: string;
+    cabecalho: string | null;
+    categoria_meta: string | null;
+    idioma: string;
+    nome_meta: string | null;
+    tipo_interno: string | null;
+    variaveis_json: Json;
+  };
+  Insert: BaseTables["whatsapp_templates"]["Insert"] & {
+    atualizado_em?: string;
+    cabecalho?: string | null;
+    categoria_meta?: string | null;
+    idioma?: string;
+    nome_meta?: string | null;
+    tipo_interno?: string | null;
+    variaveis_json?: Json;
+  };
+  Update: BaseTables["whatsapp_templates"]["Update"] & {
+    atualizado_em?: string;
+    cabecalho?: string | null;
+    categoria_meta?: string | null;
+    idioma?: string;
+    nome_meta?: string | null;
+    tipo_interno?: string | null;
+    variaveis_json?: Json;
+  };
+};
+
 type WhatsappTarifasTable = {
   Row: {
     id: string;
@@ -387,6 +420,7 @@ type ExtendedTables = Omit<
   | "clientes_app_auth"
   | "clientes_auth"
   | "whatsapp_envios"
+  | "whatsapp_templates"
 > & {
   servicos: BaseTables["servicos"] & ServicosTableExtensions;
   servicos_combo_itens: ServicosComboItensTable;
@@ -399,6 +433,7 @@ type ExtendedTables = Omit<
   security_login_attempts: SecurityLoginAttemptsTable;
   user_security_status: UserSecurityStatusTable;
   whatsapp_envios: WhatsappEnviosTable;
+  whatsapp_templates: WhatsappTemplatesTable;
   whatsapp_pacote_compras: WhatsappPacoteComprasTable;
   whatsapp_tarifas: WhatsappTarifasTable;
   whatsapp_creditos_saloes: WhatsappCreditosSaloesTable;
