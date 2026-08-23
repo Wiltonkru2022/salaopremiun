@@ -12,6 +12,7 @@ import {
   getPlanoAccessSnapshot,
   type PlanoRecursoCodigo,
 } from "@/lib/plans/access";
+import { assertSalaoOnboardingConcluido } from "@/lib/saloes/operational-state";
 
 type RequireSalaoPermissionOptions = {
   allowedNiveis?: string[];
@@ -71,6 +72,7 @@ export async function getSalaoPermissionContext(
   options: RequireSalaoPermissionOptions = {}
 ) {
   const membership = await requireSalaoMembership(idSalao, options);
+  await assertSalaoOnboardingConcluido(idSalao);
   const permissoesDb = await getUserPermissionsRow(idSalao, membership.usuario.id);
 
   const permissoes = {
