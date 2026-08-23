@@ -12,8 +12,10 @@ const AUTOMATION_KEYS = [
 ] as const;
 
 type AutomationKey = (typeof AUTOMATION_KEYS)[number];
-
 type AutomationPreferences = Record<AutomationKey, boolean>;
+
+const AUTOMATION_SELECT =
+  "confirmacao_agendamento, lembrete_agendamento, agendamento_alterado, agendamento_cancelado, profissional_confirmado, pagamento_confirmado";
 
 const DEFAULTS: AutomationPreferences = {
   confirmacao_agendamento: true,
@@ -36,10 +38,10 @@ function normalize(row?: Record<string, unknown> | null): AutomationPreferences 
 }
 
 async function loadPreferences(idSalao: string) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getSupabaseAdmin() as any;
   const { data, error } = await supabase
     .from("whatsapp_automacoes_saloes")
-    .select(AUTOMATION_KEYS.join(","))
+    .select(AUTOMATION_SELECT)
     .eq("id_salao", idSalao)
     .maybeSingle();
 
@@ -49,7 +51,7 @@ async function loadPreferences(idSalao: string) {
   const { data: created, error: createError } = await supabase
     .from("whatsapp_automacoes_saloes")
     .upsert({ id_salao: idSalao, ...DEFAULTS }, { onConflict: "id_salao" })
-    .select(AUTOMATION_KEYS.join(","))
+    .select(AUTOMATION_SELECT)
     .single();
 
   if (createError) throw createError;
@@ -90,7 +92,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const supabase = getSupabaseAdmin();
+    const supabase = getSupabaseAdmin() as any;
     const current = await loadPreferences(actor.idSalao);
     const next = { ...current, [key]: body.enabled };
 
@@ -104,7 +106,7 @@ export async function PATCH(request: Request) {
         },
         { onConflict: "id_salao" }
       )
-      .select(AUTOMATION_KEYS.join(","))
+      .select(AUTOMATION_SELECT)
       .single();
 
     if (error) throw error;
