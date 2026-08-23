@@ -22,7 +22,7 @@ function isPagamentoConfirmado(status?: string | null, event?: string | null) {
 }
 
 function mapRecargaStatus(status?: string | null, event?: string | null) {
-  if (isPagamentoConfirmado(status, event)) return "pago";
+  if (isPagamentoConfirmado(status, event)) return "processando";
 
   const normalizedStatus = String(status || "").toUpperCase();
   const normalizedEvent = String(event || "").toUpperCase();
@@ -100,7 +100,6 @@ export async function processarWebhookRecargaWhatsapp(params: {
     };
   }
 
-  const proximoStatus = mapRecargaStatus(params.paymentStatus, params.event);
   const jaPago = String(recargaRow.status || "").toLowerCase() === "pago";
   const pagamentoConfirmado = isPagamentoConfirmado(
     params.paymentStatus,
@@ -110,21 +109,22 @@ export async function processarWebhookRecargaWhatsapp(params: {
     ? getPagamentoConfirmadoEm(params.payment, params.agoraIso)
     : null;
 
-  const { error: updateError } = await params.supabaseAdmin
-    .from("whatsapp_creditos_recargas")
-    .update({
-      status: proximoStatus,
-      asaas_payment_id: params.paymentId,
-      invoice_url: String(params.payment.invoiceUrl || "").trim() || null,
-      bank_slip_url: String(params.payment.bankSlipUrl || "").trim() || null,
-      response_json: params.payment,
-      pago_em: pagoEm,
-    })
-    .eq("id", recargaRow.id);
+  if (!pagamentoConfirmado) {
+    const proximoStatus = mapRecargaStatus(params.paymentStatus, params.event);
+    const { error: updateError } = await params.supabaseAdmin
+      .from("whatsapp_creditos_recargas")
+      .update({
+        status: proximoStatus,
+        asaas_payment_id: params.paymentId,
+        invoice_url: String(params.payment.invoiceUrl || "").trim() || null,
+        bank_slip_url: String(params.payment.bankSlipUrl || "").trim() || null,
+        response_json: params.payment,
+        erro_texto: null,
+      })
+      .eq("id", recargaRow.id);
 
-  if (updateError) throw updateError;
+    if (updateError) throw updateError;
 
-  if (!pagamentoConfirmado || jaPago) {
     return {
       ok: true,
       kind: "whatsapp_credit_topup",
@@ -133,42 +133,97 @@ export async function processarWebhookRecargaWhatsapp(params: {
     };
   }
 
+  if (jaPago) {
+    return {
+      ok: true,
+      kind: "whatsapp_credit_topup",
+      status: "pago",
+      recargaId: recargaRow.id,
+    };
+  }
+
+  const { error: processingError } = await params.supabaseAdmin
+    .from("whatsapp_creditos_recargas")
+    .update({
+      status: "processando",
+      asaas_payment_id: params.paymentId,
+      invoice_url: String(params.payment.invoiceUrl || "").trim() || null,
+      bank_slip_url: String(params.payment.bankSlipUrl || "").trim() || null,
+      response_json: params.payment,
+      pago_em: pagoEm,
+      erro_texto: null,
+    })
+    .eq("id", recargaRow.id);
+
+  if (processingError) throw processingError;
+
   const valorCentavos = Math.max(Number(recargaRow.valor_centavos || 0), 0);
 
-  const rpcResult = await params.supabaseAdmin.rpc(
-    "fn_whatsapp_creditos_registrar_recarga",
-    {
-      p_id_salao: recargaRow.id_salao,
-      p_valor_centavos: valorCentavos,
-      p_referencia_externa: `asaas:${params.paymentId}`,
-      p_descricao: "Recarga via PIX",
-    }
-  );
-
-  if (rpcResult.error) throw rpcResult.error;
-
-  const { error: extraError } = await params.supabaseAdmin
-    .from("saloes_recursos_extras")
-    .upsert(
+  try {
+    const rpcResult = await params.supabaseAdmin.rpc(
+      "fn_whatsapp_creditos_registrar_recarga",
       {
-        id_salao: recargaRow.id_salao,
-        recurso_codigo: "whatsapp",
-        habilitado: true,
-        origem: "whatsapp_creditos",
-        expira_em: null,
-      },
-      {
-        onConflict: "id_salao,recurso_codigo",
+        p_id_salao: recargaRow.id_salao,
+        p_valor_centavos: valorCentavos,
+        p_referencia_externa: `asaas:${params.paymentId}`,
+        p_descricao: "Recarga via PIX",
       }
     );
 
-  if (extraError) throw extraError;
+    if (rpcResult.error) throw rpcResult.error;
 
-  return {
-    ok: true,
-    kind: "whatsapp_credit_topup",
-    status: "pago",
-    recargaId: recargaRow.id,
-    valorCentavos,
-  };
+    const { error: extraError } = await params.supabaseAdmin
+      .from("saloes_recursos_extras")
+      .upsert(
+        {
+          id_salao: recargaRow.id_salao,
+          recurso_codigo: "whatsapp",
+          habilitado: true,
+          origem: "whatsapp_creditos",
+          expira_em: null,
+        },
+        {
+          onConflict: "id_salao,recurso_codigo",
+        }
+      );
+
+    if (extraError) throw extraError;
+
+    const creditadoEm = new Date().toISOString();
+    const { error: paidError } = await params.supabaseAdmin
+      .from("whatsapp_creditos_recargas")
+      .update({
+        status: "pago",
+        pago_em: pagoEm,
+        creditado_em: creditadoEm,
+        erro_texto: null,
+      })
+      .eq("id", recargaRow.id);
+
+    if (paidError) throw paidError;
+
+    return {
+      ok: true,
+      kind: "whatsapp_credit_topup",
+      status: "pago",
+      recargaId: recargaRow.id,
+      valorCentavos,
+    };
+  } catch (cause) {
+    const message =
+      cause instanceof Error
+        ? cause.message
+        : "Falha ao liberar os creditos da recarga WhatsApp.";
+
+    await params.supabaseAdmin
+      .from("whatsapp_creditos_recargas")
+      .update({
+        status: "falhou",
+        pago_em: pagoEm,
+        erro_texto: message.slice(0, 1000),
+      })
+      .eq("id", recargaRow.id);
+
+    throw cause;
+  }
 }
