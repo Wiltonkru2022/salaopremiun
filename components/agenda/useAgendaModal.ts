@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import type { SearchableOption } from "@/components/ui/SearchableSelect";
 import { getUpgradeTarget } from "@/components/plans/usePlanoAccessSnapshot";
@@ -113,6 +113,7 @@ export function useAgendaModal({
   onCriarComanda,
 }: AgendaModalProps) {
   const { snapshot: painelSession } = usePainelSession();
+  const initializationKeyRef = useRef<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [loadingComanda, setLoadingComanda] = useState(false);
 
@@ -264,7 +265,21 @@ export function useAgendaModal({
   }
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      initializationKeyRef.current = null;
+      return;
+    }
+
+    const initializationKey =
+      mode === "agendamento"
+        ? `agendamento:${editingItem?.id || "novo"}`
+        : `bloqueio:${editingBlock?.id || "novo"}`;
+
+    if (initializationKeyRef.current === initializationKey) {
+      return;
+    }
+
+    initializationKeyRef.current = initializationKey;
 
     if (mode === "agendamento") {
       if (editingItem) {

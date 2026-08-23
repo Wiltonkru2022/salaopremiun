@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, CircleAlert } from "lucide-react";
 import CaixaCancelModal from "@/components/caixa/CaixaCancelModal";
@@ -231,6 +231,28 @@ export default function CaixaPage() {
   const agendamentoAutoOpenRef = useRef<string | null>(null);
   const avisoReaberturaRef = useRef<string | null>(null);
   const lastFocusRefreshAtRef = useRef(0);
+  const modalOperacionalAberto =
+    pagamentosOpen ||
+    sessaoOpen ||
+    itemModal.open ||
+    cancelModalOpen ||
+    Boolean(itemParaRemover);
+  const modalOperacionalAbertoRef = useRef(modalOperacionalAberto);
+  modalOperacionalAbertoRef.current = modalOperacionalAberto;
+
+  const aplicarDetalheComandaEmSegundoPlano = useCallback(
+    (idComanda: string) => {
+      if (modalOperacionalAbertoRef.current) {
+        return;
+      }
+
+      void aplicarDetalheComanda(idComanda, {
+        silent: true,
+        canApply: () => !modalOperacionalAbertoRef.current,
+      });
+    },
+    [aplicarDetalheComanda]
+  );
 
   useEffect(() => {
     void init();
@@ -238,7 +260,7 @@ export default function CaixaPage() {
   }, [requestedComandaId, requestedAgendamentoId]);
 
   useEffect(() => {
-    if (!acessoCarregado || !idSalao || loading || saving) {
+    if (!acessoCarregado || !idSalao || loading || saving || modalOperacionalAberto) {
       return;
     }
 
@@ -257,7 +279,7 @@ export default function CaixaPage() {
       void carregarSessaoOperacional(idSalao);
 
       if (comandaSelecionada?.id) {
-        void aplicarDetalheComanda(comandaSelecionada.id);
+        aplicarDetalheComandaEmSegundoPlano(comandaSelecionada.id);
       }
     };
 
@@ -270,7 +292,7 @@ export default function CaixaPage() {
       void carregarSessaoOperacional(idSalao);
 
       if (comandaSelecionada?.id) {
-        void aplicarDetalheComanda(comandaSelecionada.id);
+        aplicarDetalheComandaEmSegundoPlano(comandaSelecionada.id);
       }
     }, 45000);
 
@@ -296,16 +318,17 @@ export default function CaixaPage() {
     idSalao,
     loading,
     saving,
+    modalOperacionalAberto,
     carregarTudo,
     carregarFilaOperacional,
     carregarHistorico,
     carregarSessaoOperacional,
-    aplicarDetalheComanda,
+    aplicarDetalheComandaEmSegundoPlano,
     comandaSelecionada?.id,
   ]);
 
   useEffect(() => {
-    if (!acessoCarregado || !idSalao || loading || saving) {
+    if (!acessoCarregado || !idSalao || loading || saving || modalOperacionalAberto) {
       return;
     }
 
@@ -314,7 +337,7 @@ export default function CaixaPage() {
       void carregarSessaoOperacional(idSalao);
 
       if (comandaSelecionada?.id) {
-        void aplicarDetalheComanda(comandaSelecionada.id);
+        aplicarDetalheComandaEmSegundoPlano(comandaSelecionada.id);
       }
     };
 
@@ -340,10 +363,11 @@ export default function CaixaPage() {
     idSalao,
     loading,
     saving,
+    modalOperacionalAberto,
     supabase,
     carregarFilaOperacional,
     carregarSessaoOperacional,
-    aplicarDetalheComanda,
+    aplicarDetalheComandaEmSegundoPlano,
     comandaSelecionada?.id,
   ]);
 

@@ -264,10 +264,10 @@ export default function AgendaModal(props: Props) {
   if (variant === "sidebar") {
     return (
       <div className="flex h-full min-h-0 flex-col">
-        <div className="min-h-0 flex-1 overflow-y-auto">
-          {overlays}
+        {overlays}
 
-          {!aviso.open && !showComandaDecisionModal && statusPickerOpen ? (
+        {!aviso.open && !showComandaDecisionModal && statusPickerOpen ? (
+          <div className="min-h-0 flex-1 overflow-y-auto">
             <div className="rounded-lg border border-zinc-200 bg-white p-5 shadow-[0_10px_30px_rgba(15,23,42,0.05)]">
               <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-zinc-400">
                 Status do agendamento
@@ -319,21 +319,25 @@ export default function AgendaModal(props: Props) {
                 </button>
               </div>
             </div>
-          ) : null}
+          </div>
+        ) : null}
 
-          {!aviso.open && !showComandaDecisionModal && !statusPickerOpen ? (
-            <form
-              onSubmit={handleSubmit}
-              onKeyDown={handleFormKeyDown}
-              className="flex min-h-0 flex-1 flex-col"
-            >
+        {!aviso.open && !showComandaDecisionModal && !statusPickerOpen ? (
+          <form
+            onSubmit={handleSubmit}
+            onKeyDown={handleFormKeyDown}
+            className="flex min-h-0 flex-1 flex-col overflow-hidden"
+          >
+            <div className="min-h-0 flex-1 overflow-y-auto">
               <div className="space-y-4">
                 {avisoPlanoAgenda}
                 {formBody}
                 <div className="border-t border-zinc-200 pt-4">{resumo}</div>
               </div>
+            </div>
 
-              <div className="mt-4 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+            <div className="-mx-0 mt-3 shrink-0 border-t border-zinc-200 bg-white pt-3">
+              <div className="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
                 {onBack ? (
                   <button
                     type="button"
@@ -352,9 +356,9 @@ export default function AgendaModal(props: Props) {
                   {saving ? "Salvando..." : "Salvar"}
                 </button>
               </div>
-            </form>
-          ) : null}
-        </div>
+            </div>
+          </form>
+        ) : null}
       </div>
     );
   }

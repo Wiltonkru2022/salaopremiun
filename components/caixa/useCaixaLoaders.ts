@@ -75,6 +75,11 @@ type UseCaixaLoadersParams = {
   setProfissionaisCatalogo: StateSetter<ProfissionalResumo[]>;
 };
 
+type AplicarDetalheComandaOptions = {
+  silent?: boolean;
+  canApply?: () => boolean;
+};
+
 export function useCaixaLoaders({
   supabase,
   router,
@@ -116,9 +121,15 @@ export function useCaixaLoaders({
   }, [setComandaSelecionada, setItens, setPagamentos]);
 
   const aplicarDetalheComanda = useCallback(
-    async (idComanda: string) => {
+    async (
+      idComanda: string,
+      options: AplicarDetalheComandaOptions = {}
+    ) => {
       try {
-        setComandaCarregandoId(idComanda);
+        if (!options.silent) {
+          setComandaCarregandoId(idComanda);
+        }
+
         const detalhe = await monitorClientOperation(
           {
             module: "caixa",
@@ -132,15 +143,21 @@ export function useCaixaLoaders({
           () => carregarComandaDetalhe(supabase, idComanda)
         );
 
+        if (options.canApply && !options.canApply()) {
+          return;
+        }
+
         setComandaSelecionada(detalhe.comandaSelecionada);
         setItens(detalhe.itens);
         setPagamentos(detalhe.pagamentos);
         setDescontoInput(detalhe.descontoInput);
         setAcrescimoInput(detalhe.acrescimoInput);
       } finally {
-        setComandaCarregandoId((current) =>
-          current === idComanda ? null : current
-        );
+        if (!options.silent) {
+          setComandaCarregandoId((current) =>
+            current === idComanda ? null : current
+          );
+        }
       }
     },
     [

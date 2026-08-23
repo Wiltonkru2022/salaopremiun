@@ -148,8 +148,8 @@ export default function CaixaPagamentos({
 
   return (
     <>
-      <div className="flex min-h-full flex-col">
-        <div className="space-y-4 pb-4">
+      <div className="flex min-h-0 w-full flex-1 flex-col">
+        <div className="min-h-0 flex-1 overflow-y-auto space-y-4 pb-4">
           <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
             <div className="flex items-center justify-between gap-4">
               <div className="min-w-0">
@@ -301,7 +301,7 @@ export default function CaixaPagamentos({
           </div>
         </div>
 
-        <div className="sticky bottom-0 z-20 -mx-5 mt-auto shrink-0 border-t border-slate-200 bg-white px-5 py-3 sm:-mx-6 sm:px-6">
+        <div className="-mx-5 mt-auto shrink-0 border-t border-slate-200 bg-white px-5 py-3 sm:-mx-6 sm:px-6">
           <div className="mb-3 flex items-center justify-between gap-3 rounded-lg bg-slate-50 px-3 py-2 text-sm">
             <span className="font-semibold text-slate-500">Falta receber</span>
             <strong className="text-base text-emerald-700">

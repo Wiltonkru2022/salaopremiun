@@ -20,6 +20,8 @@ import type {
   ViewMode,
 } from "@/types/agenda";
 
+const AGENDA_WORKSPACE_STATE_KEY = "salaopremium:painel:agenda:workspace:v1";
+
 type UseAgendaDataParams = {
   supabase: ReturnType<typeof import("@/lib/supabase/client").createClient>;
   router: { replace: (href: string) => void };
@@ -277,7 +279,41 @@ export function useAgendaData({
       setErroTela(result.erroTela || "");
 
       if (result.profissionais?.length) {
-        setSelectedProfissionalId(result.profissionais[0].id);
+        const profissionaisAtivos = result.profissionais;
+        const savedProfissionalId = (() => {
+          if (typeof window === "undefined") return "";
+
+          try {
+            const saved = window.sessionStorage.getItem(AGENDA_WORKSPACE_STATE_KEY);
+            if (!saved) return "";
+
+            const parsed = JSON.parse(saved) as { selectedProfissionalId?: string };
+            return parsed.selectedProfissionalId || "";
+          } catch {
+            window.sessionStorage.removeItem(AGENDA_WORKSPACE_STATE_KEY);
+            return "";
+          }
+        })();
+
+        setSelectedProfissionalId((current) => {
+          if (
+            current &&
+            profissionaisAtivos.some((profissional) => profissional.id === current)
+          ) {
+            return current;
+          }
+
+          if (
+            savedProfissionalId &&
+            profissionaisAtivos.some(
+              (profissional) => profissional.id === savedProfissionalId
+            )
+          ) {
+            return savedProfissionalId;
+          }
+
+          return profissionaisAtivos[0].id;
+        });
       }
     } catch (error: unknown) {
       console.error("Erro ao inicializar agenda:", error);

@@ -198,7 +198,7 @@ export default function CaixaSidebar({
         maxWidthClassName="max-w-[620px]"
         panelClassName="max-h-[calc(100dvh-2rem)]"
         headerClassName="px-5 py-4 sm:px-6 sm:py-5"
-        bodyClassName="flex bg-white px-5 pb-0 pt-5 sm:px-6 sm:pt-5"
+        bodyClassName="flex overflow-hidden bg-white px-5 pb-0 pt-5 sm:px-6 sm:pt-5"
       >
         <CaixaPagamentos
           comandaSelecionada={comandaSelecionada}
