@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireAdminTenantActor } from "@/lib/auth/tenant-guard";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { expireWhatsappPixRecargas } from "@/lib/whatsapp-creditos/expire-pix";
 
 export const dynamic = "force-dynamic";
 
@@ -8,16 +9,11 @@ export async function GET() {
   try {
     const actor = await requireAdminTenantActor();
     const supabase = getSupabaseAdmin() as any;
-    const now = new Date().toISOString();
 
-    // A validade comercial do PIX no SalaoPremium e de 24 horas.
-    // Depois disso ele sai do aviso principal e permanece apenas no historico.
-    await supabase
-      .from("whatsapp_creditos_recargas")
-      .update({ status: "expirado", atualizado_em: now })
-      .eq("id_salao", actor.idSalao)
-      .eq("status", "pendente")
-      .lte("expira_em", now);
+    // Ao completar 24 horas, o backend consulta o estado real no Asaas.
+    // Se ainda estiver em aberto, remove a cobranca no provedor antes de
+    // considera-la expirada no SalaoPremium.
+    await expireWhatsappPixRecargas({ idSalao: actor.idSalao, limit: 5 });
 
     const [recargasResult, walletResult] = await Promise.all([
       supabase
