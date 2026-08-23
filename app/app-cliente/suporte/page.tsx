@@ -7,7 +7,7 @@ export const metadata = {
 };
 
 export default function ClienteSuportePage() {
-  const whatsapp = "https://wa.me/5567984341742?text=Olá,%20preciso%20de%20ajuda%20no%20App%20Cliente%20Salão%20Premium.";
+  const whatsapp = "https://wa.me/5567981431155?text=Olá,%20preciso%20de%20ajuda%20no%20App%20Cliente%20Salão%20Premium.";
 
   return (
     <ClientAppFrame title="Suporte" subtitle="Atendimento humano para o cliente.">
@@ -35,4 +35,3 @@ export default function ClienteSuportePage() {
     </ClientAppFrame>
   );
 }
-
