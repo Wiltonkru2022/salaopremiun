@@ -33,7 +33,7 @@
     },
     {
       "path": "/api/cron/whatsapp-pix-expiracao",
-      "schedule": "0 * * * *"
+      "schedule": "40 3 * * *"
     }
   ]
 }
