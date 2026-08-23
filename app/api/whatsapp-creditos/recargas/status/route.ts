@@ -11,8 +11,7 @@ export async function GET() {
     const now = new Date().toISOString();
 
     // A validade comercial do PIX no SalaoPremium e de 24 horas.
-    // A expiracao e feita no backend para que a UI nunca mantenha uma cobranca
-    // antiga como "aguardando pagamento" indefinidamente.
+    // Depois disso ele sai do aviso principal e permanece apenas no historico.
     await supabase
       .from("whatsapp_creditos_recargas")
       .update({ status: "expirado", atualizado_em: now })
@@ -27,6 +26,7 @@ export async function GET() {
           "id, status, valor_centavos, pago_em, creditado_em, erro_texto, criado_em, atualizado_em, expira_em"
         )
         .eq("id_salao", actor.idSalao)
+        .in("status", ["pendente", "processando", "pago", "falhou"])
         .order("criado_em", { ascending: false })
         .limit(5),
       supabase
