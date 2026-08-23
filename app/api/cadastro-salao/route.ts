@@ -18,12 +18,7 @@ type CadastroSalaoRequestBody = {
 function getClientIp(request: Request) {
   const forwardedFor = request.headers.get("x-forwarded-for");
   if (forwardedFor) return forwardedFor.split(",")[0]?.trim() || "Não informado";
-
-  return (
-    request.headers.get("x-real-ip") ||
-    request.headers.get("cf-connecting-ip") ||
-    "Não informado"
-  );
+  return request.headers.get("x-real-ip") || request.headers.get("cf-connecting-ip") || "Não informado";
 }
 
 function buildPublicUrl(pathname: string, fallbackHost: string) {
@@ -35,18 +30,15 @@ function buildPublicUrl(pathname: string, fallbackHost: string) {
 
 export async function POST(req: Request) {
   try {
-    const body = (await req.json().catch(() => null)) as
-      | CadastroSalaoRequestBody
-      | null;
+    const body = (await req.json().catch(() => null)) as CadastroSalaoRequestBody | null;
     const result = await cadastrarSalaoUseCase({
       body,
       service: createCadastroSalaoService(),
     });
 
     if (result.body.ok && body?.email && body?.nomeSalao && body?.responsavel) {
-      const loginHost =
-        process.env.APP_LOGIN_HOST || "login.salaopremiun.com.br";
-      const loginUrl = buildPublicUrl("/login", loginHost);
+      const loginHost = process.env.APP_LOGIN_HOST || "login.salaopremiun.com.br";
+      const loginUrl = buildPublicUrl("/login?returnTo=/onboarding-salao", loginHost);
       const recoveryUrl = buildPublicUrl("/recuperar-senha", loginHost);
 
       await sendCadastroSalaoWelcomeEmail({
@@ -56,7 +48,6 @@ export async function POST(req: Request) {
         email: String(body.email).trim().toLowerCase(),
         ip: getClientIp(req),
         userAgent: req.headers.get("user-agent") || "Não informado",
-        trialFimEm: result.body.assinatura?.trial_fim_em,
         loginUrl,
         recoveryUrl,
       }).catch((error) => {
@@ -74,10 +65,7 @@ export async function POST(req: Request) {
     }
 
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error ? error.message : "Erro interno no cadastro.",
-      },
+      { error: error instanceof Error ? error.message : "Erro interno no cadastro." },
       { status: 500 }
     );
   }
