@@ -838,6 +838,20 @@ export default function AgendaPage() {
     }
   }, [hasSidebarActionPanel]);
 
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+
+    if (hasSidebarActionPanel) {
+      document.body.dataset.spPainelActionPanel = "open";
+    } else {
+      delete document.body.dataset.spPainelActionPanel;
+    }
+
+    return () => {
+      delete document.body.dataset.spPainelActionPanel;
+    };
+  }, [hasSidebarActionPanel]);
+
   if (!acessoCarregado) {
     return (
       <div className="space-y-3 p-3">

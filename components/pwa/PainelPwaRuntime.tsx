@@ -13,7 +13,7 @@ export default function PainelPwaRuntime() {
   }, []);
 
   return (
-    <div className="fixed bottom-4 right-4 z-[420] rounded-full shadow-[0_14px_34px_rgba(15,23,42,0.16)]">
+    <div className="sp-painel-pwa-fab fixed bottom-4 right-4 z-[420] rounded-full shadow-[0_14px_34px_rgba(15,23,42,0.16)]">
       <PushPermissionRuntime audience="salao_painel" compact />
     </div>
   );
