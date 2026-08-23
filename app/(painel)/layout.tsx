@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import AppShell from "@/components/layout/AppShell";
 import PanelFormPendingGuard from "@/components/layout/PanelFormPendingGuard";
+import PartnerAdSlot from "@/components/parcerias/PartnerAdSlot";
 import { loadPainelShellData } from "@/lib/painel/load-painel-shell-data";
 
 export const metadata: Metadata = {
@@ -61,6 +62,7 @@ export default async function PainelLayout({
       notifications={data.notifications}
     >
       <PanelFormPendingGuard />
+      <PartnerAdSlot idSalao={data.idSalao} />
       {children}
     </AppShell>
   );
