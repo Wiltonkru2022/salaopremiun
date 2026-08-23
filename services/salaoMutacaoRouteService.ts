@@ -21,7 +21,44 @@ export type SalaoMutacaoConfig = {
   fallbackMessage: string;
   route: string;
   getAction: (acaoRaw: string) => string | null;
+  requiresProductsModule?: boolean;
 };
+
+async function validarEstadoOperacional(
+  idSalao: string,
+  config: SalaoMutacaoConfig
+) {
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data, error } = await supabaseAdmin
+    .from("saloes")
+    .select("onboarding_concluido, produtos_modulo_ativo")
+    .eq("id", idSalao)
+    .maybeSingle();
+
+  if (error || !data) {
+    throw new AuthzError(
+      "Nao foi possivel validar o estado do salao. Tente novamente.",
+      503,
+      "estado_salao_indisponivel"
+    );
+  }
+
+  if (data.onboarding_concluido !== true) {
+    throw new AuthzError(
+      "Finalize a configuracao inicial do salao antes de usar esta funcionalidade.",
+      423,
+      "onboarding_pendente"
+    );
+  }
+
+  if (config.requiresProductsModule && data.produtos_modulo_ativo === false) {
+    throw new AuthzError(
+      "A funcionalidade de produtos e estoque esta desativada para este salao.",
+      409,
+      "produtos_desativados"
+    );
+  }
+}
 
 export function createSalaoMutacaoRouteService(config: SalaoMutacaoConfig) {
   return {
@@ -33,6 +70,7 @@ export function createSalaoMutacaoRouteService(config: SalaoMutacaoConfig) {
           allowedNiveis: config.allowedNiveis || ["admin", "gerente"],
         }
       );
+      await validarEstadoOperacional(idSalao, config);
       await assertCanMutatePlanFeature(idSalao, config.planFeature);
     },
 
