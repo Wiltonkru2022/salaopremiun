@@ -14,7 +14,6 @@ import {
 } from "@/lib/plans/access";
 import {
   assertProdutosModuloAtivo,
-  assertSalaoOnboardingConcluido,
   SalaoOperationalStateError,
 } from "@/lib/saloes/operational-state";
 import { runAdminOperation } from "@/lib/supabase/admin-ops";
@@ -49,7 +48,6 @@ export async function POST(req: NextRequest) {
     acao = input.acao;
 
     const permissionMembership = await requireComandaActionPermission(idSalao, input.acao);
-    await assertSalaoOnboardingConcluido(idSalao);
     await assertCanMutatePlanFeature(idSalao, "comandas");
 
     if (acao === "adicionar_item" || acao === "editar_item") {
@@ -84,7 +82,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: firstIssue?.message || "Payload invalido.", issues: error.flatten() }, { status: 400 });
     }
     if (error instanceof AuthzError) {
-      return NextResponse.json({ error: error.message }, { status: error.status });
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
     }
     if (error instanceof SalaoOperationalStateError) {
       return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
