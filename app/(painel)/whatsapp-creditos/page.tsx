@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import WhatsAppCreditosClient from "@/components/whatsapp-creditos/WhatsappCreditosClient";
+import WhatsappRecargaStatusBanner from "@/components/whatsapp-creditos/WhatsappRecargaStatusBanner";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getPlanoAccessSnapshot } from "@/lib/plans/access";
 import { getWhatsappCreditosPainelData } from "@/services/whatsappCreditosService";
@@ -29,5 +30,10 @@ export default async function WhatsAppCreditosPage() {
 
   const data = await getWhatsappCreditosPainelData(usuario.id_salao);
 
-  return <WhatsAppCreditosClient data={data} />;
+  return (
+    <div className="space-y-4">
+      <WhatsappRecargaStatusBanner />
+      <WhatsAppCreditosClient data={data} />
+    </div>
+  );
 }
