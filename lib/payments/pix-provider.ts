@@ -184,6 +184,17 @@ function onlyNumbers(value?: string | null) {
   return String(value || "").replace(/\D/g, "");
 }
 
+function whatsappPixDueDate(input: CriarCobrancaInput) {
+  const isWhatsappTopup =
+    input.billingType === "PIX" &&
+    input.descricao.toLowerCase().includes("recarga de creditos whatsapp");
+
+  if (!isWhatsappTopup) return input.vencimento;
+
+  const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  return tomorrow.toISOString().slice(0, 10);
+}
+
 export async function buscarClientePorEmail(
   email: string
 ): Promise<AsaasCustomer | null> {
@@ -223,7 +234,7 @@ export async function criarCobranca(
     customer: input.customerId,
     billingType: input.billingType,
     value: input.valor,
-    dueDate: input.vencimento,
+    dueDate: whatsappPixDueDate(input),
     description: input.descricao,
     externalReference: input.referenciaExterna,
   };
@@ -275,4 +286,10 @@ export async function buscarQrCodePix(
 
 export async function buscarCobranca(paymentId: string): Promise<AsaasPayment> {
   return asaasFetch<AsaasPayment>(`/payments/${paymentId}`);
+}
+
+export async function excluirCobranca(paymentId: string) {
+  return asaasFetch<{ deleted?: boolean; id?: string }>(`/payments/${paymentId}`, {
+    method: "DELETE",
+  });
 }
