@@ -7,6 +7,10 @@ import {
   PlanAccessError,
   type PlanoRecursoCodigo,
 } from "@/lib/plans/access";
+import {
+  assertProdutosModuloAtivo,
+  SalaoOperationalStateError,
+} from "@/lib/saloes/operational-state";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { PermissionKey, UserNivel } from "@/lib/permissions";
@@ -24,39 +28,18 @@ export type SalaoMutacaoConfig = {
   requiresProductsModule?: boolean;
 };
 
-async function validarEstadoOperacional(
+async function validarModuloOpcional(
   idSalao: string,
   config: SalaoMutacaoConfig
 ) {
-  const supabaseAdmin = getSupabaseAdmin() as any;
-  const { data, error } = await supabaseAdmin
-    .from("saloes")
-    .select("onboarding_concluido, produtos_modulo_ativo")
-    .eq("id", idSalao)
-    .maybeSingle();
-
-  if (error || !data) {
-    throw new AuthzError(
-      "Nao foi possivel validar o estado do salao. Tente novamente.",
-      503,
-      "estado_salao_indisponivel"
-    );
-  }
-
-  if (data.onboarding_concluido !== true) {
-    throw new AuthzError(
-      "Finalize a configuracao inicial do salao antes de usar esta funcionalidade.",
-      423,
-      "onboarding_pendente"
-    );
-  }
-
-  if (config.requiresProductsModule && data.produtos_modulo_ativo === false) {
-    throw new AuthzError(
-      "A funcionalidade de produtos e estoque esta desativada para este salao.",
-      409,
-      "produtos_desativados"
-    );
+  if (!config.requiresProductsModule) return;
+  try {
+    await assertProdutosModuloAtivo(idSalao);
+  } catch (error) {
+    if (error instanceof SalaoOperationalStateError) {
+      throw new AuthzError(error.message, error.status, error.code);
+    }
+    throw error;
   }
 }
 
@@ -70,7 +53,7 @@ export function createSalaoMutacaoRouteService(config: SalaoMutacaoConfig) {
           allowedNiveis: config.allowedNiveis || ["admin", "gerente"],
         }
       );
-      await validarEstadoOperacional(idSalao, config);
+      await validarModuloOpcional(idSalao, config);
       await assertCanMutatePlanFeature(idSalao, config.planFeature);
     },
 
