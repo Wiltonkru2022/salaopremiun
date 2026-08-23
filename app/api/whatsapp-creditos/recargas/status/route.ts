@@ -7,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const actor = await requireAdminTenantActor();
-    const supabase = getSupabaseAdmin();
+    const supabase = getSupabaseAdmin() as any;
 
     const [recargasResult, walletResult] = await Promise.all([
       supabase
@@ -33,7 +33,7 @@ export async function GET() {
         ok: true,
         saldoCentavos: Number(walletResult.data?.saldo_centavos || 0),
         ultimaRecargaEm: walletResult.data?.ultima_recarga_em || null,
-        recargas: (recargasResult.data || []).map((row) => ({
+        recargas: (recargasResult.data || []).map((row: Record<string, unknown>) => ({
           id: String(row.id),
           status: String(row.status || "pendente"),
           valorCentavos: Number(row.valor_centavos || 0),
