@@ -1,6 +1,8 @@
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { autentiqueConfigurado } from "@/lib/parcerias/autentique";
 import { criarCampanhaParceria, criarParceiro, gerarContratoParceria } from "./actions";
+import { enviarContratoAutentique, sincronizarContratoAutentique } from "./autentique-actions";
 
 export const dynamic = "force-dynamic";
 
@@ -11,11 +13,12 @@ function brl(value: unknown) {
 export default async function AdminMasterParceriasPage() {
   await requireAdminMasterUser("comunicacao_ver");
   const supabase = getSupabaseAdmin() as any;
+  const autentiqueAtivo = autentiqueConfigurado();
 
   const [{ data: parceiros }, { data: campanhas }, { data: contratos }] = await Promise.all([
     supabase.from("parceiros_comerciais").select("id,razao_social,nome_fantasia,segmento,cidade,uf,status,email,whatsapp").order("criado_em", { ascending: false }).limit(100),
     supabase.from("parceria_campanhas").select("id,id_parceiro,nome,status,valor_contratado,inicio_em,fim_em,publico,locais_exibicao,parceiros_comerciais(razao_social,nome_fantasia)").order("criado_em", { ascending: false }).limit(100),
-    supabase.from("parceria_contratos").select("id,id_campanha,numero,status,valor,hash_documento_sha256,assinado_em,parceiros_comerciais(razao_social,nome_fantasia)").order("criado_em", { ascending: false }).limit(100),
+    supabase.from("parceria_contratos").select("id,id_campanha,numero,status,valor,hash_documento_sha256,assinado_em,signatario_email,provedor_assinatura,envelope_externo_id,url_assinatura,evidencia_assinatura,parceiros_comerciais(razao_social,nome_fantasia)").order("criado_em", { ascending: false }).limit(100),
   ]);
 
   const parceirosRows = parceiros || [];
@@ -42,6 +45,13 @@ export default async function AdminMasterParceriasPage() {
           <div className="rounded-2xl bg-zinc-50 p-4"><div className="text-xs font-bold uppercase text-zinc-500">Parceiros</div><div className="mt-1 text-2xl font-black">{parceirosRows.length}</div></div>
           <div className="rounded-2xl bg-zinc-50 p-4"><div className="text-xs font-bold uppercase text-zinc-500">Campanhas</div><div className="mt-1 text-2xl font-black">{campanhasRows.length}</div></div>
           <div className="rounded-2xl bg-zinc-50 p-4"><div className="text-xs font-bold uppercase text-zinc-500">Contratos</div><div className="mt-1 text-2xl font-black">{contratosRows.length}</div></div>
+        </div>
+
+        <div className={`mt-5 rounded-2xl border p-4 text-sm ${autentiqueAtivo ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+          <b>Assinatura eletrônica Autentique:</b>{" "}
+          {autentiqueAtivo
+            ? "configurada no servidor. Contratos podem ser enviados e sincronizados pelo AdminMaster."
+            : "integração pronta, aguardando a variável secreta AUTENTIQUE_API_TOKEN na Vercel."}
         </div>
       </section>
 
@@ -92,13 +102,43 @@ export default async function AdminMasterParceriasPage() {
       <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">
         <h2 className="text-xl font-black">Campanhas e contratos</h2>
         <div className="mt-4 overflow-x-auto">
-          <table className="w-full min-w-[820px] text-left text-sm">
-            <thead className="text-xs uppercase tracking-wide text-zinc-500"><tr><th className="py-3">Parceiro</th><th>Campanha</th><th>Status</th><th>Valor</th><th>Público</th><th>Contrato</th></tr></thead>
+          <table className="w-full min-w-[980px] text-left text-sm">
+            <thead className="text-xs uppercase tracking-wide text-zinc-500"><tr><th className="py-3">Parceiro</th><th>Campanha</th><th>Status</th><th>Valor</th><th>Público</th><th>Contrato / assinatura</th></tr></thead>
             <tbody className="divide-y divide-zinc-100">
               {campanhasRows.map((c: any) => {
                 const parceiro = Array.isArray(c.parceiros_comerciais) ? c.parceiros_comerciais[0] : c.parceiros_comerciais;
                 const contrato = contratosRows.find((x: any) => x.id_campanha === c.id);
-                return <tr key={c.id}><td className="py-4 font-semibold">{parceiro?.nome_fantasia || parceiro?.razao_social || "—"}</td><td>{c.nome}</td><td>{c.status}</td><td>{brl(c.valor_contratado)}</td><td>{(c.publico || []).join(", ")}</td><td>{contrato ? <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">{contrato.status} • {contrato.numero}</span> : <form action={gerarContratoParceria}><input type="hidden" name="id_campanha" value={c.id} /><button className="rounded-xl border border-zinc-300 px-3 py-2 text-xs font-black">Gerar contrato</button></form>}</td></tr>;
+                return (
+                  <tr key={c.id}>
+                    <td className="py-4 font-semibold">{parceiro?.nome_fantasia || parceiro?.razao_social || "—"}</td>
+                    <td>{c.nome}</td>
+                    <td>{c.status}</td>
+                    <td>{brl(c.valor_contratado)}</td>
+                    <td>{(c.publico || []).join(", ")}</td>
+                    <td className="py-3">
+                      {!contrato ? (
+                        <form action={gerarContratoParceria}><input type="hidden" name="id_campanha" value={c.id} /><button className="rounded-xl border border-zinc-300 px-3 py-2 text-xs font-black">Gerar contrato</button></form>
+                      ) : (
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="rounded-full bg-emerald-50 px-3 py-1 text-xs font-bold text-emerald-700">{contrato.status} • {contrato.numero}</span>
+                          {!contrato.envelope_externo_id ? (
+                            <form action={enviarContratoAutentique}>
+                              <input type="hidden" name="id_contrato" value={contrato.id} />
+                              <button disabled={!autentiqueAtivo || !contrato.signatario_email} className="rounded-xl bg-zinc-950 px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40">Enviar para assinatura</button>
+                            </form>
+                          ) : (
+                            <form action={sincronizarContratoAutentique}>
+                              <input type="hidden" name="id_contrato" value={contrato.id} />
+                              <button disabled={!autentiqueAtivo} className="rounded-xl border border-zinc-300 px-3 py-2 text-xs font-black disabled:cursor-not-allowed disabled:opacity-40">Sincronizar</button>
+                            </form>
+                          )}
+                          {contrato.url_assinatura ? <a href={contrato.url_assinatura} target="_blank" rel="noreferrer" className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-black text-amber-900">Abrir assinatura</a> : null}
+                          {!contrato.signatario_email ? <span className="text-xs font-semibold text-red-600">Parceiro sem e-mail</span> : null}
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                );
               })}
             </tbody>
           </table>
