@@ -12,6 +12,10 @@ import {
   PlanAccessError,
   createSalaoMutacaoRouteService,
 } from "@/services/salaoMutacaoRouteService";
+import {
+  assertProdutosModuloAtivo,
+  SalaoOperationalStateError,
+} from "@/lib/saloes/operational-state";
 import type { PermissionKey } from "@/lib/permissions";
 
 const routeService = createSalaoMutacaoRouteService({
@@ -22,18 +26,13 @@ const routeService = createSalaoMutacaoRouteService({
   title: "Processamento de serviço falhou",
   fallbackMessage: "Erro interno ao processar serviço.",
   route: "/api/servicos/processar",
-  getAction: (acaoRaw) =>
-    ["salvar", "alterar_status", "excluir"].includes(acaoRaw) ? acaoRaw : null,
+  getAction: (acaoRaw) => ["salvar", "alterar_status", "excluir"].includes(acaoRaw) ? acaoRaw : null,
 });
 
-function resolvePermission(
-  input: ReturnType<typeof parseProcessarServicoInput>
-): PermissionKey {
+function resolvePermission(input: ReturnType<typeof parseProcessarServicoInput>): PermissionKey {
   if (input.acao === "excluir") return "servicos_excluir";
   if (input.acao === "alterar_status") return "servicos_editar";
-  return String(input.servico?.id || "").trim()
-    ? "servicos_editar"
-    : "servicos_criar";
+  return String(input.servico?.id || "").trim() ? "servicos_editar" : "servicos_criar";
 }
 
 function revalidateClientAppServiceViews() {
@@ -52,66 +51,38 @@ export async function POST(req: NextRequest) {
     acaoRaw = input.acao;
 
     await routeService.validar(idSalao, resolvePermission(input));
-
-    const result = await processarServicoUseCase({
-      input,
-      service: createServicoService(),
-    });
-
-    if (result.status < 400) {
-      revalidateClientAppServiceViews();
+    if (input.consumos.length > 0) {
+      await assertProdutosModuloAtivo(idSalao);
     }
 
+    const result = await processarServicoUseCase({ input, service: createServicoService() });
+    if (result.status < 400) revalidateClientAppServiceViews();
     return NextResponse.json(result.body, { status: result.status });
   } catch (error) {
     if (error instanceof ZodError) {
       const firstIssue = error.issues[0];
-      return NextResponse.json(
-        {
-          error: firstIssue?.message || "Payload inválido.",
-          issues: error.flatten(),
-        },
-        { status: 400 }
-      );
+      return NextResponse.json({ error: firstIssue?.message || "Payload inválido.", issues: error.flatten() }, { status: 400 });
     }
-
     if (error instanceof AuthzError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: error.status }
-      );
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
     }
-
+    if (error instanceof SalaoOperationalStateError) {
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
+    }
     if (error instanceof PlanAccessError) {
-      return NextResponse.json(
-        { error: error.message, code: error.code },
-        { status: error.status }
-      );
+      return NextResponse.json({ error: error.message, code: error.code }, { status: error.status });
     }
-
     if (error instanceof ProcessarServicoUseCaseError) {
-      return NextResponse.json(
-        { error: error.message },
-        { status: error.status }
-      );
+      return NextResponse.json({ error: error.message }, { status: error.status });
     }
 
     if (idSalao) {
-      await routeService.reportarFalha({
-        idSalao,
-        acaoRaw,
-        error,
-      });
+      await routeService.reportarFalha({ idSalao, acaoRaw, error });
     }
 
     console.error("Erro geral ao processar serviço:", error);
     return NextResponse.json(
-      {
-        error:
-          error instanceof Error
-            ? error.message
-            : "Erro interno ao processar serviço.",
-      },
+      { error: error instanceof Error ? error.message : "Erro interno ao processar serviço." },
       { status: 500 }
     );
   }
