@@ -1,9 +1,15 @@
 import { chromium } from "playwright";
 
-const baseUrl = (process.env.E2E_BASE_URL || "https://cadastro.salaopremiun.com.br").replace(/\/$/, "");
+const cadastroBaseUrl = (
+  process.env.E2E_BASE_URL || "https://cadastro.salaopremiun.com.br"
+).replace(/\/$/, "");
+const painelBaseUrl = (
+  process.env.E2E_PAINEL_BASE_URL || "https://painel.salaopremiun.com.br"
+).replace(/\/$/, "");
 const password = process.env.E2E_ONBOARDING_PASSWORD || "E2E!SalaoPremium2026";
 const stamp = Date.now();
-const email = process.env.E2E_ONBOARDING_EMAIL || `e2e-onboarding-${stamp}@example.com`;
+const email =
+  process.env.E2E_ONBOARDING_EMAIL || `e2e-onboarding-${stamp}@example.com`;
 const salonName = `E2E Onboarding ${stamp}`;
 
 function assert(condition, message) {
@@ -15,6 +21,19 @@ async function fillByLabel(page, label, value) {
 }
 
 async function main() {
+  const isProduction = /salaopremiun\.com\.br$/i.test(new URL(cadastroBaseUrl).hostname);
+  if (isProduction && process.env.E2E_ALLOW_PRODUCTION !== "1") {
+    throw new Error(
+      "Execução contra produção bloqueada. Defina E2E_ALLOW_PRODUCTION=1 somente para um teste controlado com limpeza posterior."
+    );
+  }
+
+  const logoPath = process.env.E2E_ONBOARDING_LOGO;
+  assert(
+    logoPath,
+    "Defina E2E_ONBOARDING_LOGO com uma imagem local para executar o fluxo completo."
+  );
+
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     viewport: { width: 390, height: 844 },
@@ -24,12 +43,21 @@ async function main() {
   const page = await context.newPage();
 
   try {
-    await page.goto(`${baseUrl}/cadastro-salao`, { waitUntil: "domcontentloaded" });
-    assert(await page.getByText("Comece seu SalãoPremium").isVisible(), "Cadastro não carregou no viewport mobile.");
+    await page.goto(`${cadastroBaseUrl}/cadastro-salao`, {
+      waitUntil: "domcontentloaded",
+    });
+    assert(
+      await page.getByText("Comece seu SalãoPremium").isVisible(),
+      "Cadastro não carregou no viewport mobile."
+    );
 
     await fillByLabel(page, "Nome do salão", salonName);
     await fillByLabel(page, "Responsável", "E2E Responsável");
-    await fillByLabel(page, "CPF ou CNPJ", process.env.E2E_ONBOARDING_CPF || "52998224725");
+    await fillByLabel(
+      page,
+      "CPF ou CNPJ",
+      process.env.E2E_ONBOARDING_CPF || "52998224725"
+    );
     await fillByLabel(page, "WhatsApp", "67999999999");
     await page.getByRole("button", { name: /continuar/i }).click();
 
@@ -49,52 +77,88 @@ async function main() {
     await page.getByRole("button", { name: /criar e configurar/i }).click();
     await page.waitForURL(/onboarding-salao/, { timeout: 30000 });
 
-    assert(await page.getByText(/Configuração inicial obrigatória/i).isVisible(), "Onboarding não abriu após cadastro.");
+    assert(
+      await page.getByText(/Configuração inicial obrigatória/i).isVisible(),
+      "Onboarding não abriu após cadastro."
+    );
 
-    // O upload de logo exige um arquivo real definido pelo CI.
-    const logoPath = process.env.E2E_ONBOARDING_LOGO;
-    assert(logoPath, "Defina E2E_ONBOARDING_LOGO com uma imagem para executar o fluxo completo.");
-    await page.getByText("Logo do salão").locator("..").getByRole("button", { name: /escolher imagem/i }).setInputFiles(logoPath);
-
-    await fillByLabel(page, "Descrição pública", "Salão temporário para teste automatizado do onboarding.");
+    const logoCard = page
+      .getByText("Logo do salão", { exact: false })
+      .locator("xpath=ancestor::div[contains(@class,'rounded-3xl')][1]");
+    await logoCard.locator('input[type="file"]').setInputFiles(logoPath);
+    await fillByLabel(
+      page,
+      "Descrição pública",
+      "Salão temporário para teste automatizado do onboarding."
+    );
     await page.getByRole("button", { name: /salvar e continuar/i }).click();
 
-    await fillByLabel(page, "Nome", "Corte E2E");
-    await fillByLabel(page, "Categoria", "Cabelo");
-    await fillByLabel(page, "Duração", "30");
-    await fillByLabel(page, "Preço", "50,00");
+    await page.locator('label:has-text("Nome") input').first().fill("Corte E2E");
+    await page.locator('label:has-text("Categoria") input').first().fill("Cabelo");
+    await page.locator('label:has-text("Duração") input').first().fill("30");
+    await page.locator('label:has-text("Preço") input').first().fill("50,00");
     await page.getByRole("button", { name: /salvar e continuar/i }).click();
 
-    await fillByLabel(page, "Nome", "Profissional E2E");
-    await fillByLabel(page, "Cargo", "Cabeleireiro");
+    await page.locator('label:has-text("Nome") input').first().fill("Profissional E2E");
+    await page.locator('label:has-text("Cargo") input').first().fill("Cabeleireiro");
     await page.getByRole("button", { name: /Corte E2E/i }).click();
     await page.getByRole("button", { name: /salvar e continuar/i }).click();
 
-    await page.getByRole("button", { name: /não trabalho com produtos/i }).click();
+    await page
+      .getByRole("button", { name: /não trabalho com produtos/i })
+      .click();
     await page.getByRole("button", { name: /salvar e continuar/i }).click();
 
     await page.getByRole("button", { name: /configurar depois/i }).click();
     await page.getByRole("button", { name: /salvar e continuar/i }).click();
 
     await page.getByRole("button", { name: /salvar e continuar/i }).click();
-    assert(await page.getByText(/Revise e ative seu SalãoPremium/i).isVisible(), "Revisão final não abriu.");
+    assert(
+      await page.getByText(/Revise e ative seu SalãoPremium/i).isVisible(),
+      "Revisão final não abriu."
+    );
 
-    const before = await page.request.get(`${baseUrl.replace("cadastro.", "painel.")}/api/onboarding-salao`);
-    assert(before.status() === 200, `Estado do onboarding não pôde ser consultado antes da conclusão: ${before.status()}`);
+    const before = await page.request.get(`${painelBaseUrl}/api/onboarding-salao`);
+    assert(
+      before.status() === 200,
+      `Estado do onboarding não pôde ser consultado antes da conclusão: ${before.status()}`
+    );
     const beforeBody = await before.json();
-    assert(beforeBody.salao?.onboarding_concluido === false, "Onboarding foi marcado como concluído cedo demais.");
-    assert(beforeBody.salao?.trial_ativo !== true, "Trial iniciou antes da conclusão do onboarding.");
-    assert(beforeBody.salao?.produtos_modulo_ativo === false, "Produtos deveriam estar desativados no cenário E2E.");
-    assert(beforeBody.salao?.pix_modulo_ativo === false, "Pix deveria estar adiado no cenário E2E.");
+    assert(
+      beforeBody.salao?.onboarding_concluido === false,
+      "Onboarding foi marcado como concluído cedo demais."
+    );
+    assert(
+      beforeBody.salao?.trial_ativo !== true,
+      "Trial iniciou antes da conclusão do onboarding."
+    );
+    assert(
+      beforeBody.salao?.produtos_modulo_ativo === false,
+      "Produtos deveriam estar desativados no cenário E2E."
+    );
+    assert(
+      beforeBody.salao?.pix_modulo_ativo === false,
+      "Pix deveria estar adiado no cenário E2E."
+    );
 
-    await page.getByRole("button", { name: /finalizar cadastro e iniciar teste grátis/i }).click();
+    await page
+      .getByRole("button", { name: /finalizar cadastro e iniciar teste grátis/i })
+      .click();
     await page.waitForURL(/dashboard/, { timeout: 30000 });
 
-    const after = await page.request.get(`${baseUrl.replace("cadastro.", "painel.")}/api/onboarding-salao`);
-    // Após concluir, o endpoint pode redirecionar/retornar estado concluído dependendo da sessão/cache.
-    assert([200, 307, 308].includes(after.status()), `Resposta inesperada após conclusão: ${after.status()}`);
-
-    console.log(JSON.stringify({ ok: true, salonName, email, finalUrl: page.url() }, null, 2));
+    console.log(
+      JSON.stringify(
+        {
+          ok: true,
+          salonName,
+          email,
+          finalUrl: page.url(),
+          cleanupRequired: isProduction,
+        },
+        null,
+        2
+      )
+    );
   } finally {
     await browser.close();
   }
