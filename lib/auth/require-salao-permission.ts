@@ -12,10 +12,6 @@ import {
   getPlanoAccessSnapshot,
   type PlanoRecursoCodigo,
 } from "@/lib/plans/access";
-import {
-  assertSalaoOnboardingConcluido,
-  SalaoOperationalStateError,
-} from "@/lib/saloes/operational-state";
 
 type RequireSalaoPermissionOptions = {
   allowedNiveis?: string[];
@@ -62,23 +58,11 @@ async function validarPlanoParaPermissao(idSalao: string, permission: Permission
   }
 }
 
-async function validarOnboarding(idSalao: string) {
-  try {
-    await assertSalaoOnboardingConcluido(idSalao);
-  } catch (error) {
-    if (error instanceof SalaoOperationalStateError) {
-      throw new AuthzError(error.message, error.status, error.code);
-    }
-    throw error;
-  }
-}
-
 export async function getSalaoPermissionContext(
   idSalao: string,
   options: RequireSalaoPermissionOptions = {}
 ) {
   const membership = await requireSalaoMembership(idSalao, options);
-  await validarOnboarding(idSalao);
   const permissoesDb = await getUserPermissionsRow(idSalao, membership.usuario.id);
   const permissoes = {
     ...buildPermissoesByNivel(membership.usuario.nivel),
