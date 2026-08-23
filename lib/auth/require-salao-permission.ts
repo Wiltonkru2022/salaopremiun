@@ -12,7 +12,10 @@ import {
   getPlanoAccessSnapshot,
   type PlanoRecursoCodigo,
 } from "@/lib/plans/access";
-import { assertSalaoOnboardingConcluido } from "@/lib/saloes/operational-state";
+import {
+  assertSalaoOnboardingConcluido,
+  SalaoOperationalStateError,
+} from "@/lib/saloes/operational-state";
 
 type RequireSalaoPermissionOptions = {
   allowedNiveis?: string[];
@@ -39,25 +42,17 @@ const PERMISSION_FEATURE_MAP: Partial<Record<PermissionKey, PlanoRecursoCodigo>>
   marketing_ver: "marketing",
 };
 
-async function validarPlanoParaPermissao(
-  idSalao: string,
-  permission: PermissionKey
-) {
+async function validarPlanoParaPermissao(idSalao: string, permission: PermissionKey) {
   if (permission === "assinatura_ver") return;
-
   const access = await getPlanoAccessSnapshot(idSalao);
-
   if (access.bloqueioTotal) {
     throw new AuthzError(
-      access.bloqueioMotivo ||
-        "Assinatura bloqueada. Regularize para continuar.",
+      access.bloqueioMotivo || "Assinatura bloqueada. Regularize para continuar.",
       402,
       "assinatura_bloqueada"
     );
   }
-
   const recurso = PERMISSION_FEATURE_MAP[permission];
-
   if (recurso && access.recursos[recurso] === false) {
     throw new AuthzError(
       `Recurso indisponível no plano atual: ${recurso}.`,
@@ -67,14 +62,24 @@ async function validarPlanoParaPermissao(
   }
 }
 
+async function validarOnboarding(idSalao: string) {
+  try {
+    await assertSalaoOnboardingConcluido(idSalao);
+  } catch (error) {
+    if (error instanceof SalaoOperationalStateError) {
+      throw new AuthzError(error.message, error.status, error.code);
+    }
+    throw error;
+  }
+}
+
 export async function getSalaoPermissionContext(
   idSalao: string,
   options: RequireSalaoPermissionOptions = {}
 ) {
   const membership = await requireSalaoMembership(idSalao, options);
-  await assertSalaoOnboardingConcluido(idSalao);
+  await validarOnboarding(idSalao);
   const permissoesDb = await getUserPermissionsRow(idSalao, membership.usuario.id);
-
   const permissoes = {
     ...buildPermissoesByNivel(membership.usuario.nivel),
     ...sanitizePermissoesDb(permissoesDb, {
@@ -83,11 +88,7 @@ export async function getSalaoPermissionContext(
       origem: "getSalaoPermissionContext",
     }),
   };
-
-  return {
-    ...membership,
-    permissoes,
-  };
+  return { ...membership, permissoes };
 }
 
 export async function requireSalaoPermission(
@@ -96,17 +97,10 @@ export async function requireSalaoPermission(
   options: RequireSalaoPermissionOptions = {}
 ) {
   const context = await getSalaoPermissionContext(idSalao, options);
-
   if (!context.permissoes[permission]) {
-    throw new AuthzError(
-      "Usuário sem permissão para esta ação.",
-      403,
-      "sem_permissao"
-    );
+    throw new AuthzError("Usuário sem permissão para esta ação.", 403, "sem_permissao");
   }
-
   await validarPlanoParaPermissao(idSalao, permission);
-
   return context;
 }
 
@@ -118,24 +112,16 @@ export async function requireSalaoAnyPermission(
   if (permissions.length === 0) {
     throw new AuthzError("Nenhuma permissão informada para validação.", 500, "permissoes_vazias");
   }
-
   const context = await getSalaoPermissionContext(idSalao, options);
   const permitido = permissions.some((permission) => context.permissoes[permission]);
-
   if (!permitido) {
-    throw new AuthzError(
-      "Usuário sem permissão para esta ação.",
-      403,
-      "sem_permissao"
-    );
+    throw new AuthzError("Usuário sem permissão para esta ação.", 403, "sem_permissao");
   }
-
   for (const permission of permissions) {
     if (context.permissoes[permission]) {
       await validarPlanoParaPermissao(idSalao, permission);
       break;
     }
   }
-
   return context;
 }
