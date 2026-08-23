@@ -7,6 +7,10 @@ import {
   PlanAccessError,
 } from "@/lib/plans/access";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
+import {
+  assertProdutosModuloAtivo,
+  SalaoOperationalStateError,
+} from "@/lib/saloes/operational-state";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export class EstoqueMutacaoServiceError extends Error {
@@ -28,6 +32,15 @@ export function createEstoqueMutacaoService() {
     },
 
     async validarPlano(idSalao: string) {
+      try {
+        await assertProdutosModuloAtivo(idSalao);
+      } catch (error) {
+        if (error instanceof SalaoOperationalStateError) {
+          throw new EstoqueMutacaoServiceError(error.message, error.status);
+        }
+        throw error;
+      }
+
       return assertCanMutatePlanFeature(idSalao, "estoque");
     },
 
