@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { verifyBearerSecret } from "@/lib/auth/verify-secret";
 import { processPendingNotificationJobs } from "@/lib/notification-jobs";
 import { processInactiveClientRecovery } from "@/lib/client-app/inactive-recovery";
+import {
+  processDueWhatsAppReminders,
+  processPendingAutomaticWhatsAppEvents,
+} from "@/lib/whatsapp/automatic-events";
 
 function shouldRunClientRecovery() {
   const now = new Date();
@@ -17,13 +21,20 @@ async function handleCron(req: Request) {
     const recovery = shouldRunClientRecovery()
       ? await processInactiveClientRecovery(20)
       : null;
-    const result = await processPendingNotificationJobs(80);
+
+    const [result, whatsappAutomatic, whatsappReminders] = await Promise.all([
+      processPendingNotificationJobs(80),
+      processPendingAutomaticWhatsAppEvents(25),
+      processDueWhatsAppReminders(20),
+    ]);
 
     return NextResponse.json({
       ok: true,
-      provider: "vercel-web-push",
+      provider: "vercel-web-push-meta-whatsapp",
       recovery,
-      ...result,
+      push: result,
+      whatsappAutomatic,
+      whatsappReminders,
     });
   } catch (error) {
     return NextResponse.json(
