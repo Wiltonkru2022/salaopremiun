@@ -1,8 +1,13 @@
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
+import {
+  assertSalaoOnboardingConcluido,
+  SalaoOperationalStateError,
+} from "@/lib/saloes/operational-state";
 import { registrarLogSistema } from "@/lib/system-logs";
 
 type RequireSalaoMembershipOptions = {
   allowedNiveis?: string[];
+  allowPendingOnboarding?: boolean;
 };
 
 export class AuthzError extends Error {
@@ -75,6 +80,17 @@ export async function requireSalaoMembership(
     });
 
     throw new AuthzError("Usuario inativo.", 403);
+  }
+
+  if (!options.allowPendingOnboarding) {
+    try {
+      await assertSalaoOnboardingConcluido(idSalao);
+    } catch (error) {
+      if (error instanceof SalaoOperationalStateError) {
+        throw new AuthzError(error.message, error.status, error.code);
+      }
+      throw error;
+    }
   }
 
   if (options.allowedNiveis?.length) {
