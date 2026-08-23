@@ -8,14 +8,25 @@ export async function GET() {
   try {
     const actor = await requireAdminTenantActor();
     const supabase = getSupabaseAdmin() as any;
+    const now = new Date().toISOString();
+
+    // A validade comercial do PIX no SalaoPremium e de 24 horas.
+    // Depois disso ele sai do aviso principal e permanece apenas no historico.
+    await supabase
+      .from("whatsapp_creditos_recargas")
+      .update({ status: "expirado", atualizado_em: now })
+      .eq("id_salao", actor.idSalao)
+      .eq("status", "pendente")
+      .lte("expira_em", now);
 
     const [recargasResult, walletResult] = await Promise.all([
       supabase
         .from("whatsapp_creditos_recargas")
         .select(
-          "id, status, valor_centavos, pago_em, creditado_em, erro_texto, criado_em, atualizado_em"
+          "id, status, valor_centavos, pago_em, creditado_em, erro_texto, criado_em, atualizado_em, expira_em"
         )
         .eq("id_salao", actor.idSalao)
+        .in("status", ["pendente", "processando", "pago", "falhou"])
         .order("criado_em", { ascending: false })
         .limit(5),
       supabase
@@ -42,6 +53,7 @@ export async function GET() {
           erro: row.erro_texto || null,
           criadoEm: row.criado_em,
           atualizadoEm: row.atualizado_em,
+          expiraEm: row.expira_em || null,
         })),
       },
       {

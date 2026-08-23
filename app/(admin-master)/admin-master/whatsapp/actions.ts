@@ -3,7 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
+import { buscarCobranca } from "@/lib/payments/pix-provider";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { processarWebhookRecargaWhatsapp } from "@/lib/webhooks/asaas/whatsapp-credit-topup";
 
 function textValue(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
@@ -167,4 +169,71 @@ export async function ajustarWhatsappSaldoAdminMaster(formData: FormData) {
 
   revalidatePath("/admin-master/whatsapp");
   revalidatePath("/admin-master/whatsapp/tarifas");
+}
+
+async function reconciliarRecargaWhatsapp(formData: FormData, exigirPagamento: boolean) {
+  const access = await requireAdminMasterUser("whatsapp_editar");
+  const id = textValue(formData, "id");
+  if (!id) throw new Error("Recarga nao informada.");
+
+  const supabase = getSupabaseAdmin();
+  const { data: recarga, error } = await (supabase as any)
+    .from("whatsapp_creditos_recargas")
+    .select("id, id_salao, asaas_payment_id, external_reference, status, valor_centavos")
+    .eq("id", id)
+    .maybeSingle();
+
+  if (error || !recarga?.id) {
+    throw new Error(error?.message || "Recarga nao encontrada.");
+  }
+
+  const paymentId = String(recarga.asaas_payment_id || "").trim();
+  if (!paymentId) throw new Error("Recarga sem identificador de pagamento Asaas.");
+
+  const payment = (await buscarCobranca(paymentId)) as unknown as Record<string, unknown>;
+  const paymentStatus = String(payment.status || "").toUpperCase();
+  const confirmado = ["RECEIVED", "CONFIRMED", "RECEIVED_IN_CASH"].includes(paymentStatus);
+
+  if (exigirPagamento && !confirmado) {
+    throw new Error(`O Asaas ainda nao confirma o pagamento. Status atual: ${paymentStatus || "desconhecido"}.`);
+  }
+
+  const result = await processarWebhookRecargaWhatsapp({
+    supabaseAdmin: supabase as any,
+    paymentId,
+    payment,
+    paymentStatus,
+    event: "ADMIN_RECONCILIATION",
+    agoraIso: new Date().toISOString(),
+    externalReference:
+      String(payment.externalReference || recarga.external_reference || "").trim() || null,
+  });
+
+  await registrarAdminMasterAuditoria({
+    idAdmin: access.usuario.id,
+    acao: exigirPagamento ? "reprocessar_credito_whatsapp" : "consultar_recarga_whatsapp_asaas",
+    entidade: "whatsapp_creditos_recargas",
+    entidadeId: id,
+    descricao: exigirPagamento
+      ? "Recarga WhatsApp reprocessada manualmente apos validacao no Asaas."
+      : "Status da recarga WhatsApp consultado e reconciliado com o Asaas.",
+    payload: {
+      id_salao: recarga.id_salao,
+      payment_id: paymentId,
+      payment_status: paymentStatus,
+      resultado: result,
+    },
+  });
+
+  revalidatePath("/admin-master/whatsapp");
+  revalidatePath("/admin-master/whatsapp/recargas");
+  revalidatePath("/whatsapp-creditos");
+}
+
+export async function consultarRecargaWhatsappAsaasAdminMaster(formData: FormData) {
+  await reconciliarRecargaWhatsapp(formData, false);
+}
+
+export async function reprocessarRecargaWhatsappAdminMaster(formData: FormData) {
+  await reconciliarRecargaWhatsapp(formData, true);
 }
