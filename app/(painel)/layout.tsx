@@ -16,7 +16,8 @@ async function requireOnboardingConcluido() {
   const { user, usuario } = await getPainelUserContext();
   if (!user || !usuario?.id_salao) redirect("/login?motivo=sessao_expirada");
 
-  const { data, error } = await getSupabaseAdmin()
+  const admin = getSupabaseAdmin() as any;
+  const { data, error } = await admin
     .from("saloes")
     .select("onboarding_concluido, produtos_modulo_ativo")
     .eq("id", usuario.id_salao)
