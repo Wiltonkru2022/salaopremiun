@@ -5,6 +5,7 @@ import { setAdminMasterSessionCookie } from "@/lib/admin-master/auth/session";
 import { emitSecurityEvent } from "@/lib/security/security-events";
 import { getLoginErrorMessage } from "@/lib/supabase/auth-client-recovery";
 import { createClient } from "@/lib/supabase/server";
+import { hasAal2 } from "@/lib/auth/mfa-assurance";
 
 type LoginRequestBody = {
   email?: string;
@@ -102,20 +103,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const { data: assurance, error: assuranceError } =
-    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
-
-  if (assuranceError) {
-    return NextResponse.json(
-      {
-        ok: false,
-        message: "Nao foi possivel validar a verificacao em duas etapas.",
-      },
-      { status: 503 }
-    );
-  }
-
-  if (assurance.currentLevel !== "aal2") {
+  if (!(await hasAal2())) {
     const target = nextPath || "/admin-master";
     const redirectTo = `/seguranca/mfa?mode=admin-master&next=${encodeURIComponent(target)}`;
 
@@ -178,7 +166,7 @@ export async function POST(request: Request) {
     userAgent: request.headers.get("user-agent") || null,
     origem: "admin-master",
     route: "/admin-master/login",
-    detalhes: { email, admin_id: access.usuario.id, mfa: "aal2" },
+    detalhes: { email, mfa: "opcional_ou_validado" },
   });
 
   return response;
