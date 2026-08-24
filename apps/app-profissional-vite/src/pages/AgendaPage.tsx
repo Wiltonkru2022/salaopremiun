@@ -44,7 +44,12 @@ export function AgendaPage({
     reagendarAgendamento?: (payload: { agendamentoId: string; data: string; horaInicio: string; horaFim: string; status: string }) => Promise<void>;
   };
 }) {
-  const confirmaveis = agendamentos.filter((item) => item.data === selectedDate && item.status !== "bloqueado" && item.status !== "cancelado" && Boolean(whatsappNumber(item.clientes?.whatsapp || item.clientes?.telefone)));
+  const confirmaveis = agendamentos.filter(
+    (item) =>
+      item.data === selectedDate &&
+      item.status === "pendente" &&
+      Boolean(whatsappNumber(item.clientes?.whatsapp || item.clientes?.telefone))
+  );
 
   return (
     <div className="space-y-4">
