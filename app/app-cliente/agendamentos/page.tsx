@@ -15,7 +15,7 @@ export const metadata = {
 
 function bookedForAnotherPersonName(observacoes?: string | null) {
   const value = String(observacoes || "");
-  const match = /Reserva para outra pessoa:\s*([^\.\n]+)\./i.exec(value);
+  const match = /Reserva para outra pessoa:\s*([^.\n]+)\./i.exec(value);
   const nome = String(match?.[1] || "").trim();
   return nome && nome.toLowerCase() !== "nome não informado" ? nome : null;
 }
