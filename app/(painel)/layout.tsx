@@ -6,6 +6,7 @@ import PanelFormPendingGuard from "@/components/layout/PanelFormPendingGuard";
 import PartnerAdSlot from "@/components/parcerias/PartnerAdSlot";
 import { loadPainelShellData } from "@/lib/painel/load-painel-shell-data";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
+import { hasAal2 } from "@/lib/auth/mfa-assurance";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const metadata: Metadata = {
@@ -63,6 +64,10 @@ export default async function PainelLayout({ children }: { children: React.React
   }
 
   const data = result.data;
+  if (String(data.nivel || "").toLowerCase() === "admin" && !(await hasAal2())) {
+    redirect("/seguranca/mfa?next=/dashboard");
+  }
+
   return (
     <AppShell
       idSalao={data.idSalao}
