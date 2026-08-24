@@ -221,27 +221,66 @@ export async function syncClienteAppLinksByIdentity(params: {
 
       const account = accountRow as ClienteAppLinkAccount;
       const cpf = normalizeCpf(account.cpf);
+      const whatsapp = normalizeClienteAppPhone(account.whatsapp || account.telefone);
+
       if (cpf) {
-        const found = await findClienteRowsByCpf({ supabaseAdmin, cpf });
-        if (found.error) return { matched: 0, linked: 0 };
-        let linked = 0;
-        for (const row of found.data) {
-          if (
-            await upsertClienteAuthLink({
-              supabaseAdmin,
-              account,
-              idSalao: String(row.id_salao),
-              idCliente: String(row.id),
-            })
-          ) linked += 1;
+        const byCpf = await findClienteRowsByCpf({ supabaseAdmin, cpf });
+        if (byCpf.error) return { matched: 0, linked: 0 };
+
+        if (byCpf.data.length) {
+          let linked = 0;
+          for (const row of byCpf.data) {
+            if (
+              await upsertClienteAuthLink({
+                supabaseAdmin,
+                account,
+                idSalao: String(row.id_salao),
+                idCliente: String(row.id),
+              })
+            ) linked += 1;
+          }
+          return { matched: byCpf.data.length, linked };
         }
-        return { matched: found.data.length, linked };
+
+        // Ficha antiga do salão pode ter somente WhatsApp. Só vinculamos registros
+        // cujo CPF esteja vazio ou seja o mesmo CPF da conta para evitar mistura de pessoas.
+        if (whatsapp) {
+          const byPhone = await findClienteRowsByNormalizedPhone({
+            supabaseAdmin,
+            telefone: whatsapp,
+          });
+          if (byPhone.error) return { matched: 0, linked: 0 };
+
+          const safeRows = byPhone.data.filter((row) => {
+            const rowCpf = normalizeCpf(row.cpf);
+            return !rowCpf || rowCpf === cpf;
+          });
+
+          let linked = 0;
+          for (const row of safeRows) {
+            if (
+              await upsertClienteAuthLink({
+                supabaseAdmin,
+                account,
+                idSalao: String(row.id_salao),
+                idCliente: String(row.id),
+              })
+            ) linked += 1;
+          }
+
+          return { matched: safeRows.length, linked };
+        }
+
+        return { matched: 0, linked: 0 };
       }
 
-      // Compatibilidade de migração: telefone só é usado se apontar para UMA única ficha.
-      const whatsapp = normalizeClienteAppPhone(account.whatsapp || account.telefone);
+      // Compatibilidade de migração: sem CPF, telefone só é usado se apontar
+      // para UMA única ficha, pois não há um identificador forte para desempatar.
       if (!whatsapp) return { matched: 0, linked: 0 };
-      const found = await findClienteRowsByNormalizedPhone({ supabaseAdmin, telefone: whatsapp });
+      const found = await findClienteRowsByNormalizedPhone({
+        supabaseAdmin,
+        telefone: whatsapp,
+      });
       if (found.error || found.data.length !== 1) {
         return { matched: found.data.length, linked: 0 };
       }
