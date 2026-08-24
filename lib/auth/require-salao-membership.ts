@@ -49,7 +49,11 @@ export async function requireSalaoMembership(
   idSalao: string,
   options: RequireSalaoMembershipOptions = {}
 ) {
-  const { user, usuario } = await getPainelUserContext();
+  const { user, usuario } = await getPainelUserContext({
+    // Este guard precisa enxergar o admin em AAL1 para devolver explicitamente
+    // mfa_required. A permissao real continua bloqueada logo abaixo.
+    allowAdminAal1: true,
+  });
 
   if (!user) {
     throw new AuthzError("Usuario nao autenticado.", 401);
