@@ -1,0 +1,3 @@
+production-sync: 2026-08-24
+base: 525f0e59c01fc3077cf588599d47b3d59f8acce5
+purpose: trigger Vercel production build after consolidated fixes
