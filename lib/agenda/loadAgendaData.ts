@@ -4,6 +4,18 @@ import type { Agendamento, Bloqueio, Cliente, Servico, ViewMode } from "@/types/
 import { formatFullDate, normalizeTimeString } from "@/lib/utils/agenda";
 
 const AGENDA_VIEW_LIMIT = 320;
+const AGENDA_CACHE_TTL_MS = 8_000;
+const agendaCache = new Map<string, { expiresAt: number; data: { agendamentos: Agendamento[]; bloqueios: Bloqueio[] } }>();
+
+export function invalidarCacheAgenda(idSalao?: string) {
+  if (!idSalao) {
+    agendaCache.clear();
+    return;
+  }
+  for (const key of agendaCache.keys()) {
+    if (key.startsWith(`${idSalao}:`)) agendaCache.delete(key);
+  }
+}
 
 function firstRelation(value: unknown) {
   if (Array.isArray(value)) return value[0] as Record<string, unknown> | undefined;
@@ -27,6 +39,10 @@ export async function loadAgendaData(params: {
   const endDate = viewMode === "day"
     ? formatFullDate(currentDate)
     : formatFullDate(addDays(new Date(`${startDate}T12:00:00`), 6));
+
+  const cacheKey = `${idSalao}:${selectedProfissionalId}:${viewMode}:${startDate}:${endDate}`;
+  const cached = agendaCache.get(cacheKey);
+  if (cached && cached.expiresAt > Date.now()) return cached.data;
 
   const [agRes, blRes] = await Promise.all([
     supabase
@@ -96,5 +112,7 @@ export async function loadAgendaData(params: {
     hora_fim: normalizeTimeString(b.hora_fim),
   }));
 
-  return { agendamentos, bloqueios };
+  const data = { agendamentos, bloqueios };
+  agendaCache.set(cacheKey, { expiresAt: Date.now() + AGENDA_CACHE_TTL_MS, data });
+  return data;
 }
