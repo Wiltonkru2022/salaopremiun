@@ -95,6 +95,11 @@ export function SearchPicker({
 
   const showResults = query.trim().length > 0;
 
+  function selectOption(optionValue: string) {
+    onChange(optionValue);
+    setQuery("");
+  }
+
   function acceptCreated(option: SearchPickerOption) {
     setCreatedOptions((current) => [option, ...current.filter((item) => item.value !== option.value)]);
     onChange(option.value);
@@ -132,7 +137,6 @@ export function SearchPicker({
           <input
             value={query}
             onChange={(event) => setQuery(event.target.value)}
-            onFocus={(event) => window.setTimeout(() => event.currentTarget.scrollIntoView({ block: "center", behavior: "smooth" }), 120)}
             placeholder={placeholder || (visibleLabel ? `Buscar ${visibleLabel.toLowerCase()}` : "Buscar")}
             className="h-12 w-full rounded-[1.05rem] border border-zinc-200 bg-white pl-11 pr-4 font-bold text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-amber-400 focus:ring-4 focus:ring-amber-100/70"
           />
@@ -142,13 +146,19 @@ export function SearchPicker({
       {showResults ? (
         <div className="overflow-hidden rounded-[1.05rem] border border-zinc-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.09)]">
           {filtered.length ? (
-            <div className="max-h-44 overflow-auto">
+            <div className="max-h-44 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
               {filtered.map((item) => (
                 <button
                   key={item.value}
                   type="button"
-                  onClick={() => { onChange(item.value); setQuery(""); }}
-                  className="block w-full border-b border-zinc-100 px-4 py-3 text-left last:border-b-0 active:bg-zinc-50"
+                  onPointerDown={(event) => {
+                    if (event.pointerType === "touch" || event.pointerType === "pen") {
+                      event.preventDefault();
+                      selectOption(item.value);
+                    }
+                  }}
+                  onClick={() => selectOption(item.value)}
+                  className="block w-full touch-manipulation border-b border-zinc-100 px-4 py-3 text-left last:border-b-0 active:bg-zinc-50"
                 >
                   <div className="truncate text-sm font-black text-zinc-950">{item.label}</div>
                   <div className="mt-1 flex items-center justify-between gap-2 text-xs font-bold text-zinc-500">
