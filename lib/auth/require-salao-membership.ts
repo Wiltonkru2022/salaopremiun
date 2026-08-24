@@ -1,4 +1,5 @@
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
+import { hasAal2 } from "@/lib/auth/mfa-assurance";
 import {
   assertSalaoOnboardingConcluido,
   SalaoOperationalStateError,
@@ -8,6 +9,7 @@ import { registrarLogSistema } from "@/lib/system-logs";
 type RequireSalaoMembershipOptions = {
   allowedNiveis?: string[];
   allowPendingOnboarding?: boolean;
+  allowAdminAal1?: boolean;
 };
 
 export class AuthzError extends Error {
@@ -82,6 +84,25 @@ export async function requireSalaoMembership(
     throw new AuthzError("Usuario inativo.", 403);
   }
 
+  const nivelNormalizado = String(usuario.nivel || "").toLowerCase();
+  if (nivelNormalizado === "admin" && !options.allowAdminAal1) {
+    const mfaOk = await hasAal2();
+    if (!mfaOk) {
+      await registrarTenantGuardLog({
+        idSalaoAtual: usuario.id_salao,
+        idSalaoSolicitado: idSalao,
+        idUsuario: usuario.id,
+        motivo: "Administrador tentou executar API sem MFA AAL2.",
+        detalhes: { nivel_usuario: nivelNormalizado },
+      });
+      throw new AuthzError(
+        "Confirme o codigo do autenticador para continuar.",
+        403,
+        "mfa_required"
+      );
+    }
+  }
+
   if (!options.allowPendingOnboarding) {
     try {
       await assertSalaoOnboardingConcluido(idSalao);
@@ -94,7 +115,6 @@ export async function requireSalaoMembership(
   }
 
   if (options.allowedNiveis?.length) {
-    const nivelNormalizado = String(usuario.nivel || "").toLowerCase();
     const niveisPermitidos = options.allowedNiveis.map((item) =>
       item.toLowerCase()
     );
