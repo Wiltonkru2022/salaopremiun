@@ -1,6 +1,5 @@
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientSalonDiscovery from "@/components/client-app/ClientSalonDiscovery";
-import PartnerAdSlot from "@/components/parcerias/PartnerAdSlot";
 import { validateClienteAppSession } from "@/lib/client-context.server";
 import { listVisibleClientAppSaloes } from "@/lib/client-app/queries";
 
@@ -20,9 +19,6 @@ export default async function InicioClientePage({
 
   return (
     <ClientAppFrame title="Explorar" subtitle="Encontre salões e serviços perto de você.">
-      <div className="px-4 pb-4 md:px-6">
-        <PartnerAdSlot publico="cliente" local="app_cliente" allowedPaths={["/app-cliente/inicio"]} />
-      </div>
       <section>
         {saloes.length ? (
           <ClientSalonDiscovery saloes={saloes} initialSearch={busca || ""} isLoggedIn={Boolean(session.context)} />
