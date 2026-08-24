@@ -8,6 +8,7 @@ import { loadPainelShellData } from "@/lib/painel/load-painel-shell-data";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { hasAal2 } from "@/lib/auth/mfa-assurance";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import "./painel-clean.css";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
