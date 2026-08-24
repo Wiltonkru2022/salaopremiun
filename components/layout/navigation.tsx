@@ -70,6 +70,7 @@ export const painelNavigationItems: PainelNavItem[] = [
   { href: "/whatsapp-creditos", label: "WhatsApp e Creditos", shortLabel: "WhatsApp", description: "Carteira, tarifas, recargas e extrato de envios.", icon: MessageCircle, permissionKey: "marketing_ver", niveis: ["admin"], highlight: true },
   { href: "/marketing", label: "Marketing", shortLabel: "Marketing", description: "Ações de retorno, aniversários e campanhas.", icon: Megaphone, permissionKey: "marketing_ver" },
   { href: "/campanhas", label: "Campanhas", shortLabel: "Campanhas", description: "Cupons, recuperação e links de resgate.", icon: Megaphone, permissionKey: "dashboard_ver", niveis: ["admin"] },
+  { href: "/parceiros", label: "Parceiros e benefícios", shortLabel: "Parceiros", description: "Ofertas e benefícios de parceiros do Salão Premium.", icon: Sparkles, permissionKey: "dashboard_ver" },
   { href: "/novidades", label: "Novidades", shortLabel: "Novidades", description: "Roadmap, recursos novos e próximas entregas.", icon: Sparkles, permissionKey: "dashboard_ver" },
   { href: "/suporte", label: "Suporte", shortLabel: "Suporte", description: "Tickets, conversa com suporte e histórico do salão.", icon: LifeBuoy, permissionKey: "suporte_ver" },
   { href: "/perfil-salao", label: "Perfil do Salão", shortLabel: "Perfil", description: "Dados comerciais, logo, endereço e senha.", icon: Building2, permissionKey: "perfil_salao_ver", niveis: ["admin"], sidebar: false },
@@ -83,42 +84,23 @@ export const painelNavigationItems: PainelNavItem[] = [
   { href: "/comparar-planos", label: "Comparar Planos", shortLabel: "Planos", description: "Preço, limites e recursos liberados por plano.", icon: CreditCard, permissionKey: "assinatura_ver", niveis: ["admin"], sidebar: false },
 ];
 
-export function filterPainelNavigation(
-  permissoes: Permissoes,
-  nivel: string,
-  planoRecursos?: PlanoRecursos,
-  produtosModuloAtivo = true
-) {
+export function filterPainelNavigation(permissoes: Permissoes, nivel: string, planoRecursos?: PlanoRecursos, produtosModuloAtivo = true) {
   const nivelNormalizado = String(nivel || "").toLowerCase();
-
   return painelNavigationItems
     .filter((item) => {
       if (item.sidebar === false) return false;
       if (!produtosModuloAtivo && item.href === "/estoque") return false;
-
       const permitidoPorNivel = !item.niveis || item.niveis.includes(nivelNormalizado);
       const permitidoPorPermissao = !item.permissionKey || permissoes?.[item.permissionKey] === true;
       const recursoPlano = NAV_PLAN_FEATURE_MAP[item.href];
       const permitidoPorPlano = !recursoPlano || planoRecursos?.[recursoPlano] !== false;
-
       return permitidoPorNivel && permitidoPorPermissao && permitidoPorPlano;
     })
-    .map((item) =>
-      !produtosModuloAtivo && item.href === "/produtos"
-        ? {
-            ...item,
-            label: "Produtos — desativado",
-            description: "Produtos e Estoque estão desativados. Acesse para ativar.",
-          }
-        : item
-    );
+    .map((item) => !produtosModuloAtivo && item.href === "/produtos" ? { ...item, label: "Produtos — desativado", description: "Produtos e Estoque estão desativados. Acesse para ativar." } : item);
 }
 
 export function getPainelPageMeta(pathname: string) {
-  const match = [...painelNavigationItems]
-    .sort((a, b) => b.href.length - a.href.length)
-    .find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
-
+  const match = [...painelNavigationItems].sort((a, b) => b.href.length - a.href.length).find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
   if (match) return { title: match.label, description: match.description };
   return { title: "Painel", description: "Operação, agenda, vendas e crescimento do salão." };
 }
