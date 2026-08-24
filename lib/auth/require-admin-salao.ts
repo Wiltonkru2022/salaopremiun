@@ -11,6 +11,10 @@ export async function requireAdminSalao(idSalao: string) {
       allowedNiveis: ["admin"],
     });
   } catch (error) {
+    if (error instanceof AuthzError && error.code === "mfa_required") {
+      throw error;
+    }
+
     if (error instanceof AuthzError && error.status === 403) {
       throw new AuthzError("Somente administrador pode executar esta acao.", 403);
     }
