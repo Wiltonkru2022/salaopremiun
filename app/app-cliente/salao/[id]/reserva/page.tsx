@@ -1,7 +1,12 @@
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientBookingForm from "@/components/client-app/ClientBookingForm";
+import ClientBookingPersonStep from "@/components/client-app/ClientBookingPersonStep";
+import {
+  resetBookingPersonAction,
+} from "@/app/app-cliente/salao/[id]/reserva/person-actions";
 import {
   getClientAppSalonDetail,
   listClienteAppAvailableCoupons,
@@ -9,6 +14,10 @@ import {
 import { getCampaignAvailability, loadPublicCampaign } from "@/lib/campanhas/public";
 import { validateClienteAppSession } from "@/lib/client-context.server";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
+import {
+  bookingPersonCookieName,
+  parseBookingPersonSelection,
+} from "@/lib/client-app/booking-person-selection";
 
 export const metadata = {
   title: "Reserva online",
@@ -19,7 +28,11 @@ export default async function ClienteSalonReservaPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ cupom?: string | string[]; campanha?: string | string[] }>;
+  searchParams: Promise<{
+    cupom?: string | string[];
+    campanha?: string | string[];
+    pessoa_erro?: string | string[];
+  }>;
 }) {
   const { id } = await params;
   const query = await searchParams;
@@ -35,6 +48,10 @@ export default async function ClienteSalonReservaPage({
   try {
     const salao = await getClientAppSalonDetail(id);
     const session = await validateClienteAppSession();
+    const store = await cookies();
+    const pessoaSelecionada = parseBookingPersonSelection(
+      store.get(bookingPersonCookieName(salao.id))?.value
+    );
     const salaoPublicPath = buildSalaoPublicPath(
       salao.appClienteSlug || salao.id
     );
@@ -71,17 +88,52 @@ export default async function ClienteSalonReservaPage({
                 </p>
               </div>
             </div>
-          ) : (
-            <ClientBookingForm
+          ) : !pessoaSelecionada ? (
+            <ClientBookingPersonStep
               idSalao={salao.id}
-              servicos={servicosReserva}
-              profissionais={salao.profissionais}
-              intervaloMinutos={salao.intervaloAgendaMinutos}
-              isAuthenticated={Boolean(session.context)}
-              returnPath={reservaPath}
-              cuponsDisponiveis={cuponsDisponiveis}
-              cupomInicial={cupomInicial}
+              error={Boolean(query.pessoa_erro)}
             />
+          ) : (
+            <>
+              <div className="mx-auto max-w-md px-5 pt-4">
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-[#111214] px-4 py-3 text-sm">
+                  <div className="min-w-0">
+                    <div className="text-xs font-black uppercase tracking-[0.14em] text-zinc-500">
+                      Pessoa atendida
+                    </div>
+                    <div className="mt-1 truncate font-black text-white">
+                      {pessoaSelecionada.tipo === "outra_pessoa"
+                        ? pessoaSelecionada.nome
+                        : "Você"}
+                    </div>
+                    {pessoaSelecionada.tipo === "outra_pessoa" ? (
+                      <div className="mt-0.5 text-xs text-zinc-400">
+                        WhatsApp informado para este atendimento
+                      </div>
+                    ) : null}
+                  </div>
+                  <form action={resetBookingPersonAction}>
+                    <input type="hidden" name="salao" value={salao.id} />
+                    <button
+                      type="submit"
+                      className="shrink-0 rounded-xl border border-white/10 px-3 py-2 text-xs font-black text-[#f6b93f]"
+                    >
+                      Trocar
+                    </button>
+                  </form>
+                </div>
+              </div>
+              <ClientBookingForm
+                idSalao={salao.id}
+                servicos={servicosReserva}
+                profissionais={salao.profissionais}
+                intervaloMinutos={salao.intervaloAgendaMinutos}
+                isAuthenticated={Boolean(session.context)}
+                returnPath={reservaPath}
+                cuponsDisponiveis={cuponsDisponiveis}
+                cupomInicial={cupomInicial}
+              />
+            </>
           )}
         </section>
       </ClientAppFrame>
