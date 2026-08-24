@@ -13,7 +13,7 @@ export async function POST() {
   try {
     const supabaseAdmin = getSupabaseAdmin();
     const service = createSuporteTicketService();
-    const { user } = await getPainelUserContext();
+    const { user } = await getPainelUserContext({ allowAdminAal1: true });
 
     if (!user) {
       return NextResponse.json(
