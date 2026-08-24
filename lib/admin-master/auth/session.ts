@@ -5,7 +5,7 @@ import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 export const ADMIN_MASTER_SESSION_COOKIE = "admin-master-session";
 
 const ADMIN_MASTER_SESSION_MAX_AGE_SECONDS = 60 * 60 * 12;
-const ADMIN_MASTER_SESSION_VERSION = 1;
+const ADMIN_MASTER_SESSION_VERSION = 2;
 
 type AdminMasterSessionPayload = {
   v: number;
@@ -13,6 +13,7 @@ type AdminMasterSessionPayload = {
   email: string;
   exp: number;
   iat: number;
+  mfaVerifiedAt: number;
 };
 
 export type AdminMasterSession = {
@@ -20,6 +21,7 @@ export type AdminMasterSession = {
   email: string;
   expiresAt: number;
   issuedAt: number;
+  mfaVerifiedAt: number;
 };
 
 function bytesToBase64Url(bytes: Uint8Array) {
@@ -96,6 +98,7 @@ async function signSessionPayload(payloadBase64: string) {
 export async function createAdminMasterSessionToken(params: {
   authUserId: string;
   email: string;
+  mfaVerifiedAt?: number;
 }) {
   const nowSeconds = Math.floor(Date.now() / 1000);
   const payload: AdminMasterSessionPayload = {
@@ -104,6 +107,7 @@ export async function createAdminMasterSessionToken(params: {
     email: params.email.trim().toLowerCase(),
     iat: nowSeconds,
     exp: nowSeconds + ADMIN_MASTER_SESSION_MAX_AGE_SECONDS,
+    mfaVerifiedAt: params.mfaVerifiedAt || nowSeconds,
   };
 
   const payloadBase64 = encodeTextToBase64Url(JSON.stringify(payload));
@@ -140,7 +144,8 @@ export async function verifyAdminMasterSessionToken(token?: string | null) {
     !payload.authUserId ||
     !payload.email ||
     typeof payload.exp !== "number" ||
-    typeof payload.iat !== "number"
+    typeof payload.iat !== "number" ||
+    typeof payload.mfaVerifiedAt !== "number"
   ) {
     return null;
   }
@@ -156,6 +161,7 @@ export async function verifyAdminMasterSessionToken(token?: string | null) {
     email: payload.email,
     expiresAt: payload.exp,
     issuedAt: payload.iat,
+    mfaVerifiedAt: payload.mfaVerifiedAt,
   } satisfies AdminMasterSession;
 }
 
@@ -182,6 +188,7 @@ export async function setAdminMasterSessionCookie(
     authUserId: string;
     email: string;
     host?: string | null;
+    mfaVerifiedAt?: number;
   }
 ) {
   const token = await createAdminMasterSessionToken(params);
