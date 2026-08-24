@@ -1,4 +1,4 @@
-export type RoadmapStatus = "em_implementacao" | "planejado" | "entregue";
+export type RoadmapStatus = "em_implementacao" | "em_teste" | "planejado" | "entregue";
 
 export type RoadmapItem = {
   title: string;
@@ -16,6 +16,10 @@ export const roadmapStatusCopy: Record<
   em_implementacao: {
     label: "Em implementação",
     description: "Já está na esteira técnica ou entrando em produção controlada.",
+  },
+  em_teste: {
+    label: "Em teste",
+    description: "Já funciona em ambiente controlado, mas ainda está sendo validado antes da liberação geral.",
   },
   planejado: {
     label: "Planejado",
@@ -40,11 +44,11 @@ export const productRoadmap: RoadmapItem[] = [
   {
     title: "WhatsApp automático",
     description:
-      "Lembretes, confirmações e mensagens de relacionamento com disparo profissional e controle no painel.",
+      "Lembretes, confirmações e mensagens de relacionamento com disparo profissional e controle no painel. O recurso está em teste controlado antes da liberação geral.",
     category: "Comunicação",
-    status: "em_implementacao",
-    eta: "Em implementação",
-    impact: "Cliente mais avisado, agenda mais protegida.",
+    status: "em_teste",
+    eta: "Em teste",
+    impact: "Cliente mais avisado, agenda mais protegida, com validação gradual do envio automático.",
   },
   {
     title: "Cobrança de sinal",
