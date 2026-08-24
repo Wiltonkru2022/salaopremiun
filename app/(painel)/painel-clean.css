@@ -1,0 +1,175 @@
+/*
+ * Camada visual compartilhada do painel do salão.
+ * Objetivo: reduzir ruído, melhorar hierarquia e manter as telas operacionais densas
+ * sem alterar regras de negócio ou comportamento.
+ */
+
+.painel-density {
+  --painel-page-bg: #f7f7f8;
+  --painel-surface: #ffffff;
+  --painel-surface-muted: #fafafa;
+  --painel-border: #e4e4e7;
+  --painel-border-strong: #d4d4d8;
+  --painel-text: #18181b;
+  --painel-muted: #71717a;
+  --painel-accent: #a77b32;
+  --painel-accent-soft: #faf4e8;
+  --painel-shadow: 0 1px 2px rgba(24, 24, 27, 0.035), 0 6px 18px rgba(24, 24, 27, 0.025);
+  background: var(--painel-page-bg);
+}
+
+/* Mais respiro no conteúdo sem desperdiçar espaço útil da recepção. */
+.painel-density main.scroll-premium {
+  background: var(--painel-page-bg) !important;
+}
+
+.painel-density main.scroll-premium > div {
+  min-height: calc(100dvh - 4.25rem);
+  padding: 12px 14px 18px !important;
+  background: var(--painel-page-bg) !important;
+}
+
+.painel-density main.scroll-premium > div > div {
+  width: 100%;
+  max-width: 1720px;
+  margin-inline: auto;
+}
+
+/* Hierarquia tipográfica mais previsível. */
+.painel-density main :where(h1) {
+  color: var(--painel-text);
+  line-height: 1.15;
+}
+
+.painel-density main :where(h2, h3) {
+  color: #27272a;
+  line-height: 1.22;
+}
+
+.painel-density main :where(p) {
+  line-height: 1.45;
+}
+
+/* Superfícies: menos caixas gritando e menos sombra pesada. */
+.painel-density main :where(.shadow-sm) {
+  box-shadow: 0 1px 2px rgba(24, 24, 27, 0.035) !important;
+}
+
+.painel-density main :where(.shadow, .shadow-md, .shadow-lg, .shadow-xl, .shadow-2xl) {
+  box-shadow: var(--painel-shadow) !important;
+}
+
+.painel-density main :where(.border-zinc-100, .border-zinc-200) {
+  border-color: var(--painel-border) !important;
+}
+
+/* Neutraliza cartões gigantes muito arredondados no desktop. */
+@media (min-width: 1024px) {
+  .painel-density main :where(.rounded-3xl, .rounded-\[28px\], .rounded-\[30px\], .rounded-\[32px\]) {
+    border-radius: 12px !important;
+  }
+
+  .painel-density main :where(.rounded-2xl, .rounded-\[20px\], .rounded-\[22px\], .rounded-\[24px\], .rounded-\[26px\]) {
+    border-radius: 10px !important;
+  }
+}
+
+/* Campos consistentes e discretos. */
+.painel-density main :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea) {
+  border-color: var(--painel-border-strong);
+  background-color: #fff;
+}
+
+.painel-density main :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea):hover:not(:disabled) {
+  border-color: #a1a1aa;
+}
+
+.painel-density main :where(input:not([type="checkbox"]):not([type="radio"]), select, textarea):focus {
+  border-color: #a77b32;
+  box-shadow: 0 0 0 3px rgba(167, 123, 50, 0.11);
+}
+
+/* Tabelas e listas operacionais: leitura rápida, menos linhas competindo entre si. */
+.painel-density main :where(table) {
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.painel-density main :where(thead th) {
+  color: #52525b;
+  font-weight: 700;
+  background: #fafafa;
+}
+
+.painel-density main :where(tbody tr) {
+  transition: background-color 120ms ease;
+}
+
+.painel-density main :where(tbody tr:hover) {
+  background: rgba(250, 250, 250, 0.9);
+}
+
+.painel-density main :where(td, th) {
+  border-color: #eeeeef;
+}
+
+/* Mantém cores semânticas, mas remove o excesso de violeta/índigo usado como decoração. */
+.painel-density main :where(.text-violet-600, .text-violet-700, .text-purple-600, .text-purple-700, .text-indigo-600, .text-indigo-700) {
+  color: #8e6a2f !important;
+}
+
+.painel-density main :where(.border-violet-200, .border-violet-300, .border-purple-200, .border-purple-300, .border-indigo-200, .border-indigo-300) {
+  border-color: #ead9b6 !important;
+}
+
+.painel-density main :where(.bg-violet-50, .bg-violet-100, .bg-purple-50, .bg-purple-100, .bg-indigo-50, .bg-indigo-100) {
+  background-color: var(--painel-accent-soft) !important;
+}
+
+/* Ações decorativas fortes viram o dourado do produto; estados de erro/sucesso não são alterados. */
+.painel-density main :where(.bg-violet-600, .bg-violet-700, .bg-purple-600, .bg-purple-700, .bg-indigo-600, .bg-indigo-700) {
+  background-color: #8e6a2f !important;
+}
+
+.painel-density main :where(.hover\:bg-violet-700:hover, .hover\:bg-purple-700:hover, .hover\:bg-indigo-700:hover) {
+  background-color: #755524 !important;
+}
+
+/* Botões secundários não precisam competir com a ação principal. */
+.painel-density main :where(button.border.bg-white, a.border.bg-white) {
+  box-shadow: none !important;
+}
+
+/* Separadores discretos ajudam mais do que cartões dentro de cartões. */
+.painel-density main :where(hr) {
+  border-color: #ececee;
+}
+
+/* Modais: conteúdo mais legível e sombra controlada. */
+.painel-density main :where([class*="fixed"][class*="inset-0"]) :where(.bg-white) {
+  box-shadow: 0 18px 50px rgba(24, 24, 27, 0.14);
+}
+
+/* Workspace (Agenda/Caixa) continua ocupando a tela, mas com a mesma linguagem visual. */
+.painel-density > main.relative.min-h-screen {
+  background: var(--painel-page-bg) !important;
+}
+
+/* Responsive: no mobile não comprimir demais. */
+@media (max-width: 767px) {
+  .painel-density main.scroll-premium > div {
+    padding: 8px 8px 14px !important;
+  }
+}
+
+/* Reduz movimento desnecessário em operação repetitiva. */
+@media (prefers-reduced-motion: reduce) {
+  .painel-density main *,
+  .painel-density main *::before,
+  .painel-density main *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
