@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
-import ClientMobileAppLayout from "@/components/client-app/ClientMobileAppLayout";
 import { useClientMobileLayout } from "@/components/client-app/ClientMobileLayoutContext";
 import PartnerAdSlot from "@/components/parcerias/PartnerAdSlot";
 
@@ -34,13 +33,5 @@ export default function ClientAppFrame({
     mobileLayout?.setChrome({ title, subtitle });
   }, [mobileLayout, title, subtitle]);
 
-  if (mobileLayout) {
-    return <ClientFrameContent>{children}</ClientFrameContent>;
-  }
-
-  return (
-    <ClientMobileAppLayout>
-      <ClientFrameContent>{children}</ClientFrameContent>
-    </ClientMobileAppLayout>
-  );
+  return <ClientFrameContent>{children}</ClientFrameContent>;
 }
