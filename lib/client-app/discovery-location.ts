@@ -149,16 +149,17 @@ async function enrich(saloes: ClientAppSalonListItem[]) {
   if (!saloes.length) return saloes;
   const supabase = getSupabaseAdmin();
   const ids = saloes.map((item) => item.id);
+  const supabaseUntyped = supabase as any;
 
   const [servicesResult, professionalsResult, reviewsResult] = await Promise.allSettled([
-    supabase
+    supabaseUntyped
       .from("servicos")
       .select("id_salao,nome,categoria,preco,preco_padrao,duracao_minutos,duracao")
       .in("id_salao", ids)
       .eq("ativo", true)
       .eq("app_cliente_visivel", true)
       .limit(1200),
-    supabase
+    supabaseUntyped
       .from("profissionais")
       .select("id_salao,id")
       .in("id_salao", ids)
@@ -166,7 +167,11 @@ async function enrich(saloes: ClientAppSalonListItem[]) {
       .eq("app_cliente_visivel", true)
       .or("eh_assistente.is.null,eh_assistente.eq.false")
       .limit(600),
-    supabase.from("clientes_avaliacoes").select("id_salao,nota").in("id_salao", ids).limit(1800),
+    supabaseUntyped
+      .from("clientes_avaliacoes")
+      .select("id_salao,nota")
+      .in("id_salao", ids)
+      .limit(1800),
   ]);
 
   const serviceMetrics = new Map<string, { count: number; minPrice: number | null; minDuration: number | null; categories: Set<string> }>();
