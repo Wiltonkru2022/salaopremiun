@@ -13,7 +13,15 @@ function hashScore(seed: string, id: string) {
   return parseInt(hex, 16) / 0xffffffffffff;
 }
 
-function asPartner(campanha: any) {
+function campaignLabel(origem: string, categoria?: string | null) {
+  if (origem !== "salao_premium") return "Publicidade • Parceiro Salão Premium";
+  if (categoria === "critico") return "Comunicado importante • Salão Premium";
+  if (categoria === "beneficio") return "Benefício Salão Premium";
+  if (categoria === "comunicado") return "Comunicado • Salão Premium";
+  return "Novidade Salão Premium";
+}
+
+function asCampaign(campanha: any) {
   const parceiro = Array.isArray(campanha.parceiros_comerciais)
     ? campanha.parceiros_comerciais[0]
     : campanha.parceiros_comerciais;
@@ -21,15 +29,20 @@ function asPartner(campanha: any) {
     .filter((item: any) => item.ativo !== false)
     .sort((a: any, b: any) => Number(a.ordem || 0) - Number(b.ordem || 0));
   const criativo = criativos[0] || null;
+  const origem = campanha.origem || "parceiro";
+  const categoria = campanha.categoria_interna || null;
 
   return {
     id: campanha.id,
-    parceiro: parceiro?.nome_fantasia || parceiro?.razao_social || "Parceiro Salão Premium",
+    origem,
+    categoria,
+    label: campaignLabel(origem, categoria),
+    parceiro: origem === "salao_premium" ? "Salão Premium" : (parceiro?.nome_fantasia || parceiro?.razao_social || "Parceiro Salão Premium"),
     titulo: criativo?.titulo || campanha.nome,
     subtitulo: criativo?.subtitulo || campanha.descricao || null,
     imagemUrl: criativo?.imagem_url || null,
     altText: criativo?.alt_text || campanha.nome,
-    ctaTexto: criativo?.cta_texto || "Conhecer parceiro",
+    ctaTexto: criativo?.cta_texto || (origem === "salao_premium" ? "Saiba mais" : "Conhecer parceiro"),
     destinoUrl: criativo?.destino_url || campanha.destino_url || null,
     cupomCodigo: campanha.cupom_codigo || null,
     prioridade: Number(campanha.prioridade || 0),
@@ -65,12 +78,12 @@ export async function GET(request: NextRequest) {
       : Promise.resolve({ data: null }),
     supabase
       .from("parceria_campanhas")
-      .select("id,nome,descricao,destino_url,cupom_codigo,publico,locais_exibicao,regioes,inicio_em,fim_em,status,prioridade,peso_rotacao,limite_frequencia_dia,limite_impressoes_dia,exclusiva,parceiros_comerciais(nome_fantasia,razao_social),parceria_criativos(id,titulo,subtitulo,imagem_url,alt_text,cta_texto,destino_url,formato,ordem,ativo)")
+      .select("id,nome,descricao,destino_url,cupom_codigo,publico,locais_exibicao,regioes,inicio_em,fim_em,status,prioridade,peso_rotacao,limite_frequencia_dia,limite_impressoes_dia,exclusiva,origem,categoria_interna,parceiros_comerciais(nome_fantasia,razao_social),parceria_criativos(id,titulo,subtitulo,imagem_url,alt_text,cta_texto,destino_url,formato,ordem,ativo)")
       .in("status", ["ativa", "agendada"])
       .lte("inicio_em", now)
       .or(`fim_em.is.null,fim_em.gte.${now}`)
       .order("prioridade", { ascending: false })
-      .limit(60),
+      .limit(80),
   ]);
 
   const cidadeSalao = normalize(salao?.cidade);
@@ -84,11 +97,8 @@ export async function GET(request: NextRequest) {
     const regioes = campanha.regioes || {};
     const cidadeAlvo = normalize(regioes.cidade);
     const ufAlvo = normalize(regioes.uf);
-
     if (!idSalao) return !cidadeAlvo && !ufAlvo;
-    const cidadeOk = !cidadeAlvo || cidadeAlvo === cidadeSalao;
-    const ufOk = !ufAlvo || ufAlvo === estadoSalao;
-    return cidadeOk && ufOk;
+    return (!cidadeAlvo || cidadeAlvo === cidadeSalao) && (!ufAlvo || ufAlvo === estadoSalao);
   });
 
   if (!elegiveis.length) return NextResponse.json({ campanha: null, campanhas: [] });
@@ -102,9 +112,7 @@ export async function GET(request: NextRequest) {
     .eq("local_exibicao", local);
 
   const impressoesHoje = new Map<string, number>();
-  for (const row of metricas || []) {
-    impressoesHoje.set(String(row.id_campanha), Number(row.impressoes || 0));
-  }
+  for (const row of metricas || []) impressoesHoje.set(String(row.id_campanha), Number(row.impressoes || 0));
 
   elegiveis = elegiveis.filter((campanha: any) => {
     const limite = campanha.limite_impressoes_dia == null ? null : Number(campanha.limite_impressoes_dia);
@@ -114,9 +122,14 @@ export async function GET(request: NextRequest) {
   if (modo === "lista") {
     return NextResponse.json({
       campanhas: elegiveis
-        .sort((a: any, b: any) => Number(b.prioridade || 0) - Number(a.prioridade || 0))
+        .sort((a: any, b: any) => {
+          const aCritico = a.origem === "salao_premium" && a.categoria_interna === "critico" ? 1 : 0;
+          const bCritico = b.origem === "salao_premium" && b.categoria_interna === "critico" ? 1 : 0;
+          if (aCritico !== bCritico) return bCritico - aCritico;
+          return Number(b.prioridade || 0) - Number(a.prioridade || 0);
+        })
         .slice(0, 50)
-        .map(asPartner),
+        .map(asCampaign),
     });
   }
 
@@ -124,8 +137,13 @@ export async function GET(request: NextRequest) {
   if (semBloqueadas.length) elegiveis = semBloqueadas;
   else if (excluded.size) return NextResponse.json({ campanha: null });
 
-  const exclusivas = elegiveis.filter((c: any) => c.exclusiva);
-  if (exclusivas.length) elegiveis = exclusivas;
+  const criticas = elegiveis.filter((c: any) => c.origem === "salao_premium" && c.categoria_interna === "critico");
+  if (criticas.length) {
+    elegiveis = criticas;
+  } else {
+    const exclusivas = elegiveis.filter((c: any) => c.exclusiva);
+    if (exclusivas.length) elegiveis = exclusivas;
+  }
 
   const maiorPrioridade = Math.max(...elegiveis.map((c: any) => Number(c.prioridade || 0)));
   const faixa = elegiveis.filter((c: any) => Number(c.prioridade || 0) === maiorPrioridade);
@@ -139,7 +157,7 @@ export async function GET(request: NextRequest) {
     return hashScore(seed, a.id) - hashScore(seed, b.id);
   });
 
-  return NextResponse.json({ campanha: asPartner(faixa[0]) });
+  return NextResponse.json({ campanha: asCampaign(faixa[0]) });
 }
 
 export async function POST(request: NextRequest) {
@@ -151,7 +169,6 @@ export async function POST(request: NextRequest) {
     if (!/^[0-9a-f-]{36}$/i.test(idCampanha) || !["impressao", "clique", "conversao", "cupom"].includes(tipo)) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
-
     const supabase = getSupabaseAdmin() as any;
     const { error } = await supabase.rpc("registrar_parceria_metrica", {
       p_id_campanha: idCampanha,
