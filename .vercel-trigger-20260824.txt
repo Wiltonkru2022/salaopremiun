@@ -1,1 +1,1 @@
-Deploy de produção solicitado manualmente em 2026-08-24 após validação do vínculo Git/Vercel.
+Redeploy único após configurar variáveis Meta WhatsApp em produção — 2026-08-24.
