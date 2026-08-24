@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import type { ReactNode } from "react";
 import {
   ArrowUpRight,
+  Beaker,
   CalendarClock,
   CheckCircle2,
   CircleDot,
@@ -36,6 +37,11 @@ const statusTone: Record<
     icon: <Clock3 size={15} />,
     className: "border-amber-200 bg-amber-50 text-amber-900",
     cardClassName: "border-amber-200 bg-amber-50/70",
+  },
+  em_teste: {
+    icon: <Beaker size={15} />,
+    className: "border-sky-200 bg-sky-50 text-sky-900",
+    cardClassName: "border-sky-200 bg-sky-50/70",
   },
   planejado: {
     icon: <CircleDot size={15} />,
@@ -75,6 +81,7 @@ export default async function NovidadesPage() {
   }
 
   const inProgress = getRoadmapByStatus("em_implementacao");
+  const inTest = getRoadmapByStatus("em_teste");
   const planned = getRoadmapByStatus("planejado");
   const delivered = getRoadmapByStatus("entregue");
 
@@ -86,8 +93,8 @@ export default async function NovidadesPage() {
         description="Uma visao direta das entregas que deixam o painel, o app cliente e a operacao do salao mais fortes."
         actions={
           <>
+            <HeroMetric value={inTest.length} label="em teste" />
             <HeroMetric value={inProgress.length} label="em implementacao" />
-            <HeroMetric value={planned.length} label="planejadas" />
             <HeroMetric value={delivered.length} label="disponiveis" />
           </>
         }
@@ -96,10 +103,10 @@ export default async function NovidadesPage() {
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div>
           <div className="text-xs font-bold uppercase tracking-[0.2em] text-zinc-400">
-            Proxima leva
+            Em validacao agora
           </div>
           <div className="mt-3 grid gap-3 lg:grid-cols-2">
-            {inProgress.map((item) => (
+            {[...inTest, ...inProgress].map((item) => (
               <SpotlightItem key={item.title} item={item} />
             ))}
           </div>
@@ -122,7 +129,8 @@ export default async function NovidadesPage() {
         </aside>
       </section>
 
-      <section className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-3">
+      <section className="grid gap-3 lg:grid-cols-2 2xl:grid-cols-4">
+        <RoadmapColumn status="em_teste" items={inTest} />
         <RoadmapColumn status="em_implementacao" items={inProgress} />
         <RoadmapColumn status="planejado" items={planned} />
         <RoadmapColumn status="entregue" items={delivered} />
