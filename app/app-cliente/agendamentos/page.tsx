@@ -13,6 +13,13 @@ export const metadata = {
   title: "Meus Agendamentos",
 };
 
+function bookedForAnotherPersonName(observacoes?: string | null) {
+  const value = String(observacoes || "");
+  const match = /Reserva para outra pessoa:\s*([^\.\n]+)\./i.exec(value);
+  const nome = String(match?.[1] || "").trim();
+  return nome && nome.toLowerCase() !== "nome não informado" ? nome : null;
+}
+
 export default async function ClienteAppointmentsPage({
   searchParams,
 }: {
@@ -31,13 +38,18 @@ export default async function ClienteAppointmentsPage({
   const salonTimeZones = await getSalonTimeZoneMap(
     agendamentos.map((item) => item.idSalao)
   );
-  const hydrationStableAppointments = agendamentos.map((item) => ({
-    ...item,
-    criadoEm: toDeterministicSalonLocalDateTime(
-      item.criadoEm,
-      salonTimeZones.get(item.idSalao)
-    ),
-  }));
+  const hydrationStableAppointments = agendamentos.map((item) => {
+    const outraPessoa = bookedForAnotherPersonName(item.observacoes);
+    return {
+      ...item,
+      salaoNome: outraPessoa ? `${item.salaoNome} · Agendado por você` : item.salaoNome,
+      servicoNome: outraPessoa ? `${item.servicoNome} · Para ${outraPessoa}` : item.servicoNome,
+      criadoEm: toDeterministicSalonLocalDateTime(
+        item.criadoEm,
+        salonTimeZones.get(item.idSalao)
+      ),
+    };
+  });
 
   return (
     <ClientAppFrame
