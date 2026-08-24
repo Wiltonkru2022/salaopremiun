@@ -21,6 +21,7 @@ const HIDDEN_CHROME_ROUTES = [
 
 const EXACT_CUSTOM_HEADER_ROUTES = new Set([
   "/app-cliente",
+  "/app-cliente/meuapp",
   "/app-cliente/inicio",
   "/app-cliente/explorar",
   "/app-cliente/agenda",
@@ -30,6 +31,7 @@ const EXACT_CUSTOM_HEADER_ROUTES = new Set([
 
 const INLINE_MENU_ROUTES = new Set([
   "/app-cliente",
+  "/app-cliente/meuapp",
   "/app-cliente/inicio",
   "/app-cliente/explorar",
   "/app-cliente/agenda",
@@ -61,6 +63,7 @@ export default function ClientMobileAppLayout({
     pathname.startsWith("/app-cliente/salao/") && pathname.includes("/detalhes");
   const isDarkRoute =
     pathname === "/app-cliente" ||
+    pathname === "/app-cliente/meuapp" ||
     pathname.startsWith("/app-cliente/inicio") ||
     pathname.startsWith("/app-cliente/explorar") ||
     isReservationRoute ||
