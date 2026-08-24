@@ -1,160 +1,21 @@
 export type ViewMode = "day" | "week";
 export type AgendaDensityMode = "standard" | "reception";
-
-export type StatusAgenda =
-  | "confirmado"
-  | "pendente"
-  | "reservado_aguardando_pagamento"
-  | "aguardando_confirmacao_salao"
-  | "atendido"
-  | "cancelado"
-  | "expirado"
-  | "aguardando_pagamento"
-  | "bloqueado";
-
-export type DiaTrabalhoProfissional = {
-  dia: string;
-  inicio: string;
-  fim: string;
-  ativo: boolean;
-};
-
-export type PausaProfissional = {
-  inicio: string;
-  fim: string;
-  descricao?: string | null;
-};
-
+export type StatusAgenda = "confirmado" | "pendente" | "reservado_aguardando_pagamento" | "aguardando_confirmacao_salao" | "atendido" | "cancelado" | "expirado" | "aguardando_pagamento" | "bloqueado";
+export type DiaTrabalhoProfissional = { dia: string; inicio: string; fim: string; ativo: boolean };
+export type PausaProfissional = { inicio: string; fim: string; descricao?: string | null };
 export type Profissional = {
-  id: string;
-  id_salao?: string;
-  nome: string;
-  foto_url: string | null;
-  categoria: string | null;
-  cargo?: string | null;
-  comissao_percentual: number | null;
-  tipo_profissional?: string | null;
-  cor_agenda: string | null;
-  status: string;
-  ativo?: boolean | null;
-  intervalo_agenda_minutos?: number | null;
-  sinal_pix_proprio?: boolean | null;
-  sinal_pix_recebedor?: string | null;
-  sinal_whatsapp?: string | null;
-  sinal_confirmacao_responsavel?: "salao" | "profissional" | string | null;
-  dias_trabalho?: DiaTrabalhoProfissional[] | string | null;
-  pausas?: PausaProfissional[] | string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
+  id: string; id_salao?: string; nome: string; foto_url: string | null; categoria: string | null; cargo?: string | null; comissao_percentual: number | null; tipo_profissional?: string | null; cor_agenda: string | null; status: string; ativo?: boolean | null; intervalo_agenda_minutos?: number | null; sinal_pix_proprio?: boolean | null; sinal_pix_recebedor?: string | null; sinal_whatsapp?: string | null; sinal_confirmacao_responsavel?: "salao" | "profissional" | string | null; dias_trabalho?: DiaTrabalhoProfissional[] | string | null; pausas?: PausaProfissional[] | string | null; created_at?: string | null; updated_at?: string | null;
 };
-
-export type Cliente = {
-  id: string;
-  nome: string;
-  whatsapp?: string | null;
-  cashback?: number | null;
-};
-
-export type Servico = {
-  id: string;
-  nome: string;
-  duracao_minutos: number;
-  preco: number;
-  preco_padrao?: number | null;
-  custo_produto?: number | null;
-  comissao_percentual?: number | null;
-  comissao_percentual_padrao?: number | null;
-  comissao_assistente_percentual?: number | null;
-  base_calculo?: string | null;
-  desconta_taxa_maquininha?: boolean | null;
-  profissionais_vinculados?: string[];
-  eh_combo?: boolean | null;
-  combo_resumo?: string | null;
-};
-
-export type ConfigSalao = {
-  id_salao: string;
-  hora_abertura: string;
-  hora_fechamento: string;
-  intervalo_minutos: number;
-  dias_funcionamento: string[];
-};
-
+export type Cliente = { id: string; nome: string; whatsapp?: string | null; cashback?: number | null };
+export type Servico = { id: string; nome: string; duracao_minutos: number; preco: number; preco_padrao?: number | null; custo_produto?: number | null; comissao_percentual?: number | null; comissao_percentual_padrao?: number | null; comissao_assistente_percentual?: number | null; base_calculo?: string | null; desconta_taxa_maquininha?: boolean | null; profissionais_vinculados?: string[]; eh_combo?: boolean | null; combo_resumo?: string | null };
+export type ConfigSalao = { id_salao: string; hora_abertura: string; hora_fechamento: string; intervalo_minutos: number; dias_funcionamento: string[] };
 export type Agendamento = {
-  id: string;
-  id_salao: string;
-  cliente_id: string;
-  profissional_id: string;
-  servico_id: string;
-  id_comanda?: string | null;
-  data: string;
-  hora_inicio: string;
-  hora_fim: string;
-  duracao_minutos: number;
-  observacoes: string | null;
-  status: StatusAgenda;
-  origem: string | null;
-  created_at?: string | null;
-  updated_at?: string | null;
-  comanda_numero?: number | null;
-  comanda_status?: string | null;
-  reserva_expira_em?: string | null;
-  sinal_valor?: number | null;
-  sinal_status?: string | null;
-  sinal_comprovante_path?: string | null;
-  sinal_confirmacao_responsavel?: "salao" | "profissional" | string | null;
-  sinal_confirmado_por_tipo?: "salao" | "profissional" | string | null;
-  sinal_confirmado_por_id?: string | null;
-  sinal_confirmado_por_nome?: string | null;
-  sinal_confirmado_em?: string | null;
-
-  cliente?: {
-    nome: string;
-    whatsapp?: string | null;
-    cashback?: number | null;
-  };
-
-  servico?: {
-    nome: string;
-    duracao_minutos: number;
-    preco: number;
-  };
+  id: string; id_salao: string; cliente_id: string; cliente_responsavel_id?: string | null; pessoa_atendida_cliente_id?: string | null; agendado_por_app_conta_id?: string | null; pessoa_agendada_tipo?: "mim" | "outra_pessoa" | string | null; pessoa_agendada_nome?: string | null; pessoa_agendada_whatsapp?: string | null;
+  profissional_id: string; servico_id: string; id_comanda?: string | null; data: string; hora_inicio: string; hora_fim: string; duracao_minutos: number; observacoes: string | null; status: StatusAgenda; origem: string | null; created_at?: string | null; updated_at?: string | null; comanda_numero?: number | null; comanda_status?: string | null; reserva_expira_em?: string | null; sinal_valor?: number | null; sinal_status?: string | null; sinal_comprovante_path?: string | null; sinal_confirmacao_responsavel?: "salao" | "profissional" | string | null; sinal_confirmado_por_tipo?: "salao" | "profissional" | string | null; sinal_confirmado_por_id?: string | null; sinal_confirmado_por_nome?: string | null; sinal_confirmado_em?: string | null;
+  cliente?: { nome: string; whatsapp?: string | null; cashback?: number | null };
+  servico?: { nome: string; duracao_minutos: number; preco: number };
 };
-
-export type OrigemBloqueio =
-  | "manual"
-  | "pausa_profissional"
-  | "fora_expediente_profissional"
-  | null;
-
-export type Bloqueio = {
-  id: string;
-  id_salao: string;
-  profissional_id: string;
-  data: string;
-  hora_inicio: string;
-  hora_fim: string;
-  motivo: string | null;
-  origem?: OrigemBloqueio;
-  created_at?: string | null;
-  updated_at?: string | null;
-};
-
-export type AgendaBloqueioLog = {
-  id: string;
-  bloqueio_id: string | null;
-  id_salao: string;
-  profissional_id: string | null;
-  data: string | null;
-  hora_inicio: string | null;
-  hora_fim: string | null;
-  motivo_original: string | null;
-  motivo_exclusao: string | null;
-  deleted_by: string | null;
-  created_at?: string | null;
-};
-
-export type TimeSlot = {
-  time: string;
-  minutes: number;
-};
+export type OrigemBloqueio = "manual" | "pausa_profissional" | "fora_expediente_profissional" | null;
+export type Bloqueio = { id: string; id_salao: string; profissional_id: string; data: string; hora_inicio: string; hora_fim: string; motivo: string | null; origem?: OrigemBloqueio; created_at?: string | null; updated_at?: string | null };
+export type AgendaBloqueioLog = { id: string; bloqueio_id: string | null; id_salao: string; profissional_id: string | null; data: string | null; hora_inicio: string | null; hora_fim: string | null; motivo_original: string | null; motivo_exclusao: string | null; deleted_by: string | null; created_at?: string | null };
+export type TimeSlot = { time: string; minutes: number };
