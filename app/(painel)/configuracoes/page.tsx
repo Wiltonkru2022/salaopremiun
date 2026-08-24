@@ -5,6 +5,7 @@ import {
   CalendarClock,
   ChevronRight,
   CreditCard,
+  ShieldCheck,
   Users,
 } from "lucide-react";
 import { PainelPageHeader } from "@/components/painel-ui";
@@ -18,6 +19,15 @@ const configCards = [
     icon: Users,
     area: "Conta",
     tone: "bg-zinc-950 text-white",
+  },
+  {
+    href: "/seguranca/mfa?next=/configuracoes",
+    title: "Segurança da conta",
+    description:
+      "Ative opcionalmente a verificação em 2 etapas para reforçar a proteção da sua conta.",
+    icon: ShieldCheck,
+    area: "Segurança",
+    tone: "bg-indigo-600 text-white",
   },
   {
     href: "/configuracoes/agenda-horarios",
@@ -63,7 +73,7 @@ export default function ConfiguracoesPage() {
       <PainelPageHeader
         eyebrow="Central de configuracoes"
         title="Configuracoes do salao"
-        description="Ajuste acessos, horarios, notificacoes, caixa e regras de repasse com seguranca. Cada card abre uma area especifica."
+        description="Ajuste acessos, seguranca, horarios, notificacoes, caixa e regras de repasse. Cada card abre uma area especifica."
         actions={
           <div className="grid grid-cols-3 gap-2">
             <HeaderMetric label="Modulos" value={String(configCards.length)} />
