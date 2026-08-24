@@ -3,10 +3,8 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireClienteAppContext } from "@/lib/client-context.server";
-import {
-  createClienteAppAppointment,
-  joinClienteAppWaitlist,
-} from "@/app/services/cliente-app/appointments";
+import { joinClienteAppWaitlist } from "@/app/services/cliente-app/appointments";
+import { createClienteAppAppointmentForPerson } from "@/app/services/cliente-app/booking-person";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { captureSystemEvent } from "@/lib/monitoring/server";
 
@@ -39,7 +37,7 @@ export async function createClienteBookingAction(
     .map((item) => String(item || "").trim())
     .filter(Boolean);
 
-  const result = await createClienteAppAppointment({
+  const result = await createClienteAppAppointmentForPerson({
     idSalao,
     idConta: session.idConta,
     idServico,
@@ -76,6 +74,8 @@ export async function createClienteBookingAction(
     details: {
       requiresSignal: Boolean(result.requiresSignal),
       serviceId: idServico,
+      pessoaAgendadaTipo:
+        pessoaAgendadaTipo === "outra_pessoa" ? "outra_pessoa" : "mim",
     },
   });
 
