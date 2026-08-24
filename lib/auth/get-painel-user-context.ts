@@ -1,6 +1,7 @@
 import { unstable_cache } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
+import { hasAal2 } from "@/lib/auth/mfa-assurance";
 
 export type PainelUserContext = {
   id: string;
@@ -63,12 +64,9 @@ export async function getPainelUserContext(
   const isAdmin = String(usuario?.nivel || "").toLowerCase() === "admin";
 
   if (isAdmin && !options.allowAdminAal1) {
-    const { data: assurance, error: assuranceError } =
-      await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+    const mfaSatisfied = await hasAal2();
 
-    if (assuranceError || assurance.currentLevel !== "aal2") {
-      // Fail closed: APIs legadas que apenas consultam este contexto deixam de
-      // receber uma identidade privilegiada enquanto o admin estiver em AAL1.
+    if (!mfaSatisfied) {
       return { user: null, usuario: null, mfaRequired: true };
     }
   }
