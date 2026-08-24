@@ -21,10 +21,10 @@ const configCards = [
     tone: "bg-zinc-950 text-white",
   },
   {
-    href: "/seguranca/mfa?next=/configuracoes",
+    href: "/configuracoes/seguranca",
     title: "Segurança da conta",
     description:
-      "Ative opcionalmente a verificação em 2 etapas para reforçar a proteção da sua conta.",
+      "Gerencie senha e, se quiser, ative a verificação em 2 etapas para reforçar a proteção da sua conta.",
     icon: ShieldCheck,
     area: "Segurança",
     tone: "bg-indigo-600 text-white",
