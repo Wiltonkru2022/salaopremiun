@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
-import { Bell, CalendarDays, Gift, Heart, Home, Menu, Search, UserRound, X } from "lucide-react";
+import { Bell, CalendarDays, Gift, Handshake, Heart, Home, Menu, Search, UserRound, X } from "lucide-react";
 import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 
 const navItems = [
@@ -12,6 +12,7 @@ const navItems = [
   { label: "Agenda", icon: CalendarDays, href: "/app-cliente/agenda", match: (p: string) => p.startsWith("/app-cliente/agenda") || p.startsWith("/app-cliente/agendamentos") },
   { label: "Favoritos", icon: Heart, href: "/app-cliente/favoritos", match: (p: string) => p.startsWith("/app-cliente/favoritos") },
   { label: "Cupons", icon: Gift, href: "/app-cliente/cupons", match: (p: string) => p.startsWith("/app-cliente/cupons") },
+  { label: "Parceiros", icon: Handshake, href: "/app-cliente/parceiros", match: (p: string) => p.startsWith("/app-cliente/parceiros") },
   { label: "Notificações", icon: Bell, href: "/app-cliente/notificacoes", match: (p: string) => p.startsWith("/app-cliente/notificacoes") },
   { label: "Perfil", icon: UserRound, href: "/app-cliente/perfil", match: (p: string) => p.startsWith("/app-cliente/perfil") },
 ];
