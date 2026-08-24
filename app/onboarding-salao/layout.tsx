@@ -7,7 +7,7 @@ export default async function OnboardingSalaoLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, usuario } = await getPainelUserContext();
+  const { user, usuario } = await getPainelUserContext({ allowAdminAal1: true });
 
   if (!user || !usuario?.id_salao) {
     redirect("/login?motivo=sessao_expirada");
