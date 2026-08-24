@@ -1,0 +1,1 @@
+Trigger único de deploy após liberação do limite da Vercel.
