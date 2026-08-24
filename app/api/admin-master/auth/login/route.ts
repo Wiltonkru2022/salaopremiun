@@ -1,10 +1,10 @@
-import { createClient } from "@supabase/supabase-js";
 import { NextResponse } from "next/server";
 import { sanitizeAdminMasterNextPath } from "@/lib/admin-master/auth/login-path";
 import { resolveAdminMasterAccessForIdentity } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { setAdminMasterSessionCookie } from "@/lib/admin-master/auth/session";
 import { emitSecurityEvent } from "@/lib/security/security-events";
 import { getLoginErrorMessage } from "@/lib/supabase/auth-client-recovery";
+import { createClient } from "@/lib/supabase/server";
 
 type LoginRequestBody = {
   email?: string;
@@ -43,18 +43,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-        detectSessionInUrl: false,
-      },
-    }
-  );
-
+  const supabase = await createClient();
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password,
@@ -91,6 +80,7 @@ export async function POST(request: Request) {
   );
 
   if (!access.ok) {
+    await supabase.auth.signOut().catch(() => null);
     void emitSecurityEvent({
       evento: "admin_master_login_falhou",
       tipoUsuario: "salao",
@@ -109,6 +99,48 @@ export async function POST(request: Request) {
         message: access.message,
       },
       { status: access.status }
+    );
+  }
+
+  const { data: assurance, error: assuranceError } =
+    await supabase.auth.mfa.getAuthenticatorAssuranceLevel();
+
+  if (assuranceError) {
+    return NextResponse.json(
+      {
+        ok: false,
+        message: "Nao foi possivel validar a verificacao em duas etapas.",
+      },
+      { status: 503 }
+    );
+  }
+
+  if (assurance.currentLevel !== "aal2") {
+    const target = nextPath || "/admin-master";
+    const redirectTo = `/seguranca/mfa?mode=admin-master&next=${encodeURIComponent(target)}`;
+
+    void emitSecurityEvent({
+      evento: "admin_master_mfa_requerido",
+      tipoUsuario: "salao",
+      userId: data.user.id,
+      risco: "baixo",
+      ip: getClientIp(request),
+      userAgent: request.headers.get("user-agent") || null,
+      origem: "admin-master",
+      route: "/admin-master/login",
+      detalhes: { email },
+    });
+
+    return NextResponse.json(
+      {
+        ok: true,
+        mfaRequired: true,
+        redirectTo,
+      },
+      {
+        status: 200,
+        headers: { "Cache-Control": "no-store" },
+      }
     );
   }
 
@@ -134,6 +166,7 @@ export async function POST(request: Request) {
     authUserId: data.user.id,
     email,
     host: getRequestHost(request),
+    mfaVerifiedAt: Math.floor(Date.now() / 1000),
   });
 
   void emitSecurityEvent({
@@ -145,7 +178,7 @@ export async function POST(request: Request) {
     userAgent: request.headers.get("user-agent") || null,
     origem: "admin-master",
     route: "/admin-master/login",
-    detalhes: { email, admin_id: access.usuario.id },
+    detalhes: { email, admin_id: access.usuario.id, mfa: "aal2" },
   });
 
   return response;
