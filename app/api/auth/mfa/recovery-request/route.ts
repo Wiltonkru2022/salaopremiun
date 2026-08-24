@@ -13,9 +13,9 @@ export async function POST() {
   try {
     const supabaseAdmin = getSupabaseAdmin();
     const service = createSuporteTicketService();
-    const { user } = await getPainelUserContext({ allowAdminAal1: true });
+    const { user, usuario } = await getPainelUserContext({ allowAdminAal1: true });
 
-    if (!user) {
+    if (!user || !usuario?.id_salao) {
       return NextResponse.json(
         { ok: false, error: "Sessao invalida." },
         { status: 401 }
@@ -53,7 +53,18 @@ export async function POST() {
       );
     }
 
-    const context = await service.getPainelContext();
+    // Recuperacao de MFA precisa funcionar justamente quando o administrador ainda
+    // esta em AAL1. Por isso o contexto do ticket e montado apenas com a identidade
+    // autenticada/tenant ja validada acima, sem passar novamente pelo guard AAL2.
+    const context = {
+      origem: "painel_salao" as const,
+      idSalao: usuario.id_salao,
+      idUsuario: usuario.id,
+      nome: usuario.nome || usuario.email || "Administrador",
+      email: usuario.email || null,
+      nivel: String(usuario.nivel || "admin"),
+    };
+
     const recoveryCode = generateMfaRecoveryCode();
     const ticket = await service.criarTicket({
       context,
