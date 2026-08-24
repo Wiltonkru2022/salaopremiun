@@ -1,3 +1,5 @@
+import "server-only";
+
 import { normalizeWhatsapp } from "@/lib/client-app/identity";
 
 export type ClientBookingPersonSelection =
