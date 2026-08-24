@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { hasAal2 } from "@/lib/auth/mfa-assurance";
 import {
   AssinaturaCheckoutUseCaseError,
   criarCobrancaAssinaturaUseCase,
@@ -10,6 +11,13 @@ import {
 
 export async function POST(req: Request) {
   try {
+    if (!(await hasAal2())) {
+      return NextResponse.json(
+        { error: "Confirme o codigo do autenticador para continuar.", code: "mfa_required" },
+        { status: 403 }
+      );
+    }
+
     const result = await criarCobrancaAssinaturaUseCase({
       body: await req.json().catch(() => null),
       idempotencyKey: getCheckoutIdempotencyKeyFromHeaders(req.headers),
