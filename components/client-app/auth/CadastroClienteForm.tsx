@@ -5,7 +5,7 @@ import { useActionState, useState } from "react";
 import { useFormStatus } from "react-dom";
 import { cadastroClienteAction, type CadastroClienteState } from "@/app/app-cliente/cadastro/actions";
 
-const initialState: CadastroClienteState = { error: null, existingProfileFound: false };
+const initialState: CadastroClienteState = { error: null, existingProfileFound: false, existingProfileIdentity: null };
 function onlyDigits(value: string) { return value.replace(/\D/g, ""); }
 function maskCpf(value: string) { const d = onlyDigits(value).slice(0,11); return d.replace(/^(\d{3})(\d)/,"$1.$2").replace(/^(\d{3})\.(\d{3})(\d)/,"$1.$2.$3").replace(/\.(\d{3})(\d)/,".$1-$2"); }
 function maskDate(value: string) { const d = onlyDigits(value).slice(0,8); if (d.length <= 2) return d; if (d.length <= 4) return `${d.slice(0,2)}/${d.slice(2)}`; return `${d.slice(0,2)}/${d.slice(2,4)}/${d.slice(4)}`; }
@@ -20,7 +20,7 @@ export default function CadastroClienteForm({ salaoId, salaoNome, next }: { sala
   const [whatsapp, setWhatsapp] = useState("");
   return <form action={formAction} className="overflow-hidden rounded-[1.55rem] border border-zinc-100 bg-white p-5 shadow-[0_16px_38px_rgba(15,23,42,0.07)]">
     {salaoId ? <input type="hidden" name="salao" value={salaoId} /> : null}{next ? <input type="hidden" name="next" value={next} /> : null}
-    {state.existingProfileFound ? <input type="hidden" name="confirm_existing_profile" value="1" /> : null}
+    {state.existingProfileFound && state.existingProfileIdentity ? <input type="hidden" name="confirm_existing_profile" value={state.existingProfileIdentity} /> : null}
     <div className="text-[11px] font-black uppercase tracking-[0.16em] text-amber-700">Cadastro único</div>
     <h2 className="mt-1 text-[1.5rem] font-black tracking-[-0.035em] text-zinc-950">Crie sua conta de cliente</h2>
     <p className="mt-2 text-sm leading-6 text-zinc-500">Você entra usando CPF + data de nascimento. O e-mail continua opcional.</p>
