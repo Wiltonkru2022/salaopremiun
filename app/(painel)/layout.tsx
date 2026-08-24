@@ -14,8 +14,12 @@ export const metadata: Metadata = {
 };
 
 async function requireOnboardingConcluido() {
-  const { user, usuario } = await getPainelUserContext();
+  const { user, usuario } = await getPainelUserContext({ allowAdminAal1: true });
   if (!user || !usuario?.id_salao) redirect("/login?motivo=sessao_expirada");
+
+  if (String(usuario.nivel || "").toLowerCase() === "admin" && !(await hasAal2())) {
+    redirect("/seguranca/mfa?next=/dashboard");
+  }
 
   const admin = getSupabaseAdmin() as any;
   const { data, error } = await admin
@@ -64,10 +68,6 @@ export default async function PainelLayout({ children }: { children: React.React
   }
 
   const data = result.data;
-  if (String(data.nivel || "").toLowerCase() === "admin" && !(await hasAal2())) {
-    redirect("/seguranca/mfa?next=/dashboard");
-  }
-
   return (
     <AppShell
       idSalao={data.idSalao}
