@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { usePathname } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ExternalLink, Tag } from "lucide-react";
 
 type Campanha = {
@@ -14,18 +13,79 @@ type Campanha = {
   ctaTexto: string;
   destinoUrl?: string | null;
   cupomCodigo?: string | null;
+  limiteFrequenciaDia?: number;
 };
 
-export default function PartnerAdSlot({ idSalao }: { idSalao: string }) {
-  const pathname = usePathname();
+type Props = {
+  idSalao?: string | null;
+  publico?: "salao" | "cliente" | "profissional";
+  local?: string;
+  className?: string;
+};
+
+const STORAGE_KEY = "salaopremium:partner-ads:frequency";
+const VIEWER_KEY = "salaopremium:partner-ads:viewer";
+
+function todayKey() {
+  return new Date().toISOString().slice(0, 10);
+}
+
+function getViewerSeed() {
+  if (typeof window === "undefined") return "server";
+  let seed = window.localStorage.getItem(VIEWER_KEY);
+  if (!seed) {
+    seed = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
+    window.localStorage.setItem(VIEWER_KEY, seed);
+  }
+  return seed;
+}
+
+function readFrequency() {
+  if (typeof window === "undefined") return {} as Record<string, number>;
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(STORAGE_KEY) || "{}") as {
+      date?: string;
+      counts?: Record<string, number>;
+    };
+    if (parsed.date !== todayKey()) return {};
+    return parsed.counts || {};
+  } catch {
+    return {};
+  }
+}
+
+function writeFrequency(counts: Record<string, number>) {
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ date: todayKey(), counts }));
+  } catch {
+    // Frequency cap local é apenas uma proteção de experiência.
+  }
+}
+
+export default function PartnerAdSlot({
+  idSalao,
+  publico = "salao",
+  local = "dashboard",
+  className = "",
+}: Props) {
   const [campanha, setCampanha] = useState<Campanha | null>(null);
   const impressionSent = useRef<string | null>(null);
-  const shouldShow = pathname === "/dashboard";
+  const requestUrl = useMemo(() => {
+    if (typeof window === "undefined") return null;
+    const counts = readFrequency();
+    const blocked = Object.entries(counts)
+      .filter(([, count]) => count >= 2)
+      .map(([id]) => id);
+    const params = new URLSearchParams({ publico, local, seed: getViewerSeed() });
+    if (idSalao) params.set("idSalao", idSalao);
+    if (blocked.length) params.set("exclude", blocked.join(","));
+    return `/api/parcerias/ativos?${params.toString()}`;
+  }, [idSalao, publico, local]);
 
   useEffect(() => {
-    if (!shouldShow || !idSalao) return;
+    if (!requestUrl) return;
     let active = true;
-    fetch(`/api/parcerias/ativos?idSalao=${encodeURIComponent(idSalao)}&publico=salao&local=dashboard`, { cache: "no-store" })
+    fetch(requestUrl, { cache: "no-store" })
       .then((response) => (response.ok ? response.json() : null))
       .then((payload) => {
         if (active) setCampanha(payload?.campanha || null);
@@ -36,36 +96,42 @@ export default function PartnerAdSlot({ idSalao }: { idSalao: string }) {
     return () => {
       active = false;
     };
-  }, [idSalao, shouldShow]);
+  }, [requestUrl]);
 
   useEffect(() => {
     if (!campanha?.id || impressionSent.current === campanha.id) return;
+    const counts = readFrequency();
+    const cap = Math.max(1, Number(campanha.limiteFrequenciaDia || 2));
+    if ((counts[campanha.id] || 0) >= cap) {
+      setCampanha(null);
+      return;
+    }
+    counts[campanha.id] = (counts[campanha.id] || 0) + 1;
+    writeFrequency(counts);
     impressionSent.current = campanha.id;
     void fetch("/api/parcerias/ativos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idCampanha: campanha.id, local: "dashboard", tipo: "impressao" }),
+      body: JSON.stringify({ idCampanha: campanha.id, local, tipo: "impressao" }),
       keepalive: true,
     });
-  }, [campanha?.id]);
+  }, [campanha, local]);
 
-  if (!shouldShow || !campanha) return null;
+  if (!campanha) return null;
 
-  async function handleClick() {
+  function handleClick() {
     if (!campanha) return;
     void fetch("/api/parcerias/ativos", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ idCampanha: campanha.id, local: "dashboard", tipo: "clique" }),
+      body: JSON.stringify({ idCampanha: campanha.id, local, tipo: "clique" }),
       keepalive: true,
     });
-    if (campanha.destinoUrl) {
-      window.open(campanha.destinoUrl, "_blank", "noopener,noreferrer");
-    }
+    if (campanha.destinoUrl) window.open(campanha.destinoUrl, "_blank", "noopener,noreferrer");
   }
 
   return (
-    <aside className="mb-5 overflow-hidden rounded-[24px] border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-zinc-50 shadow-sm" aria-label="Publicidade de parceiro Salão Premium">
+    <aside className={`overflow-hidden rounded-[24px] border border-amber-200 bg-gradient-to-r from-amber-50 via-white to-zinc-50 shadow-sm ${className}`} aria-label="Publicidade de parceiro Salão Premium">
       <div className="grid items-center gap-4 p-4 sm:grid-cols-[96px_1fr_auto] sm:p-5">
         {campanha.imagemUrl ? (
           <img src={campanha.imagemUrl} alt={campanha.altText || campanha.titulo} className="h-20 w-full rounded-2xl object-cover sm:w-24" loading="lazy" />
