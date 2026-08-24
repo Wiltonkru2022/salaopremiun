@@ -1,1 +1,1 @@
-Retry único de deploy de produção solicitado em 2026-08-24.
+Deploy de produção solicitado manualmente em 2026-08-24 após validação do vínculo Git/Vercel.
