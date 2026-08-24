@@ -1,0 +1,2513 @@
+﻿"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import Link from "next/link";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
+import { PainelListLoading } from "@/components/painel-ui";
+import AppModal from "@/components/ui/AppModal";
+import { createClient } from "@/lib/supabase/client";
+import {
+  BadgeDollarSign,
+  CalendarDays,
+  CreditCard,
+  Download,
+  FileText,
+  MessageCircle,
+  Printer,
+  Receipt,
+  Scissors,
+  Search,
+  TrendingUp,
+  UserRound,
+  Wallet,
+  ShieldAlert,
+} from "lucide-react";
+import { parseComboDisplayMeta } from "@/lib/combo/display";
+import { getLocalDayRangeIso } from "@/lib/date/local-day-range";
+import { getPlanoMinimoParaRecurso, type PlanoCobravelCodigo } from "@/lib/plans/catalog";
+import { getAssinaturaUrl } from "@/lib/site-urls";
+import { statusPtBR } from "@/core/i18n/pt-BR";
+
+type ClienteJoin = {
+  nome?: string | null;
+};
+
+type ComandaRow = {
+  id: string;
+  numero: number;
+  status: string;
+  subtotal?: number | null;
+  desconto?: number | null;
+  acrescimo?: number | null;
+  total?: number | null;
+  aberta_em?: string | null;
+  fechada_em?: string | null;
+  cancelada_em?: string | null;
+  id_cliente?: string | null;
+  clientes?: ClienteJoin | ClienteJoin[] | null;
+};
+
+type PagamentoRow = {
+  id: string;
+  id_comanda: string;
+  forma_pagamento: string;
+  valor: number | null;
+  valor_credito_cliente?: number | null;
+  valor_troco?: number | null;
+  destino_excedente?: string | null;
+  parcelas?: number | null;
+  taxa_maquininha_percentual?: number | null;
+  taxa_maquininha_valor?: number | null;
+  observacoes?: string | null;
+  pago_em?: string | null;
+};
+
+type ComissaoRow = {
+  id: string;
+  id_comanda?: string | null;
+  id_profissional?: string | null;
+  descricao?: string | null;
+  valor_base?: number | null;
+  percentual_aplicado?: number | null;
+  valor_comissao?: number | null;
+  valor_comissao_assistente?: number | null;
+  status?: string | null;
+  competencia_data?: string | null;
+  pago_em?: string | null;
+};
+
+type ProfissionalRow = {
+  id: string;
+  nome: string;
+  tipo_profissional?: string | null;
+  status?: string | null;
+};
+
+type ComandaItemRow = {
+  id: string;
+  id_comanda: string;
+  tipo_item?: string | null;
+  descricao?: string | null;
+  quantidade?: number | null;
+  valor_unitario?: number | null;
+  valor_total?: number | null;
+  custo_total?: number | null;
+  id_profissional?: string | null;
+  id_assistente?: string | null;
+};
+
+type CaixaSessaoResumoRow = {
+  id: string;
+  status: string;
+  aberto_em?: string | null;
+  fechado_em?: string | null;
+  valor_abertura?: number | null;
+  valor_previsto_fechamento?: number | null;
+  valor_fechamento_informado?: number | null;
+  valor_diferenca_fechamento?: number | null;
+  tipo_fechamento?: string | null;
+  observacoes?: string | null;
+};
+
+type ResumoFinanceiro = {
+  faturamentoBruto: number;
+  descontos: number;
+  acrescimos: number;
+  faturamentoLiquido: number;
+  recebido: number;
+  recebidoBruto: number;
+  creditoGerado: number;
+  troco: number;
+  divergenciaRecebimento: number;
+  taxaMaquininha: number;
+  comissaoPendente: number;
+  comissaoPaga: number;
+  canceladas: number;
+  quantidadeVendas: number;
+  ticketMedio: number;
+  custoItens: number;
+  lucroLiquidoSalao: number;
+};
+
+type ResumoCaixa = {
+  sessoesFechadas: number;
+  previstoFechamento: number;
+  contadoFechamento: number;
+  quebraTotal: number;
+  sobraTotal: number;
+};
+
+type StatusFiltro = "fechada" | "cancelada" | "todos";
+type PainelLateralTab = "pagamentos" | "comissoes";
+type DatePresetKey = "hoje" | "ontem" | "7dias" | "mes";
+type PrintSectionKey = "vendas" | "pagamentos" | "comissoes" | "caixa" | "itens";
+type PrintSelection = Record<PrintSectionKey, boolean>;
+
+function toArray<T>(value: T | T[] | null | undefined): T[] {
+  if (!value) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
+function getJoinedName(
+  value: ClienteJoin | ClienteJoin[] | null | undefined,
+  fallback = "-"
+) {
+  const first = toArray(value)[0];
+  return first?.nome || fallback;
+}
+
+function formatCurrency(value?: number | null) {
+  return Number(value || 0).toLocaleString("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+  });
+}
+
+function formatDateTime(value?: string | null) {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString("pt-BR");
+}
+
+function formatDateInput(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+function addDays(date: Date, amount: number) {
+  const next = new Date(date);
+  next.setDate(next.getDate() + amount);
+  return next;
+}
+
+function getDatePresetRange(key: DatePresetKey) {
+  const today = new Date();
+
+  if (key === "ontem") {
+    const yesterday = addDays(today, -1);
+    return {
+      start: formatDateInput(yesterday),
+      end: formatDateInput(yesterday),
+    };
+  }
+
+  if (key === "7dias") {
+    return {
+      start: formatDateInput(addDays(today, -6)),
+      end: formatDateInput(today),
+    };
+  }
+
+  if (key === "mes") {
+    return {
+      start: formatDateInput(new Date(today.getFullYear(), today.getMonth(), 1)),
+      end: formatDateInput(today),
+    };
+  }
+
+  return {
+    start: formatDateInput(today),
+    end: formatDateInput(today),
+  };
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function formatFormaPagamentoLabel(value: string) {
+  const key = (value || "").trim().toLowerCase();
+
+  if (key === "pix") return "Pix";
+  if (key === "dinheiro") return "Dinheiro";
+  if (key === "debito") return "Débito";
+  if (key === "credito") return "Crédito";
+  if (key === "credito_cliente") return "Crédito da cliente";
+  if (key === "transferencia") return "Transferência";
+  if (!key) return "-";
+
+  return key.charAt(0).toUpperCase() + key.slice(1);
+}
+
+function formatTipoItemLabel(value?: string | null) {
+  const key = (value || "").trim().toLowerCase();
+  if (key === "servico") return "Serviço";
+  if (key === "produto") return "Produto";
+  if (key === "extra") return "Extra";
+  if (key === "ajuste") return "Ajuste";
+  return key ? key.charAt(0).toUpperCase() + key.slice(1) : "-";
+}
+
+function csvCell(value: string | number | null | undefined) {
+  const normalized = String(value ?? "").replaceAll('"', '""');
+  return `"${normalized}"`;
+}
+
+function getStatusBadgeClass(status: string) {
+  if (status === "fechada") {
+    return "bg-emerald-100 text-emerald-700 border border-emerald-200";
+  }
+
+  if (status === "cancelada") {
+    return "bg-rose-100 text-rose-700 border border-rose-200";
+  }
+
+  if (status === "aguardando_pagamento") {
+    return "bg-amber-100 text-amber-700 border border-amber-200";
+  }
+
+  return "bg-zinc-100 text-zinc-700 border border-zinc-200";
+}
+
+function KpiCard({
+  icon,
+  label,
+  value,
+  helper,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+  helper?: string;
+}) {
+  return (
+    <div className="rounded-[24px] border border-zinc-200 bg-white p-5 shadow-sm">
+      <div className="flex items-center gap-3">
+        <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-3 text-zinc-700">
+          {icon}
+        </div>
+
+        <div className="min-w-0">
+          <div className="text-sm text-zinc-500">{label}</div>
+          <div className="mt-1 text-2xl font-bold text-zinc-900">{value}</div>
+          {helper ? <div className="mt-1 text-xs text-zinc-500">{helper}</div> : null}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ComboDescriptionCell({
+  descricao,
+}: {
+  descricao: string | null | undefined;
+}) {
+  const comboMeta = parseComboDisplayMeta(descricao);
+
+  return (
+    <div>
+      <div className="text-sm text-zinc-700">{comboMeta.displayTitle}</div>
+      {comboMeta.isComboItem && comboMeta.comboName ? (
+        <div className="mt-1 inline-flex items-center gap-2">
+          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-800">
+            Combo
+          </span>
+          <span className="text-xs text-zinc-500">{comboMeta.comboName}</span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+export default function RelatorioFinanceiroPage() {
+  const supabase = createClient();
+  const { snapshot: painelSession } = usePainelSession();
+
+  const [loading, setLoading] = useState(true);
+  const [dadosCarregados, setDadosCarregados] = useState(false);
+  const [semPermissao, setSemPermissao] = useState(false);
+  const [erroTela, setErroTela] = useState("");
+  const [msg, setMsg] = useState("");
+  const [idSalao, setIdSalao] = useState("");
+
+  const hoje = new Date();
+  const inicioMes = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
+
+  const [dataInicio, setDataInicio] = useState(formatDateInput(inicioMes));
+  const [dataFim, setDataFim] = useState(formatDateInput(hoje));
+  const [busca, setBusca] = useState("");
+  const [statusFiltro, setStatusFiltro] = useState<StatusFiltro>("todos");
+  const [profissionalFiltro, setProfissionalFiltro] = useState("");
+  const [painelLateralTab, setPainelLateralTab] =
+    useState<PainelLateralTab>("pagamentos");
+  const [printModalOpen, setPrintModalOpen] = useState(false);
+  const [relatoriosAvancados, setRelatoriosAvancados] = useState(false);
+  const [printSelection, setPrintSelection] = useState<PrintSelection>({
+    vendas: true,
+    pagamentos: true,
+    comissoes: true,
+    caixa: true,
+    itens: true,
+  });
+
+  const [comandas, setComandas] = useState<ComandaRow[]>([]);
+  const [pagamentos, setPagamentos] = useState<PagamentoRow[]>([]);
+  const [comissoes, setComissoes] = useState<ComissaoRow[]>([]);
+  const [profissionais, setProfissionais] = useState<ProfissionalRow[]>([]);
+  const [itensComanda, setItensComanda] = useState<ComandaItemRow[]>([]);
+  const [caixaSessoes, setCaixaSessoes] = useState<CaixaSessaoResumoRow[]>([]);
+
+  const carregarRelatorio = useCallback(
+    async (salaoIdParam?: string) => {
+      const shouldShowInitialLoading = !dadosCarregados;
+
+      try {
+        if (shouldShowInitialLoading) {
+          setLoading(true);
+        }
+
+        const salaoId = salaoIdParam || idSalao;
+        if (!salaoId) return;
+        const dataInicioRange = getLocalDayRangeIso(dataInicio);
+        const dataFimRange = getLocalDayRangeIso(dataFim);
+
+        setErroTela("");
+        setMsg("");
+
+        setRelatoriosAvancados(
+          Boolean(painelSession?.planoRecursos?.relatorios_avancados)
+        );
+
+        const { data: profissionaisData, error: profissionaisError } = await supabase
+          .from("profissionais")
+          .select("id, nome, tipo_profissional, status")
+          .eq("id_salao", salaoId)
+          .order("nome", { ascending: true });
+
+        if (profissionaisError) {
+          console.error(profissionaisError);
+          setErroTela("Erro ao carregar profissionais do relatório.");
+          return;
+        }
+
+        setProfissionais((profissionaisData as ProfissionalRow[]) || []);
+
+        let queryComandas = supabase
+          .from("comandas")
+          .select(`
+            id,
+            numero,
+            status,
+            subtotal,
+            desconto,
+            acrescimo,
+            total,
+            aberta_em,
+            fechada_em,
+            cancelada_em,
+            id_cliente,
+            clientes (
+              nome
+            )
+          `)
+          .eq("id_salao", salaoId);
+
+        if (statusFiltro !== "todos") {
+          queryComandas = queryComandas.eq("status", statusFiltro);
+        } else {
+          queryComandas = queryComandas.in("status", ["fechada", "cancelada"]);
+        }
+
+        if (statusFiltro === "fechada") {
+          queryComandas = queryComandas
+            .gte("fechada_em", dataInicioRange.startIso)
+            .lte("fechada_em", dataFimRange.endIso)
+            .order("fechada_em", { ascending: false });
+        } else if (statusFiltro === "cancelada") {
+          queryComandas = queryComandas
+            .gte("cancelada_em", dataInicioRange.startIso)
+            .lte("cancelada_em", dataFimRange.endIso)
+            .order("cancelada_em", { ascending: false });
+        } else {
+          queryComandas = queryComandas
+            .or(
+              [
+                `and(status.eq.fechada,fechada_em.gte.${dataInicioRange.startIso},fechada_em.lte.${dataFimRange.endIso})`,
+                `and(status.eq.cancelada,cancelada_em.gte.${dataInicioRange.startIso},cancelada_em.lte.${dataFimRange.endIso})`,
+              ].join(",")
+            )
+            .order("fechada_em", { ascending: false });
+        }
+
+        const { data: comandasData, error: comandasError } = await queryComandas;
+
+        if (comandasError) {
+          console.error(comandasError);
+          setErroTela("Erro ao carregar comandas do relatório.");
+          return;
+        }
+
+        const listaComandas = (comandasData as ComandaRow[]) || [];
+        setComandas(listaComandas);
+
+        const { data: caixaSessoesData, error: caixaSessoesError } = await supabase
+          .from("caixa_sessoes")
+          .select(`
+            id,
+            status,
+            aberto_em,
+            fechado_em,
+            valor_abertura,
+            valor_previsto_fechamento,
+            valor_fechamento_informado,
+            valor_diferenca_fechamento,
+            tipo_fechamento,
+            observacoes
+          `)
+          .eq("id_salao", salaoId)
+          .eq("status", "fechado")
+          .gte("fechado_em", dataInicioRange.startIso)
+          .lte("fechado_em", dataFimRange.endIso)
+          .order("fechado_em", { ascending: false });
+
+        if (caixaSessoesError) {
+          console.error(caixaSessoesError);
+          setErroTela("Erro ao carregar fechamentos do caixa.");
+          return;
+        }
+
+        setCaixaSessoes((caixaSessoesData as CaixaSessaoResumoRow[]) || []);
+
+        const idsComandas = listaComandas.map((item) => item.id);
+
+        if (idsComandas.length === 0) {
+          setPagamentos([]);
+          setComissoes([]);
+          setItensComanda([]);
+          return;
+        }
+
+        const [
+          { data: pagamentosData, error: pagamentosError },
+          { data: comissoesData, error: comissoesError },
+          { data: itensData, error: itensError },
+        ] = await Promise.all([
+          supabase
+            .from("comanda_pagamentos")
+            .select(`
+              id,
+              id_comanda,
+              forma_pagamento,
+              valor,
+              valor_credito_cliente,
+              valor_troco,
+              destino_excedente,
+              parcelas,
+              taxa_maquininha_percentual,
+              taxa_maquininha_valor,
+              observacoes,
+              pago_em
+            `)
+            .in("id_comanda", idsComandas),
+
+          supabase
+            .from("comissoes_lancamentos")
+            .select(`
+              id,
+              id_comanda,
+              id_profissional,
+              descricao,
+              valor_base,
+              percentual_aplicado,
+              valor_comissao,
+              valor_comissao_assistente,
+              status,
+              competencia_data,
+              pago_em
+            `)
+            .in("id_comanda", idsComandas),
+
+          supabase
+            .from("comanda_itens")
+            .select(`
+              id,
+              id_comanda,
+              tipo_item,
+              descricao,
+              quantidade,
+              valor_unitario,
+              valor_total,
+              custo_total,
+              id_profissional,
+              id_assistente
+            `)
+            .in("id_comanda", idsComandas),
+        ]);
+
+        if (pagamentosError) {
+          console.error(pagamentosError);
+          setErroTela("Erro ao carregar pagamentos do relatório.");
+          return;
+        }
+
+        if (comissoesError) {
+          console.error(comissoesError);
+          setErroTela("Erro ao carregar comissões do relatório.");
+          return;
+        }
+
+        if (itensError) {
+          console.error(itensError);
+          setErroTela("Erro ao carregar itens vendidos do relatório.");
+          return;
+        }
+
+        setPagamentos((pagamentosData as PagamentoRow[]) || []);
+        setComissoes((comissoesData as ComissaoRow[]) || []);
+        setItensComanda((itensData as ComandaItemRow[]) || []);
+      } catch (error: unknown) {
+        console.error(error);
+        setErroTela(
+          error instanceof Error ? error.message : "Erro ao carregar relatório financeiro."
+        );
+      } finally {
+        setDadosCarregados(true);
+        if (shouldShowInitialLoading) {
+          setLoading(false);
+        }
+      }
+    },
+    [
+      dadosCarregados,
+      supabase,
+      idSalao,
+      statusFiltro,
+      dataInicio,
+      dataFim,
+      painelSession?.planoRecursos,
+    ]
+  );
+
+  const init = useCallback(async () => {
+    let handedOffToReportLoad = false;
+
+    try {
+      setLoading(true);
+      setErroTela("");
+      setMsg("");
+      setSemPermissao(false);
+
+      if (!painelSession?.idSalao || !painelSession?.permissoes) {
+        setErroTela("Não foi possível identificar o salão do usuário.");
+        return;
+      }
+
+      if (!painelSession.permissoes.relatorios_ver) {
+        setSemPermissao(true);
+        return;
+      }
+
+      if (painelSession.planoRecursos?.relatorios_basicos === false) {
+        setErroTela("Relatórios não estão liberados no plano atual.");
+        return;
+      }
+
+      setIdSalao(painelSession.idSalao);
+      handedOffToReportLoad = true;
+    } catch (error: unknown) {
+      console.error(error);
+      setErroTela(
+        error instanceof Error ? error.message : "Erro ao carregar relatório financeiro."
+      );
+    } finally {
+      if (!handedOffToReportLoad) {
+        setLoading(false);
+      }
+    }
+  }, [painelSession]);
+
+  useEffect(() => {
+    void init();
+  }, [init]);
+
+  useEffect(() => {
+    if (idSalao && !semPermissao) {
+      void carregarRelatorio(idSalao);
+    }
+  }, [idSalao, semPermissao, carregarRelatorio]);
+
+  const comandasFiltradas = useMemo(() => {
+    const termo = busca.trim().toLowerCase();
+
+    return comandas.filter((item) => {
+      const numero = String(item.numero || "");
+      const cliente = getJoinedName(item.clientes, "").toLowerCase();
+      const matchesBusca = !termo || numero.includes(termo) || cliente.includes(termo);
+
+      if (!matchesBusca) return false;
+      if (!profissionalFiltro) return true;
+
+      return (
+        comissoes.some(
+          (comissao) =>
+            comissao.id_comanda === item.id &&
+            comissao.id_profissional === profissionalFiltro
+        ) ||
+        itensComanda.some(
+          (itemComanda) =>
+            itemComanda.id_comanda === item.id &&
+            (itemComanda.id_profissional === profissionalFiltro ||
+              itemComanda.id_assistente === profissionalFiltro)
+        )
+      );
+    });
+  }, [busca, comandas, profissionalFiltro, comissoes, itensComanda]);
+
+  const idsComandasFiltradas = useMemo(
+    () => comandasFiltradas.map((item) => item.id),
+    [comandasFiltradas]
+  );
+
+  const idsComandasFechadasFiltradas = useMemo(
+    () =>
+      comandasFiltradas
+        .filter((item) => item.status === "fechada")
+        .map((item) => item.id),
+    [comandasFiltradas]
+  );
+
+  const pagamentosFiltrados = useMemo(() => {
+    return pagamentos.filter((item) => idsComandasFiltradas.includes(item.id_comanda));
+  }, [pagamentos, idsComandasFiltradas]);
+
+  const comissoesFiltradas = useMemo(() => {
+    return comissoes.filter((item) => {
+      const matchesComanda = item.id_comanda && idsComandasFiltradas.includes(item.id_comanda);
+      const matchesProfissional =
+        !profissionalFiltro || item.id_profissional === profissionalFiltro;
+      return matchesComanda && matchesProfissional;
+    });
+  }, [comissoes, idsComandasFiltradas, profissionalFiltro]);
+
+  const itensComandaFiltrados = useMemo(() => {
+    return itensComanda.filter((item) => {
+      const matchesComanda = idsComandasFechadasFiltradas.includes(item.id_comanda);
+      const matchesProfissional =
+        !profissionalFiltro ||
+        item.id_profissional === profissionalFiltro ||
+        item.id_assistente === profissionalFiltro;
+      return matchesComanda && matchesProfissional;
+    });
+  }, [itensComanda, idsComandasFechadasFiltradas, profissionalFiltro]);
+
+  const profissionalSelecionado = useMemo(
+    () => profissionais.find((item) => item.id === profissionalFiltro) || null,
+    [profissionais, profissionalFiltro]
+  );
+
+  const resumo = useMemo<ResumoFinanceiro>(() => {
+    const faturamentoBruto = comandasFiltradas
+      .filter((item) => item.status === "fechada")
+      .reduce((acc, item) => acc + Number(item.subtotal || 0), 0);
+
+    const descontos = comandasFiltradas
+      .filter((item) => item.status === "fechada")
+      .reduce((acc, item) => acc + Number(item.desconto || 0), 0);
+
+    const acrescimos = comandasFiltradas
+      .filter((item) => item.status === "fechada")
+      .reduce((acc, item) => acc + Number(item.acrescimo || 0), 0);
+
+    const faturamentoLiquido = comandasFiltradas
+      .filter((item) => item.status === "fechada")
+      .reduce((acc, item) => acc + Number(item.total || 0), 0);
+
+    const recebidoBruto = pagamentosFiltrados.reduce(
+      (acc, item) => acc + Number(item.valor || 0),
+      0
+    );
+    const creditoGerado = pagamentosFiltrados.reduce(
+      (acc, item) => acc + Number(item.valor_credito_cliente || 0),
+      0
+    );
+    const troco = pagamentosFiltrados.reduce(
+      (acc, item) => acc + Number(item.valor_troco || 0),
+      0
+    );
+    const recebido = pagamentosFiltrados.reduce(
+      (acc, item) =>
+        acc +
+        Math.max(
+          Number(item.valor || 0) -
+            Number(item.valor_credito_cliente || 0) -
+            Number(item.valor_troco || 0),
+          0
+        ),
+      0
+    );
+
+    const taxaMaquininha = pagamentosFiltrados.reduce(
+      (acc, item) => acc + Number(item.taxa_maquininha_valor || 0),
+      0
+    );
+
+    const comissaoPendente = comissoesFiltradas
+      .filter((item) => item.status === "pendente")
+      .reduce((acc, item) => acc + Number(item.valor_comissao || 0), 0);
+
+    const comissaoPaga = comissoesFiltradas
+      .filter((item) => item.status === "pago")
+      .reduce((acc, item) => acc + Number(item.valor_comissao || 0), 0);
+
+    const custoItens = itensComandaFiltrados
+      .filter((item) => idsComandasFiltradas.includes(item.id_comanda))
+      .reduce((acc, item) => acc + Number(item.custo_total || 0), 0);
+
+    const canceladas = comandasFiltradas
+      .filter((item) => item.status === "cancelada")
+      .reduce((acc, item) => acc + Number(item.total || 0), 0);
+
+    const quantidadeVendas = comandasFiltradas.filter((item) => item.status === "fechada").length;
+
+    const ticketMedio = quantidadeVendas > 0 ? faturamentoLiquido / quantidadeVendas : 0;
+    const lucroLiquidoSalao =
+      faturamentoLiquido - taxaMaquininha - custoItens - comissaoPendente - comissaoPaga;
+
+    return {
+      faturamentoBruto,
+      descontos,
+      acrescimos,
+      faturamentoLiquido,
+      recebido,
+      recebidoBruto,
+      creditoGerado,
+      troco,
+      divergenciaRecebimento: recebido - faturamentoLiquido,
+      taxaMaquininha,
+      comissaoPendente,
+      comissaoPaga,
+      canceladas,
+      quantidadeVendas,
+      ticketMedio,
+      custoItens,
+      lucroLiquidoSalao,
+    };
+  }, [
+    comandasFiltradas,
+    pagamentosFiltrados,
+    comissoesFiltradas,
+    itensComandaFiltrados,
+    idsComandasFiltradas,
+  ]);
+
+  const pagamentosPorForma = useMemo(() => {
+    const mapa = new Map<
+      string,
+      {
+        forma: string;
+        total: number;
+        bruto: number;
+        creditoGerado: number;
+        troco: number;
+        taxa: number;
+        qtd: number;
+      }
+    >();
+
+    pagamentosFiltrados.forEach((item) => {
+      const chave = item.forma_pagamento || "outro";
+      const atual = mapa.get(chave) || {
+        forma: chave,
+        total: 0,
+        bruto: 0,
+        creditoGerado: 0,
+        troco: 0,
+        taxa: 0,
+        qtd: 0,
+      };
+
+      const bruto = Number(item.valor || 0);
+      const creditoGerado = Number(item.valor_credito_cliente || 0);
+      const troco = Number(item.valor_troco || 0);
+
+      atual.total += Math.max(
+        bruto - creditoGerado - troco,
+        0
+      );
+      atual.bruto += bruto;
+      atual.creditoGerado += creditoGerado;
+      atual.troco += troco;
+      atual.taxa += Number(item.taxa_maquininha_valor || 0);
+      atual.qtd += 1;
+
+      mapa.set(chave, atual);
+    });
+
+    return Array.from(mapa.values()).sort((a, b) => b.total - a.total);
+  }, [pagamentosFiltrados]);
+
+  const resumoCaixa = useMemo<ResumoCaixa>(() => {
+    const previstoFechamento = caixaSessoes.reduce(
+      (acc, item) => acc + Number(item.valor_previsto_fechamento || 0),
+      0
+    );
+
+    const contadoFechamento = caixaSessoes.reduce(
+      (acc, item) => acc + Number(item.valor_fechamento_informado || 0),
+      0
+    );
+
+    const quebraTotal = caixaSessoes
+      .filter((item) => item.tipo_fechamento === "quebra")
+      .reduce(
+        (acc, item) => acc + Math.abs(Number(item.valor_diferenca_fechamento || 0)),
+        0
+      );
+
+    const sobraTotal = caixaSessoes
+      .filter((item) => item.tipo_fechamento === "sobra")
+      .reduce(
+        (acc, item) => acc + Math.abs(Number(item.valor_diferenca_fechamento || 0)),
+        0
+      );
+
+    return {
+      sessoesFechadas: caixaSessoes.length,
+      previstoFechamento,
+      contadoFechamento,
+      quebraTotal,
+      sobraTotal,
+    };
+  }, [caixaSessoes]);
+
+  const resumoComissoes = useMemo(() => {
+    const pendentes = comissoesFiltradas.filter((item) => item.status === "pendente");
+    const pagas = comissoesFiltradas.filter((item) => item.status === "pago");
+
+    return {
+      totalLancamentos: comissoesFiltradas.length,
+      pendentes: pendentes.length,
+      pagas: pagas.length,
+      valorPendente: pendentes.reduce(
+        (acc, item) => acc + Number(item.valor_comissao || 0),
+        0
+      ),
+      valorPago: pagas.reduce((acc, item) => acc + Number(item.valor_comissao || 0), 0),
+    };
+  }, [comissoesFiltradas]);
+
+  const rankingItens = useMemo(() => {
+    const mapa = new Map<
+      string,
+      {
+        chave: string;
+        descricao: string;
+        tipo: string;
+        quantidade: number;
+        faturamento: number;
+        custo: number;
+        lucro: number;
+      }
+    >();
+
+    itensComandaFiltrados.forEach((item) => {
+      const descricao = parseComboDisplayMeta(item.descricao).displayTitle || "Item";
+      const tipo = item.tipo_item || "outro";
+      const chave = `${tipo}:${descricao.toLowerCase()}`;
+      const atual = mapa.get(chave) || {
+        chave,
+        descricao,
+        tipo,
+        quantidade: 0,
+        faturamento: 0,
+        custo: 0,
+        lucro: 0,
+      };
+      const faturamento = Number(item.valor_total || 0);
+      const custo = Number(item.custo_total || 0);
+
+      atual.quantidade += Number(item.quantidade || 1);
+      atual.faturamento += faturamento;
+      atual.custo += custo;
+      atual.lucro += faturamento - custo;
+      mapa.set(chave, atual);
+    });
+
+    return Array.from(mapa.values())
+      .sort((a, b) => b.lucro - a.lucro)
+      .slice(0, 8);
+  }, [itensComandaFiltrados]);
+
+  const vendasPorDiaSemana = useMemo(() => {
+    const labels = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+    const mapa = labels.map((label) => ({ label, total: 0, vendas: 0 }));
+
+    comandasFiltradas
+      .filter((item) => item.status === "fechada")
+      .forEach((item) => {
+        const date = new Date(item.fechada_em || item.aberta_em || "");
+        if (Number.isNaN(date.getTime())) return;
+        const bucket = mapa[date.getDay()];
+        bucket.total += Number(item.total || 0);
+        bucket.vendas += 1;
+      });
+
+    const maiorTotal = Math.max(...mapa.map((item) => item.total), 1);
+    return mapa.map((item) => ({
+      ...item,
+      percentual: Math.max(4, Math.round((item.total / maiorTotal) * 100)),
+    }));
+  }, [comandasFiltradas]);
+
+  const totalSecoesSelecionadas = useMemo(
+    () => Object.values(printSelection).filter(Boolean).length,
+    [printSelection]
+  );
+
+  const togglePrintSelection = useCallback((key: PrintSectionKey) => {
+    setPrintSelection((current) => ({
+      ...current,
+      [key]: !current[key],
+    }));
+  }, []);
+
+  const marcarTodasSecoes = useCallback(() => {
+    setPrintSelection({
+      vendas: true,
+      pagamentos: true,
+      comissoes: true,
+      caixa: true,
+      itens: true,
+    });
+  }, []);
+
+  const aplicarPresetData = useCallback((key: DatePresetKey) => {
+    const range = getDatePresetRange(key);
+    setDataInicio(range.start);
+    setDataFim(range.end);
+  }, []);
+
+  const fecharMes = useCallback(() => {
+    const range = getDatePresetRange("mes");
+    setDataInicio(range.start);
+    setDataFim(range.end);
+    marcarTodasSecoes();
+    setPrintModalOpen(true);
+    setMsg("Fechamento do mês preparado. Confira as seções e clique em imprimir.");
+  }, [marcarTodasSecoes]);
+
+  const exportarCsv = useCallback(() => {
+    const linhas = [
+      [
+        "Relatório",
+        "Período inicial",
+        "Período final",
+        "Profissional",
+        "Comanda",
+        "Cliente",
+        "Status",
+        "Data",
+        "Subtotal",
+        "Desconto",
+        "Acréscimo",
+        "Total",
+      ],
+      ...comandasFiltradas.map((item) => [
+        "Vendas",
+        dataInicio,
+        dataFim,
+        profissionalSelecionado?.nome || "Todos",
+        `#${item.numero}`,
+        getJoinedName(item.clientes, "Sem cliente"),
+        item.status || "-",
+        formatDateTime(item.fechada_em || item.cancelada_em || item.aberta_em),
+        Number(item.subtotal || 0).toFixed(2),
+        Number(item.desconto || 0).toFixed(2),
+        Number(item.acrescimo || 0).toFixed(2),
+        Number(item.total || 0).toFixed(2),
+      ]),
+      [],
+      ["Item", "Tipo", "Quantidade", "Faturamento", "Custo", "Lucro"],
+      ...rankingItens.map((item) => [
+        item.descricao,
+        formatTipoItemLabel(item.tipo),
+        item.quantidade.toFixed(2),
+        item.faturamento.toFixed(2),
+        item.custo.toFixed(2),
+        item.lucro.toFixed(2),
+      ]),
+    ];
+
+    const csv = linhas
+      .map((linha) => linha.map((celula) => csvCell(celula)).join(";"))
+      .join("\n");
+    const blob = new Blob([`\uFEFF${csv}`], {
+      type: "text/csv;charset=utf-8",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `relatorio-financeiro-${dataInicio}-${dataFim}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }, [
+    comandasFiltradas,
+    dataInicio,
+    dataFim,
+    profissionalSelecionado,
+    rankingItens,
+  ]);
+
+  const imprimirRelatorio = useCallback(() => {
+    const sections = Object.entries(printSelection)
+      .filter(([, enabled]) => enabled)
+      .map(([key]) => key);
+
+    if (sections.length === 0) {
+      setMsg("Selecione ao menos uma parte do relatório para imprimir.");
+      return;
+    }
+
+    setMsg("");
+    setPrintModalOpen(false);
+
+    const periodLabel = `Período de ${dataInicio} até ${dataFim}`;
+    const generatedAt = new Date().toLocaleString("pt-BR");
+    const professionalLabel = profissionalSelecionado?.nome || "Todos os profissionais";
+
+    const vendasRows =
+      comandasFiltradas.length > 0
+        ? comandasFiltradas
+            .map(
+              (item) => `
+                <tr>
+                  <td>#${escapeHtml(String(item.numero))}</td>
+                  <td>${escapeHtml(getJoinedName(item.clientes, "Sem cliente"))}</td>
+                  <td>${escapeHtml(item.status || "-")}</td>
+                  <td>${escapeHtml(
+                    formatDateTime(item.fechada_em || item.cancelada_em || item.aberta_em)
+                  )}</td>
+                  <td>${escapeHtml(formatCurrency(item.subtotal))}</td>
+                  <td>${escapeHtml(formatCurrency(item.desconto))}</td>
+                  <td>${escapeHtml(formatCurrency(item.acrescimo))}</td>
+                  <td>${escapeHtml(formatCurrency(item.total))}</td>
+                </tr>
+              `
+            )
+            .join("")
+        : `
+          <tr>
+            <td colspan="8" class="empty">Nenhuma venda encontrada no período.</td>
+          </tr>
+        `;
+
+    const pagamentosRows =
+      pagamentosPorForma.length > 0
+        ? pagamentosPorForma
+            .map(
+              (item) => `
+                <tr>
+                  <td>${escapeHtml(formatFormaPagamentoLabel(item.forma))}</td>
+                  <td>${escapeHtml(String(item.qtd))}</td>
+                  <td>${escapeHtml(formatCurrency(item.bruto))}</td>
+                  <td>${escapeHtml(formatCurrency(item.troco))}</td>
+                  <td>${escapeHtml(formatCurrency(item.creditoGerado))}</td>
+                  <td>${escapeHtml(formatCurrency(item.taxa))}</td>
+                  <td>${escapeHtml(formatCurrency(item.total))}</td>
+                </tr>
+              `
+            )
+            .join("")
+        : `
+          <tr>
+            <td colspan="7" class="empty">Nenhum pagamento encontrado.</td>
+          </tr>
+        `;
+
+    const comissoesRows =
+      comissoesFiltradas.length > 0
+        ? comissoesFiltradas
+            .map(
+              (item) => `
+                <tr>
+                  <td>${escapeHtml(parseComboDisplayMeta(item.descricao).displayTitle)}</td>
+                  <td>${escapeHtml(formatCurrency(item.valor_base))}</td>
+                  <td>${escapeHtml(
+                    `${Number(item.percentual_aplicado || 0).toLocaleString("pt-BR", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}%`
+                  )}</td>
+                  <td>${escapeHtml(formatCurrency(item.valor_comissao))}</td>
+                  <td>${escapeHtml(item.status || "-")}</td>
+                </tr>
+              `
+            )
+            .join("")
+        : `
+          <tr>
+            <td colspan="5" class="empty">Nenhuma comissão encontrada.</td>
+          </tr>
+        `;
+
+    const caixaRows =
+      caixaSessoes.length > 0
+        ? caixaSessoes
+            .map(
+              (item) => `
+                <tr>
+                  <td>${escapeHtml(formatDateTime(item.aberto_em))}</td>
+                  <td>${escapeHtml(formatDateTime(item.fechado_em))}</td>
+                  <td>${escapeHtml(formatCurrency(item.valor_abertura))}</td>
+                  <td>${escapeHtml(formatCurrency(item.valor_previsto_fechamento))}</td>
+                  <td>${escapeHtml(formatCurrency(item.valor_fechamento_informado))}</td>
+                  <td>${escapeHtml(formatCurrency(item.valor_diferenca_fechamento))}</td>
+                  <td>${escapeHtml(item.tipo_fechamento || "-")}</td>
+                </tr>
+              `
+            )
+            .join("")
+        : `
+          <tr>
+            <td colspan="7" class="empty">Nenhum fechamento de caixa no período.</td>
+          </tr>
+        `;
+
+    const itensRows =
+      rankingItens.length > 0
+        ? rankingItens
+            .map(
+              (item) => `
+                <tr>
+                  <td>${escapeHtml(item.descricao)}</td>
+                  <td>${escapeHtml(formatTipoItemLabel(item.tipo))}</td>
+                  <td>${escapeHtml(item.quantidade.toLocaleString("pt-BR"))}</td>
+                  <td>${escapeHtml(formatCurrency(item.faturamento))}</td>
+                  <td>${escapeHtml(formatCurrency(item.custo))}</td>
+                  <td>${escapeHtml(formatCurrency(item.lucro))}</td>
+                </tr>
+              `
+            )
+            .join("")
+        : `
+          <tr>
+            <td colspan="6" class="empty">Nenhum item vendido no período.</td>
+          </tr>
+        `;
+
+    const sectionBlocks = [
+      printSelection.vendas
+        ? `
+          <section class="report-card">
+            <div class="section-head">
+              <h2>Vendas do período</h2>
+              <p>Lista de comandas conforme os filtros atuais.</p>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Comanda</th>
+                  <th>Cliente</th>
+                  <th>Status</th>
+                  <th>Data</th>
+                  <th>Subtotal</th>
+                  <th>Desconto</th>
+                  <th>Acréscimo</th>
+                  <th>Total</th>
+                </tr>
+              </thead>
+              <tbody>${vendasRows}</tbody>
+            </table>
+          </section>
+        `
+        : "",
+      printSelection.pagamentos
+        ? `
+          <section class="report-card">
+            <div class="section-head">
+              <h2>Pagamentos por forma</h2>
+              <p>Valor bruto, troco, crédito gerado e total aplicado nas vendas.</p>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Forma</th>
+                  <th>Pagamentos</th>
+                  <th>Bruto</th>
+                  <th>Troco</th>
+                  <th>Crédito</th>
+                  <th>Taxa</th>
+                  <th>Aplicado</th>
+                </tr>
+              </thead>
+              <tbody>${pagamentosRows}</tbody>
+            </table>
+          </section>
+        `
+        : "",
+      printSelection.comissoes
+        ? `
+          <section class="report-card">
+            <div class="section-head">
+              <h2>Comissões do período</h2>
+              <p>Resumo das comissões ligadas às vendas filtradas.</p>
+            </div>
+            <div class="summary-grid">
+              <div class="summary-card">
+                <span>Lançamentos</span>
+                <strong>${escapeHtml(String(resumoComissoes.totalLancamentos))}</strong>
+              </div>
+              <div class="summary-card">
+                <span>Pendentes</span>
+                <strong>${escapeHtml(formatCurrency(resumoComissoes.valorPendente))}</strong>
+              </div>
+              <div class="summary-card">
+                <span>Pagas</span>
+                <strong>${escapeHtml(formatCurrency(resumoComissoes.valorPago))}</strong>
+              </div>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Descrição</th>
+                  <th>Base</th>
+                  <th>%</th>
+                  <th>Comissão</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>${comissoesRows}</tbody>
+            </table>
+          </section>
+        `
+        : "",
+      printSelection.caixa
+        ? `
+          <section class="report-card">
+            <div class="section-head">
+              <h2>Fechamento de caixa</h2>
+              <p>Saldo inicial, previsto, contado e diferença dos caixas fechados.</p>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Abertura</th>
+                  <th>Fechamento</th>
+                  <th>Saldo inicial</th>
+                  <th>Previsto</th>
+                  <th>Contado</th>
+                  <th>Diferença</th>
+                  <th>Tipo</th>
+                </tr>
+              </thead>
+              <tbody>${caixaRows}</tbody>
+            </table>
+          </section>
+        `
+        : "",
+      printSelection.itens
+        ? `
+          <section class="report-card">
+            <div class="section-head">
+              <h2>Ranking de vendas e lucro</h2>
+              <p>Itens que mais contribuíram para o resultado do período.</p>
+            </div>
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th>Tipo</th>
+                  <th>Quantidade</th>
+                  <th>Faturamento</th>
+                  <th>Custo</th>
+                  <th>Lucro</th>
+                </tr>
+              </thead>
+              <tbody>${itensRows}</tbody>
+            </table>
+          </section>
+        `
+        : "",
+    ]
+      .filter(Boolean)
+      .join("");
+
+    const reportHtml = `
+      <!doctype html>
+      <html lang="pt-BR">
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Relatório financeiro</title>
+          <style>
+            :root {
+              color-scheme: light;
+            }
+            * {
+              box-sizing: border-box;
+            }
+            body {
+              margin: 0;
+              background: #f4f4f5;
+              color: #18181b;
+              font-family: Inter, Arial, Helvetica, sans-serif;
+              -webkit-print-color-adjust: exact;
+              print-color-adjust: exact;
+            }
+            .page {
+              width: 100%;
+              max-width: 1080px;
+              margin: 0 auto;
+              padding: 32px 24px 40px;
+            }
+            .report-header {
+              border: 1px solid #e4e4e7;
+              border-radius: 24px;
+              background: #ffffff;
+              padding: 24px;
+              margin-bottom: 20px;
+            }
+            .eyebrow {
+              font-size: 11px;
+              font-weight: 700;
+              letter-spacing: 0.18em;
+              text-transform: uppercase;
+              color: #71717a;
+            }
+            h1 {
+              margin: 10px 0 0;
+              font-size: 30px;
+              line-height: 1.1;
+            }
+            .subtitle {
+              margin-top: 10px;
+              font-size: 14px;
+              color: #52525b;
+            }
+            .meta {
+              margin-top: 4px;
+              font-size: 12px;
+              color: #71717a;
+            }
+            .report-card {
+              border: 1px solid #e4e4e7;
+              border-radius: 24px;
+              background: #ffffff;
+              padding: 20px;
+              margin-bottom: 18px;
+              break-inside: avoid;
+            }
+            .section-head h2 {
+              margin: 0;
+              font-size: 20px;
+            }
+            .section-head p {
+              margin: 6px 0 0;
+              font-size: 13px;
+              color: #71717a;
+            }
+            .summary-grid {
+              display: grid;
+              grid-template-columns: repeat(3, minmax(0, 1fr));
+              gap: 12px;
+              margin: 18px 0;
+            }
+            .summary-card {
+              border: 1px solid #e4e4e7;
+              border-radius: 18px;
+              background: #fafafa;
+              padding: 14px 16px;
+            }
+            .summary-card span {
+              display: block;
+              font-size: 11px;
+              font-weight: 700;
+              letter-spacing: 0.14em;
+              text-transform: uppercase;
+              color: #71717a;
+            }
+            .summary-card strong {
+              display: block;
+              margin-top: 8px;
+              font-size: 20px;
+            }
+            table {
+              width: 100%;
+              border-collapse: collapse;
+              margin-top: 18px;
+            }
+            th {
+              background: #fafafa;
+              color: #71717a;
+              font-size: 11px;
+              letter-spacing: 0.12em;
+              text-transform: uppercase;
+              text-align: left;
+              padding: 11px 12px;
+              border-bottom: 1px solid #e4e4e7;
+            }
+            td {
+              padding: 12px;
+              border-bottom: 1px solid #f0f0f0;
+              font-size: 13px;
+              vertical-align: top;
+            }
+            tbody tr:nth-child(even) td {
+              background: #fafafa;
+            }
+            tbody tr:last-child td {
+              border-bottom: none;
+            }
+            .empty {
+              text-align: center;
+              color: #71717a;
+              padding: 22px 12px;
+            }
+            .report-footer {
+              margin-top: 22px;
+              color: #71717a;
+              font-size: 12px;
+              text-align: center;
+            }
+            @media print {
+              body {
+                background: #ffffff;
+              }
+              .page {
+                max-width: none;
+                padding: 0;
+              }
+              .report-header,
+              .report-card,
+              .summary-card {
+                box-shadow: none;
+              }
+              @page {
+                margin: 14mm;
+              }
+            }
+          </style>
+        </head>
+        <body>
+          <main class="page">
+            <header class="report-header">
+              <div class="eyebrow">Relatório financeiro</div>
+              <h1>Resumo do período</h1>
+              <div class="subtitle">${escapeHtml(periodLabel)}</div>
+              <div class="meta">Profissional: ${escapeHtml(professionalLabel)}</div>
+              <div class="meta">Gerado em ${escapeHtml(generatedAt)}</div>
+              <div class="summary-grid">
+                <div class="summary-card">
+                  <span>Faturamento bruto</span>
+                  <strong>${escapeHtml(formatCurrency(resumo.faturamentoBruto))}</strong>
+                </div>
+                <div class="summary-card">
+                  <span>Lucro líquido salão</span>
+                  <strong>${escapeHtml(formatCurrency(resumo.lucroLiquidoSalao))}</strong>
+                </div>
+                <div class="summary-card">
+                  <span>Comissões a pagar</span>
+                  <strong>${escapeHtml(formatCurrency(resumo.comissaoPendente))}</strong>
+                </div>
+              </div>
+            </header>
+            ${sectionBlocks}
+            <footer class="report-footer">Gerado pelo Sistema Salão Premium</footer>
+          </main>
+        </body>
+      </html>
+    `;
+
+    const iframe = document.createElement("iframe");
+    iframe.setAttribute("aria-hidden", "true");
+    iframe.style.position = "fixed";
+    iframe.style.right = "0";
+    iframe.style.bottom = "0";
+    iframe.style.width = "0";
+    iframe.style.height = "0";
+    iframe.style.border = "0";
+    iframe.style.opacity = "0";
+    document.body.appendChild(iframe);
+
+    const printDocument =
+      iframe.contentWindow?.document || iframe.contentDocument || null;
+
+    if (!printDocument || !iframe.contentWindow) {
+      document.body.removeChild(iframe);
+      setMsg("Não foi possível montar o relatório para impressão.");
+      return;
+    }
+
+    printDocument.open();
+    printDocument.write(reportHtml);
+    printDocument.close();
+
+    const cleanup = () => {
+      window.setTimeout(() => {
+        if (iframe.parentNode) {
+          iframe.parentNode.removeChild(iframe);
+        }
+      }, 300);
+    };
+
+    iframe.onload = () => {
+      window.setTimeout(() => {
+        iframe.contentWindow?.focus();
+        iframe.contentWindow?.print();
+        cleanup();
+      }, 250);
+    };
+  }, [
+    comandasFiltradas,
+    pagamentosPorForma,
+    comissoesFiltradas,
+    resumoComissoes,
+    printSelection,
+    dataInicio,
+    dataFim,
+    caixaSessoes,
+    profissionalSelecionado,
+    rankingItens,
+    resumo,
+  ]);
+
+  const enviarRelatorioWhatsApp = useCallback(() => {
+    imprimirRelatorio();
+    const texto = [
+      `Relatório financeiro Salão Premium`,
+      `Período: ${dataInicio} até ${dataFim}`,
+      "O PDF foi gerado pela janela de impressão do sistema. Anexe o arquivo salvo nesta conversa para compartilhar com segurança.",
+    ].join("\n");
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(texto)}`,
+      "_blank",
+      "noopener,noreferrer"
+    );
+  }, [dataFim, dataInicio, imprimirRelatorio]);
+
+  if (loading) {
+    return (
+      <PainelListLoading
+        title="Carregando relatório financeiro"
+        message="Aguarde enquanto cruzamos vendas, pagamentos, taxas e comissões do período."
+        fullHeight={false}
+      />
+    );
+  }
+
+  if (semPermissao) {
+    return (
+      <div className="p-6">
+        <div className="mx-auto max-w-3xl rounded-[28px] border border-amber-200 bg-amber-50 p-6 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="rounded-2xl bg-amber-100 p-3 text-amber-700">
+              <ShieldAlert size={22} />
+            </div>
+
+            <div>
+              <h1 className="text-xl font-bold text-amber-900">Sem permissão</h1>
+              <p className="mt-2 text-sm text-amber-800">
+                Seu usuário não tem acesso para visualizar o relatório financeiro.
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="contents">
+      <div className="mx-auto max-w-[1800px] space-y-5">
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-4 text-zinc-950 shadow-sm">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-[0.22em] text-zinc-400">
+                Visão do período
+              </div>
+              <h1 className="mt-1 text-[1.95rem] font-bold tracking-[-0.04em] md:text-[2.1rem]">
+                Relatório financeiro
+              </h1>
+              <p className="mt-2 text-sm text-zinc-500">
+                Vendas, recebimentos, comissões e fechamento de caixa em blocos mais diretos.
+              </p>
+            </div>
+
+            <div className="flex flex-wrap items-center justify-end gap-3">
+              <button
+                type="button"
+                onClick={fecharMes}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+              >
+                <FileText size={16} />
+                Fechar mês
+              </button>
+              <button
+                type="button"
+                onClick={exportarCsv}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+              >
+                <Download size={16} />
+                Exportar Excel
+              </button>
+              <button
+                type="button"
+                onClick={() => setPrintModalOpen(true)}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+              >
+                <Printer size={16} />
+                Imprimir
+              </button>
+
+              <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-right">
+                <div className="text-xs uppercase tracking-[0.2em] text-zinc-500">
+                  Vendas fechadas
+                </div>
+                <div className="mt-1 text-2xl font-bold">{resumo.quantidadeVendas}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {erroTela ? (
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+            {erroTela}
+          </div>
+        ) : null}
+
+        {msg ? (
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            {msg}
+          </div>
+        ) : null}
+
+        <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
+          <div className="mb-4 flex flex-wrap gap-2">
+            {[
+              { key: "hoje" as const, label: "Hoje" },
+              { key: "ontem" as const, label: "Ontem" },
+              { key: "7dias" as const, label: "Últimos 7 dias" },
+              { key: "mes" as const, label: "Mês atual" },
+            ].map((preset) => (
+              <button
+                key={preset.key}
+                type="button"
+                onClick={() => aplicarPresetData(preset.key)}
+                className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:border-zinc-900 hover:bg-white"
+              >
+                {preset.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+            <div className="xl:col-span-2">
+              <label className="mb-2 block text-sm font-semibold text-zinc-700">
+                Buscar
+              </label>
+
+              <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                <Search size={16} className="text-zinc-500" />
+                <input
+                  value={busca}
+                  onChange={(e) => setBusca(e.target.value)}
+                  placeholder="Número da comanda ou cliente"
+                  className="w-full bg-transparent text-sm outline-none"
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-zinc-700">
+                Status
+              </label>
+
+              <select
+                value={statusFiltro}
+                onChange={(e) => setStatusFiltro(e.target.value as StatusFiltro)}
+                className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+              >
+                <option value="fechada">Fechadas</option>
+                <option value="cancelada">Canceladas</option>
+                <option value="todos">Todos</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-zinc-700">
+                Profissional
+              </label>
+
+              <div className="relative">
+                <select
+                  value={profissionalFiltro}
+                  onChange={(e) => setProfissionalFiltro(e.target.value)}
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 pr-9 text-sm outline-none transition focus:border-zinc-900"
+                >
+                  <option value="">Todos</option>
+                  {profissionais.map((profissional) => (
+                    <option key={profissional.id} value={profissional.id}>
+                      {profissional.nome}
+                    </option>
+                  ))}
+                </select>
+                <UserRound
+                  className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400"
+                  size={16}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-zinc-700">
+                Data inicial
+              </label>
+
+              <div className="relative">
+                <input
+                  type="date"
+                  value={dataInicio}
+                  onChange={(e) => setDataInicio(e.target.value)}
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                />
+                <CalendarDays
+                  className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400"
+                  size={16}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-zinc-700">
+                Data final
+              </label>
+
+              <div className="relative">
+                <input
+                  type="date"
+                  value={dataFim}
+                  onChange={(e) => setDataFim(e.target.value)}
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+                />
+                <CalendarDays
+                  className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400"
+                  size={16}
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-base font-semibold text-zinc-950">Vendas e recebimentos</h2>
+            <p className="text-sm text-zinc-500">
+              Leitura rápida do que entrou no período filtrado.
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-4">
+          <KpiCard
+            icon={<BadgeDollarSign size={18} />}
+            label="Faturamento bruto"
+            value={formatCurrency(resumo.faturamentoBruto)}
+            helper="Preço vendido, sem custo de produto"
+          />
+          <KpiCard
+            icon={<TrendingUp size={18} />}
+            label="Lucro líquido salão"
+            value={formatCurrency(resumo.lucroLiquidoSalao)}
+            helper={
+              relatoriosAvancados
+                ? `Após taxas, custos e comissões`
+                : "Estimativa do período"
+            }
+          />
+          <KpiCard
+            icon={<Scissors size={18} />}
+            label="Comissões a pagar"
+            value={formatCurrency(resumo.comissaoPendente)}
+            helper={`Paga: ${formatCurrency(resumo.comissaoPaga)}`}
+          />
+          <KpiCard
+            icon={<Wallet size={18} />}
+            label="Saldo em caixa"
+            value={formatCurrency(resumoCaixa.contadoFechamento)}
+            helper={`${resumoCaixa.sessoesFechadas} fechamento(s)`}
+          />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-4">
+          <KpiCard
+            icon={<Receipt size={18} />}
+            label="Faturamento líquido"
+            value={formatCurrency(resumo.faturamentoLiquido)}
+            helper={`Ticket médio: ${formatCurrency(resumo.ticketMedio)}`}
+          />
+          <KpiCard
+            icon={<Wallet size={18} />}
+            label="Recebido aplicado"
+            value={formatCurrency(resumo.recebido)}
+            helper={`Bruto: ${formatCurrency(resumo.recebidoBruto)}`}
+          />
+          <KpiCard
+            icon={<CreditCard size={18} />}
+            label="Taxa maquininha"
+            value={formatCurrency(resumo.taxaMaquininha)}
+            helper="Sobre pagamentos, não sobre custos"
+          />
+          <KpiCard
+            icon={<Receipt size={18} />}
+            label="Custo dos itens"
+            value={formatCurrency(resumo.custoItens)}
+            helper="Despesa do lucro, não faturamento"
+          />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-4">
+          <KpiCard
+            icon={<Receipt size={18} />}
+            label="Descontos"
+            value={formatCurrency(resumo.descontos)}
+          />
+          <KpiCard
+            icon={<Receipt size={18} />}
+            label="Acréscimos"
+            value={formatCurrency(resumo.acrescimos)}
+          />
+          <KpiCard
+            icon={<Receipt size={18} />}
+            label="Canceladas"
+            value={
+              relatoriosAvancados ? formatCurrency(resumo.canceladas) : "Upgrade"
+            }
+          />
+          <KpiCard
+            icon={<Receipt size={18} />}
+            label="Quantidade de vendas"
+            value={String(resumo.quantidadeVendas)}
+          />
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-4">
+          <KpiCard
+            icon={<Wallet size={18} />}
+            label="Troco registrado"
+            value={formatCurrency(resumo.troco)}
+            helper="Excedente devolvido ao cliente"
+          />
+          <KpiCard
+            icon={<Wallet size={18} />}
+            label="Crédito gerado"
+            value={formatCurrency(resumo.creditoGerado)}
+            helper="Excedente guardado para cliente"
+          />
+          <KpiCard
+            icon={<ShieldAlert size={18} />}
+            label="Diferença recebimento"
+            value={formatCurrency(resumo.divergenciaRecebimento)}
+            helper="Aplicado na venda - faturamento líquido"
+          />
+          <KpiCard
+            icon={<Receipt size={18} />}
+            label="Regra do lucro"
+            value="Fechadas"
+            helper="Canceladas não geram lucro"
+          />
+          </div>
+        </section>
+
+        {relatoriosAvancados ? (
+          <section className="space-y-3">
+            <div>
+              <h2 className="text-base font-semibold text-zinc-950">Fechamento de caixa</h2>
+              <p className="text-sm text-zinc-500">
+                Diferença entre previsto, contado, sobra e quebra.
+              </p>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2 2xl:grid-cols-5">
+            <KpiCard
+              icon={<Wallet size={18} />}
+              label="Fechamentos de caixa"
+              value={String(resumoCaixa.sessoesFechadas)}
+            />
+            <KpiCard
+              icon={<Receipt size={18} />}
+              label="Previsto no fechamento"
+              value={formatCurrency(resumoCaixa.previstoFechamento)}
+            />
+            <KpiCard
+              icon={<BadgeDollarSign size={18} />}
+              label="Contado no fechamento"
+              value={formatCurrency(resumoCaixa.contadoFechamento)}
+            />
+            <KpiCard
+              icon={<ShieldAlert size={18} />}
+              label="Quebra de caixa"
+              value={formatCurrency(resumoCaixa.quebraTotal)}
+            />
+            <KpiCard
+              icon={<CreditCard size={18} />}
+              label="Sobra de caixa"
+              value={formatCurrency(resumoCaixa.sobraTotal)}
+            />
+            </div>
+          </section>
+        ) : (
+          <UpgradePanel
+            title="Relatório avançado"
+            description="Fechamento de caixa com quebra, sobra e leitura mais gerencial entra no Pro ou Premium."
+          />
+        )}
+
+        <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[0.8fr_1.2fr]">
+          <section className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+            <div>
+              <h2 className="text-base font-semibold text-zinc-950">
+                Dias fortes da semana
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                Ajuda a decidir promoção, escala e campanha por dia.
+              </p>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {vendasPorDiaSemana.map((item) => (
+                <div key={item.label} className="grid grid-cols-[42px_1fr_96px] items-center gap-3">
+                  <span className="text-xs font-bold uppercase tracking-[0.12em] text-zinc-500">
+                    {item.label}
+                  </span>
+                  <div className="h-3 overflow-hidden rounded-full bg-zinc-100">
+                    <div
+                      className="h-full rounded-full bg-zinc-900"
+                      style={{ width: `${item.percentual}%` }}
+                    />
+                  </div>
+                  <span className="text-right text-xs font-semibold text-zinc-700">
+                    {formatCurrency(item.total)}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
+            <div className="border-b border-zinc-200 px-5 py-4">
+              <h2 className="text-base font-semibold text-zinc-950">
+                Ranking de vendas e lucro
+              </h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                Mostra o que trouxe mais resultado, não só volume.
+              </p>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-[680px] w-full">
+                <thead>
+                  <tr className="border-b border-zinc-100 text-left text-xs uppercase tracking-wider text-zinc-500">
+                    <th className="px-5 py-3">Item</th>
+                    <th className="px-5 py-3">Tipo</th>
+                    <th className="px-5 py-3">Qtd.</th>
+                    <th className="px-5 py-3">Faturamento</th>
+                    <th className="px-5 py-3">Lucro</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {rankingItens.map((item) => (
+                    <tr key={item.chave} className="border-b border-zinc-100 last:border-b-0">
+                      <td className="px-5 py-4 text-sm font-semibold text-zinc-900">
+                        {item.descricao}
+                      </td>
+                      <td className="px-5 py-4 text-sm text-zinc-600">
+                        {formatTipoItemLabel(item.tipo)}
+                      </td>
+                      <td className="px-5 py-4 text-sm text-zinc-600">
+                        {item.quantidade.toLocaleString("pt-BR")}
+                      </td>
+                      <td className="px-5 py-4 text-sm text-zinc-600">
+                        {formatCurrency(item.faturamento)}
+                      </td>
+                      <td className="px-5 py-4 text-sm font-bold text-zinc-950">
+                        {formatCurrency(item.lucro)}
+                      </td>
+                    </tr>
+                  ))}
+
+                  {rankingItens.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="px-5 py-8 text-center text-sm text-zinc-500">
+                        Nenhum item vendido no período.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </section>
+        </div>
+
+        <div className="grid grid-cols-1 gap-4 2xl:grid-cols-[1.2fr_0.8fr]">
+          <div className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
+            <div className="border-b border-zinc-200 px-5 py-4">
+              <div className="text-lg font-bold text-zinc-900">Vendas do período</div>
+              <div className="mt-1 text-sm text-zinc-500">
+                Lista de comandas conforme os filtros atuais.
+              </div>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="min-w-[760px] w-full">
+                <thead>
+                  <tr className="border-b border-zinc-100 text-left text-xs uppercase tracking-wider text-zinc-500">
+                    <th className="px-3.5 py-3">Comanda</th>
+                    <th className="px-3.5 py-3">Cliente</th>
+                    <th className="px-3.5 py-3">Status</th>
+                    <th className="px-3.5 py-3">Data</th>
+                    <th className="px-3.5 py-3">Subtotal</th>
+                    <th className="px-3.5 py-3">Desc.</th>
+                    <th className="px-3.5 py-3">Acrésc.</th>
+                    <th className="px-3.5 py-3">Total</th>
+                  </tr>
+                </thead>
+
+                <tbody>
+                  {comandasFiltradas.map((item) => (
+                    <tr key={item.id} className="border-b border-zinc-100 last:border-b-0">
+                      <td className="px-3.5 py-4 whitespace-nowrap font-semibold text-zinc-900">
+                        #{item.numero}
+                      </td>
+                      <td className="min-w-[120px] max-w-[180px] px-3.5 py-4 text-sm text-zinc-700 break-words">
+                        {getJoinedName(item.clientes, "Sem cliente")}
+                      </td>
+                      <td className="px-3.5 py-4">
+                        <span
+                          className={`inline-flex rounded-full px-2.5 py-1 text-xs font-semibold uppercase ${getStatusBadgeClass(
+                            item.status
+                          )}`}
+                        >
+                          {statusPtBR(item.status)}
+                        </span>
+                      </td>
+                      <td className="px-3.5 py-4 whitespace-nowrap text-sm text-zinc-700">
+                        {formatDateTime(item.fechada_em || item.cancelada_em || item.aberta_em)}
+                      </td>
+                      <td className="px-3.5 py-4 whitespace-nowrap text-sm text-zinc-700">
+                        {formatCurrency(item.subtotal)}
+                      </td>
+                      <td className="px-3.5 py-4 whitespace-nowrap text-sm text-zinc-700">
+                        {formatCurrency(item.desconto)}
+                      </td>
+                      <td className="px-3.5 py-4 whitespace-nowrap text-sm text-zinc-700">
+                        {formatCurrency(item.acrescimo)}
+                      </td>
+                      <td className="px-3.5 py-4 whitespace-nowrap text-sm font-semibold text-zinc-900">
+                        {formatCurrency(item.total)}
+                      </td>
+                    </tr>
+                  ))}
+
+                  {comandasFiltradas.length === 0 ? (
+                    <tr>
+                      <td colSpan={8} className="px-5 py-10 text-center text-sm text-zinc-500">
+                        Nenhuma venda encontrada no período.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+            <div className="space-y-5">
+            <div className="rounded-[28px] border border-zinc-200 bg-white p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <div className="text-lg font-bold text-zinc-900">Painel lateral</div>
+                  <div className="mt-1 text-sm text-zinc-500">
+                    Pagamentos e comissões em uma leitura mais curta.
+                  </div>
+                </div>
+
+                <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-1">
+                  <button
+                    type="button"
+                    onClick={() => setPainelLateralTab("pagamentos")}
+                    className={`rounded-[12px] px-3 py-1.5 text-xs font-semibold ${
+                      painelLateralTab === "pagamentos"
+                        ? "bg-zinc-900 text-white"
+                        : "text-zinc-700"
+                    }`}
+                  >
+                    Pagamentos
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setPainelLateralTab("comissoes")}
+                    className={`rounded-[12px] px-3 py-1.5 text-xs font-semibold ${
+                      painelLateralTab === "comissoes"
+                        ? "bg-zinc-900 text-white"
+                        : "text-zinc-700"
+                    }`}
+                  >
+                    Comissões
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div
+              className={`overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm ${
+                painelLateralTab === "pagamentos" ? "block" : "hidden"
+              }`}
+            >
+              <div className="border-b border-zinc-200 px-5 py-4">
+                <div className="text-lg font-bold text-zinc-900">Pagamentos por forma</div>
+                <div className="mt-1 text-sm text-zinc-500">
+                  Total aplicado nas vendas, já separando troco e crédito gerado.
+                </div>
+              </div>
+
+              <div className="divide-y divide-zinc-100">
+                {pagamentosPorForma.map((item) => (
+                  <div key={item.forma} className="flex items-center justify-between px-5 py-4">
+                    <div>
+                      <div className="font-semibold text-zinc-900">
+                        {formatFormaPagamentoLabel(item.forma)}
+                      </div>
+                      <div className="text-xs text-zinc-500">
+                        {item.qtd} pagamento(s) • Bruto: {formatCurrency(item.bruto)}
+                      </div>
+                      <div className="mt-1 text-xs text-zinc-500">
+                        Troco: {formatCurrency(item.troco)} • Crédito:{" "}
+                        {formatCurrency(item.creditoGerado)} • Taxa:{" "}
+                        {formatCurrency(item.taxa)}
+                      </div>
+                    </div>
+
+                    <div className="text-right">
+                      <div className="text-[11px] font-semibold uppercase tracking-[0.14em] text-zinc-400">
+                        Aplicado
+                      </div>
+                      <div className="text-sm font-bold text-zinc-900">
+                        {formatCurrency(item.total)}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                {pagamentosPorForma.length === 0 ? (
+                  <div className="px-5 py-8 text-center text-sm text-zinc-500">
+                    Nenhum pagamento encontrado.
+                  </div>
+                ) : null}
+              </div>
+            </div>
+
+            <div
+              className={`overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm ${
+                painelLateralTab === "comissoes" ? "block" : "hidden"
+              }`}
+            >
+              <div className="border-b border-zinc-200 px-5 py-4">
+                <div className="text-lg font-bold text-zinc-900">Comissões do período</div>
+                <div className="mt-1 text-sm text-zinc-500">
+                  Resumo das comissões ligadas às vendas filtradas.
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 border-b border-zinc-200 px-5 py-4 sm:grid-cols-3">
+                <ResumoLateralCard
+                  label="Lançamentos"
+                  value={String(resumoComissoes.totalLancamentos)}
+                  helper="Comissões no filtro atual"
+                />
+                <ResumoLateralCard
+                  label="Pendentes"
+                  value={formatCurrency(resumoComissoes.valorPendente)}
+                  helper={`${resumoComissoes.pendentes} lançamento(s)`}
+                />
+                <ResumoLateralCard
+                  label="Pagas"
+                  value={formatCurrency(resumoComissoes.valorPago)}
+                  helper={`${resumoComissoes.pagas} lançamento(s)`}
+                />
+              </div>
+
+              {relatoriosAvancados ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full">
+                    <thead>
+                      <tr className="border-b border-zinc-100 text-left text-xs uppercase tracking-wider text-zinc-500">
+                        <th className="px-5 py-3">Descrição</th>
+                        <th className="px-5 py-3">Base</th>
+                        <th className="px-5 py-3">% </th>
+                        <th className="px-5 py-3">Comissão</th>
+                        <th className="px-5 py-3">Status</th>
+                      </tr>
+                    </thead>
+
+                    <tbody>
+                      {comissoesFiltradas.slice(0, 8).map((item) => (
+                        <tr key={item.id} className="border-b border-zinc-100 last:border-b-0">
+                          <td className="px-5 py-4">
+                            <ComboDescriptionCell descricao={item.descricao} />
+                          </td>
+                          <td className="px-5 py-4 text-sm text-zinc-700">
+                            {formatCurrency(item.valor_base)}
+                          </td>
+                          <td className="px-5 py-4 text-sm text-zinc-700">
+                            {Number(item.percentual_aplicado || 0).toLocaleString("pt-BR", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 2,
+                            })}
+                            %
+                          </td>
+                          <td className="px-5 py-4 text-sm font-semibold text-zinc-900">
+                            {formatCurrency(item.valor_comissao)}
+                          </td>
+                          <td className="px-5 py-4 text-sm text-zinc-700">{item.status || "-"}</td>
+                        </tr>
+                      ))}
+
+                      {comissoesFiltradas.length === 0 ? (
+                        <tr>
+                          <td colSpan={5} className="px-5 py-8 text-center text-sm text-zinc-500">
+                            Nenhuma comissão encontrada.
+                          </td>
+                        </tr>
+                      ) : null}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="px-5 py-5">
+                  <div className="rounded-2xl border border-dashed border-zinc-200 bg-zinc-50 p-4">
+                    <div className="text-sm font-semibold text-zinc-900">
+                      Detalhamento premium das comissões
+                    </div>
+                    <div className="mt-1 text-sm leading-6 text-zinc-500">
+                      A tabela detalhada de comissões do período fica liberada no
+                      Pro ou Premium. No Básico, você continua com o resumo
+                      financeiro e a leitura essencial das vendas.
+                    </div>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      <Link
+                        href="/comparar-planos"
+                        prefetch
+                        className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+                      >
+                        Comparar planos
+                      </Link>
+                      <a
+                        href={getAssinaturaUrl(`/assinatura?plano=${getPlanoMinimoParaRecurso("relatorios_avancados")}`)}
+                        className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+                      >
+                        Fazer upgrade
+                      </a>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <AppModal
+        open={printModalOpen}
+        onClose={() => setPrintModalOpen(false)}
+        title="Imprimir relatório"
+        description="Escolha o que vai sair na impressão deste período."
+        maxWidthClassName="max-w-2xl"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setPrintModalOpen(false)}
+              className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={imprimirRelatorio}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-900 px-4 py-3 text-sm font-semibold text-white transition hover:bg-zinc-800"
+            >
+              <Printer size={16} />
+              Imprimir agora
+            </button>
+            <button
+              type="button"
+              onClick={enviarRelatorioWhatsApp}
+              className="inline-flex items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-semibold text-white transition hover:bg-emerald-700"
+            >
+              <MessageCircle size={16} />
+              Enviar para WhatsApp
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500">
+              Período
+            </div>
+            <div className="mt-2 text-sm font-medium text-zinc-900">
+              De {dataInicio} até {dataFim}
+            </div>
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+            <PrintOptionCard
+              checked={printSelection.vendas}
+              title="Vendas do período"
+              description="Tabela principal das comandas filtradas."
+              onToggle={() => togglePrintSelection("vendas")}
+            />
+            <PrintOptionCard
+              checked={printSelection.pagamentos}
+              title="Pagamentos por forma"
+              description="Resumo por Pix, dinheiro, cartão e outros."
+              onToggle={() => togglePrintSelection("pagamentos")}
+            />
+            <PrintOptionCard
+              checked={printSelection.comissoes}
+              title="Comissões do período"
+              description="Resumo e tabela curta das comissões filtradas."
+              onToggle={() => togglePrintSelection("comissoes")}
+            />
+            <PrintOptionCard
+              checked={printSelection.caixa}
+              title="Fechamento de caixa"
+              description="Previsto, contado, sobra e quebra."
+              onToggle={() => togglePrintSelection("caixa")}
+            />
+            <PrintOptionCard
+              checked={printSelection.itens}
+              title="Ranking de lucro"
+              description="Serviços e produtos com melhor resultado."
+              onToggle={() => togglePrintSelection("itens")}
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 bg-white p-4">
+            <div>
+              <div className="text-sm font-semibold text-zinc-900">
+                {totalSecoesSelecionadas} parte(s) selecionada(s)
+              </div>
+              <div className="mt-1 text-xs text-zinc-500">
+                Você pode imprimir tudo ou só o que fizer sentido agora.
+              </div>
+            </div>
+
+            <button
+              type="button"
+              onClick={marcarTodasSecoes}
+              className="inline-flex items-center justify-center rounded-xl border border-zinc-300 bg-zinc-50 px-3 py-2 text-xs font-semibold text-zinc-700 transition hover:bg-zinc-100"
+            >
+              Imprimir tudo
+            </button>
+          </div>
+        </div>
+      </AppModal>
+    </div>
+  );
+}
+
+function ResumoLateralCard({
+  label,
+  value,
+  helper,
+}: {
+  label: string;
+  value: string;
+  helper: string;
+}) {
+  return (
+    <div className="rounded-[22px] border border-zinc-200 bg-zinc-50 p-4">
+      <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-zinc-400">
+        {label}
+      </div>
+      <div className="mt-2 text-xl font-bold text-zinc-950">{value}</div>
+      <div className="mt-1 text-xs text-zinc-500">{helper}</div>
+    </div>
+  );
+}
+
+function PrintOptionCard({
+  checked,
+  title,
+  description,
+  onToggle,
+}: {
+  checked: boolean;
+  title: string;
+  description: string;
+  onToggle: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onToggle}
+      className={`rounded-[22px] border p-4 text-left transition ${
+        checked
+          ? "border-zinc-900 bg-zinc-900 text-white"
+          : "border-zinc-200 bg-white text-zinc-900 hover:bg-zinc-50"
+      }`}
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="text-sm font-semibold">{title}</div>
+          <div className={`mt-2 text-xs leading-5 ${checked ? "text-zinc-300" : "text-zinc-500"}`}>
+            {description}
+          </div>
+        </div>
+
+        <span
+          className={`inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-md border text-[11px] font-bold ${
+            checked
+              ? "border-white/30 bg-white/10 text-white"
+              : "border-zinc-300 bg-zinc-50 text-zinc-500"
+          }`}
+        >
+          {checked ? "✓" : ""}
+        </span>
+      </div>
+    </button>
+  );
+}
+
+function UpgradePanel({
+  title,
+  description,
+  plan = getPlanoMinimoParaRecurso("relatorios_avancados"),
+}: {
+  title: string;
+  description: string;
+  plan?: PlanoCobravelCodigo;
+}) {
+  return (
+    <section className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+      <h2 className="text-base font-semibold text-zinc-950">{title}</h2>
+      <p className="mt-2 max-w-2xl text-sm leading-6 text-zinc-500">
+        {description}
+      </p>
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Link
+          href="/comparar-planos"
+          prefetch
+          className="inline-flex items-center justify-center rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-800 transition hover:bg-zinc-50"
+        >
+          Comparar planos
+        </Link>
+        <a
+          href={getAssinaturaUrl(`/assinatura?plano=${plan}`)}
+          className="inline-flex items-center justify-center rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-zinc-800"
+        >
+          Fazer upgrade
+        </a>
+      </div>
+    </section>
+  );
+}

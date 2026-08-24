@@ -1,0 +1,1681 @@
+﻿"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import { PainelListLoading, PainelPageHeader } from "@/components/painel-ui";
+import PaginationControls from "@/components/ui/PaginationControls";
+import { usePainelSession } from "@/components/layout/PainelSessionProvider";
+import { createClient } from "@/lib/supabase/client";
+import { useRouter } from "next/navigation";
+import {
+  CalendarDays,
+  FileText,
+  Printer,
+  Receipt,
+  RotateCcw,
+  Search,
+  Trash2,
+  X,
+  BadgeDollarSign,
+  Users,
+  CreditCard,
+} from "lucide-react";
+import type {
+  ComandaVenda,
+  ItemVenda,
+  Pagamento,
+  SalaoInfo,
+  VendaBuscaRow,
+  VendaDetalhe,
+} from "@/components/vendas/types";
+import {
+  formatCurrency,
+  formatDateInput,
+  formatDateTime,
+  getJoinedName,
+  getStatusBadgeClass,
+  getStatusLabel,
+} from "@/components/vendas/utils";
+import { KpiCard, ResumoRow } from "@/components/vendas/ui";
+import { groupComboTotals, parseComboDisplayMeta } from "@/lib/combo/display";
+import { getLocalDayRangeIso } from "@/lib/date/local-day-range";
+import { monitorClientOperation } from "@/lib/monitoring/client";
+import type {
+  VendaProcessarBody,
+  VendaProcessarErrorResponse,
+  VendaProcessarResponse,
+} from "@/types/vendas";
+import { openPainelWorkspaceWindow } from "@/lib/painel/workspace-windows";
+
+const VENDAS_PAGE_SIZE = 10;
+
+function escapeHtml(value: string | null | undefined) {
+  return String(value || "-")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function getFirstJoined<T>(value: T | T[] | null | undefined): T | null {
+  if (Array.isArray(value)) return value[0] || null;
+  return value || null;
+}
+
+function formatDocumentLabel(value?: string | null) {
+  const digits = String(value || "").replace(/\D/g, "");
+  if (!digits) return "";
+  return digits.length > 11 ? "CNPJ" : "CPF";
+}
+
+function buildSalaoEndereco(salao?: SalaoInfo | null) {
+  if (!salao) return "";
+  const linha1 = [
+    salao.endereco ? escapeHtml(salao.endereco) : null,
+    salao.numero ? `nº ${escapeHtml(salao.numero)}` : null,
+    salao.complemento ? escapeHtml(salao.complemento) : null,
+  ]
+    .filter(Boolean)
+    .join(", ");
+  const linha2 = [salao.bairro, salao.cidade, salao.estado]
+    .map((item) => (item ? escapeHtml(item) : null))
+    .filter(Boolean)
+    .join(" - ");
+  const linha3 = salao.cep ? `CEP ${escapeHtml(salao.cep)}` : "";
+  return [linha1, linha2, linha3].filter(Boolean).join("<br />");
+}
+
+function mergeComandaDetalhe(
+  venda: ComandaVenda,
+  detalheComanda: ComandaVenda | null | undefined
+): ComandaVenda {
+  if (!detalheComanda) return venda;
+
+  return {
+    ...venda,
+    ...detalheComanda,
+    clientes: detalheComanda.clientes ?? venda.clientes,
+  };
+}
+
+export default function VendasPage() {
+  const supabase = createClient();
+  const router = useRouter();
+  const { snapshot: painelSession } = usePainelSession();
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [erroTela, setErroTela] = useState("");
+  const [msg, setMsg] = useState("");
+  const [idSalao, setIdSalao] = useState("");
+
+  const [permissoes, setPermissoes] = useState<Record<string, boolean> | null>(null);
+  const [acessoCarregado, setAcessoCarregado] = useState(false);
+  const [permitirReabrirVenda, setPermitirReabrirVenda] = useState(true);
+
+  const [salaoInfo, setSalaoInfo] = useState<SalaoInfo | null>(null);
+  const [vendas, setVendas] = useState<ComandaVenda[]>([]);
+  const [vendasBusca, setVendasBusca] = useState<VendaBuscaRow[]>([]);
+  const [clientesFiltro, setClientesFiltro] = useState<{ id: string; nome: string }[]>([]);
+  const [vendasPage, setVendasPage] = useState(0);
+  const [vendasHasMore, setVendasHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+
+  const [busca, setBusca] = useState("");
+  const [statusFiltro, setStatusFiltro] = useState<"fechada" | "cancelada" | "todos">("fechada");
+  const [dataInicio, setDataInicio] = useState(() => {
+    const date = new Date();
+    date.setDate(1);
+    return formatDateInput(date);
+  });
+  const [dataFim, setDataFim] = useState(() => formatDateInput(new Date()));
+  const [clienteFiltro, setClienteFiltro] = useState("");
+  const [profissionalFiltro, setProfissionalFiltro] = useState("");
+  const [formaPagamentoFiltro, setFormaPagamentoFiltro] = useState("");
+  const [itemFiltro, setItemFiltro] = useState("");
+  const [valorMinimo, setValorMinimo] = useState("");
+  const [valorMaximo, setValorMaximo] = useState("");
+  const [profissionalFiltroAplicado, setProfissionalFiltroAplicado] = useState("");
+  const [formaPagamentoFiltroAplicado, setFormaPagamentoFiltroAplicado] = useState("");
+  const [itemFiltroAplicado, setItemFiltroAplicado] = useState("");
+  const [valorMinimoAplicado, setValorMinimoAplicado] = useState("");
+  const [valorMaximoAplicado, setValorMaximoAplicado] = useState("");
+
+  const [detalheOpen, setDetalheOpen] = useState(false);
+  const [detalheVenda, setDetalheVenda] = useState<VendaDetalhe | null>(null);
+  const [vendaSelecionada, setVendaSelecionada] = useState<ComandaVenda | null>(null);
+  const [vendaCarregandoId, setVendaCarregandoId] = useState<string | null>(null);
+
+  const [reabrirModalOpen, setReabrirModalOpen] = useState(false);
+  const [motivoReabertura, setMotivoReabertura] = useState("");
+
+  const [excluirModalOpen, setExcluirModalOpen] = useState(false);
+  const [motivoExclusao, setMotivoExclusao] = useState("");
+
+  const comboSummaryDetalhe = useMemo(
+    () =>
+      detalheVenda
+        ? groupComboTotals(
+            detalheVenda.itens,
+            (item) => item.descricao,
+            (item) => Number(item.valor_total || 0)
+          )
+        : [],
+    [detalheVenda]
+  );
+  const podeReabrirVenda = Boolean(permissoes?.vendas_reabrir) && permitirReabrirVenda;
+  const podeExcluirVenda = Boolean(permissoes?.vendas_excluir);
+
+  useEffect(() => {
+    void init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    if (idSalao && acessoCarregado && permissoes?.vendas_ver) {
+      void carregarVendas(idSalao, 0, false);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [
+    idSalao,
+    dataInicio,
+    dataFim,
+    statusFiltro,
+    acessoCarregado,
+    permissoes,
+    clienteFiltro,
+    profissionalFiltroAplicado,
+    formaPagamentoFiltroAplicado,
+    itemFiltroAplicado,
+    valorMinimoAplicado,
+    valorMaximoAplicado,
+  ]);
+
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setProfissionalFiltroAplicado(profissionalFiltro.trim());
+      setFormaPagamentoFiltroAplicado(formaPagamentoFiltro.trim());
+      setItemFiltroAplicado(itemFiltro.trim());
+      setValorMinimoAplicado(valorMinimo.trim());
+      setValorMaximoAplicado(valorMaximo.trim());
+    }, 300);
+
+    return () => window.clearTimeout(handle);
+  }, [
+    profissionalFiltro,
+    formaPagamentoFiltro,
+    itemFiltro,
+    valorMinimo,
+    valorMaximo,
+  ]);
+
+  async function init() {
+    try {
+      setLoading(true);
+      setErroTela("");
+      setMsg("");
+
+      if (!painelSession?.idSalao || !painelSession?.permissoes) {
+        router.push("/login");
+        return;
+      }
+      const permissoesFinal = painelSession.permissoes;
+
+      setPermissoes(permissoesFinal);
+      setAcessoCarregado(true);
+      setIdSalao(painelSession.idSalao);
+
+      if (!permissoesFinal?.vendas_ver) {
+        setErroTela("Você não tem permissão para acessar a página de vendas.");
+        setLoading(false);
+        return;
+      }
+
+      if (painelSession.planoRecursos?.vendas === false) {
+        router.replace("/meu-plano?motivo=recurso_vendas_bloqueado");
+        return;
+      }
+
+      const { data: salaoData, error: salaoError } = await supabase
+        .from("saloes")
+        .select("id, nome, cpf_cnpj, telefone, endereco, numero, bairro, cidade, estado, cep, complemento, logo_url")
+        .eq("id", painelSession.idSalao)
+        .maybeSingle();
+
+      if (salaoError) {
+        console.error(salaoError);
+      } else {
+        setSalaoInfo((salaoData as SalaoInfo) || null);
+      }
+
+      const { data: configData, error: configError } = await supabase
+        .from("configuracoes_salao")
+        .select("permitir_reabrir_venda")
+        .eq("id_salao", painelSession.idSalao)
+        .maybeSingle();
+
+      if (configError) {
+        console.error(configError);
+      } else {
+        setPermitirReabrirVenda(configData?.permitir_reabrir_venda !== false);
+      }
+
+      const { data: clientesData, error: clientesError } = await supabase
+        .from("clientes")
+        .select("id, nome")
+        .eq("id_salao", painelSession.idSalao)
+        .order("nome", { ascending: true });
+
+      if (clientesError) {
+        console.error(clientesError);
+      } else {
+        setClientesFiltro((clientesData as { id: string; nome: string }[]) || []);
+      }
+
+      await carregarVendas(painelSession.idSalao);
+    } catch (error: unknown) {
+      console.error(error);
+      setErroTela(
+        error instanceof Error ? error.message : "Erro ao carregar vendas."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function carregarVendas(
+    salaoIdParam?: string,
+    page = 0,
+    append = false
+  ) {
+    const salaoId = salaoIdParam || idSalao;
+    if (!salaoId) return;
+    const dataInicioRange = getLocalDayRangeIso(dataInicio);
+    const dataFimRange = getLocalDayRangeIso(dataFim);
+    const from = page * VENDAS_PAGE_SIZE;
+    const to = from + VENDAS_PAGE_SIZE - 1;
+
+    setErroTela("");
+
+    let queryComandas = supabase
+      .from("comandas")
+      .select(`
+        id,
+        numero,
+        status,
+        subtotal,
+        desconto,
+        acrescimo,
+        total,
+        aberta_em,
+        fechada_em,
+        cancelada_em,
+        id_cliente,
+        clientes (
+          nome
+        )
+      `)
+      .eq("id_salao", salaoId)
+      .order("fechada_em", { ascending: false })
+      .range(from, to);
+
+    let queryBusca = supabase
+      .from("vw_vendas_busca")
+      .select("aberta_em, acrescimo, cancelada_em, cliente_nome, desconto, fechada_em, formas_pagamento, id, id_cliente, id_salao, itens_descricoes, numero, profissionais_nomes, status, subtotal, total")
+      .eq("id_salao", salaoId)
+      .range(from, to);
+
+    if (statusFiltro !== "todos") {
+      queryComandas = queryComandas.eq("status", statusFiltro);
+      queryBusca = queryBusca.eq("status", statusFiltro);
+    } else {
+      queryComandas = queryComandas.in("status", ["fechada", "cancelada"]);
+      queryBusca = queryBusca.in("status", ["fechada", "cancelada"]);
+    }
+
+    if (statusFiltro === "fechada") {
+      queryComandas = queryComandas
+        .gte("fechada_em", dataInicioRange.startIso)
+        .lte("fechada_em", dataFimRange.endIso);
+
+      queryBusca = queryBusca
+        .gte("fechada_em", dataInicioRange.startIso)
+        .lte("fechada_em", dataFimRange.endIso);
+    }
+
+    if (statusFiltro === "cancelada") {
+      queryComandas = queryComandas
+        .gte("cancelada_em", dataInicioRange.startIso)
+        .lte("cancelada_em", dataFimRange.endIso);
+
+      queryBusca = queryBusca
+        .gte("cancelada_em", dataInicioRange.startIso)
+        .lte("cancelada_em", dataFimRange.endIso);
+    }
+
+    if (statusFiltro === "todos") {
+      queryComandas = queryComandas.or(
+        `and(status.eq.fechada,fechada_em.gte.${dataInicioRange.startIso},fechada_em.lte.${dataFimRange.endIso}),and(status.eq.cancelada,cancelada_em.gte.${dataInicioRange.startIso},cancelada_em.lte.${dataFimRange.endIso})`
+      );
+
+      queryBusca = queryBusca.or(
+        `and(status.eq.fechada,fechada_em.gte.${dataInicioRange.startIso},fechada_em.lte.${dataFimRange.endIso}),and(status.eq.cancelada,cancelada_em.gte.${dataInicioRange.startIso},cancelada_em.lte.${dataFimRange.endIso})`
+      );
+    }
+
+    if (clienteFiltro) {
+      queryComandas = queryComandas.eq("id_cliente", clienteFiltro);
+      queryBusca = queryBusca.eq("id_cliente", clienteFiltro);
+    }
+
+    if (profissionalFiltroAplicado) {
+      queryBusca = queryBusca.ilike(
+        "profissionais_nomes",
+        `%${profissionalFiltroAplicado}%`
+      );
+    }
+
+    if (formaPagamentoFiltroAplicado) {
+      queryBusca = queryBusca.ilike(
+        "formas_pagamento",
+        `%${formaPagamentoFiltroAplicado}%`
+      );
+    }
+
+    if (itemFiltroAplicado) {
+      queryBusca = queryBusca.ilike(
+        "itens_descricoes",
+        `%${itemFiltroAplicado}%`
+      );
+    }
+
+    if (valorMinimoAplicado) {
+      const min = Number(valorMinimoAplicado.replace(",", "."));
+      if (!Number.isNaN(min)) {
+        queryComandas = queryComandas.gte("total", min);
+        queryBusca = queryBusca.gte("total", min);
+      }
+    }
+
+    if (valorMaximoAplicado) {
+      const max = Number(valorMaximoAplicado.replace(",", "."));
+      if (!Number.isNaN(max)) {
+        queryComandas = queryComandas.lte("total", max);
+        queryBusca = queryBusca.lte("total", max);
+      }
+    }
+
+    const [
+      { data: comandasData, error: comandasError },
+      { data: buscaData, error: buscaError },
+    ] = await monitorClientOperation(
+      {
+        module: "vendas",
+        action: "carregar_vendas",
+        screen: "vendas",
+        details: {
+          idSalao: salaoId,
+          statusFiltro,
+          dataInicio,
+          dataFim,
+        },
+        successMessage: "Vendas carregadas com sucesso.",
+        errorMessage: "Falha ao carregar vendas.",
+      },
+      () => Promise.all([queryComandas, queryBusca])
+    );
+
+    if (comandasError) {
+      console.error(comandasError);
+      setErroTela("Erro ao carregar vendas.");
+      return;
+    }
+
+    if (buscaError) {
+      console.error(buscaError);
+      setErroTela("Erro ao carregar busca avançada das vendas.");
+      return;
+    }
+
+    const novasVendas = (comandasData as ComandaVenda[]) || [];
+    const novasVendasBusca = (buscaData as VendaBuscaRow[]) || [];
+
+    setVendas((prev) => (append ? [...prev, ...novasVendas] : novasVendas));
+    setVendasBusca((prev) =>
+      append ? [...prev, ...novasVendasBusca] : novasVendasBusca
+    );
+    setVendasPage(page);
+    setVendasHasMore(
+      novasVendas.length === VENDAS_PAGE_SIZE &&
+        novasVendasBusca.length === VENDAS_PAGE_SIZE
+    );
+  }
+
+  async function mudarPaginaVendas(page: number) {
+    if (!idSalao || loadingMore || page < 0) return;
+
+    try {
+      setLoadingMore(true);
+      await carregarVendas(idSalao, page, false);
+    } catch (error: unknown) {
+      console.error(error);
+      setErroTela(
+        error instanceof Error ? error.message : "Erro ao carregar vendas."
+      );
+    } finally {
+      setLoadingMore(false);
+    }
+  }
+
+  async function processarVenda(params: {
+    acao: "detalhes" | "reabrir" | "excluir";
+    idComanda: string;
+    motivo?: string | null;
+  }) {
+    const requestBody: VendaProcessarBody = {
+      idSalao,
+      acao: params.acao,
+      idComanda: params.idComanda,
+      motivo: params.motivo || null,
+    };
+
+    const response = await monitorClientOperation(
+      {
+        module: "vendas",
+        action: params.acao,
+        route: "/api/vendas/processar",
+        screen: "vendas",
+        entity: "comanda",
+        entityId: params.idComanda,
+        details: {
+          idSalao,
+        },
+        successMessage: `Acao de venda concluida: ${params.acao}.`,
+        errorMessage: `Falha ao executar acao de venda: ${params.acao}.`,
+      },
+      () =>
+        fetch("/api/vendas/processar", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestBody),
+        })
+    );
+
+    const result = (await response.json().catch(() => ({}))) as Partial<
+      VendaProcessarResponse<Partial<VendaDetalhe>>
+    > &
+      VendaProcessarErrorResponse;
+
+    if (!response.ok) {
+      throw new Error(result.error || "Erro ao processar venda.");
+    }
+
+    return result as VendaProcessarResponse<Partial<VendaDetalhe>>;
+  }
+
+  async function abrirDetalhes(venda: ComandaVenda) {
+    if (saving || vendaCarregandoId) return;
+
+    try {
+      setSaving(true);
+      setVendaCarregandoId(venda.id);
+      setErroTela("");
+      setVendaSelecionada(venda);
+
+      const data = await processarVenda({
+        acao: "detalhes",
+        idComanda: venda.id,
+      });
+      const comandaDetalhe = data.detalhe?.comanda as
+        | ComandaVenda
+        | null
+        | undefined;
+
+      setDetalheVenda({
+        comanda: mergeComandaDetalhe(venda, comandaDetalhe),
+        itens: (data.detalhe?.itens as ItemVenda[]) || [],
+        pagamentos: (data.detalhe?.pagamentos as Pagamento[]) || [],
+        agendamentos: (data.detalhe?.agendamentos as unknown[]) || [],
+        comissoes: (data.detalhe?.comissoes as unknown[]) || [],
+      });
+
+      setDetalheOpen(true);
+    } catch (error: unknown) {
+      console.error(error);
+      setErroTela(
+        error instanceof Error ? error.message : "Erro ao abrir detalhes."
+      );
+    } finally {
+      setVendaCarregandoId(null);
+      setSaving(false);
+    }
+  }
+
+  function abrirModalReabrir(venda: ComandaVenda) {
+    setVendaSelecionada(venda);
+    setMotivoReabertura("");
+    setReabrirModalOpen(true);
+  }
+
+  function abrirModalExcluir(venda: ComandaVenda) {
+    setVendaSelecionada(venda);
+    setMotivoExclusao("");
+    setExcluirModalOpen(true);
+  }
+
+  async function confirmarReabrirVenda() {
+    if (!vendaSelecionada) return;
+
+    try {
+      setSaving(true);
+      setErroTela("");
+      setMsg("");
+
+      const result = await processarVenda({
+        acao: "reabrir",
+        idComanda: vendaSelecionada.id,
+        motivo: motivoReabertura || null,
+      });
+
+      const avisoEstoque = result.warning || "";
+
+      setReabrirModalOpen(false);
+      setMotivoReabertura("");
+      setMsg(
+        avisoEstoque
+          ? `Venda #${vendaSelecionada.numero} reaberta, mas ${avisoEstoque}`
+          : `Venda #${vendaSelecionada.numero} enviada para o caixa.`
+      );
+      await carregarVendas();
+
+      const caixaHref = `/caixa?comanda_id=${vendaSelecionada.id}&reaberta=1`;
+
+      if (typeof window === "undefined") {
+        router.push(caixaHref);
+      } else {
+        openPainelWorkspaceWindow(caixaHref);
+      }
+    } catch (error: unknown) {
+      console.error(error);
+      setErroTela(
+        error instanceof Error ? error.message : "Erro ao reabrir venda."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function confirmarExcluirVenda() {
+    if (!vendaSelecionada) return;
+
+    try {
+      setSaving(true);
+      setErroTela("");
+      setMsg("");
+
+      const result = await processarVenda({
+        acao: "excluir",
+        idComanda: vendaSelecionada.id,
+        motivo: motivoExclusao || null,
+      });
+
+      const avisoEstoque = result.warning || "";
+
+      if (avisoEstoque) {
+        setExcluirModalOpen(false);
+        setMotivoExclusao("");
+        setDetalheOpen(false);
+        setDetalheVenda(null);
+        throw new Error(`Venda excluida, mas ${avisoEstoque}`);
+      }
+
+      setExcluirModalOpen(false);
+      setMotivoExclusao("");
+      setDetalheOpen(false);
+      setDetalheVenda(null);
+      setMsg(`Venda #${vendaSelecionada.numero} cancelada com sucesso.`);
+      await carregarVendas();
+    } catch (error: unknown) {
+      console.error(error);
+      setErroTela(
+        error instanceof Error ? error.message : "Erro ao cancelar venda."
+      );
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  function imprimirCupom(
+    venda: ComandaVenda,
+    detalhe?: VendaDetalhe | null,
+    salao?: SalaoInfo | null
+  ) {
+    const itens = detalhe?.itens || [];
+    const pagamentos = detalhe?.pagamentos || [];
+    const cliente = getFirstJoined(venda.clientes);
+    const clienteNome = getJoinedName(venda.clientes, "Sem cliente");
+    const clienteCpf = cliente?.cpf || "";
+    const salaoDocumentoLabel = formatDocumentLabel(salao?.cpf_cnpj);
+    const enderecoSalao = buildSalaoEndereco(salao);
+    const comboSummary = groupComboTotals(
+      itens,
+      (item) => item.descricao,
+      (item) => Number(item.valor_total || 0)
+    );
+
+    const totalPago = pagamentos.reduce(
+      (acc, item) => acc + Number(item.valor || 0),
+      0
+    );
+
+    const troco = Math.max(totalPago - Number(venda.total || 0), 0);
+
+    const html = `
+      <html>
+        <head>
+          <title>Cupom - Venda #${venda.numero}</title>
+          <style>
+            * { box-sizing: border-box; }
+            body { font-family: Arial, Helvetica, sans-serif; padding: 18px; color: #111; background: #fff; }
+            .cupom { width: 100%; max-width: 420px; margin: 0 auto; }
+            .center { text-align: center; }
+            .salao { font-size: 22px; font-weight: 700; margin-bottom: 4px; }
+            .logo { display: block; max-width: 86px; max-height: 86px; object-fit: contain; margin: 0 auto 8px; border-radius: 18px; }
+            .muted { color: #666; font-size: 12px; line-height: 1.45; }
+            .line { border-top: 1px dashed #999; margin: 14px 0; }
+            .section-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; text-transform: uppercase; letter-spacing: .08em; }
+            .row { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin: 5px 0; font-size: 13px; }
+            .row strong { font-weight: 700; }
+            .item { padding: 8px 0; border-bottom: 1px dashed #ddd; }
+            .item:last-child { border-bottom: 0; }
+            .item-title { font-size: 13px; font-weight: 700; margin-bottom: 3px; }
+            .item-sub { font-size: 12px; color: #666; }
+            .total-box { margin-top: 10px; border: 1px solid #111; padding: 10px 12px; }
+            .total-label { font-size: 12px; text-transform: uppercase; letter-spacing: .08em; }
+            .total-value { font-size: 24px; font-weight: 700; margin-top: 4px; }
+            .footer { margin-top: 18px; text-align: center; font-size: 12px; color: #666; line-height: 1.6; }
+            @media print { body { padding: 0; } .cupom { max-width: none; width: 100%; } }
+          </style>
+        </head>
+        <body onload="window.print(); window.close();">
+          <div class="cupom">
+            <div class="center">
+              ${salao?.logo_url ? `<img class="logo" src="${escapeHtml(salao.logo_url)}" alt="Logo do salão" />` : ""}
+              <div class="salao">${escapeHtml(salao?.nome || "Salão Premium")}</div>
+              ${salao?.cpf_cnpj ? `<div class="muted">${salaoDocumentoLabel || "Documento"}: ${escapeHtml(salao.cpf_cnpj)}</div>` : ""}
+              ${salao?.telefone ? `<div class="muted">Telefone: ${escapeHtml(salao.telefone)}</div>` : ""}
+              ${enderecoSalao ? `<div class="muted">${enderecoSalao}</div>` : ""}
+            </div>
+
+            <div class="line"></div>
+
+            <div class="section-title">Dados da venda</div>
+
+            <div class="row"><span>Comanda</span><strong>#${venda.numero}</strong></div>
+            <div class="row"><span>Status</span><strong>${venda.status}</strong></div>
+            <div class="row"><span>Data</span><strong>${formatDateTime(venda.fechada_em || venda.cancelada_em)}</strong></div>
+            <div class="row"><span>Cliente</span><strong>${escapeHtml(clienteNome)}</strong></div>
+            ${clienteCpf ? `<div class="row"><span>CPF do cliente</span><strong>${escapeHtml(clienteCpf)}</strong></div>` : ""}
+
+            <div class="line"></div>
+
+            <div class="section-title">Itens</div>
+
+            <div>
+              ${
+                itens.length > 0
+                  ? itens
+                      .map(
+                        (item) => {
+                          const comboMeta = parseComboDisplayMeta(item.descricao);
+                          const itemTitle = comboMeta.isComboItem
+                            ? `
+                                <div class="item-title">${escapeHtml(
+                                  comboMeta.displayTitle
+                                )}</div>
+                                <div class="item-sub" style="margin-bottom:4px;">
+                                  <span style="display:inline-block;border:1px solid #ddd6fe;background:#f5f3ff;color:#6d28d9;border-radius:999px;padding:1px 6px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.08em;">Combo</span>
+                                  <span style="margin-left:6px;">${escapeHtml(
+                                    comboMeta.comboName
+                                  )}</span>
+                                </div>
+                              `
+                            : `<div class="item-title">${escapeHtml(
+                                item.descricao
+                              )}</div>`;
+
+                          return `
+                          <div class="item">
+                            ${itemTitle}
+                            <div class="row">
+                              <span class="item-sub">${item.quantidade} x ${formatCurrency(item.valor_unitario)}</span>
+                              <strong>${formatCurrency(item.valor_total)}</strong>
+                            </div>
+                          </div>
+                        `;
+                        }
+                      )
+                      .join("")
+                  : `<div class="muted">Nenhum item encontrado.</div>`
+              }
+            </div>
+
+            ${
+              comboSummary.length > 0
+                ? `
+                    <div class="line"></div>
+                    <div class="section-title">Totais por combo</div>
+                    <div>
+                      ${comboSummary
+                        .map(
+                          (combo) => `
+                            <div class="item" style="padding:10px 0;">
+                              <div class="row" style="margin:0;">
+                                <div>
+                                  <div class="item-title">${escapeHtml(
+                                    combo.comboName
+                                  )}</div>
+                                  <div class="item-sub">${escapeHtml(
+                                    `${combo.itemCount} item(ns) rateados`
+                                  )}</div>
+                                  <div class="item-sub" style="margin-top:3px;">${escapeHtml(
+                                    combo.childLabels.join(", ")
+                                  )}</div>
+                                </div>
+                                <strong>${formatCurrency(combo.total)}</strong>
+                              </div>
+                            </div>
+                          `
+                        )
+                        .join("")}
+                    </div>
+                  `
+                : ""
+            }
+
+            <div class="line"></div>
+
+            <div class="section-title">Resumo</div>
+
+            <div class="row"><span>Subtotal</span><strong>${formatCurrency(venda.subtotal)}</strong></div>
+            <div class="row"><span>Desconto</span><strong>${formatCurrency(venda.desconto)}</strong></div>
+            <div class="row"><span>Acréscimo</span><strong>${formatCurrency(venda.acrescimo)}</strong></div>
+
+            <div class="total-box">
+              <div class="total-label">Total da venda</div>
+              <div class="total-value">${formatCurrency(venda.total)}</div>
+            </div>
+
+            <div class="line"></div>
+
+            <div class="section-title">Pagamentos</div>
+
+            <div>
+              ${
+                pagamentos.length > 0
+                  ? pagamentos
+                      .map(
+                        (pagamento) => `
+                          <div class="row">
+                            <span>
+                              ${pagamento.forma_pagamento}
+                              ${pagamento.parcelas && pagamento.parcelas > 1 ? ` (${pagamento.parcelas}x)` : ""}
+                            </span>
+                            <strong>${formatCurrency(pagamento.valor)}</strong>
+                          </div>
+                        `
+                      )
+                      .join("")
+                  : `<div class="muted">Nenhum pagamento encontrado.</div>`
+              }
+            </div>
+
+            ${
+              troco > 0
+                ? `<div class="row" style="margin-top:10px;"><span>Troco</span><strong>${formatCurrency(troco)}</strong></div>`
+                : ""
+            }
+
+            <div class="line"></div>
+
+            <div class="footer">
+              <div>Comprovante não fiscal</div>
+              <div>Obrigado pela preferência.</div>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const printWindow = window.open("", "_blank", "width=520,height=760");
+    if (!printWindow) return;
+
+    printWindow.document.open();
+    printWindow.document.write(html);
+    printWindow.document.close();
+  }
+
+  const formasPagamentoDisponiveis = useMemo(() => {
+    const values = new Set<string>();
+    vendasBusca.forEach((item) => {
+      (item.formas_pagamento || "")
+        .split("|")
+        .map((v) => v.trim())
+        .filter(Boolean)
+        .forEach((v) => values.add(v));
+    });
+    return Array.from(values).sort();
+  }, [vendasBusca]);
+
+  const profissionaisDisponiveis = useMemo(() => {
+    const values = new Set<string>();
+    vendasBusca.forEach((item) => {
+      (item.profissionais_nomes || "")
+        .split("|")
+        .map((v) => v.trim())
+        .filter(Boolean)
+        .forEach((v) => values.add(v));
+    });
+    return Array.from(values).sort();
+  }, [vendasBusca]);
+
+  const vendasFiltradas = useMemo(() => {
+    const term = busca.trim().toLowerCase();
+
+    const idsPermitidos = vendasBusca
+      .filter((row) => {
+        const clienteNome = String(row.cliente_nome || "").toLowerCase();
+        const profissionais = String(row.profissionais_nomes || "").toLowerCase();
+        const itens = String(row.itens_descricoes || "").toLowerCase();
+        const formas = String(row.formas_pagamento || "").toLowerCase();
+        const numero = String(row.numero);
+
+        const matchBusca =
+          !term ||
+          numero.includes(term) ||
+          clienteNome.includes(term) ||
+          profissionais.includes(term) ||
+          itens.includes(term) ||
+          formas.includes(term);
+        return matchBusca;
+      })
+      .map((row) => row.id);
+
+    return vendas.filter((item) => idsPermitidos.includes(item.id));
+  }, [vendas, vendasBusca, busca]);
+
+  const totalVendasPeriodo = useMemo(
+    () => vendasFiltradas.reduce((acc, item) => acc + Number(item.total || 0), 0),
+    [vendasFiltradas]
+  );
+
+  const ticketMedio = useMemo(
+    () => (vendasFiltradas.length ? totalVendasPeriodo / vendasFiltradas.length : 0),
+    [vendasFiltradas, totalVendasPeriodo]
+  );
+
+  const totalClientesPeriodo = useMemo(() => {
+    const ids = new Set(vendasFiltradas.map((item) => item.id_cliente).filter(Boolean));
+    return ids.size;
+  }, [vendasFiltradas]);
+
+  if (loading || !acessoCarregado) {
+    return (
+      <PainelListLoading
+        title="Carregando vendas"
+        message="Aguarde enquanto reunimos histórico, filtros, detalhes e totais das comandas fechadas."
+        fullHeight={false}
+      />
+    );
+  }
+
+  if (!permissoes?.vendas_ver) {
+    return (
+      <div className="p-6">
+        <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+          Você não tem permissão para acessar esta página.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <>
+      <div className="bg-zinc-50">
+        <div className="mx-auto max-w-[1700px] space-y-4">
+          <PainelPageHeader
+            eyebrow="Historico financeiro"
+            title="Vendas"
+            description="Comandas fechadas, busca avancada, reabertura para o caixa, exclusao e impressao de cupom."
+            actions={
+              <div className="rounded-lg border border-zinc-200 bg-zinc-50 px-3 py-2 text-right">
+                <div className="text-[10px] font-black uppercase tracking-[0.18em] text-zinc-500">
+                  Resultados
+                </div>
+                <div className="mt-1 text-xl font-black text-zinc-950">
+                  {vendasFiltradas.length}
+                </div>
+              </div>
+            }
+          />
+
+          <div className="grid grid-cols-1 gap-3 xl:grid-cols-4">
+            <KpiCard
+              icon={<BadgeDollarSign size={18} />}
+              label="Total vendido"
+              value={formatCurrency(totalVendasPeriodo)}
+            />
+            <KpiCard
+              icon={<Receipt size={18} />}
+              label="Vendas"
+              value={String(vendasFiltradas.length)}
+            />
+            <KpiCard
+              icon={<Users size={18} />}
+              label="Clientes"
+              value={String(totalClientesPeriodo)}
+            />
+            <KpiCard
+              icon={<CreditCard size={18} />}
+              label="Ticket médio"
+              value={formatCurrency(ticketMedio)}
+            />
+          </div>
+
+          {erroTela ? (
+            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+              {erroTela}
+            </div>
+          ) : null}
+
+          {msg ? (
+            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+              {msg}
+            </div>
+          ) : null}
+
+          <div className="rounded-[24px] border border-zinc-200 bg-white p-3.5 shadow-sm">
+            <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-5">
+              <div className="xl:col-span-2">
+                <label className="mb-2 block text-sm font-semibold text-zinc-700">
+                  Busca avançada
+                </label>
+                <div className="flex items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5">
+                  <Search size={16} className="text-zinc-500" />
+                  <input
+                    value={busca}
+                    onChange={(e) => setBusca(e.target.value)}
+                    placeholder="Número, cliente, profissional, item ou pagamento"
+                    className="w-full bg-transparent text-sm outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-zinc-700">
+                  Status
+                </label>
+                <select
+                  value={statusFiltro}
+                  onChange={(e) => setStatusFiltro(e.target.value as "fechada" | "cancelada" | "todos")}
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
+                >
+                  <option value="fechada">Fechadas</option>
+                  <option value="cancelada">Canceladas</option>
+                  <option value="todos">Todos</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-zinc-700">
+                  Data inicial
+                </label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={dataInicio}
+                    onChange={(e) => setDataInicio(e.target.value)}
+                    className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
+                  />
+                  <CalendarDays className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-zinc-700">
+                  Data final
+                </label>
+                <div className="relative">
+                  <input
+                    type="date"
+                    value={dataFim}
+                    onChange={(e) => setDataFim(e.target.value)}
+                    className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
+                  />
+                  <CalendarDays className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-zinc-400" size={16} />
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-2.5 grid grid-cols-1 gap-2.5 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-6">
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-zinc-700">
+                  Cliente
+                </label>
+                <select
+                  value={clienteFiltro}
+                  onChange={(e) => setClienteFiltro(e.target.value)}
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
+                >
+                  <option value="">Todos</option>
+                  {clientesFiltro.map((cliente) => (
+                    <option key={cliente.id} value={cliente.id}>
+                      {cliente.nome}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-zinc-700">
+                  Profissional
+                </label>
+                <select
+                  value={profissionalFiltro}
+                  onChange={(e) => setProfissionalFiltro(e.target.value)}
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
+                >
+                  <option value="">Todos</option>
+                  {profissionaisDisponiveis.map((prof) => (
+                    <option key={prof} value={prof}>
+                      {prof}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-zinc-700">
+                  Forma de pagamento
+                </label>
+                <select
+                  value={formaPagamentoFiltro}
+                  onChange={(e) => setFormaPagamentoFiltro(e.target.value)}
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
+                >
+                  <option value="">Todas</option>
+                  {formasPagamentoDisponiveis.map((forma) => (
+                    <option key={forma} value={forma}>
+                      {forma}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-zinc-700">
+                  Item vendido
+                </label>
+                <input
+                  value={itemFiltro}
+                  onChange={(e) => setItemFiltro(e.target.value)}
+                  placeholder="Ex.: sobrancelha"
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-zinc-700">
+                  Valor mínimo
+                </label>
+                <input
+                  value={valorMinimo}
+                  onChange={(e) => setValorMinimo(e.target.value)}
+                  placeholder="0,00"
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
+                />
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-semibold text-zinc-700">
+                  Valor máximo
+                </label>
+                <input
+                  value={valorMaximo}
+                  onChange={(e) => setValorMaximo(e.target.value)}
+                  placeholder="999,99"
+                  className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-2.5 text-sm outline-none transition focus:border-zinc-900"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
+            <div className="flex flex-col gap-3 border-b border-zinc-200 px-4 py-3.5 md:flex-row md:items-center md:justify-between">
+              <div>
+              <div className="text-lg font-bold text-zinc-900">Lista de vendas</div>
+              <div className="mt-1 text-sm text-zinc-500">
+                Clique em uma venda para ver resumo, itens, pagamento e ações.
+              </div>
+              </div>
+              {!permitirReabrirVenda ? (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                  Reabertura desativada em Caixa e taxas
+                </div>
+              ) : null}
+            </div>
+
+            <div className="relative overflow-x-auto">
+              {vendaCarregandoId ? (
+                <div className="absolute inset-0 z-20 flex cursor-wait items-center justify-center bg-white/10 backdrop-blur-[1px]">
+                  <span
+                    className="h-8 w-8 animate-spin rounded-full border-4 border-zinc-300 border-t-zinc-950 shadow-sm"
+                    aria-label="Abrindo venda"
+                  />
+                </div>
+              ) : null}
+              <table className="min-w-[1120px]">
+                <thead>
+                  <tr className="border-b border-zinc-100 bg-zinc-50/80 text-left text-[11px] uppercase tracking-[0.16em] text-zinc-500">
+                    <th className="px-4 py-3">Comanda</th>
+                    <th className="px-4 py-3">Cliente</th>
+                    <th className="px-4 py-3">Status</th>
+                    <th className="px-4 py-3">Data</th>
+                    <th className="px-4 py-3">Total</th>
+                    <th className="px-4 py-3">Profissional</th>
+                    <th className="px-4 py-3">Pagamento</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {vendasFiltradas.map((item) => {
+                    const rowBusca = vendasBusca.find((row) => row.id === item.id);
+                    const rowLoading = vendaCarregandoId === item.id;
+                    const listBlocked = Boolean(vendaCarregandoId);
+
+                    return (
+                      <tr
+                        key={item.id}
+                        role="button"
+                        aria-disabled={listBlocked}
+                        tabIndex={listBlocked && !rowLoading ? -1 : 0}
+                        onClick={() => abrirDetalhes(item)}
+                        onKeyDown={(event) => {
+                          if (event.key === "Enter" || event.key === " ") {
+                            event.preventDefault();
+                            abrirDetalhes(item);
+                          }
+                        }}
+                        className={`border-b border-zinc-100 align-top transition last:border-b-0 ${
+                          rowLoading
+                            ? "cursor-wait bg-zinc-200/80 text-zinc-500"
+                            : listBlocked
+                              ? "cursor-wait opacity-50"
+                              : "cursor-pointer hover:bg-zinc-50/80 focus-visible:bg-zinc-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900/10"
+                        }`}
+                      >
+                        <td className="px-4 py-3.5">
+                          <div className="font-semibold text-zinc-900">#{item.numero}</div>
+                          <div className="text-xs text-zinc-500">
+                            Subtotal: {formatCurrency(item.subtotal)}
+                          </div>
+                        </td>
+
+                        <td className="max-w-[210px] px-4 py-3.5 text-sm font-medium text-zinc-800">
+                          <div className="line-clamp-2">
+                            {getJoinedName(item.clientes, "Sem cliente")}
+                          </div>
+                        </td>
+
+                        <td className="px-4 py-3.5">
+                          <span className={`inline-flex max-w-[9.5rem] items-center rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.12em] ${getStatusBadgeClass(item.status)}`}>
+                            <span className="truncate">{getStatusLabel(item.status)}</span>
+                          </span>
+                        </td>
+
+                        <td className="px-4 py-3.5 text-sm text-zinc-700">
+                          {formatDateTime(item.fechada_em || item.cancelada_em)}
+                        </td>
+
+                        <td className="px-4 py-3.5 text-sm font-semibold text-zinc-900">
+                          {formatCurrency(item.total)}
+                        </td>
+
+                        <td className="max-w-[210px] px-4 py-3.5 text-sm text-zinc-700">
+                          <div className="line-clamp-2 break-words">
+                            {(rowBusca?.profissionais_nomes || "-").replaceAll("|", ", ")}
+                          </div>
+                        </td>
+
+                        <td className="max-w-[190px] px-4 py-3.5 text-sm text-zinc-700">
+                          <div className="line-clamp-2 break-words">
+                            {(rowBusca?.formas_pagamento || "-").replaceAll("|", ", ")}
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+
+                  {vendasFiltradas.length === 0 ? (
+                    <tr>
+                      <td colSpan={7} className="px-4 py-10 text-center text-sm text-zinc-500">
+                        Nenhuma venda encontrada para os filtros informados.
+                      </td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+            </div>
+            <div className="border-t border-zinc-200 px-4 py-4">
+              <PaginationControls
+                currentPage={vendasPage}
+                pageSize={VENDAS_PAGE_SIZE}
+                hasMore={vendasHasMore}
+                onPageChange={(page) => void mudarPaginaVendas(page)}
+                className={loadingMore ? "opacity-60" : ""}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {detalheOpen && detalheVenda ? (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950/45 p-4 backdrop-blur-[2px]">
+          <div className="flex h-[min(92vh,820px)] w-full max-w-[1180px] flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl">
+            <div className="flex items-start justify-between gap-4 border-b border-zinc-200 bg-white px-5 py-4">
+              <div className="min-w-0">
+                <div className="mb-2 inline-flex rounded-lg border border-zinc-200 bg-zinc-50 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-zinc-500">
+                  Detalhes da venda
+                </div>
+                <h2 className="truncate text-[1.35rem] font-black tracking-[-0.03em] text-zinc-900">
+                  Venda #{detalheVenda.comanda?.numero}
+                </h2>
+                <p className="mt-1 line-clamp-1 text-sm text-zinc-500">
+                  Resumo, itens, pagamentos e ações da venda.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setDetalheOpen(false);
+                  setDetalheVenda(null);
+                }}
+                className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 transition hover:bg-zinc-100"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div className="min-h-0 flex-1 overflow-hidden">
+              <div className="grid h-full min-h-0 grid-cols-1 xl:grid-cols-[minmax(0,1fr)_330px]">
+                <div className="min-h-0 overflow-y-auto p-4 agenda-scroll md:p-5">
+                  <div className="space-y-3.5">
+                    <div className="rounded-lg border border-zinc-200 bg-white">
+                      <div className="border-b border-zinc-200 px-4 py-3.5">
+                        <div className="flex items-center gap-2 text-lg font-bold text-zinc-900">
+                          <Receipt size={18} />
+                          Itens da venda
+                        </div>
+                      </div>
+
+                      <div className="overflow-x-auto">
+                        <table className="min-w-full">
+                          <thead>
+                            <tr className="border-b border-zinc-100 text-left text-xs uppercase tracking-wider text-zinc-500">
+                              <th className="px-4 py-3">Descrição</th>
+                              <th className="px-4 py-3">Qtd</th>
+                              <th className="px-4 py-3">Unit.</th>
+                              <th className="px-4 py-3">Total</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {detalheVenda.itens.map((item) => (
+                              <tr key={item.id} className="border-b border-zinc-100 last:border-b-0">
+                                <td className="px-4 py-3.5">
+                                  <ComboItemLabel descricao={item.descricao} />
+                                  <div className="text-xs uppercase text-zinc-500">{item.tipo_item}</div>
+                                </td>
+                                <td className="px-4 py-3.5 text-sm text-zinc-700">{item.quantidade}</td>
+                                <td className="px-4 py-3.5 text-sm text-zinc-700">
+                                  {formatCurrency(item.valor_unitario)}
+                                </td>
+                                <td className="px-4 py-3.5 text-sm font-semibold text-zinc-900">
+                                  {formatCurrency(item.valor_total)}
+                                </td>
+                              </tr>
+                            ))}
+
+                            {detalheVenda.itens.length === 0 ? (
+                              <tr>
+                                <td colSpan={4} className="px-4 py-10 text-center text-sm text-zinc-500">
+                                  Nenhum item encontrado.
+                                </td>
+                              </tr>
+                            ) : null}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+
+                    {comboSummaryDetalhe.length > 0 ? (
+                      <div className="rounded-lg border border-amber-100 bg-amber-50 p-4">
+                        <div className="mb-3.5 flex items-start justify-between gap-4">
+                          <div>
+                            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-600">
+                              Totais por combo
+                            </div>
+                            <div className="mt-2 text-lg font-bold text-zinc-950">
+                              Quanto cada combo representou nesta venda
+                            </div>
+                            <p className="mt-1 text-sm text-zinc-500">
+                              O total abaixo soma os serviços filhos que vieram de cada combo.
+                            </p>
+                          </div>
+                          <div className="rounded-2xl border border-amber-200 bg-white px-3.5 py-2.5 text-right shadow-sm">
+                            <div className="text-xs uppercase tracking-[0.16em] text-zinc-500">
+                              Combos
+                            </div>
+                            <div className="mt-1 text-xl font-bold text-zinc-950">
+                              {comboSummaryDetalhe.length}
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="grid gap-2.5 md:grid-cols-2">
+                          {comboSummaryDetalhe.map((combo) => (
+                            <div
+                              key={combo.comboName}
+                              className="rounded-lg border border-amber-200 bg-white p-3.5 shadow-sm"
+                            >
+                              <div className="flex items-center justify-between gap-3">
+                                <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.16em] text-amber-800">
+                                  Combo
+                                </span>
+                                <span className="text-sm font-semibold text-zinc-900">
+                                  {formatCurrency(combo.total)}
+                                </span>
+                              </div>
+                              <div className="mt-2.5 text-[15px] font-bold text-zinc-950">
+                                {combo.comboName}
+                              </div>
+                              <div className="mt-1 text-sm text-zinc-500">
+                                {combo.itemCount} item(ns) rateados
+                              </div>
+                              <div className="mt-2.5 text-xs leading-5 text-zinc-500">
+                                {combo.childLabels.join(", ")}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className="rounded-lg border border-zinc-200 bg-white p-4">
+                      <div className="mb-3.5 flex items-center gap-2 text-lg font-bold text-zinc-900">
+                        <FileText size={18} />
+                        Pagamentos
+                      </div>
+
+                      <div className="space-y-3">
+                        {detalheVenda.pagamentos.map((pagamento) => (
+                          <div
+                            key={pagamento.id}
+                          className="flex items-center justify-between rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-2.5"
+                          >
+                            <div>
+                              <div className="font-semibold capitalize text-zinc-900">
+                                {pagamento.forma_pagamento}
+                              </div>
+                              <div className="text-sm text-zinc-500">
+                                {pagamento.parcelas && pagamento.parcelas > 1
+                                  ? `${pagamento.parcelas}x`
+                                  : "À vista"}
+                              </div>
+                            </div>
+
+                            <div className="text-sm font-semibold text-zinc-900">
+                              {formatCurrency(pagamento.valor)}
+                            </div>
+                          </div>
+                        ))}
+
+                        {detalheVenda.pagamentos.length === 0 ? (
+                          <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-5 text-center text-sm text-zinc-500">
+                            Nenhum pagamento encontrado.
+                          </div>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="min-h-0 overflow-y-auto border-t border-zinc-200 bg-zinc-50 p-4 agenda-scroll xl:border-l xl:border-t-0">
+                  <div className="space-y-4">
+                    <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+                      <div className="mb-3.5 text-lg font-bold text-zinc-900">Resumo</div>
+
+                      <div className="space-y-3">
+                        <ResumoRow
+                          label="Comanda"
+                          value={`#${detalheVenda.comanda?.numero || "-"}`}
+                        />
+                        <ResumoRow
+                          label="Cliente"
+                          value={getJoinedName(detalheVenda.comanda?.clientes, "Sem cliente")}
+                        />
+                        <ResumoRow
+                          label="Itens"
+                          value={String(detalheVenda.itens.length)}
+                        />
+                        <ResumoRow
+                          label="Pagamentos"
+                          value={String(detalheVenda.pagamentos.length)}
+                        />
+                        <ResumoRow
+                          label="Status"
+                          value={getStatusLabel(detalheVenda.comanda?.status || "")}
+                        />
+                        <ResumoRow
+                          label="Abertura"
+                          value={formatDateTime(detalheVenda.comanda?.aberta_em)}
+                        />
+                        <ResumoRow
+                          label="Fechamento"
+                          value={formatDateTime(
+                            detalheVenda.comanda?.fechada_em || detalheVenda.comanda?.cancelada_em
+                          )}
+                        />
+                        <ResumoRow
+                          label="Subtotal"
+                          value={formatCurrency(detalheVenda.comanda?.subtotal)}
+                        />
+                        <ResumoRow
+                          label="Desconto"
+                          value={formatCurrency(detalheVenda.comanda?.desconto)}
+                        />
+                        <ResumoRow
+                          label="Acréscimo"
+                          value={formatCurrency(detalheVenda.comanda?.acrescimo)}
+                        />
+
+                        <div className="rounded-2xl bg-zinc-900 px-4 py-3.5 text-white">
+                          <div className="text-xs uppercase tracking-[0.18em] text-zinc-400">
+                            Total
+                          </div>
+                          <div className="mt-1 text-3xl font-bold">
+                            {formatCurrency(detalheVenda.comanda?.total)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="rounded-lg border border-zinc-200 bg-white p-4 shadow-sm">
+                      <div className="mb-3.5 text-lg font-bold text-zinc-900">Ações</div>
+
+                      <div className="grid grid-cols-1 gap-3">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            imprimirCupom(
+                              detalheVenda.comanda as ComandaVenda,
+                              detalheVenda,
+                              salaoInfo
+                            )
+                          }
+                          className="flex items-center justify-center gap-2 rounded-lg border border-zinc-200 bg-white px-4 py-3 text-sm font-bold text-zinc-800 transition hover:bg-zinc-50"
+                        >
+                          <Printer size={16} />
+                          Imprimir cupom
+                        </button>
+
+                        {detalheVenda.comanda?.status === "fechada" && podeReabrirVenda ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDetalheOpen(false);
+                              abrirModalReabrir(detalheVenda.comanda as ComandaVenda);
+                            }}
+                            className="flex items-center justify-center gap-2 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-bold text-amber-700 transition hover:bg-amber-100"
+                          >
+                            <RotateCcw size={16} />
+                            Mandar para o caixa
+                          </button>
+                        ) : null}
+
+                        {podeExcluirVenda ? (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setDetalheOpen(false);
+                              abrirModalExcluir(detalheVenda.comanda as ComandaVenda);
+                            }}
+                            className="flex items-center justify-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-bold text-rose-700 transition hover:bg-rose-100"
+                          >
+                            <Trash2 size={16} />
+                            Cancelar venda
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {reabrirModalOpen && vendaSelecionada ? (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-zinc-950/45 p-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-lg overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl">
+            <div className="border-b border-zinc-200 px-6 py-5">
+              <h2 className="text-xl font-bold text-zinc-900">Mandar venda para o caixa</h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                A venda #{vendaSelecionada.numero} será reaberta no caixa para edição.
+              </p>
+            </div>
+
+            <div className="px-6 py-5">
+              <label className="mb-2 block text-sm font-semibold text-zinc-700">
+                Motivo
+              </label>
+              <textarea
+                rows={4}
+                value={motivoReabertura}
+                onChange={(e) => setMotivoReabertura(e.target.value)}
+                placeholder="Ex.: cliente pediu ajuste, correção de pagamento..."
+                className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+              />
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 px-6 py-5 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setReabrirModalOpen(false)}
+                disabled={saving}
+                className="rounded-lg border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+              >
+                Voltar
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmarReabrirVenda}
+                disabled={saving}
+                className="rounded-lg bg-amber-600 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
+              >
+                {saving ? "Reabrindo..." : "Confirmar e mandar para o caixa"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
+      {excluirModalOpen && vendaSelecionada ? (
+        <div className="fixed inset-0 z-[95] flex items-center justify-center bg-zinc-950/45 p-4 backdrop-blur-[2px]">
+          <div className="w-full max-w-lg overflow-hidden rounded-lg border border-zinc-200 bg-white shadow-2xl">
+            <div className="border-b border-zinc-200 px-6 py-5">
+              <h2 className="text-xl font-bold text-zinc-900">Cancelar venda</h2>
+              <p className="mt-1 text-sm text-zinc-500">
+                A venda #{vendaSelecionada.numero} será marcada como cancelada e as comissões vinculadas serão canceladas.
+              </p>
+            </div>
+
+            <div className="px-6 py-5">
+              <label className="mb-2 block text-sm font-semibold text-zinc-700">
+                Motivo do cancelamento
+              </label>
+              <textarea
+                rows={4}
+                value={motivoExclusao}
+                onChange={(e) => setMotivoExclusao(e.target.value)}
+                placeholder="Descreva o motivo do cancelamento da venda..."
+                className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
+              />
+            </div>
+
+            <div className="flex flex-col-reverse gap-3 border-t border-zinc-200 px-6 py-5 sm:flex-row sm:justify-end">
+              <button
+                type="button"
+                onClick={() => setExcluirModalOpen(false)}
+                disabled={saving}
+                className="rounded-lg border border-zinc-300 bg-white px-5 py-3 text-sm font-bold text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-60"
+              >
+                Voltar
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmarExcluirVenda}
+                disabled={saving}
+                className="rounded-lg bg-rose-600 px-5 py-3 text-sm font-bold text-white transition hover:opacity-95 disabled:opacity-60"
+              >
+                {saving ? "Cancelando..." : "Confirmar cancelamento"}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </>
+  );
+}
+
+function ComboItemLabel({ descricao }: { descricao: string }) {
+  const comboMeta = parseComboDisplayMeta(descricao);
+
+  return (
+    <div>
+      <div className="font-semibold text-zinc-900">{comboMeta.displayTitle}</div>
+      {comboMeta.isComboItem ? (
+        <div className="mt-1 flex flex-wrap items-center gap-2">
+          <span className="rounded-full border border-amber-200 bg-amber-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-amber-800">
+            Combo
+          </span>
+          <span className="text-xs text-zinc-500">{comboMeta.comboName}</span>
+        </div>
+      ) : null}
+    </div>
+  );
+}
