@@ -1,5 +1,6 @@
 "use server";
 
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireClienteAppContext } from "@/lib/client-context.server";
@@ -7,6 +8,10 @@ import { joinClienteAppWaitlist } from "@/app/services/cliente-app/appointments"
 import { createClienteAppAppointmentForPerson } from "@/app/services/cliente-app/booking-person";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { captureSystemEvent } from "@/lib/monitoring/server";
+import {
+  bookingPersonCookieName,
+  parseBookingPersonSelection,
+} from "@/lib/client-app/booking-person-selection";
 
 export type ClienteBookingState = {
   error: string | null;
@@ -27,15 +32,22 @@ export async function createClienteBookingAction(
   const data = String(formData.get("data") || "");
   const horaInicio = String(formData.get("hora_inicio") || "");
   const observacoes = String(formData.get("observacoes") || "");
-  const pessoaAgendadaTipo = String(formData.get("pessoa_tipo") || "mim");
-  const pessoaAgendadaNome = String(formData.get("pessoa_nome") || "");
-  const pessoaAgendadaWhatsapp = String(formData.get("pessoa_whatsapp") || "");
-  const pessoaAgendadaObservacao = String(formData.get("pessoa_observacao") || "");
   const codigoCupom = String(formData.get("cupom") || "");
   const adicionaisIds = formData
     .getAll("adicionais")
     .map((item) => String(item || "").trim())
     .filter(Boolean);
+
+  const store = await cookies();
+  const pessoaSelecionada = parseBookingPersonSelection(
+    store.get(bookingPersonCookieName(idSalao))?.value
+  );
+
+  if (!pessoaSelecionada) {
+    return {
+      error: "Escolha para quem é o agendamento antes de confirmar a reserva.",
+    };
+  }
 
   const result = await createClienteAppAppointmentForPerson({
     idSalao,
@@ -46,10 +58,10 @@ export async function createClienteBookingAction(
     data,
     horaInicio,
     observacoes,
-    pessoaAgendadaTipo,
-    pessoaAgendadaNome,
-    pessoaAgendadaWhatsapp,
-    pessoaAgendadaObservacao,
+    pessoaAgendadaTipo: pessoaSelecionada.tipo,
+    pessoaAgendadaNome: pessoaSelecionada.nome,
+    pessoaAgendadaWhatsapp: pessoaSelecionada.whatsapp,
+    pessoaAgendadaObservacao: null,
     adicionaisIds,
     codigoCupom,
   });
@@ -74,10 +86,11 @@ export async function createClienteBookingAction(
     details: {
       requiresSignal: Boolean(result.requiresSignal),
       serviceId: idServico,
-      pessoaAgendadaTipo:
-        pessoaAgendadaTipo === "outra_pessoa" ? "outra_pessoa" : "mim",
+      pessoaAgendadaTipo: pessoaSelecionada.tipo,
     },
   });
+
+  store.delete(bookingPersonCookieName(idSalao));
 
   revalidatePath(`/app-cliente/salao/${idSalao}`);
   revalidatePath("/app-cliente/agendamentos");
