@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import {
   bookingPersonCookieName,
   serializeBookingPersonSelection,
+  type ClientBookingPersonSelection,
 } from "@/lib/client-app/booking-person-selection";
 
 function normalizeReturnQuery(formData: FormData) {
@@ -18,28 +19,37 @@ function normalizeReturnQuery(formData: FormData) {
 
 export async function selectBookingPersonAction(formData: FormData) {
   const idSalao = String(formData.get("salao") || "").trim();
-  const tipo = String(formData.get("pessoa_tipo") || "mim") === "outra_pessoa"
-    ? "outra_pessoa"
-    : "mim";
-  const nome = String(formData.get("pessoa_nome") || "").trim().replace(/\s+/g, " ");
+  const tipo =
+    String(formData.get("pessoa_tipo") || "mim") === "outra_pessoa"
+      ? "outra_pessoa"
+      : "mim";
+  const nome = String(formData.get("pessoa_nome") || "")
+    .trim()
+    .replace(/\s+/g, " ");
   const whatsapp = String(formData.get("pessoa_whatsapp") || "").replace(/\D/g, "");
   const query = normalizeReturnQuery(formData);
 
   if (!idSalao) redirect("/app-cliente/explorar");
 
-  if (tipo === "outra_pessoa" && (nome.length < 2 || whatsapp.length < 10 || whatsapp.length > 13)) {
+  if (
+    tipo === "outra_pessoa" &&
+    (nome.length < 2 || whatsapp.length < 10 || whatsapp.length > 13)
+  ) {
     query.set("pessoa_erro", "1");
-    redirect(`/app-cliente/salao/${encodeURIComponent(idSalao)}/reserva?${query.toString()}`);
+    redirect(
+      `/app-cliente/salao/${encodeURIComponent(idSalao)}/reserva?${query.toString()}`
+    );
   }
+
+  const selection: ClientBookingPersonSelection =
+    tipo === "outra_pessoa"
+      ? { tipo: "outra_pessoa", nome, whatsapp }
+      : { tipo: "mim", nome: null, whatsapp: null };
 
   const store = await cookies();
   store.set(
     bookingPersonCookieName(idSalao),
-    serializeBookingPersonSelection({
-      tipo,
-      nome: tipo === "outra_pessoa" ? nome : null,
-      whatsapp: tipo === "outra_pessoa" ? whatsapp : null,
-    }),
+    serializeBookingPersonSelection(selection),
     {
       httpOnly: true,
       sameSite: "lax",
