@@ -90,7 +90,7 @@ async function loadAppointmentContext(idSalao: string, idAgendamento: string) {
   const appointmentResult = await (supabase as any)
     .from("agendamentos")
     .select(
-      "id, id_salao, cliente_id, profissional_id, servico_id, data, hora_inicio, sinal_valor"
+      "id, id_salao, cliente_id, pessoa_atendida_cliente_id, pessoa_agendada_tipo, pessoa_agendada_nome, pessoa_agendada_whatsapp, profissional_id, servico_id, data, hora_inicio, sinal_valor"
     )
     .eq("id", idAgendamento)
     .eq("id_salao", idSalao)
@@ -100,11 +100,14 @@ async function loadAppointmentContext(idSalao: string, idAgendamento: string) {
   const appointment = appointmentResult.data as Record<string, unknown> | null;
   if (!appointment?.id) throw new Error("Agendamento nao encontrado para o envio WhatsApp.");
 
+  const targetClientId = String(
+    appointment.pessoa_atendida_cliente_id || appointment.cliente_id || ""
+  );
   const [clienteResult, profissionalResult, servicoResult] = await Promise.all([
     (supabase as any)
       .from("clientes")
       .select("id, nome, nome_social, whatsapp, telefone")
-      .eq("id", appointment.cliente_id)
+      .eq("id", targetClientId)
       .eq("id_salao", idSalao)
       .maybeSingle(),
     (supabase as any)
@@ -128,15 +131,22 @@ async function loadAppointmentContext(idSalao: string, idAgendamento: string) {
   const cliente = (clienteResult.data || {}) as Record<string, unknown>;
   const profissional = (profissionalResult.data || {}) as Record<string, unknown>;
   const servico = (servicoResult.data || {}) as Record<string, unknown>;
-  const whatsapp = digits(String(cliente.whatsapp || cliente.telefone || ""));
+  const outraPessoa = String(appointment.pessoa_agendada_tipo || "") === "outra_pessoa";
+  const nomeAgendado = String(appointment.pessoa_agendada_nome || "").trim();
+  const whatsappAgendado = digits(String(appointment.pessoa_agendada_whatsapp || ""));
+  const whatsapp =
+    (outraPessoa ? whatsappAgendado : "") ||
+    digits(String(cliente.whatsapp || cliente.telefone || ""));
 
   return {
     id: String(appointment.id),
     idSalao,
     data: String(appointment.data || ""),
     hora: String(appointment.hora_inicio || ""),
-    clienteId: String(appointment.cliente_id || ""),
-    clienteNome: String(cliente.nome_social || cliente.nome || "Cliente").trim(),
+    clienteId: targetClientId,
+    clienteNome:
+      (outraPessoa ? nomeAgendado : "") ||
+      String(cliente.nome_social || cliente.nome || "Cliente").trim(),
     clienteWhatsApp: whatsapp,
     profissionalNome: String(
       profissional.nome_exibicao || profissional.nome_social || profissional.nome || "Profissional"
