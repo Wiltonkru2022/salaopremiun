@@ -17,7 +17,7 @@ const steps = [
     title: "Veja salões perto de você",
     text: "Use sua localização para encontrar opções próximas e chegar no horário certo.",
     icon: MapPin,
-    action: "Próximo",
+    action: "Usar minha localização",
   },
   {
     title: "Nunca perca um agendamento",
@@ -32,6 +32,8 @@ type DocumentWithGeolocationPolicy = Document & {
   featurePolicy?: { allowsFeature(feature: string): boolean };
 };
 
+type LocationState = "idle" | "requesting" | "granted" | "denied" | "unavailable";
+
 function canRequestGeolocation() {
   if (!("geolocation" in navigator)) return false;
 
@@ -42,9 +44,35 @@ function canRequestGeolocation() {
   return policy?.allowsFeature ? policy.allowsFeature("geolocation") : true;
 }
 
+function requestGeolocationPermission() {
+  return new Promise<"granted" | "denied" | "unavailable">((resolve) => {
+    if (!canRequestGeolocation()) {
+      resolve("unavailable");
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      () => resolve("granted"),
+      (error) => {
+        if (error.code === error.PERMISSION_DENIED) {
+          resolve("denied");
+          return;
+        }
+        resolve("unavailable");
+      },
+      {
+        enableHighAccuracy: true,
+        maximumAge: 30_000,
+        timeout: 12_000,
+      }
+    );
+  });
+}
+
 export default function ClientOnboarding() {
   const [step, setStep] = useState(0);
   const [enablingPush, setEnablingPush] = useState(false);
+  const [locationState, setLocationState] = useState<LocationState>("idle");
   const router = useRouter();
   const searchParams = useSearchParams();
   const current = steps[step];
@@ -62,12 +90,20 @@ export default function ClientOnboarding() {
   }
 
   async function continueFlow() {
-    if (step === 1 && canRequestGeolocation()) {
-      navigator.geolocation.getCurrentPosition(
-        () => undefined,
-        () => undefined,
-        { maximumAge: 60_000, timeout: 5000 }
-      );
+    if (step === 1) {
+      if (locationState === "granted") {
+        setStep((value) => value + 1);
+        return;
+      }
+
+      setLocationState("requesting");
+      const result = await requestGeolocationPermission();
+      setLocationState(result);
+
+      if (result === "granted") {
+        setStep((value) => value + 1);
+      }
+      return;
     }
 
     if (step === 2) {
@@ -85,6 +121,8 @@ export default function ClientOnboarding() {
 
     setStep((value) => value + 1);
   }
+
+  const busy = enablingPush || locationState === "requesting";
 
   return (
     <main className="flex min-h-dvh flex-col overflow-hidden bg-white px-6 py-8 text-zinc-950">
@@ -120,7 +158,7 @@ export default function ClientOnboarding() {
           <div className="relative flex h-36 w-36 items-center justify-center rounded-[2.5rem] bg-zinc-950 text-white shadow-[0_24px_60px_rgba(199,162,92,0.24)]">
             <Icon size={70} />
           </div>
-          {isLast ? (
+          {(isLast || locationState === "granted") ? (
             <span className="absolute bottom-7 right-14 flex h-12 w-12 items-center justify-center rounded-full border-4 border-white bg-emerald-500 text-white shadow-xl">
               <Check size={24} strokeWidth={3} />
             </span>
@@ -132,9 +170,28 @@ export default function ClientOnboarding() {
         <p className="mt-6 max-w-lg text-xl leading-9 text-zinc-500">
           {current.text}
         </p>
+
+        {step === 1 ? (
+          <div className="mt-5 max-w-md">
+            <p className="rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold leading-6 text-amber-900">
+              Ao tocar no botão, o Android ou iPhone mostrará a confirmação oficial de localização quando a permissão ainda não tiver sido decidida.
+            </p>
+            {locationState === "denied" ? (
+              <p className="mt-3 rounded-2xl bg-red-50 px-4 py-3 text-sm font-semibold leading-6 text-red-700">
+                Localização bloqueada. Libere a permissão de localização nas configurações do navegador ou do app e tente novamente. Você também pode pular esta etapa.
+              </p>
+            ) : null}
+            {locationState === "unavailable" ? (
+              <p className="mt-3 rounded-2xl bg-zinc-100 px-4 py-3 text-sm font-semibold leading-6 text-zinc-700">
+                Não foi possível obter sua localização agora. Confira se o GPS está ativo e tente novamente, ou pule esta etapa.
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         {isLast ? (
           <p className="mt-5 max-w-md rounded-2xl bg-amber-50 px-4 py-3 text-sm font-semibold leading-6 text-amber-900">
-            Ao tocar em ativar, o Android ou navegador mostrará a permissão oficial de notificações. Você pode alterar isso depois em Configurações.
+            Ao tocar em ativar, o Android, iPhone ou navegador mostrará a permissão oficial de notificações quando disponível. Você pode alterar isso depois em Configurações.
           </p>
         ) : null}
       </section>
@@ -142,15 +199,19 @@ export default function ClientOnboarding() {
       <button
         type="button"
         onClick={() => void continueFlow()}
-        disabled={enablingPush}
+        disabled={busy}
         className="mb-4 inline-flex h-14 items-center justify-center gap-2 rounded-2xl bg-zinc-950 text-base font-black text-white shadow-[0_18px_36px_rgba(15,23,42,0.18)] disabled:opacity-65"
       >
-        {enablingPush
-          ? "Ativando..."
-          : step === 0
-            ? "Próximo"
-            : current.action}
-        {!enablingPush ? <ChevronRight size={20} /> : null}
+        {locationState === "requesting"
+          ? "Aguardando localização..."
+          : enablingPush
+            ? "Ativando..."
+            : step === 0
+              ? "Próximo"
+              : locationState === "denied" || locationState === "unavailable"
+                ? "Tentar localização novamente"
+                : current.action}
+        {!busy ? <ChevronRight size={20} /> : null}
       </button>
     </main>
   );
