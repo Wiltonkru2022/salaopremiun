@@ -7,18 +7,28 @@
   font-family: Inter, ui-sans-serif, system-ui, sans-serif;
   background: #f5f5f4;
   color: #09090b;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
 }
 
 html,
 body,
 #root {
   min-height: 100%;
+  min-height: 100dvh;
+}
+
+html,
+body {
+  width: 100%;
+  overscroll-behavior-y: none;
 }
 
 body {
   margin: 0;
   -webkit-font-smoothing: antialiased;
   text-rendering: geometricPrecision;
+  overflow-x: hidden;
 }
 
 button,
@@ -28,8 +38,40 @@ textarea {
   font: inherit;
 }
 
+button,
+a,
+[role="button"] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+input,
+select,
+textarea {
+  min-width: 0;
+}
+
+@media (max-width: 768px) {
+  input,
+  select,
+  textarea {
+    font-size: 16px !important;
+    line-height: 1.25;
+  }
+
+  input[type="date"],
+  input[type="time"],
+  input[type="datetime-local"] {
+    min-height: 48px;
+  }
+}
+
 .safe-bottom {
   padding-bottom: max(1rem, env(safe-area-inset-bottom));
+}
+
+.safe-top {
+  padding-top: max(0px, env(safe-area-inset-top));
 }
 
 .striped {
