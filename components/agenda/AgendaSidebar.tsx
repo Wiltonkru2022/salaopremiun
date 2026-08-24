@@ -10,7 +10,6 @@ import {
   MonitorUp,
   Search,
   Sparkles,
-  UserRoundSearch,
   Users,
   Wallet,
   X,
@@ -130,87 +129,64 @@ export default function AgendaSidebar(props: Props) {
     onOpenClient,
   } = props;
 
-  if (!open) {
-    return null;
-  }
+  if (!open) return null;
 
-  const headerTitle = panel
+  const title = panel
     ? panel.title
     : view === "clientSearch"
-      ? "Buscar cliente"
+      ? "Clientes"
       : view === "waitlist"
         ? "Lista de espera"
         : "Agenda";
-  const headerSubtitle = panel
+  const subtitle = panel
     ? panel.subtitle
     : view === "clientSearch"
-      ? "Busque no cadastro e abra a ficha da cliente."
+      ? "Busque ou cadastre uma cliente."
       : view === "waitlist"
-        ? "Fila rápida de clientes e atendimentos pendentes."
-        : "Visão geral do periodo";
-
-  const showBackButton = Boolean(panel) || view !== "overview";
+        ? "Atendimentos aguardando confirmação."
+        : "Resumo rápido do período";
+  const showBack = Boolean(panel) || view !== "overview";
 
   return (
-    <aside className="w-full min-h-0 lg:h-full lg:max-w-[332px] lg:min-w-[318px] xl:max-w-[348px] xl:min-w-[332px] 2xl:max-w-[380px] 2xl:min-w-[380px]">
-      <div className="flex h-full min-h-0 flex-col rounded-[20px] border border-white/90 bg-[linear-gradient(180deg,rgba(255,255,255,0.98)_0%,rgba(250,251,255,0.96)_100%)] p-2.5 shadow-[0_14px_34px_rgba(15,23,42,0.065)]">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            {showBackButton ? (
-              <button
-                type="button"
-                onClick={panel ? panel.onBack : onBackToOverview}
-                className="mb-2.5 inline-flex items-center gap-2 rounded-full border border-zinc-200 bg-white px-3 py-1.5 text-xs font-semibold text-zinc-700 shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
-              >
-                <ArrowLeft size={14} />
-                Voltar
-              </button>
-            ) : null}
-
-            <h2 className="text-[1.18rem] font-semibold tracking-[-0.04em] text-slate-900">
-              {headerTitle}
-            </h2>
-            <p className="mt-0.5 max-w-[21rem] text-xs leading-4 text-zinc-500">
-              {headerSubtitle}
-            </p>
+    <aside className="min-h-0 w-full lg:h-full lg:min-w-[318px] lg:max-w-[332px] xl:min-w-[332px] xl:max-w-[348px] 2xl:min-w-[360px] 2xl:max-w-[360px]">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden rounded-[22px] border border-zinc-200/80 bg-white shadow-[0_12px_34px_rgba(15,23,42,0.06)]">
+        <header className="shrink-0 border-b border-zinc-100 px-3.5 py-3">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              {showBack ? (
+                <button
+                  type="button"
+                  onClick={panel ? panel.onBack : onBackToOverview}
+                  className="mb-2 inline-flex items-center gap-1.5 text-xs font-semibold text-zinc-500 transition hover:text-zinc-950"
+                >
+                  <ArrowLeft size={14} /> Voltar
+                </button>
+              ) : null}
+              <h2 className="truncate text-[1.05rem] font-bold tracking-[-0.03em] text-zinc-950">{title}</h2>
+              <p className="mt-0.5 text-xs leading-4 text-zinc-500">{subtitle}</p>
+            </div>
+            <button
+              type="button"
+              onClick={onToggleOpen}
+              className="grid h-8 w-8 shrink-0 place-items-center rounded-xl text-zinc-400 transition hover:bg-zinc-100 hover:text-zinc-900"
+              title="Fechar painel"
+            >
+              <X size={18} />
+            </button>
           </div>
 
-          <button
-            type="button"
-            onClick={onToggleOpen}
-            className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-500 shadow-[0_10px_24px_rgba(15,23,42,0.06)] transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50 hover:text-zinc-900"
-            title="Fechar painel"
-          >
-            <X size={18} />
-          </button>
-        </div>
+          {!panel ? (
+            <div className="mt-3 grid grid-cols-3 rounded-xl bg-zinc-100 p-1">
+              <NavButton active={view === "overview"} onClick={() => onSetView("overview")}>Resumo</NavButton>
+              <NavButton active={view === "clientSearch"} onClick={onOpenClientSearch}>Clientes</NavButton>
+              <NavButton active={view === "waitlist"} onClick={onOpenWaitlist}>Espera</NavButton>
+            </div>
+          ) : null}
+        </header>
 
-        {!panel ? (
-          <div className="mt-2.5 grid grid-cols-3 gap-1.5 rounded-[16px] border border-zinc-200/80 bg-zinc-50/85 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.75)]">
-            <SidebarNavButton
-              active={view === "overview"}
-              onClick={() => onSetView("overview")}
-            >
-              Resumo
-            </SidebarNavButton>
-            <SidebarNavButton
-              active={view === "clientSearch"}
-              onClick={onOpenClientSearch}
-            >
-              Clientes
-            </SidebarNavButton>
-            <SidebarNavButton
-              active={view === "waitlist"}
-              onClick={onOpenWaitlist}
-            >
-              Espera
-            </SidebarNavButton>
-          </div>
-        ) : null}
-
-        <div className="mt-2.5 min-h-0 flex-1 overflow-y-auto pr-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        <div className="min-h-0 flex-1 overflow-y-auto px-3.5 py-3 [scrollbar-width:thin]">
           {panel ? (
-            <div className="h-full">{panel.content}</div>
+            panel.content
           ) : view === "clientSearch" ? (
             <ClientSearchView
               query={clientSearchQuery}
@@ -230,150 +206,74 @@ export default function AgendaSidebar(props: Props) {
           ) : view === "waitlist" ? (
             <WaitlistView items={waitlistItems} />
           ) : (
-            <div className="space-y-2">
-              <section className="rounded-[18px] border border-zinc-200/80 bg-white/98 p-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.045)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
-                <div className="flex items-start justify-between gap-3">
+            <div className="space-y-4">
+              <section>
+                <div className="flex items-center justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="text-xs font-medium text-zinc-950">Valor total</p>
-                    <p className="mt-0.5 truncate text-[1.18rem] font-semibold tracking-[-0.03em] text-emerald-600">
-                      {potentialValueVisible ? totalValueLabel : "R$ ******"}
+                    <p className="text-[11px] font-semibold uppercase tracking-[0.1em] text-zinc-400">{totalValueCaption}</p>
+                    <p className="mt-1 truncate text-2xl font-black tracking-[-0.04em] text-zinc-950">
+                      {potentialValueVisible ? totalValueLabel : "R$ ••••••"}
                     </p>
                   </div>
                   <button
                     type="button"
                     onClick={onTogglePotentialValueVisible}
-                    className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50/80 text-zinc-600 transition duration-200 hover:-translate-y-[1px] hover:bg-white"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-zinc-100 text-zinc-600 transition hover:bg-zinc-200"
                     title={potentialValueVisible ? "Ocultar valor" : "Mostrar valor"}
                   >
-                    <Eye size={18} />
+                    <Eye size={17} />
                   </button>
                 </div>
-                <div className="mt-1.5 text-xs text-zinc-500">
-                  {totalValueCaption}
+              </section>
+
+              <div className="h-px bg-zinc-100" />
+
+              <section>
+                <div className="mb-2 flex items-center justify-between gap-2">
+                  <h3 className="text-sm font-bold capitalize text-zinc-900">{currentMonthLabel}</h3>
+                  <span className="text-xs text-zinc-400">{appointmentsCount} agend.</span>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <Metric label="Confirmados" value={statusCounts.confirmado} />
+                  <Metric label="Pendentes" value={statusCounts.pendente} />
+                  <Metric label="Atendidos" value={attendedCount} />
+                  <Metric label="Em caixa" value={waitingPaymentCount} />
+                </div>
+                {blockedCount > 0 ? (
+                  <div className="mt-2 flex items-center justify-between rounded-xl bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800">
+                    <span>Horários bloqueados</span><span>{blockedCount}</span>
+                  </div>
+                ) : null}
+              </section>
+
+              <div className="h-px bg-zinc-100" />
+
+              <section>
+                <h3 className="mb-2 text-sm font-bold text-zinc-900">Visualização</h3>
+                <div className="grid grid-cols-3 gap-1.5">
+                  <SmallButton active={false} onClick={onToday}>Hoje</SmallButton>
+                  <SmallButton active={viewMode === "day"} onClick={() => onChangeView("day")}>Dia</SmallButton>
+                  <SmallButton active={viewMode === "week"} onClick={() => onChangeView("week")}>Semana</SmallButton>
+                </div>
+                <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                  <ModeButton active={densityMode === "reception"} icon={<Sparkles size={15} />} label="Recepção" onClick={() => onChangeDensityMode("reception")} />
+                  <ModeButton active={densityMode === "standard"} icon={<MonitorUp size={15} />} label="Conforto" onClick={() => onChangeDensityMode("standard")} />
                 </div>
               </section>
 
-              <section className="rounded-[18px] border border-zinc-200/80 bg-white/98 p-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.045)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
-                <div className="flex w-full items-center justify-between gap-3 text-left">
-                  <span className="truncate text-[1.15rem] font-semibold tracking-[-0.03em] text-slate-900 capitalize">
-                    {currentMonthLabel}
-                  </span>
-                </div>
+              <div className="h-px bg-zinc-100" />
 
-                <div className="mt-2.5 grid grid-cols-2 gap-2">
-                  <MetricCard
-                    icon={<UserRoundSearch size={16} />}
-                    label="Atendimentos"
-                    value={appointmentsCount}
-                    tone="emerald"
-                  />
-                  <MetricCard
-                    icon={<Wallet size={16} />}
-                    label="Aguardando caixa"
-                    value={waitingPaymentCount}
-                    tone="amber"
-                  />
-                  <MetricCard
-                    icon={<Lock size={16} />}
-                    label="Bloqueios"
-                    value={blockedCount}
-                    tone="amber"
-                  />
-                  <MetricCard
-                    icon={<CalendarDays size={16} />}
-                    label="Atendidos"
-                    value={attendedCount}
-                    tone="sky"
-                  />
-                </div>
-              </section>
-
-              <section className="rounded-[18px] border border-zinc-200/80 bg-white/98 p-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.045)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
-                <h3 className="text-[1rem] font-semibold tracking-[-0.03em] text-slate-900">
-                  Status dos atendimentos
-                </h3>
-
-                <div className="mt-2 grid grid-cols-2 gap-1.5">
-                  <StatusCard label="Confirmados" value={statusCounts.confirmado} tone="emerald" />
-                  <StatusCard label="Pendentes" value={statusCounts.pendente} tone="amber" />
-                  <StatusCard
-                    label="Em caixa"
-                    value={statusCounts.aguardandoPagamento}
-                    tone="amber"
-                  />
-                  <StatusCard label="Atendidos" value={statusCounts.atendido} tone="sky" />
-                </div>
-              </section>
-
-              <section className="rounded-[18px] border border-zinc-200/80 bg-white/98 p-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.045)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
-                <h3 className="text-[1rem] font-semibold tracking-[-0.03em] text-slate-900">
-                  Visualizacao
-                </h3>
-
-                <div className="mt-2 grid grid-cols-3 gap-1.5">
-                  <ToggleButton active={false} onClick={onToday}>
-                    Hoje
-                  </ToggleButton>
-                  <ToggleButton active={viewMode === "day"} onClick={() => onChangeView("day")}>
-                    Dia
-                  </ToggleButton>
-                  <ToggleButton active={viewMode === "week"} onClick={() => onChangeView("week")}>
-                    Semana
-                  </ToggleButton>
-                </div>
-
-                <div className="mt-2 grid grid-cols-2 gap-1.5">
-                  <ModeButton
-                    active={densityMode === "reception"}
-                    label="Recepcao"
-                    icon={<Sparkles size={17} />}
-                    onClick={() => onChangeDensityMode("reception")}
-                  />
-                  <ModeButton
-                    active={densityMode === "standard"}
-                    label="Conforto"
-                    icon={<MonitorUp size={17} />}
-                    onClick={() => onChangeDensityMode("standard")}
-                  />
-                </div>
-              </section>
-
-              <section className="rounded-[18px] border border-zinc-200/80 bg-white/98 p-2.5 shadow-[0_10px_24px_rgba(15,23,42,0.045)] transition duration-300 hover:-translate-y-[1px] hover:shadow-[0_18px_40px_rgba(15,23,42,0.07)]">
-                <h3 className="text-[1rem] font-semibold tracking-[-0.03em] text-slate-900">
-                  Ações rapidas
-                </h3>
-
-                <div className="mt-2 grid grid-cols-2 gap-1.5">
-                  <QuickAction
-                    icon={<CalendarDays size={16} />}
-                    label="Novo agendamento"
-                    onClick={onOpenCreate}
-                  />
-                  <QuickAction
-                    icon={<Lock size={16} />}
-                    label="Bloquear horário"
-                    onClick={onOpenBlock}
-                  />
-                  <QuickAction
-                    icon={<Search size={16} />}
-                    label="Buscar cliente"
-                    onClick={onOpenClientSearch}
-                  />
-                  <QuickAction
-                    icon={<Users size={16} />}
-                    label="Lista de espera"
-                    onClick={onOpenWaitlist}
-                  />
-                  <QuickAction
-                    icon={<CreditCard size={16} />}
-                    label="Abrir crédito"
-                    onClick={onOpenCredit}
-                  />
-                  <QuickAction
-                    icon={<Wallet size={16} />}
-                    label="Ver caixas"
-                    onClick={onOpenCashier}
-                  />
+              <section>
+                <h3 className="mb-2 text-sm font-bold text-zinc-900">Ações</h3>
+                <div className="space-y-1.5">
+                  <Action icon={<CalendarDays size={17} />} label="Novo agendamento" primary onClick={onOpenCreate} />
+                  <Action icon={<Search size={17} />} label="Buscar cliente" onClick={onOpenClientSearch} />
+                  <Action icon={<Lock size={17} />} label="Bloquear horário" onClick={onOpenBlock} />
+                  <Action icon={<Users size={17} />} label="Lista de espera" onClick={onOpenWaitlist} />
+                  <div className="grid grid-cols-2 gap-1.5 pt-1">
+                    <Action icon={<CreditCard size={16} />} label="Crédito" compact onClick={onOpenCredit} />
+                    <Action icon={<Wallet size={16} />} label="Caixas" compact onClick={onOpenCashier} />
+                  </div>
                 </div>
               </section>
             </div>
@@ -384,357 +284,72 @@ export default function AgendaSidebar(props: Props) {
   );
 }
 
-function SidebarNavButton({
-  active,
-  children,
-  onClick,
-}: {
-  active: boolean;
-  children: ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={
-        active
-          ? "rounded-[13px] bg-white px-2.5 py-1.5 text-xs font-semibold text-amber-800 shadow-[0_10px_24px_rgba(142,106,47,0.12)] transition duration-200"
-          : "rounded-[13px] px-2.5 py-1.5 text-xs font-medium text-zinc-600 transition duration-200 hover:bg-white/70"
-      }
-    >
-      {children}
-    </button>
-  );
+function NavButton({ active, children, onClick }: { active: boolean; children: ReactNode; onClick: () => void }) {
+  return <button type="button" onClick={onClick} className={active ? "rounded-lg bg-white px-2 py-1.5 text-xs font-bold text-zinc-950 shadow-sm" : "rounded-lg px-2 py-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-900"}>{children}</button>;
 }
 
-function ClientSearchView({
-  query,
-  results,
-  createOpen,
-  createName,
-  createWhatsapp,
-  createSaving,
-  onQueryChange,
-  onCreateClient,
-  onStartCreateClient,
-  onCancelCreateClient,
-  onCreateNameChange,
-  onCreateWhatsappChange,
-  onOpenClient,
-}: {
-  query: string;
-  results: Cliente[];
-  createOpen: boolean;
-  createName: string;
-  createWhatsapp: string;
-  createSaving: boolean;
-  onQueryChange: (value: string) => void;
-  onCreateClient: () => void;
-  onStartCreateClient: () => void;
-  onCancelCreateClient: () => void;
-  onCreateNameChange: (value: string) => void;
-  onCreateWhatsappChange: (value: string) => void;
-  onOpenClient: (clientId: string) => void;
+function ClientSearchView({ query, results, createOpen, createName, createWhatsapp, createSaving, onQueryChange, onCreateClient, onStartCreateClient, onCancelCreateClient, onCreateNameChange, onCreateWhatsappChange, onOpenClient }: {
+  query: string; results: Cliente[]; createOpen: boolean; createName: string; createWhatsapp: string; createSaving: boolean;
+  onQueryChange: (value: string) => void; onCreateClient: () => void; onStartCreateClient: () => void; onCancelCreateClient: () => void;
+  onCreateNameChange: (value: string) => void; onCreateWhatsappChange: (value: string) => void; onOpenClient: (clientId: string) => void;
 }) {
   const hasQuery = query.trim().length > 0;
-
   return (
     <div className="space-y-3">
-      <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
-        <label className="mb-2 block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">
-          Filtro da cliente
-        </label>
-        <div className="flex items-center gap-3 rounded-[20px] border border-zinc-200 bg-zinc-50 px-3 py-3">
-          <Search size={16} className="shrink-0 text-zinc-400" />
-          <input
-            type="text"
-            value={query}
-            onChange={(event) => onQueryChange(event.target.value)}
-            placeholder="Digite o nome ou whatsapp"
-            className="w-full bg-transparent text-sm text-zinc-900 outline-none"
-          />
-        </div>
-      </section>
+      <div className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 py-2.5">
+        <Search size={16} className="text-zinc-400" />
+        <input value={query} onChange={(e) => onQueryChange(e.target.value)} placeholder="Nome ou WhatsApp" className="w-full bg-transparent text-sm outline-none" />
+      </div>
 
-      <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
-        <div className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
-          Resultado
+      {!hasQuery ? (
+        <p className="py-4 text-center text-sm text-zinc-500">Digite para buscar uma cliente.</p>
+      ) : results.length ? (
+        <div className="space-y-1.5">
+          {results.map((client) => (
+            <button key={client.id} type="button" onClick={() => onOpenClient(client.id)} className="flex w-full items-center justify-between gap-3 rounded-xl border border-zinc-200 px-3 py-2.5 text-left hover:bg-zinc-50">
+              <div className="min-w-0"><div className="truncate text-sm font-bold text-zinc-900">{client.nome}</div><div className="truncate text-xs text-zinc-500">{client.whatsapp || "Sem WhatsApp"}</div></div>
+              <span className="text-xs font-bold text-zinc-500">Abrir</span>
+            </button>
+          ))}
         </div>
-
-        {!hasQuery ? (
-          <div className="mt-4 rounded-[20px] border border-dashed border-zinc-200 bg-zinc-50 px-4 py-5 text-sm leading-6 text-zinc-500">
-            Digite nome ou WhatsApp para buscar uma cliente. A lista completa fica
-            fora deste painel para manter a agenda leve.
-          </div>
-        ) : results.length > 0 ? (
-          <div className="mt-4 space-y-2.5">
-            {results.map((client) => (
-              <button
-                key={client.id}
-                type="button"
-                onClick={() => onOpenClient(client.id)}
-                className="flex w-full items-center justify-between gap-3 rounded-[20px] border border-zinc-200 bg-white px-3.5 py-3 text-left shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-[1px] hover:shadow-[0_16px_32px_rgba(15,23,42,0.07)]"
-              >
-                <div className="min-w-0">
-                  <div className="truncate text-sm font-semibold text-zinc-900">
-                    {client.nome}
-                  </div>
-                  <div className="mt-1 truncate text-xs text-zinc-500">
-                    {client.whatsapp || "Sem whatsapp cadastrado"}
-                  </div>
-                </div>
-                <span className="shrink-0 text-xs font-semibold text-amber-700">
-                  Abrir
-                </span>
-              </button>
-            ))}
-          </div>
-        ) : (
-          <div className="mt-4 rounded-[20px] border border-dashed border-zinc-200 bg-zinc-50 px-4 py-4">
-            <div className="text-sm font-semibold text-zinc-900">Não encontrado</div>
-            <p className="mt-1 text-sm text-zinc-500">
-              Deseja criar novo cliente?
-            </p>
-            {!createOpen ? (
-              <button
-                type="button"
-                onClick={onStartCreateClient}
-                className="mt-3 rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white"
-              >
-                Criar novo cliente
-              </button>
-            ) : (
-              <div className="mt-4 space-y-3">
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">
-                    Nome
-                  </label>
-                  <input
-                    type="text"
-                    value={createName}
-                    onChange={(event) => onCreateNameChange(event.target.value)}
-                    placeholder="Nome da cliente"
-                    className="w-full rounded-2xl border border-zinc-200 bg-white px-3 py-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900"
-                  />
-                </div>
-                <div>
-                  <label className="mb-1.5 block text-xs font-semibold uppercase tracking-[0.14em] text-zinc-400">
-                    WhatsApp
-                  </label>
-                  <input
-                    type="text"
-                    value={createWhatsapp}
-                    onChange={(event) => onCreateWhatsappChange(event.target.value)}
-                    placeholder="(00) 00000-0000"
-                    className="w-full rounded-2xl border border-zinc-200 bg-white px-3 py-3 text-sm text-zinc-900 outline-none transition focus:border-zinc-900"
-                  />
-                </div>
-                <div className="flex gap-2">
-                  <button
-                    type="button"
-                    onClick={onCancelCreateClient}
-                    className="flex-1 rounded-2xl border border-zinc-200 bg-white px-4 py-2.5 text-sm font-semibold text-zinc-700"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={onCreateClient}
-                    disabled={createSaving}
-                    className="flex-1 rounded-2xl bg-zinc-900 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
-                  >
-                    {createSaving ? "Salvando..." : "Salvar cliente"}
-                  </button>
-                </div>
+      ) : (
+        <div className="rounded-xl border border-dashed border-zinc-300 p-3">
+          <p className="text-sm font-bold text-zinc-900">Cliente não encontrada</p>
+          {!createOpen ? (
+            <button type="button" onClick={onStartCreateClient} className="mt-2 w-full rounded-xl bg-zinc-950 px-3 py-2.5 text-sm font-bold text-white">Cadastrar cliente</button>
+          ) : (
+            <div className="mt-3 space-y-2">
+              <input value={createName} onChange={(e) => onCreateNameChange(e.target.value)} placeholder="Nome" className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm outline-none focus:border-zinc-900" />
+              <input value={createWhatsapp} onChange={(e) => onCreateWhatsappChange(e.target.value)} placeholder="WhatsApp" className="w-full rounded-xl border border-zinc-200 px-3 py-2.5 text-sm outline-none focus:border-zinc-900" />
+              <div className="grid grid-cols-2 gap-2">
+                <button type="button" onClick={onCancelCreateClient} className="rounded-xl border border-zinc-200 px-3 py-2.5 text-sm font-bold">Cancelar</button>
+                <button type="button" disabled={createSaving} onClick={onCreateClient} className="rounded-xl bg-zinc-950 px-3 py-2.5 text-sm font-bold text-white disabled:opacity-60">{createSaving ? "Salvando..." : "Salvar"}</button>
               </div>
-            )}
-          </div>
-        )}
-      </section>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
 
 function WaitlistView({ items }: { items: AgendaWaitlistItem[] }) {
-  return (
-    <div className="space-y-3">
-      <section className="rounded-[24px] border border-zinc-200/80 bg-white p-4 shadow-[0_12px_32px_rgba(15,23,42,0.05)]">
-        <div className="text-[1.15rem] font-semibold tracking-[-0.04em] text-slate-900">
-          Clientes aguardando
-        </div>
-        <p className="mt-1 text-sm text-zinc-500">
-          Lista rápida para acompanhar encaixes e pendencias da agenda.
-        </p>
-
-        {items.length > 0 ? (
-          <div className="mt-4 space-y-2.5">
-            {items.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-[20px] border border-zinc-200 bg-white px-4 py-3 shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-[1px] hover:shadow-[0_16px_32px_rgba(15,23,42,0.07)]"
-              >
-                <div className="truncate text-sm font-semibold text-zinc-900">
-                  {item.clientName}
-                </div>
-                <div className="mt-1 truncate text-xs text-zinc-500">
-                  {item.serviceName}
-                </div>
-                <div className="mt-3 flex flex-wrap gap-2">
-                  <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-medium text-zinc-600">
-                    {item.dateLabel}
-                  </span>
-                  <span className="rounded-full bg-zinc-100 px-2.5 py-1 text-[11px] font-medium text-zinc-600">
-                    {item.timeLabel}
-                  </span>
-                  <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-medium text-amber-700">
-                    {item.statusLabel}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="mt-4 rounded-[20px] border border-dashed border-zinc-200 bg-zinc-50 px-4 py-4 text-sm text-zinc-500">
-            Nenhuma cliente na lista de espera agora.
-          </div>
-        )}
-      </section>
-    </div>
-  );
+  if (!items.length) return <div className="rounded-xl border border-dashed border-zinc-300 px-4 py-5 text-center text-sm text-zinc-500">Nenhuma cliente aguardando agora.</div>;
+  return <div className="space-y-1.5">{items.map((item) => <div key={item.id} className="rounded-xl border border-zinc-200 px-3 py-2.5"><div className="truncate text-sm font-bold text-zinc-900">{item.clientName}</div><div className="mt-0.5 truncate text-xs text-zinc-500">{item.serviceName}</div><div className="mt-2 flex items-center gap-1.5 text-[11px] font-semibold text-zinc-500"><span>{item.dateLabel}</span><span>•</span><span>{item.timeLabel}</span><span className="ml-auto rounded-full bg-amber-50 px-2 py-0.5 text-amber-700">{item.statusLabel}</span></div></div>)}</div>;
 }
 
-function MetricCard({
-  icon,
-  label,
-  value,
-  tone,
-}: {
-  icon: ReactNode;
-  label: string;
-  value: number;
-  tone: "emerald" | "amber" | "sky";
-}) {
-  const toneClasses =
-    tone === "emerald"
-      ? "bg-emerald-50 text-emerald-700"
-      : tone === "amber"
-        ? "bg-amber-50 text-amber-700"
-        : "bg-sky-50 text-sky-700";
-
-  return (
-    <div className="rounded-[16px] border border-zinc-200 bg-white p-2.5 shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-[1px] hover:shadow-[0_14px_28px_rgba(15,23,42,0.06)]">
-      <div className="flex items-start gap-2">
-        <div
-          className={`inline-flex h-8.5 w-8.5 shrink-0 items-center justify-center rounded-xl ${toneClasses}`}
-        >
-          {icon}
-        </div>
-        <div className="min-w-0">
-          <div className="text-[11px] leading-tight text-zinc-600">{label}</div>
-          <div className="mt-0.5 text-[1.12rem] font-semibold tracking-[-0.03em] text-slate-900">
-            {value}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+function Metric({ label, value }: { label: string; value: number }) {
+  return <div className="rounded-xl bg-zinc-50 px-3 py-2"><div className="text-[11px] text-zinc-500">{label}</div><div className="mt-0.5 text-lg font-black text-zinc-950">{value}</div></div>;
 }
 
-function StatusCard({
-  label,
-  value,
-  tone,
-}: {
-  label: string;
-  value: number;
-  tone: "emerald" | "amber" | "sky";
-}) {
-  const toneClasses =
-    tone === "emerald"
-      ? "bg-emerald-50 text-emerald-700"
-      : tone === "amber"
-        ? "bg-amber-50 text-amber-700"
-        : "bg-sky-50 text-sky-700";
-
-  return (
-    <div className={`rounded-[15px] px-3 py-2 transition duration-200 ${toneClasses}`}>
-      <div className="text-[11px] font-medium leading-tight">{label}</div>
-      <div className="mt-0.5 text-[1.08rem] font-semibold tracking-[-0.03em]">{value}</div>
-    </div>
-  );
+function SmallButton({ active, children, onClick }: { active: boolean; children: ReactNode; onClick: () => void }) {
+  return <button type="button" onClick={onClick} className={active ? "rounded-xl bg-zinc-950 px-2 py-2 text-xs font-bold text-white" : "rounded-xl bg-zinc-100 px-2 py-2 text-xs font-bold text-zinc-600 hover:bg-zinc-200"}>{children}</button>;
 }
 
-function ToggleButton({
-  active,
-  children,
-  onClick,
-}: {
-  active: boolean;
-  children: ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={
-        active
-          ? "rounded-xl bg-zinc-950 px-2.5 py-2 text-xs font-semibold text-white shadow-[0_12px_30px_rgba(15,23,42,0.18)] transition duration-200"
-          : "rounded-xl border border-zinc-200 bg-white px-2.5 py-2 text-xs font-medium text-zinc-700 transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
-      }
-    >
-      {children}
-    </button>
-  );
+function ModeButton({ active, icon, label, onClick }: { active: boolean; icon: ReactNode; label: string; onClick: () => void }) {
+  return <button type="button" onClick={onClick} className={active ? "flex items-center justify-center gap-1.5 rounded-xl bg-amber-50 px-2 py-2 text-xs font-bold text-amber-800 ring-1 ring-amber-200" : "flex items-center justify-center gap-1.5 rounded-xl bg-zinc-100 px-2 py-2 text-xs font-bold text-zinc-600 hover:bg-zinc-200"}>{icon}{label}</button>;
 }
 
-function ModeButton({
-  active,
-  icon,
-  label,
-  onClick,
-}: {
-  active: boolean;
-  icon: ReactNode;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={
-        active
-          ? "flex items-center justify-center gap-1.5 rounded-[15px] border border-amber-300 bg-amber-50 px-2.5 py-2 text-xs font-semibold text-amber-800 shadow-[0_12px_30px_rgba(142,106,47,0.12)] transition duration-200"
-          : "flex items-center justify-center gap-1.5 rounded-[15px] border border-zinc-200 bg-white px-2.5 py-2 text-xs font-medium text-zinc-700 transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50"
-      }
-    >
-      {icon}
-      <span>{label}</span>
-    </button>
-  );
-}
-
-function QuickAction({
-  icon,
-  label,
-  onClick,
-}: {
-  icon: ReactNode;
-  label: string;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex min-w-0 items-center gap-2 rounded-[15px] border border-zinc-200 bg-white px-2.5 py-2 text-left text-[12px] font-medium text-zinc-700 shadow-[0_8px_20px_rgba(15,23,42,0.04)] transition duration-200 hover:-translate-y-[1px] hover:bg-zinc-50/80 hover:shadow-[0_16px_35px_rgba(15,23,42,0.08)]"
-    >
-      <span className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-zinc-50 text-zinc-700">
-        {icon}
-      </span>
-      <span className="min-w-0 break-words leading-tight">{label}</span>
-    </button>
-  );
+function Action({ icon, label, onClick, primary = false, compact = false }: { icon: ReactNode; label: string; onClick: () => void; primary?: boolean; compact?: boolean }) {
+  return <button type="button" onClick={onClick} className={`${compact ? "justify-center" : "justify-start"} flex w-full items-center gap-2 rounded-xl px-3 py-2.5 text-sm font-bold transition ${primary ? "bg-zinc-950 text-white hover:bg-zinc-800" : "bg-zinc-100 text-zinc-700 hover:bg-zinc-200"}`}>{icon}<span>{label}</span></button>;
 }
