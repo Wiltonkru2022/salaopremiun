@@ -19,6 +19,32 @@ export async function getMfaAssurance(): Promise<MfaAssurance> {
   };
 }
 
+/**
+ * MFA e uma protecao opcional.
+ * - Sem fator TOTP verificado cadastrado: o acesso segue normalmente.
+ * - Com fator TOTP verificado cadastrado: exige sessao AAL2.
+ *
+ * O nome hasAal2 foi mantido para compatibilidade com os guards existentes.
+ */
 export async function hasAal2() {
-  return (await getMfaAssurance()).aal === "aal2";
+  const supabase = await createClient();
+  const [{ data: assurance, error: assuranceError }, { data: factors, error: factorsError }] =
+    await Promise.all([
+      supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+      supabase.auth.mfa.listFactors(),
+    ]);
+
+  if (assuranceError || factorsError) {
+    return false;
+  }
+
+  const verifiedTotpFactors = (factors?.totp || []).filter(
+    (factor) => factor.status === "verified"
+  );
+
+  if (verifiedTotpFactors.length === 0) {
+    return true;
+  }
+
+  return assurance.currentLevel === "aal2";
 }
