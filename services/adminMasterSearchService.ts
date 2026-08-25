@@ -56,7 +56,7 @@ export function createAdminMasterSearchService() {
               .select("id, id_salao, nome, email, whatsapp, telefone, status")
               .or(`nome.ilike.${like},email.ilike.${like},whatsapp.ilike.${like},telefone.ilike.${like}`)
               .limit(5),
-            supabase
+            (supabase as any)
               .from("parceiros_comerciais")
               .select("id, razao_social, nome_fantasia, segmento, cidade, uf, status, email, whatsapp")
               .or(`razao_social.ilike.${like},nome_fantasia.ilike.${like},segmento.ilike.${like},email.ilike.${like},whatsapp.ilike.${like}`)
