@@ -1,28 +1,67 @@
-﻿import { RefreshCw } from "lucide-react";
-import { PushNotifications } from "@capacitor/push-notifications";
-import { useEffect, useMemo, useState } from "react";
+import { RefreshCw } from "lucide-react";
+import { lazy, Suspense, useEffect, useMemo, useState } from "react";
 import { ptBR } from "../../../core/i18n/pt-BR";
 import { AppShell, type View } from "./components/layout/AppShell";
-import { ProfessionalNotificationOnboarding } from "./components/ProfessionalNotificationOnboarding";
 import { isNativeProfessionalApp } from "./components/PushPermissionButton";
 import { Button } from "./components/ui/Button";
 import { Card } from "./components/ui/Card";
 import { useAuth } from "./contexts/AuthContext";
 import { useProfissionalData } from "./hooks/useProfissionalData";
 import { toISODate } from "./lib/date";
-import { AgendaPage } from "./pages/AgendaPage";
-import { AvaliacoesPage } from "./pages/AvaliacoesPage";
-import { ClientesPage } from "./pages/ClientesPage";
-import { ComissaoPage } from "./pages/ComissaoPage";
-import { ComandasPage } from "./pages/ComandasPage";
-import { ConfiguracoesPage } from "./pages/ConfiguracoesPage";
-import { CuponsPage } from "./pages/CuponsPage";
-import { InicioPage } from "./pages/InicioPage";
-import { LoginPage } from "./pages/LoginPage";
-import { NotificacoesPage } from "./pages/NotificacoesPage";
-import { PerfilPage } from "./pages/PerfilPage";
-import { ServicosPage } from "./pages/ServicosPage";
-import { DuvidasPage, InstalarPage, PrivacidadePage, SuportePage } from "./pages/StaticPages";
+
+const ProfessionalNotificationOnboarding = lazy(() =>
+  import("./components/ProfessionalNotificationOnboarding").then((module) => ({
+    default: module.ProfessionalNotificationOnboarding,
+  }))
+);
+const AgendaPage = lazy(() =>
+  import("./pages/AgendaPage").then((module) => ({ default: module.AgendaPage }))
+);
+const AvaliacoesPage = lazy(() =>
+  import("./pages/AvaliacoesPage").then((module) => ({ default: module.AvaliacoesPage }))
+);
+const ClientesPage = lazy(() =>
+  import("./pages/ClientesPage").then((module) => ({ default: module.ClientesPage }))
+);
+const ComissaoPage = lazy(() =>
+  import("./pages/ComissaoPage").then((module) => ({ default: module.ComissaoPage }))
+);
+const ComandasPage = lazy(() =>
+  import("./pages/ComandasPage").then((module) => ({ default: module.ComandasPage }))
+);
+const ConfiguracoesPage = lazy(() =>
+  import("./pages/ConfiguracoesPage").then((module) => ({ default: module.ConfiguracoesPage }))
+);
+const CuponsPage = lazy(() =>
+  import("./pages/CuponsPage").then((module) => ({ default: module.CuponsPage }))
+);
+const InicioPage = lazy(() =>
+  import("./pages/InicioPage").then((module) => ({ default: module.InicioPage }))
+);
+const LoginPage = lazy(() =>
+  import("./pages/LoginPage").then((module) => ({ default: module.LoginPage }))
+);
+const NotificacoesPage = lazy(() =>
+  import("./pages/NotificacoesPage").then((module) => ({ default: module.NotificacoesPage }))
+);
+const PerfilPage = lazy(() =>
+  import("./pages/PerfilPage").then((module) => ({ default: module.PerfilPage }))
+);
+const ServicosPage = lazy(() =>
+  import("./pages/ServicosPage").then((module) => ({ default: module.ServicosPage }))
+);
+const DuvidasPage = lazy(() =>
+  import("./pages/StaticPages").then((module) => ({ default: module.DuvidasPage }))
+);
+const InstalarPage = lazy(() =>
+  import("./pages/StaticPages").then((module) => ({ default: module.InstalarPage }))
+);
+const PrivacidadePage = lazy(() =>
+  import("./pages/StaticPages").then((module) => ({ default: module.PrivacidadePage }))
+);
+const SuportePage = lazy(() =>
+  import("./pages/StaticPages").then((module) => ({ default: module.SuportePage }))
+);
 
 const titles: Record<View, string> = {
   inicio: ptBR.professional.home,
@@ -41,6 +80,14 @@ const titles: Record<View, string> = {
   instalar: "Instalar",
   privacidade: "Privacidade",
 };
+
+function RouteFallback() {
+  return (
+    <div className="grid min-h-40 place-items-center rounded-[1.4rem] border border-zinc-200 bg-white text-xs font-black uppercase tracking-[0.16em] text-zinc-400">
+      Carregando tela
+    </div>
+  );
+}
 
 export function App() {
   const { profissional, loading: authLoading } = useAuth();
@@ -63,26 +110,30 @@ export function App() {
     let actionHandle: { remove: () => Promise<void> } | null = null;
     let receivedHandle: { remove: () => Promise<void> } | null = null;
 
-    void PushNotifications.addListener("pushNotificationActionPerformed", (event) => {
-      const url = String(event.notification.data?.url || "");
-      setView(url.includes("/agenda") ? "agenda" : "notificacoes");
-      void refreshData();
-    }).then((handle) => {
-      if (active) {
-        actionHandle = handle;
-        return;
-      }
-      void handle.remove().catch(() => undefined);
-    });
+    void import("@capacitor/push-notifications").then(({ PushNotifications }) => {
+      if (!active) return;
 
-    void PushNotifications.addListener("pushNotificationReceived", () => {
-      void refreshData();
-    }).then((handle) => {
-      if (active) {
-        receivedHandle = handle;
-        return;
-      }
-      void handle.remove().catch(() => undefined);
+      void PushNotifications.addListener("pushNotificationActionPerformed", (event) => {
+        const url = String(event.notification.data?.url || "");
+        setView(url.includes("/agenda") ? "agenda" : "notificacoes");
+        void refreshData();
+      }).then((handle) => {
+        if (active) {
+          actionHandle = handle;
+          return;
+        }
+        void handle.remove().catch(() => undefined);
+      });
+
+      void PushNotifications.addListener("pushNotificationReceived", () => {
+        void refreshData();
+      }).then((handle) => {
+        if (active) {
+          receivedHandle = handle;
+          return;
+        }
+        void handle.remove().catch(() => undefined);
+      });
     });
 
     return () => {
@@ -123,7 +174,13 @@ export function App() {
       </div>
     );
   }
-  if (!profissional) return <LoginPage />;
+  if (!profissional) {
+    return (
+      <Suspense fallback={<RouteFallback />}>
+        <LoginPage />
+      </Suspense>
+    );
+  }
 
   return (
     <AppShell
@@ -133,7 +190,9 @@ export function App() {
       subtitle={subtitle || ""}
       unreadNotifications={unreadNotifications}
     >
-      <ProfessionalNotificationOnboarding />
+      <Suspense fallback={null}>
+        <ProfessionalNotificationOnboarding />
+      </Suspense>
 
       {data.error ? (
         <Card className="mb-4 border-red-200 bg-red-50 text-red-700">
@@ -162,73 +221,75 @@ export function App() {
         </Button>
       </div>
 
-      {view === "inicio" ? (
-        <InicioPage
-          nome={profissional.nome_exibicao || profissional.nome}
-          agendamentos={data.agendamentos}
-          clientes={data.clientes}
-          servicos={data.servicos}
-          comandas={data.comandas}
-          goTo={setView}
-        />
-      ) : null}
-      {view === "agenda" ? (
-        <AgendaPage
-          agendamentos={data.agendamentos}
-          clientes={data.clientes}
-          servicos={data.servicos}
-          profissionais={data.profissionais}
-          profissionalAtual={profissional}
-          selectedDate={selectedDate}
-          setSelectedDate={setSelectedDate}
-          actions={data.actions}
-        />
-      ) : null}
-      {view === "clientes" ? (
-        <ClientesPage
-          clientes={data.clientes}
-          agendamentos={data.agendamentos}
-          comandas={data.comandas}
-          onSave={data.actions.salvarCliente}
-          onEdit={data.actions.editarCliente}
-        />
-      ) : null}
-      {view === "servicos" ? (
-        <ServicosPage
-          servicos={data.servicos}
-          onSave={data.actions.salvarServico}
-          onEdit={data.actions.editarServico}
-        />
-      ) : null}
-      {view === "comandas" ? (
-        <ComandasPage
-          clientes={data.clientes}
-          servicos={data.servicos}
-          comandas={data.comandas}
-          itens={data.itensComanda}
-          actions={data.actions}
-        />
-      ) : null}
-      {view === "cupons" ? <CuponsPage clientes={data.clientes} /> : null}
-      {view === "comissao" ? <ComissaoPage comissoes={data.comissoes} /> : null}
-      {view === "avaliacoes" ? (
-        <AvaliacoesPage
-          avaliacoes={data.avaliacoes}
-          onDelete={data.actions.excluirAvaliacao}
-        />
-      ) : null}
-      {view === "notificacoes" ? (
-        <NotificacoesPage
-          notificacoes={data.notificacoes}
-          onRead={data.actions.marcarNotificacaoLida}
-        />
-      ) : null}
-      {view === "perfil" ? <PerfilPage profissional={profissional} goTo={setView} /> : null}
-      {view === "configuracoes" ? <ConfiguracoesPage /> : null}
-      {view === "suporte" ? <SuportePage /> : null}
-      {view === "duvidas" ? <DuvidasPage /> : null}
-      {view === "instalar" ? <InstalarPage /> : null}
-      {view === "privacidade" ? <PrivacidadePage /> : null}
+      <Suspense fallback={<RouteFallback />}>
+        {view === "inicio" ? (
+          <InicioPage
+            nome={profissional.nome_exibicao || profissional.nome}
+            agendamentos={data.agendamentos}
+            clientes={data.clientes}
+            servicos={data.servicos}
+            comandas={data.comandas}
+            goTo={setView}
+          />
+        ) : null}
+        {view === "agenda" ? (
+          <AgendaPage
+            agendamentos={data.agendamentos}
+            clientes={data.clientes}
+            servicos={data.servicos}
+            profissionais={data.profissionais}
+            profissionalAtual={profissional}
+            selectedDate={selectedDate}
+            setSelectedDate={setSelectedDate}
+            actions={data.actions}
+          />
+        ) : null}
+        {view === "clientes" ? (
+          <ClientesPage
+            clientes={data.clientes}
+            agendamentos={data.agendamentos}
+            comandas={data.comandas}
+            onSave={data.actions.salvarCliente}
+            onEdit={data.actions.editarCliente}
+          />
+        ) : null}
+        {view === "servicos" ? (
+          <ServicosPage
+            servicos={data.servicos}
+            onSave={data.actions.salvarServico}
+            onEdit={data.actions.editarServico}
+          />
+        ) : null}
+        {view === "comandas" ? (
+          <ComandasPage
+            clientes={data.clientes}
+            servicos={data.servicos}
+            comandas={data.comandas}
+            itens={data.itensComanda}
+            actions={data.actions}
+          />
+        ) : null}
+        {view === "cupons" ? <CuponsPage clientes={data.clientes} /> : null}
+        {view === "comissao" ? <ComissaoPage comissoes={data.comissoes} /> : null}
+        {view === "avaliacoes" ? (
+          <AvaliacoesPage
+            avaliacoes={data.avaliacoes}
+            onDelete={data.actions.excluirAvaliacao}
+          />
+        ) : null}
+        {view === "notificacoes" ? (
+          <NotificacoesPage
+            notificacoes={data.notificacoes}
+            onRead={data.actions.marcarNotificacaoLida}
+          />
+        ) : null}
+        {view === "perfil" ? <PerfilPage profissional={profissional} goTo={setView} /> : null}
+        {view === "configuracoes" ? <ConfiguracoesPage /> : null}
+        {view === "suporte" ? <SuportePage /> : null}
+        {view === "duvidas" ? <DuvidasPage /> : null}
+        {view === "instalar" ? <InstalarPage /> : null}
+        {view === "privacidade" ? <PrivacidadePage /> : null}
+      </Suspense>
     </AppShell>
   );
 }
