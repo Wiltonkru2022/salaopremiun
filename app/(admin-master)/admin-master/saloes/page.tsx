@@ -5,11 +5,21 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminMasterSaloesPage() {
   const data = await getAdminMasterSection("saloes");
+  const columns = data.columns.includes("acao") ? data.columns : [...data.columns, "acao"];
+  const rows = data.rows.map((row) => ({
+    ...row,
+    acao: row.acao_id ? "Ver Raio-X" : row.acao || "-",
+    acao_tipo: row.acao_id ? "salao_detail" : row.acao_tipo,
+  }));
+
   return (
     <AdminMasterSectionSimple
       data={{
         ...data,
-        description: "Contas, situação e uso da plataforma. Abra um salão para acessar o Raio-X organizado em abas.",
+        rows,
+        columns,
+        description:
+          "Contas, situação e uso da plataforma. Use Ver Raio-X para abrir a ficha completa do salão, assinatura, suporte, atividade e notas.",
       }}
     />
   );
