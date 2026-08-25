@@ -10,10 +10,10 @@ import type { Json } from "@/types/database.generated";
 
 const CRON_NAME = "limpar_observabilidade";
 const CRON_ROUTE = "/api/cron/limpar-observabilidade";
-const OPERATIONAL_PROBE_HISTORY_DAYS = 3;
+const OPERATIONAL_PROBE_HISTORY_DAYS = 1;
 const AUDIT_ARCHIVE_DAYS = 30;
-const AUDIT_ARCHIVE_BATCH = 500;
-const AUDIT_ARCHIVE_MAX_BATCHES = 3;
+const ARCHIVE_BATCH = 500;
+const ARCHIVE_MAX_BATCHES = 10;
 
 type AuditArchiveRow = {
   id: string;
@@ -70,7 +70,7 @@ async function archiveOldAuditLogs() {
   let archived = 0;
   let batches = 0;
 
-  for (let batch = 0; batch < AUDIT_ARCHIVE_MAX_BATCHES; batch += 1) {
+  for (let batch = 0; batch < ARCHIVE_MAX_BATCHES; batch += 1) {
     const { data, error } = await supabaseAdmin
       .from("auditoria_logs")
       .select(
@@ -78,7 +78,7 @@ async function archiveOldAuditLogs() {
       )
       .lt("created_at", cutoff)
       .order("created_at", { ascending: true })
-      .limit(AUDIT_ARCHIVE_BATCH);
+      .limit(ARCHIVE_BATCH);
 
     if (error) throw error;
 
@@ -107,10 +107,71 @@ async function archiveOldAuditLogs() {
 
     archived += rows.length;
     batches += 1;
-    if (rows.length < AUDIT_ARCHIVE_BATCH) break;
+    if (rows.length < ARCHIVE_BATCH) break;
   }
 
   return { archived, batches, cutoff, retentionDays: AUDIT_ARCHIVE_DAYS };
+}
+
+async function archiveOldTelemetryRows(input: {
+  tableName: "operational_probe_history" | "eventos_cron";
+  timestampColumn: "checked_at" | "iniciado_em";
+  retentionDays: number;
+}) {
+  const supabaseAdmin = getSupabaseAdmin();
+  const cutoff = new Date(Date.now() - input.retentionDays * 24 * 60 * 60 * 1000).toISOString();
+  let archived = 0;
+  let batches = 0;
+
+  for (let batch = 0; batch < ARCHIVE_MAX_BATCHES; batch += 1) {
+    const { data, error } = await (supabaseAdmin as any)
+      .from(input.tableName)
+      .select("*")
+      .lt(input.timestampColumn, cutoff)
+      .order(input.timestampColumn, { ascending: true })
+      .limit(ARCHIVE_BATCH);
+
+    if (error) throw error;
+
+    const rawRows = (data || []) as Array<Record<string, unknown>>;
+    if (!rawRows.length) break;
+
+    const rows = rawRows.map((row) => ({
+      ...row,
+      id: String(row.id || ""),
+      created_at: String(row[input.timestampColumn] || new Date().toISOString()),
+    }));
+
+    const archiveResult = await archiveNeonRows(input.tableName, rows);
+    if (!archiveResult.ok || archiveResult.archived !== rows.length) {
+      await recordNeonEvent({
+        componentKey: "cron.observability_cleanup",
+        eventType: "telemetry_archive_deferred",
+        level: "warning",
+        message: `Arquivamento de ${input.tableName} adiado; nenhum registro foi removido do Supabase.`,
+        metadata: {
+          sourceTable: input.tableName,
+          expected: rows.length,
+          archived: archiveResult.archived,
+          batch: batch + 1,
+        },
+      });
+      break;
+    }
+
+    const ids = rows.map((row) => row.id);
+    const { error: deleteError } = await (supabaseAdmin as any)
+      .from(input.tableName)
+      .delete()
+      .in("id", ids);
+    if (deleteError) throw deleteError;
+
+    archived += rows.length;
+    batches += 1;
+    if (rows.length < ARCHIVE_BATCH) break;
+  }
+
+  return { archived, batches, cutoff, retentionDays: input.retentionDays };
 }
 
 export async function limparObservabilidade() {
@@ -118,10 +179,21 @@ export async function limparObservabilidade() {
     route: CRON_ROUTE,
     retention: OBSERVABILITY_RETENTION_DEFAULTS,
     auditArchiveDays: AUDIT_ARCHIVE_DAYS,
+    operationalProbeHistoryDays: OPERATIONAL_PROBE_HISTORY_DAYS,
   });
 
   const supabaseAdmin = getSupabaseAdmin();
   const auditArchive = await archiveOldAuditLogs();
+  const probeArchive = await archiveOldTelemetryRows({
+    tableName: "operational_probe_history",
+    timestampColumn: "checked_at",
+    retentionDays: OPERATIONAL_PROBE_HISTORY_DAYS,
+  });
+  const cronArchive = await archiveOldTelemetryRows({
+    tableName: "eventos_cron",
+    timestampColumn: "iniciado_em",
+    retentionDays: OBSERVABILITY_RETENTION_DEFAULTS.eventosCronDays,
+  });
 
   const [{ data, error }, { data: operationalData, error: operationalError }] =
     await Promise.all([
@@ -161,6 +233,8 @@ export async function limparObservabilidade() {
     totalRemovido: summary.total,
     tabelas: summary.detail,
     auditArchive,
+    probeArchive,
+    cronArchive,
     retention: {
       ...OBSERVABILITY_RETENTION_DEFAULTS,
       auditArchiveDays: AUDIT_ARCHIVE_DAYS,
@@ -172,7 +246,7 @@ export async function limparObservabilidade() {
 
   await recordCron(
     "sucesso",
-    `${summary.summary} ${auditArchive.archived} auditoria(s) arquivada(s) no Neon.`,
+    `${summary.summary} ${auditArchive.archived} auditoria(s), ${probeArchive.archived} probe(s) e ${cronArchive.archived} evento(s) de cron arquivados no Neon.`,
     payload
   );
 
@@ -181,7 +255,12 @@ export async function limparObservabilidade() {
     totalRemovido: summary.total,
     tabelas: summary.detail,
     auditArchive,
-    retention: OBSERVABILITY_RETENTION_DEFAULTS,
+    probeArchive,
+    cronArchive,
+    retention: {
+      ...OBSERVABILITY_RETENTION_DEFAULTS,
+      operationalProbeHistoryDays: OPERATIONAL_PROBE_HISTORY_DAYS,
+    },
     resumo: summary.summary,
   };
 }
