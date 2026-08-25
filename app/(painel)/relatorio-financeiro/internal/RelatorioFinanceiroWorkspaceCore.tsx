@@ -28,8 +28,8 @@ import { getPlanoMinimoParaRecurso, type PlanoCobravelCodigo } from "@/lib/plans
 import { getAssinaturaUrl } from "@/lib/site-urls";
 import { statusPtBR } from "@/core/i18n/pt-BR";
 
-import type { ClienteJoin, ComandaRow, PagamentoRow, ComissaoRow, ProfissionalRow, ComandaItemRow, CaixaSessaoResumoRow, ResumoFinanceiro, ResumoCaixa, StatusFiltro, PainelLateralTab, DatePresetKey, PrintSectionKey, PrintSelection } from "./relatorio-financeiro-support";
-import { toArray, getJoinedName, formatCurrency, formatDateTime, formatDateInput, addDays, getDatePresetRange, escapeHtml, formatFormaPagamentoLabel, formatTipoItemLabel, csvCell, getStatusBadgeClass, KpiCard, ComboDescriptionCell } from "./relatorio-financeiro-support";
+import type { ComandaRow, PagamentoRow, ComissaoRow, ProfissionalRow, ComandaItemRow, CaixaSessaoResumoRow, ResumoFinanceiro, ResumoCaixa, StatusFiltro, PainelLateralTab, DatePresetKey, PrintSectionKey, PrintSelection } from "./relatorio-financeiro-support";
+import { getJoinedName, formatCurrency, formatDateTime, formatDateInput, getDatePresetRange, escapeHtml, formatFormaPagamentoLabel, formatTipoItemLabel, csvCell, getStatusBadgeClass, KpiCard, ComboDescriptionCell } from "./relatorio-financeiro-support";
 
 export default function RelatorioFinanceiroPage() {
   const supabase = createClient();

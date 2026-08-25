@@ -65,7 +65,7 @@ const AgendaCreditModal = dynamic(
 );
 
 import type { ClienteHistoricoItem } from "./agenda-workspace-support";
-import { AGENDA_WORKSPACE_STATE_KEY, getAgendaReturnPath, withAgendaReturnTo, addMinutesToSlotTime } from "./agenda-workspace-support";
+import { AGENDA_WORKSPACE_STATE_KEY, withAgendaReturnTo, addMinutesToSlotTime } from "./agenda-workspace-support";
 
 export default function AgendaPage() {
   const router = useRouter();

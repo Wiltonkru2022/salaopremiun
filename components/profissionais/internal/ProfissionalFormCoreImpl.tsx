@@ -18,9 +18,8 @@ import type {
   ProfissionalProcessarResponse,
 } from "@/types/profissional";
 
-
 import type { Servico, ProfissionalServico, DiaTrabalho, AssistenteOption, Profissional, ProfissionalAcesso, ProfissionalServicoRow, ProfissionalAssistenteRow } from "./profissional-form-support";
-import { DIAS_FIXOS, initialForm, initialAcesso, FOTO_MAX_FILE_SIZE, FOTO_ALLOWED_MIME_TYPES, classNames, onlyDigits, validarFotoProfissional, isDiaTrabalho } from "./profissional-form-support";
+import { DIAS_FIXOS, initialForm, initialAcesso, classNames, onlyDigits, validarFotoProfissional, isDiaTrabalho } from "./profissional-form-support";
 
 export default function ProfissionalForm({
   modo,

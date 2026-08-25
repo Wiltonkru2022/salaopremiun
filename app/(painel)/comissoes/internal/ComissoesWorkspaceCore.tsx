@@ -22,7 +22,7 @@ import { groupComboTotals, parseComboDisplayMeta } from "@/lib/combo/display";
 import { getPlanoMinimoParaRecurso, type PlanoCobravelCodigo } from "@/lib/plans/catalog";
 import { getAssinaturaUrl } from "@/lib/site-urls";
 
-import { formatCurrency, formatPercent, formatDate, formatDateTime, formatDateTimeCompact, escapeHtml, extractMoneyFromObservacao, getPrintDetail, formatDocument, getInitials, origemMeta, ComboDescriptionBlock } from "./comissoes-workspace-support";
+import { formatCurrency, formatPercent, formatDate, formatDateTime, formatDateTimeCompact, escapeHtml, getPrintDetail, formatDocument, getInitials, origemMeta, ComboDescriptionBlock } from "./comissoes-workspace-support";
 
 export default function ComissoesPage() {
   const { snapshot: painelSession } = usePainelSession();
