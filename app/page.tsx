@@ -12,8 +12,6 @@ import {
 } from "lucide-react";
 import HomeLanding from "@/components/site/HomeLanding";
 
-const BRAND_GOLD = "#f5bd42";
-
 const appPortalEntries: Array<{
   title: string;
   description: string;
