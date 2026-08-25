@@ -361,7 +361,6 @@ export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardDat
   inicioMes.setHours(0, 0, 0, 0);
   const inicioMesAnterior = new Date(inicioMes);
   inicioMesAnterior.setMonth(inicioMesAnterior.getMonth() - 1);
-  const inicio30Dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
   const [
     totalSaloes,
