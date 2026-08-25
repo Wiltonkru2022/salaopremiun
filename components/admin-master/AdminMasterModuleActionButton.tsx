@@ -106,13 +106,14 @@ function resolveModuleAction(action: string): ModuleAction {
     "abrir recursos": "/admin-master/recursos",
     "abrir financeiro": "/admin-master/financeiro",
     "abrir relatorios": "/admin-master/relatorios",
-    "abrir operacao": "/admin-master/operacao",
+    "abrir operacao": "/admin-master/saude",
     "abrir webhooks": "/admin-master/webhooks",
     "abrir logs": "/admin-master/logs",
     "abrir alertas": "/admin-master/alertas",
     "abrir suporte": "/admin-master/suporte",
     "abrir notificacoes": "/admin-master/notificacoes",
     "abrir campanhas": "/admin-master/campanhas",
+    "abrir parcerias": "/admin-master/parcerias",
     "abrir whatsapp": "/admin-master/whatsapp",
     "abrir feature flags": "/admin-master/feature-flags",
     "abrir admins internos": "/admin-master/usuarios-admin",
@@ -123,6 +124,7 @@ function resolveModuleAction(action: string): ModuleAction {
     "ver tickets": "/admin-master/tickets",
     "ver notificacoes": "/admin-master/notificacoes",
     "ver campanhas": "/admin-master/campanhas",
+    "ver parcerias": "/admin-master/parcerias",
     "ver whatsapp": "/admin-master/whatsapp",
     "creditos e tarifas": "/admin-master/whatsapp/tarifas",
     "ver creditos e tarifas": "/admin-master/whatsapp/tarifas",
@@ -173,12 +175,14 @@ function resolveModuleAction(action: string): ModuleAction {
     agendar: "/admin-master/notificacoes/nova",
     "enviar agora": "/admin-master/notificacoes",
     duplicar: "/admin-master/notificacoes",
-    "criar campanha": "/admin-master/campanhas/nova",
+    "criar campanha": "/admin-master/parcerias#campanhas",
+    "nova campanha": "/admin-master/parcerias#campanhas",
+    "nova parceria": "/admin-master/parcerias#empresas",
     pausar: "/admin-master/campanhas",
     encerrar: "/admin-master/campanhas",
     "ver metricas": "/admin-master/campanhas",
     "notificar cliente": "/admin-master/notificacoes/nova",
-    "corrigir manualmente": "/admin-master/operacao",
+    "corrigir manualmente": "/admin-master/saude",
     "auditar erros": "/admin-master/logs",
     "adicionar pacote": "/admin-master/whatsapp/pacotes",
     "ajustar creditos": "/admin-master/whatsapp/tarifas",
@@ -215,19 +219,21 @@ function resolveModuleAction(action: string): ModuleAction {
 
 function buttonClass(variant: "pill" | "list", state: ActionState) {
   if (variant === "pill") {
-    return `inline-flex items-center rounded-full border px-4 py-2 text-sm font-bold transition ${
+    return `inline-flex min-h-10 items-center rounded-xl border px-4 py-2 text-sm font-bold transition ${
       state === "success"
-        ? "border-emerald-300 bg-emerald-100 text-emerald-900"
-        : "border-white/15 bg-white/10 text-white hover:bg-white/20"
+        ? "border-emerald-200 bg-emerald-50 text-emerald-800"
+        : state === "error"
+          ? "border-amber-200 bg-amber-50 text-amber-900"
+          : "border-violet-200 bg-violet-50 text-violet-700 hover:border-violet-300 hover:bg-violet-100 hover:text-violet-900"
     }`;
   }
 
-  return `block w-full rounded-2xl border px-4 py-3 text-left text-sm font-bold transition ${
+  return `block w-full rounded-xl border px-4 py-3 text-left text-sm font-bold transition ${
     state === "success"
       ? "border-emerald-200 bg-emerald-50 text-emerald-800"
       : state === "error"
         ? "border-amber-200 bg-amber-50 text-amber-900"
-        : "border-zinc-200 text-zinc-800 hover:border-zinc-950 hover:bg-zinc-950 hover:text-white"
+        : "border-zinc-200 bg-white text-zinc-700 hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800"
   }`;
 }
 
