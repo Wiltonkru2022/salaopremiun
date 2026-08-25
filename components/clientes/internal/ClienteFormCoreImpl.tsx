@@ -38,70 +38,19 @@ import {
   maskPhone,
   onlyDigits,
 } from "@/lib/utils/masks";
-
-const initialCliente: ClienteState = {
-  id_salao: "",
-  nome: "",
-  nome_social: "",
-  cashback: 0,
-  data_nascimento: "",
-  whatsapp: "",
-  telefone: "",
-  email: "",
-  cpf: "",
-  endereco: "",
-  numero: "",
-  bairro: "",
-  cidade: "",
-  estado: "",
-  cep: "",
-  profissao: "",
-  observacoes: "",
-  foto_url: "",
-  status: "ativo",
-  ativo: true,
-};
-
-const initialFicha: FichaTecnicaCliente = {
-  alergias: "",
-  historico_quimico: "",
-  condicoes_couro_cabeludo_pele: "",
-  uso_medicamentos: "",
-  gestante: false,
-  lactante: false,
-  restricoes_quimicas: "",
-  observacoes_tecnicas: "",
-};
-
-const initialPreferencias: PreferenciasCliente = {
-  bebida_favorita: "",
-  estilo_atendimento: "",
-  revistas_assuntos_preferidos: "",
-  como_conheceu_salao: "",
-  profissional_favorito_id: "",
-  frequencia_visitas: "",
-  preferencias_gerais: "",
-};
-
-const initialAutorizacoes: AutorizacoesCliente = {
-  autoriza_uso_imagem: false,
-  autoriza_whatsapp_marketing: false,
-  autoriza_email_marketing: false,
-  termo_lgpd_aceito: false,
-  observacoes_autorizacao: "",
-};
-
-const initialAuth: ClienteAuthState = {
-  email: "",
-  senha_hash: "",
-  app_ativo: false,
-};
+import {
+  initialAutorizacoes,
+  initialAuth,
+  initialCliente,
+  initialFicha,
+  initialPreferencias,
+} from "./cliente-form-defaults";
+import { Card, Input, Select, Switch, Textarea } from "./ClienteFormFields";
 
 export default function ClienteForm({ modo }: ClienteFormProps) {
   const supabase = createClient();
   const router = useRouter();
   const params = useParams();
-
   const clienteId = typeof params?.id === "string" ? params.id : "";
 
   const [loading, setLoading] = useState(true);
@@ -110,9 +59,7 @@ export default function ClienteForm({ modo }: ClienteFormProps) {
   const [msg, setMsg] = useState("");
   const [idSalao, setIdSalao] = useState("");
   const [buscandoCep, setBuscandoCep] = useState(false);
-
   const [profissionais, setProfissionais] = useState<ProfissionalCliente[]>([]);
-
   const [cliente, setCliente] = useState<ClienteState>(initialCliente);
   const [ficha, setFicha] = useState<FichaTecnicaCliente>(initialFicha);
   const [preferencias, setPreferencias] = useState<PreferenciasCliente>(initialPreferencias);
@@ -121,50 +68,45 @@ export default function ClienteForm({ modo }: ClienteFormProps) {
   const { planoAccess, upgradeTarget } = usePlanoAccessSnapshot(modo === "novo");
 
   useEffect(() => {
-    bootstrap();
+    void bootstrap();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [modo, clienteId]);
 
-async function bootstrap() {
-  try {
-    setLoading(true);
-    setErro("");
-    setMsg("");
+  async function bootstrap() {
+    try {
+      setLoading(true);
+      setErro("");
+      setMsg("");
 
-    const usuarioLogado = await getUsuarioLogado();
+      const usuarioLogado = await getUsuarioLogado();
+      if (!usuarioLogado) throw new Error("Usuário não autenticado.");
+      if (!usuarioLogado.idSalao) {
+        throw new Error("Não foi possível identificar o salão do usuário.");
+      }
 
-    if (!usuarioLogado) {
-      throw new Error("Usuário não autenticado.");
+      setIdSalao(usuarioLogado.idSalao);
+      setCliente((prev) => ({ ...prev, id_salao: usuarioLogado.idSalao }));
+
+      const { data: listaProfissionais, error: profissionaisError } = await supabase
+        .from("profissionais")
+        .select("id, nome")
+        .eq("id_salao", usuarioLogado.idSalao)
+        .eq("ativo", true)
+        .order("nome", { ascending: true });
+
+      if (profissionaisError) throw profissionaisError;
+      setProfissionais((listaProfissionais as ProfissionalCliente[]) || []);
+
+      if (modo === "editar" && clienteId) {
+        await carregarCliente(clienteId, usuarioLogado.idSalao);
+      }
+    } catch (error: unknown) {
+      console.error(error);
+      setErro(getErrorMessage(error, "Erro ao carregar formulário."));
+    } finally {
+      setLoading(false);
     }
-
-    if (!usuarioLogado.idSalao) {
-      throw new Error("Não foi possível identificar o salão do usuário.");
-    }
-
-    setIdSalao(usuarioLogado.idSalao);
-    setCliente((prev) => ({ ...prev, id_salao: usuarioLogado.idSalao }));
-
-    const { data: listaProfissionais, error: profissionaisError } = await supabase
-      .from("profissionais")
-      .select("id, nome")
-      .eq("id_salao", usuarioLogado.idSalao)
-      .eq("ativo", true)
-      .order("nome", { ascending: true });
-
-    if (profissionaisError) throw profissionaisError;
-
-    setProfissionais((listaProfissionais as ProfissionalCliente[]) || []);
-
-    if (modo === "editar" && clienteId) {
-      await carregarCliente(clienteId, usuarioLogado.idSalao);
-    }
-  } catch (e: unknown) {
-    console.error(e);
-    setErro(getErrorMessage(e, "Erro ao carregar formulário."));
-  } finally {
-    setLoading(false);
   }
-}
 
   async function carregarCliente(id: string, salaoId: string) {
     const { data: clienteRows, error: clienteError } = await supabase
@@ -211,17 +153,17 @@ async function bootstrap() {
       .eq("id_cliente", id)
       .limit(1);
 
-    const f = fichaRows?.[0];
-    if (f) {
+    const fichaRow = fichaRows?.[0];
+    if (fichaRow) {
       setFicha({
-        alergias: f.alergias || "",
-        historico_quimico: f.historico_quimico || "",
-        condicoes_couro_cabeludo_pele: f.condicoes_couro_cabeludo_pele || "",
-        uso_medicamentos: f.uso_medicamentos || "",
-        gestante: f.gestante ?? false,
-        lactante: f.lactante ?? false,
-        restricoes_quimicas: f.restricoes_quimicas || "",
-        observacoes_tecnicas: f.observacoes_tecnicas || "",
+        alergias: fichaRow.alergias || "",
+        historico_quimico: fichaRow.historico_quimico || "",
+        condicoes_couro_cabeludo_pele: fichaRow.condicoes_couro_cabeludo_pele || "",
+        uso_medicamentos: fichaRow.uso_medicamentos || "",
+        gestante: fichaRow.gestante ?? false,
+        lactante: fichaRow.lactante ?? false,
+        restricoes_quimicas: fichaRow.restricoes_quimicas || "",
+        observacoes_tecnicas: fichaRow.observacoes_tecnicas || "",
       });
     }
 
@@ -231,16 +173,16 @@ async function bootstrap() {
       .eq("id_cliente", id)
       .limit(1);
 
-    const p = prefRows?.[0];
-    if (p) {
+    const prefRow = prefRows?.[0];
+    if (prefRow) {
       setPreferencias({
-        bebida_favorita: p.bebida_favorita || "",
-        estilo_atendimento: p.estilo_atendimento || "",
-        revistas_assuntos_preferidos: p.revistas_assuntos_preferidos || "",
-        como_conheceu_salao: p.como_conheceu_salao || "",
-        profissional_favorito_id: p.profissional_favorito_id || "",
-        frequencia_visitas: p.frequencia_visitas || "",
-        preferencias_gerais: p.preferencias_gerais || "",
+        bebida_favorita: prefRow.bebida_favorita || "",
+        estilo_atendimento: prefRow.estilo_atendimento || "",
+        revistas_assuntos_preferidos: prefRow.revistas_assuntos_preferidos || "",
+        como_conheceu_salao: prefRow.como_conheceu_salao || "",
+        profissional_favorito_id: prefRow.profissional_favorito_id || "",
+        frequencia_visitas: prefRow.frequencia_visitas || "",
+        preferencias_gerais: prefRow.preferencias_gerais || "",
       });
     }
 
@@ -250,14 +192,14 @@ async function bootstrap() {
       .eq("id_cliente", id)
       .limit(1);
 
-    const a = autRows?.[0];
-    if (a) {
+    const autRow = autRows?.[0];
+    if (autRow) {
       setAutorizacoes({
-        autoriza_uso_imagem: a.autoriza_uso_imagem ?? false,
-        autoriza_whatsapp_marketing: a.autoriza_whatsapp_marketing ?? false,
-        autoriza_email_marketing: a.autoriza_email_marketing ?? false,
-        termo_lgpd_aceito: a.termo_lgpd_aceito ?? false,
-        observacoes_autorizacao: a.observacoes_autorizacao || "",
+        autoriza_uso_imagem: autRow.autoriza_uso_imagem ?? false,
+        autoriza_whatsapp_marketing: autRow.autoriza_whatsapp_marketing ?? false,
+        autoriza_email_marketing: autRow.autoriza_email_marketing ?? false,
+        termo_lgpd_aceito: autRow.termo_lgpd_aceito ?? false,
+        observacoes_autorizacao: autRow.observacoes_autorizacao || "",
       });
     }
 
@@ -267,18 +209,15 @@ async function bootstrap() {
       .eq("id_cliente", id)
       .limit(1);
 
-    const ac = authRows?.[0];
-    if (ac) {
+    const authRow = authRows?.[0];
+    if (authRow) {
       setAuthCliente({
-        email: ac.email || row.email || "",
-        senha_hash: ac.senha_hash || "",
-        app_ativo: ac.app_ativo ?? false,
+        email: authRow.email || row.email || "",
+        senha_hash: authRow.senha_hash || "",
+        app_ativo: authRow.app_ativo ?? false,
       });
     } else {
-      setAuthCliente((prev) => ({
-        ...prev,
-        email: row.email || "",
-      }));
+      setAuthCliente((prev) => ({ ...prev, email: row.email || "" }));
     }
   }
 
@@ -306,15 +245,12 @@ async function bootstrap() {
 
   async function buscarCep(cepFormatado: string) {
     const cep = onlyDigits(cepFormatado);
-
     if (cep.length !== 8) return;
 
     try {
       setBuscandoCep(true);
-
       const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
       const data = await response.json();
-
       if (data.erro) return;
 
       setCliente((prev) => ({
@@ -337,14 +273,9 @@ async function bootstrap() {
       setErro("");
       setMsg("");
 
-      if (!cliente.nome.trim()) {
-        throw new Error("Informe o nome da cliente.");
-      }
-
+      if (!cliente.nome.trim()) throw new Error("Informe o nome da cliente.");
       if (atingiuLimiteClientes) {
-        throw new Error(
-          `Limite do plano atingido: ${usoClientes} de ${limiteClientes} clientes.`
-        );
+        throw new Error(`Limite do plano atingido: ${usoClientes} de ${limiteClientes} clientes.`);
       }
 
       const payloadCliente: ClientePayload = {
@@ -413,6 +344,7 @@ async function bootstrap() {
         senha_hash: authCliente.senha_hash.trim() || null,
         app_ativo: authCliente.app_ativo,
       };
+
       const requestBody: ClienteProcessarBody = {
         idSalao,
         acao: "salvar",
@@ -425,20 +357,14 @@ async function bootstrap() {
 
       const response = await fetch("/api/clientes/processar", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(requestBody),
       });
 
-      const result = (await response.json().catch(() => ({}))) as Partial<
-        ClienteProcessarResponse
-      > &
+      const result = (await response.json().catch(() => ({}))) as Partial<ClienteProcessarResponse> &
         ClienteProcessarErrorResponse;
 
-      if (!response.ok) {
-        throw new Error(result.error || "Erro ao salvar cliente.");
-      }
+      if (!response.ok) throw new Error(result.error || "Erro ao salvar cliente.");
 
       if (modo === "novo") {
         router.push("/clientes");
@@ -448,11 +374,10 @@ async function bootstrap() {
       if (result.idCliente) {
         setCliente((prev) => ({ ...prev, id: result.idCliente || prev.id }));
       }
-
       setMsg("Cliente atualizado com sucesso.");
-    } catch (e: unknown) {
-      console.error(e);
-      setErro(getErrorMessage(e, "Erro ao salvar cliente."));
+    } catch (error: unknown) {
+      console.error(error);
+      setErro(getErrorMessage(error, "Erro ao salvar cliente."));
     } finally {
       setSaving(false);
     }
@@ -470,9 +395,7 @@ async function bootstrap() {
   const limiteClientes = planoAccess?.limites?.clientes ?? null;
   const usoClientes = planoAccess?.uso?.clientes ?? 0;
   const atingiuLimiteClientes =
-    modo === "novo" &&
-    limiteClientes != null &&
-    usoClientes >= limiteClientes;
+    modo === "novo" && limiteClientes != null && usoClientes >= limiteClientes;
 
   return (
     <div className="bg-white">
@@ -505,15 +428,10 @@ async function bootstrap() {
         ) : null}
 
         {erro ? (
-          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-            {erro}
-          </div>
+          <div className="rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">{erro}</div>
         ) : null}
-
         {msg ? (
-          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-            {msg}
-          </div>
+          <div className="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">{msg}</div>
         ) : null}
 
         <div className="flex flex-wrap justify-between gap-3">
@@ -524,7 +442,6 @@ async function bootstrap() {
           >
             Voltar para lista
           </button>
-
           <button
             type="button"
             onClick={salvar}
@@ -556,172 +473,46 @@ async function bootstrap() {
           <div className="space-y-6 xl:col-span-2">
             <Card title="1. Dados principais" subtitle="Informações básicas para identificar e atender bem a cliente.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Input label="Nome completo" value={cliente.nome} onChange={(v) => setClienteField("nome", v)} required />
-                <Input label="Nome social" value={cliente.nome_social} onChange={(v) => setClienteField("nome_social", v)} />
-                <Input
-                  label="Data de nascimento"
-                  value={cliente.data_nascimento}
-                  onChange={(v) => setClienteField("data_nascimento", maskDate(v))}
-                  placeholder="dd/mm/aaaa"
-                  maxLength={10}
-                />
-                <Input
-                  label="WhatsApp"
-                  value={cliente.whatsapp}
-                  onChange={(v) => setClienteField("whatsapp", maskPhone(v))}
-                  placeholder="(00) 00000-0000"
-                  maxLength={15}
-                />
-                <Input
-                  label="Telefone"
-                  value={cliente.telefone}
-                  onChange={(v) => setClienteField("telefone", maskPhone(v))}
-                  placeholder="(00) 00000-0000"
-                  maxLength={15}
-                />
-                <Input label="E-mail" type="email" value={cliente.email} onChange={(v) => setClienteField("email", v)} />
-                <Input
-                  label="CPF"
-                  value={cliente.cpf}
-                  onChange={(v) => setClienteField("cpf", maskCPF(v))}
-                  placeholder="000.000.000-00"
-                  maxLength={14}
-                />
-                <Input label="Profissão" value={cliente.profissao} onChange={(v) => setClienteField("profissao", v)} />
-
-                <Input
-                  label="CEP"
-                  value={cliente.cep}
-                  onChange={(v) => setClienteField("cep", maskCEP(v))}
-                  onBlur={() => buscarCep(cliente.cep)}
-                  placeholder="00000-000"
-                  maxLength={9}
-                  helperText={buscandoCep ? "Buscando CEP..." : ""}
-                />
-
-                <Input label="Estado" value={cliente.estado} onChange={(v) => setClienteField("estado", v.toUpperCase())} maxLength={2} />
-
-                <div className="md:col-span-2">
-                  <Input label="Endereço" value={cliente.endereco} onChange={(v) => setClienteField("endereco", v)} />
-                </div>
-
-                <Input label="Número" value={cliente.numero} onChange={(v) => setClienteField("numero", v)} />
-                <Input label="Bairro" value={cliente.bairro} onChange={(v) => setClienteField("bairro", v)} />
-                <Input label="Cidade" value={cliente.cidade} onChange={(v) => setClienteField("cidade", v)} />
-
-                <div className="md:col-span-2">
-                  <Textarea label="Observações gerais" value={cliente.observacoes} onChange={(v) => setClienteField("observacoes", v)} />
-                </div>
+                <Input label="Nome completo" value={cliente.nome} onChange={(value) => setClienteField("nome", value)} required />
+                <Input label="Nome social" value={cliente.nome_social} onChange={(value) => setClienteField("nome_social", value)} />
+                <Input label="Data de nascimento" value={cliente.data_nascimento} onChange={(value) => setClienteField("data_nascimento", maskDate(value))} placeholder="dd/mm/aaaa" maxLength={10} />
+                <Input label="WhatsApp" value={cliente.whatsapp} onChange={(value) => setClienteField("whatsapp", maskPhone(value))} placeholder="(00) 00000-0000" maxLength={15} />
+                <Input label="Telefone" value={cliente.telefone} onChange={(value) => setClienteField("telefone", maskPhone(value))} placeholder="(00) 00000-0000" maxLength={15} />
+                <Input label="E-mail" type="email" value={cliente.email} onChange={(value) => setClienteField("email", value)} />
+                <Input label="CPF" value={cliente.cpf} onChange={(value) => setClienteField("cpf", maskCPF(value))} placeholder="000.000.000-00" maxLength={14} />
+                <Input label="Profissão" value={cliente.profissao} onChange={(value) => setClienteField("profissao", value)} />
+                <Input label="CEP" value={cliente.cep} onChange={(value) => setClienteField("cep", maskCEP(value))} onBlur={() => void buscarCep(cliente.cep)} placeholder="00000-000" maxLength={9} helperText={buscandoCep ? "Buscando CEP..." : ""} />
+                <Input label="Estado" value={cliente.estado} onChange={(value) => setClienteField("estado", value.toUpperCase())} maxLength={2} />
+                <div className="md:col-span-2"><Input label="Endereço" value={cliente.endereco} onChange={(value) => setClienteField("endereco", value)} /></div>
+                <Input label="Número" value={cliente.numero} onChange={(value) => setClienteField("numero", value)} />
+                <Input label="Bairro" value={cliente.bairro} onChange={(value) => setClienteField("bairro", value)} />
+                <Input label="Cidade" value={cliente.cidade} onChange={(value) => setClienteField("cidade", value)} />
+                <div className="md:col-span-2"><Textarea label="Observações gerais" value={cliente.observacoes} onChange={(value) => setClienteField("observacoes", value)} /></div>
               </div>
             </Card>
 
             <Card title="2. Cuidados e ficha técnica" subtitle="Informações importantes para um atendimento seguro.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Textarea label="Alergias" value={ficha.alergias} onChange={(v) => setFichaField("alergias", v)} />
-                <Textarea
-                  label="Uso de medicamentos"
-                  value={ficha.uso_medicamentos}
-                  onChange={(v) => setFichaField("uso_medicamentos", v)}
-                />
-                <Textarea
-                  label="Histórico químico"
-                  value={ficha.historico_quimico}
-                  onChange={(v) => setFichaField("historico_quimico", v)}
-                />
-                <Textarea
-                  label="Condições do couro cabeludo / pele"
-                  value={ficha.condicoes_couro_cabeludo_pele}
-                  onChange={(v) => setFichaField("condicoes_couro_cabeludo_pele", v)}
-                />
-                <Textarea
-                  label="Restrições químicas"
-                  value={ficha.restricoes_quimicas}
-                  onChange={(v) => setFichaField("restricoes_quimicas", v)}
-                />
-                <Textarea
-                  label="Observações técnicas"
-                  value={ficha.observacoes_tecnicas}
-                  onChange={(v) => setFichaField("observacoes_tecnicas", v)}
-                />
-
-                <Switch
-                  label="Gestante"
-                  checked={ficha.gestante}
-                  onChange={(v) => setFichaField("gestante", v)}
-                />
-
-                <Switch
-                  label="Lactante"
-                  checked={ficha.lactante}
-                  onChange={(v) => setFichaField("lactante", v)}
-                />
+                <Textarea label="Alergias" value={ficha.alergias} onChange={(value) => setFichaField("alergias", value)} />
+                <Textarea label="Uso de medicamentos" value={ficha.uso_medicamentos} onChange={(value) => setFichaField("uso_medicamentos", value)} />
+                <Textarea label="Histórico químico" value={ficha.historico_quimico} onChange={(value) => setFichaField("historico_quimico", value)} />
+                <Textarea label="Condições do couro cabeludo / pele" value={ficha.condicoes_couro_cabeludo_pele} onChange={(value) => setFichaField("condicoes_couro_cabeludo_pele", value)} />
+                <Textarea label="Restrições químicas" value={ficha.restricoes_quimicas} onChange={(value) => setFichaField("restricoes_quimicas", value)} />
+                <Textarea label="Observações técnicas" value={ficha.observacoes_tecnicas} onChange={(value) => setFichaField("observacoes_tecnicas", value)} />
+                <Switch label="Gestante" checked={ficha.gestante} onChange={(value) => setFichaField("gestante", value)} />
+                <Switch label="Lactante" checked={ficha.lactante} onChange={(value) => setFichaField("lactante", value)} />
               </div>
             </Card>
 
             <Card title="3. Preferencias de atendimento" subtitle="Detalhes que ajudam a personalizar a experiência.">
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                <Input
-                  label="Bebida favorita"
-                  value={preferencias.bebida_favorita}
-                  onChange={(v) => setPreferenciasField("bebida_favorita", v)}
-                />
-
-                <Select
-                  label="Estilo de atendimento"
-                  value={preferencias.estilo_atendimento}
-                  onChange={(v) => setPreferenciasField("estilo_atendimento", v)}
-                  options={[
-                    { value: "", label: "Selecione" },
-                    { value: "conversa", label: "Gosta de conversar" },
-                    { value: "silencio", label: "Prefere silêncio" },
-                    { value: "tanto_faz", label: "Tanto faz" },
-                  ]}
-                />
-
-                <Input
-                  label="Como conheceu o salão?"
-                  value={preferencias.como_conheceu_salao}
-                  onChange={(v) => setPreferenciasField("como_conheceu_salao", v)}
-                />
-
-                <Select
-                  label="Frequência de visitas"
-                  value={preferencias.frequencia_visitas}
-                  onChange={(v) => setPreferenciasField("frequencia_visitas", v)}
-                  options={[
-                    { value: "", label: "Selecione" },
-                    { value: "semanal", label: "Semanal" },
-                    { value: "quinzenal", label: "Quinzenal" },
-                    { value: "mensal", label: "Mensal" },
-                    { value: "eventual", label: "Eventual" },
-                  ]}
-                />
-
-                <Select
-                  label="Profissional favorito"
-                  value={preferencias.profissional_favorito_id}
-                  onChange={(v) => setPreferenciasField("profissional_favorito_id", v)}
-                  options={[
-                    { value: "", label: "Selecione" },
-                    ...profissionais.map((p) => ({ value: p.id, label: p.nome })),
-                  ]}
-                />
-
-                <div className="md:col-span-2">
-                  <Textarea
-                    label="Revistas / assuntos preferidos"
-                    value={preferencias.revistas_assuntos_preferidos}
-                    onChange={(v) => setPreferenciasField("revistas_assuntos_preferidos", v)}
-                  />
-                </div>
-
-                <div className="md:col-span-2">
-                  <Textarea
-                    label="Preferências gerais"
-                    value={preferencias.preferencias_gerais}
-                    onChange={(v) => setPreferenciasField("preferencias_gerais", v)}
-                  />
-                </div>
+                <Input label="Bebida favorita" value={preferencias.bebida_favorita} onChange={(value) => setPreferenciasField("bebida_favorita", value)} />
+                <Select label="Estilo de atendimento" value={preferencias.estilo_atendimento} onChange={(value) => setPreferenciasField("estilo_atendimento", value)} options={[{ value: "", label: "Selecione" }, { value: "conversa", label: "Gosta de conversar" }, { value: "silencio", label: "Prefere silêncio" }, { value: "tanto_faz", label: "Tanto faz" }]} />
+                <Input label="Como conheceu o salão?" value={preferencias.como_conheceu_salao} onChange={(value) => setPreferenciasField("como_conheceu_salao", value)} />
+                <Select label="Frequência de visitas" value={preferencias.frequencia_visitas} onChange={(value) => setPreferenciasField("frequencia_visitas", value)} options={[{ value: "", label: "Selecione" }, { value: "semanal", label: "Semanal" }, { value: "quinzenal", label: "Quinzenal" }, { value: "mensal", label: "Mensal" }, { value: "eventual", label: "Eventual" }]} />
+                <Select label="Profissional favorito" value={preferencias.profissional_favorito_id} onChange={(value) => setPreferenciasField("profissional_favorito_id", value)} options={[{ value: "", label: "Selecione" }, ...profissionais.map((profissional) => ({ value: profissional.id, label: profissional.nome }))]} />
+                <div className="md:col-span-2"><Textarea label="Revistas / assuntos preferidos" value={preferencias.revistas_assuntos_preferidos} onChange={(value) => setPreferenciasField("revistas_assuntos_preferidos", value)} /></div>
+                <div className="md:col-span-2"><Textarea label="Preferências gerais" value={preferencias.preferencias_gerais} onChange={(value) => setPreferenciasField("preferencias_gerais", value)} /></div>
               </div>
             </Card>
           </div>
@@ -729,192 +520,23 @@ async function bootstrap() {
           <div className="space-y-6">
             <Card title="4. Autorizacoes" subtitle="Imagem, comunicacao e consentimentos da cliente.">
               <div className="space-y-4">
-                <Switch
-                  label="Autoriza uso de imagem"
-                  checked={autorizacoes.autoriza_uso_imagem}
-                  onChange={(v) => setAutorizacoesField("autoriza_uso_imagem", v)}
-                />
-
-                <Switch
-                  label="Autoriza promoções no WhatsApp"
-                  checked={autorizacoes.autoriza_whatsapp_marketing}
-                  onChange={(v) => setAutorizacoesField("autoriza_whatsapp_marketing", v)}
-                />
-
-                <Switch
-                  label="Autoriza promoções por e-mail"
-                  checked={autorizacoes.autoriza_email_marketing}
-                  onChange={(v) => setAutorizacoesField("autoriza_email_marketing", v)}
-                />
-
-                <Switch
-                  label="Termo LGPD aceito"
-                  checked={autorizacoes.termo_lgpd_aceito}
-                  onChange={(v) => setAutorizacoesField("termo_lgpd_aceito", v)}
-                />
-
-                <Textarea
-                  label="Observações"
-                  value={autorizacoes.observacoes_autorizacao}
-                  onChange={(v) => setAutorizacoesField("observacoes_autorizacao", v)}
-                />
+                <Switch label="Autoriza uso de imagem" checked={autorizacoes.autoriza_uso_imagem} onChange={(value) => setAutorizacoesField("autoriza_uso_imagem", value)} />
+                <Switch label="Autoriza promoções no WhatsApp" checked={autorizacoes.autoriza_whatsapp_marketing} onChange={(value) => setAutorizacoesField("autoriza_whatsapp_marketing", value)} />
+                <Switch label="Autoriza promoções por e-mail" checked={autorizacoes.autoriza_email_marketing} onChange={(value) => setAutorizacoesField("autoriza_email_marketing", value)} />
+                <Switch label="Termo LGPD aceito" checked={autorizacoes.termo_lgpd_aceito} onChange={(value) => setAutorizacoesField("termo_lgpd_aceito", value)} />
+                <Textarea label="Observações" value={autorizacoes.observacoes_autorizacao} onChange={(value) => setAutorizacoesField("observacoes_autorizacao", value)} />
               </div>
             </Card>
 
             <Card title="5. Status e foto" subtitle="Controle simples do cadastro.">
               <div className="space-y-4">
-                <Select
-                  label="Status"
-                  value={cliente.ativo ? "ativo" : "inativo"}
-                  onChange={(v) => {
-                    const ativo = v === "ativo";
-                    setClienteField("ativo", ativo);
-                    setClienteField("status", ativo ? "ativo" : "inativo");
-                  }}
-                  options={[
-                    { value: "ativo", label: "Ativo" },
-                    { value: "inativo", label: "Inativo" },
-                  ]}
-                />
-
-                <Input
-                  label="URL da foto"
-                  value={cliente.foto_url}
-                  onChange={(v) => setClienteField("foto_url", v)}
-                />
+                <Select label="Status" value={cliente.ativo ? "ativo" : "inativo"} onChange={(value) => { const ativo = value === "ativo"; setClienteField("ativo", ativo); setClienteField("status", ativo ? "ativo" : "inativo"); }} options={[{ value: "ativo", label: "Ativo" }, { value: "inativo", label: "Inativo" }]} />
+                <Input label="URL da foto" value={cliente.foto_url} onChange={(value) => setClienteField("foto_url", value)} />
               </div>
             </Card>
           </div>
         </div>
       </div>
     </div>
-  );
-}
-
-function Card({
-  title,
-  subtitle,
-  children,
-}: {
-  title: string;
-  subtitle?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <div className="rounded-lg border border-zinc-200 bg-white p-5 shadow-sm md:p-6">
-      <div className="mb-5">
-        <h2 className="text-lg font-bold text-zinc-900">{title}</h2>
-        {subtitle ? <p className="mt-1 text-sm text-zinc-500">{subtitle}</p> : null}
-      </div>
-      {children}
-    </div>
-  );
-}
-
-function Input({
-  label,
-  value,
-  onChange,
-  type = "text",
-  placeholder,
-  required,
-  maxLength,
-  onBlur,
-  helperText,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  type?: string;
-  placeholder?: string;
-  required?: boolean;
-  maxLength?: number;
-  onBlur?: () => void;
-  helperText?: string;
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-sm font-semibold text-zinc-700">
-        {label} {required ? <span className="text-red-500">*</span> : null}
-      </label>
-      <input
-        type={type}
-        value={value}
-        maxLength={maxLength}
-        onChange={(e) => onChange(e.target.value)}
-        onBlur={onBlur}
-        placeholder={placeholder}
-        className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
-      />
-      {helperText ? <p className="mt-1 text-xs text-zinc-500">{helperText}</p> : null}
-    </div>
-  );
-}
-
-function Textarea({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-sm font-semibold text-zinc-700">{label}</label>
-      <textarea
-        rows={4}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
-      />
-    </div>
-  );
-}
-
-function Select({
-  label,
-  value,
-  onChange,
-  options,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: { value: string; label: string }[];
-}) {
-  return (
-    <div>
-      <label className="mb-1 block text-sm font-semibold text-zinc-700">{label}</label>
-      <select
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3 text-sm outline-none transition focus:border-zinc-900"
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-function Switch({
-  label,
-  checked,
-  onChange,
-}: {
-  label: string;
-  checked: boolean;
-  onChange: (value: boolean) => void;
-}) {
-  return (
-    <label className="flex items-center justify-between rounded-2xl border border-zinc-200 px-4 py-3">
-      <span className="text-sm font-medium text-zinc-700">{label}</span>
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-    </label>
   );
 }
