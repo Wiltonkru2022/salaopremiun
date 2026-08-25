@@ -853,7 +853,7 @@ async function loadOwnedAppointment(params: {
   const { data: agendamento, error } = await params.supabaseAdmin
     .from("agendamentos")
     .select(
-      "id, id_salao, cliente_id, profissional_id, servico_id, id_comanda, status, data, hora_inicio, hora_fim, clientes(nome), profissionais(nome, nome_exibicao), servicos(nome)"
+      "id, id_salao, cliente_id, profissional_id, servico_id, id_comanda, status, data, hora_inicio, hora_fim, clientes!agendamentos_cliente_id_fkey(nome), profissionais(nome, nome_exibicao), servicos(nome)"
     )
     .eq("id", params.idAgendamento)
     .limit(1)
