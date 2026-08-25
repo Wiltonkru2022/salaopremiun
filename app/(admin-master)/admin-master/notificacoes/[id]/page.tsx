@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { AdminDataTable } from "@/components/admin-master/AdminMasterViews";
+import AdminMasterDataTableClient from "@/components/admin-master/AdminMasterDataTableClient";
+import AdminMasterPageHeader, { AdminMasterMetricCard } from "@/components/admin-master/AdminMasterPageHeader";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import {
   formatSaoPauloDateTimeLocal,
@@ -19,18 +20,6 @@ function dateTime(value?: string | null) {
     timeStyle: "short",
     timeZone: "America/Sao_Paulo",
   }).format(new Date(value));
-}
-
-function MetricCard(props: { label: string; value: string; hint?: string }) {
-  return (
-    <div className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
-      <div className="text-[11px] font-black uppercase tracking-[0.22em] text-zinc-400">
-        {props.label}
-      </div>
-      <div className="mt-2 text-2xl font-black text-zinc-950">{props.value}</div>
-      {props.hint ? <p className="mt-2 text-sm text-zinc-500">{props.hint}</p> : null}
-    </div>
-  );
 }
 
 export const dynamic = "force-dynamic";
@@ -112,38 +101,20 @@ export default async function AdminMasterNotificacaoDetailPage({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[34px] bg-zinc-950 p-7 text-white shadow-sm">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="text-xs font-bold uppercase tracking-[0.35em] text-amber-200">
-              {isVisual ? "Aviso visual · App Cliente" : "Notificação push"}
-            </div>
-            <h1 className="mt-3 font-display text-4xl font-black">
-              {String(notificacao.titulo || "Notificação")}
-            </h1>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
-              {String(
-                notificacao.descricao ||
-                  "Detalhe operacional do disparo, leitura, cliques e falhas."
-              )}
-            </p>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/admin-master/notificacoes/nova"
-              className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/20"
-            >
-              Nova comunicação
-            </Link>
-            <Link
-              href="/admin-master/notificacoes"
-              className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/20"
-            >
-              Voltar
-            </Link>
-          </div>
-        </div>
-      </section>
+      <AdminMasterPageHeader
+        eyebrow={isVisual ? "Aviso visual · App Cliente" : "Notificação push"}
+        title={String(notificacao.titulo || "Notificação")}
+        description={String(notificacao.descricao || "Detalhe operacional do disparo, leitura, cliques e falhas.")}
+        breadcrumb={[
+          { label: "Admin Master", href: "/admin-master" },
+          { label: "Comunicação", href: "/admin-master/notificacoes" },
+          { label: "Detalhe" },
+        ]}
+        actions={<>
+          <Link href="/admin-master/notificacoes/nova" className="inline-flex h-10 items-center rounded-xl bg-violet-600 px-4 text-sm font-bold text-white transition hover:bg-violet-700">Nova comunicação</Link>
+          <Link href="/admin-master/notificacoes" className="inline-flex h-10 items-center rounded-xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-700 transition hover:border-violet-200 hover:text-violet-700">Voltar</Link>
+        </>}
+      />
 
       {query.ok ? (
         <div className="rounded-[22px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
@@ -157,34 +128,34 @@ export default async function AdminMasterNotificacaoDetailPage({
       ) : null}
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <MetricCard
+        <AdminMasterMetricCard
           label={isVisual ? "Contas alcançadas" : "Destinos"}
           value={String(total)}
           hint={String(notificacao.publico_tipo || "-")}
         />
-        <MetricCard
+        <AdminMasterMetricCard
           label={isVisual ? "Exibições" : "Entregues"}
           value={String(shown)}
           hint={String(notificacao.status || "-")}
         />
-        <MetricCard
+        <AdminMasterMetricCard
           label="Lidas"
           value={String(read)}
           hint={`${total ? Math.round((read / total) * 100) : 0}% de leitura`}
         />
-        <MetricCard
+        <AdminMasterMetricCard
           label="Cliques"
           value={String(clicks)}
           hint={String(notificacao.link_url || "Sem link")}
         />
-        <MetricCard
+        <AdminMasterMetricCard
           label={isVisual ? "Dispensadas" : "Falhas"}
           value={String(dismissed)}
           hint={isVisual ? "Clientes que fecharam" : "Destinos com erro"}
         />
       </section>
 
-      <section className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+      <section className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
         <div className="grid gap-3 text-sm text-zinc-600 md:grid-cols-2 xl:grid-cols-5">
           <div><span className="font-bold text-zinc-950">Tipo:</span> {String(notificacao.tipo || "-")}</div>
           <div><span className="font-bold text-zinc-950">Status:</span> {String(notificacao.status || "-")}</div>
@@ -195,7 +166,7 @@ export default async function AdminMasterNotificacaoDetailPage({
       </section>
 
       {isVisual && visualConfig ? (
-        <section className="rounded-[30px] border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
+        <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
               <div className="text-xs font-black uppercase tracking-[0.22em] text-zinc-400">
@@ -358,13 +329,11 @@ export default async function AdminMasterNotificacaoDetailPage({
         </section>
       ) : null}
 
-      <AdminDataTable
+      <AdminMasterDataTableClient
         rows={rows}
-        columns={
-          isVisual
-            ? ["cliente", "exibida", "lida", "dispensada", "clique"]
-            : ["destino", "status", "entregue", "lida", "clique"]
-        }
+        columns={isVisual ? ["cliente", "exibida", "lida", "dispensada", "clique"] : ["destino", "status", "entregue", "lida", "clique"]}
+        emptyTitle="Nenhum destino encontrado"
+        emptyDescription="Os resultados de entrega e interação aparecerão aqui."
       />
     </div>
   );

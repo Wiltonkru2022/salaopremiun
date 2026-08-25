@@ -55,6 +55,14 @@ export type AdminMasterShellData = {
   auditoriaRecente: AdminMasterAuditEntry[];
 };
 
+export type AdminMasterDashboardInsight = {
+  label: string;
+  value: string;
+  delta?: number | null;
+  hint: string;
+  tone?: AdminKpi["tone"];
+};
+
 export type AdminMasterDashboardData = {
   kpis: AdminKpi[];
   planos: AdminTableRow[];
@@ -62,6 +70,8 @@ export type AdminMasterDashboardData = {
   cancelados: number;
   operational: AdminMasterOperationalSnapshot;
   digitalizacao: AdminTableRow[];
+  insights: AdminMasterDashboardInsight[];
+  revenueTrend: number[];
 };
 
 type CountResult = {
@@ -349,6 +359,9 @@ export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardDat
   const inicioMes = new Date();
   inicioMes.setDate(1);
   inicioMes.setHours(0, 0, 0, 0);
+  const inicioMesAnterior = new Date(inicioMes);
+  inicioMesAnterior.setMonth(inicioMesAnterior.getMonth() - 1);
+  const inicio30Dias = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
 
   const [
     totalSaloes,
@@ -369,6 +382,8 @@ export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardDat
     clientesParaDiagnostico,
     planos,
     recentes,
+    saloesCrescimento,
+    assinaturasRecentes,
   ] = await Promise.all([
     supabase.from("saloes").select("id", { count: "exact", head: true }),
     countSaloesByStatus("ativo"),
@@ -388,8 +403,8 @@ export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardDat
       .in("status", ["vencida", "bloqueada", "cancelada"]),
     supabase
       .from("assinaturas_cobrancas")
-      .select("valor, pago_em, payment_date, confirmed_date, status")
-      .gte("created_at", inicioMes.toISOString()),
+      .select("valor, pago_em, payment_date, confirmed_date, status, created_at")
+      .gte("created_at", inicioMesAnterior.toISOString()),
     supabase
       .from("assinaturas_cobrancas")
       .select("id", { count: "exact", head: true })
@@ -433,25 +448,83 @@ export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardDat
       .select("id, nome, responsavel, email, plano, status, created_at")
       .order("created_at", { ascending: false })
       .limit(8),
+    supabase
+      .from("saloes")
+      .select("id, created_at")
+      .gte("created_at", inicioMesAnterior.toISOString())
+      .limit(500),
+    supabase
+      .from("assinaturas")
+      .select("id, status, trial_inicio_em, pago_em, updated_at, created_at")
+      .gte("updated_at", inicioMesAnterior.toISOString())
+      .limit(500),
   ]);
 
   const assinaturasAtivasRows =
     (assinaturasAtivas.data as { valor?: number | string | null }[] | null) ||
     [];
   const cobrancasRows =
-    (cobrancasMes.data as { valor?: number | string | null; status?: string | null }[] | null) ||
+    (cobrancasMes.data as { valor?: number | string | null; status?: string | null; pago_em?: string | null; payment_date?: string | null; confirmed_date?: string | null; created_at?: string | null }[] | null) ||
     [];
   const mrr = assinaturasAtivasRows.reduce(
     (acc, row) => acc + safeNumber(row.valor),
     0
   );
-  const receitaMes = cobrancasRows
-    .filter((row) =>
-      ["received", "confirmed", "pago", "paid"].includes(
-        String(row.status || "").toLowerCase()
-      )
+  const paidCharges = cobrancasRows.filter((row) =>
+    ["received", "confirmed", "pago", "paid"].includes(
+      String(row.status || "").toLowerCase()
     )
-    .reduce((acc, row) => acc + safeNumber(row.valor), 0);
+  );
+  const chargePaidAt = (row: (typeof paidCharges)[number]) =>
+    row.pago_em || row.payment_date || row.confirmed_date || row.created_at || null;
+  const currentMonthCharges = paidCharges.filter((row) => {
+    const paidAt = chargePaidAt(row);
+    return paidAt ? new Date(paidAt).getTime() >= inicioMes.getTime() : false;
+  });
+  const previousMonthCharges = paidCharges.filter((row) => {
+    const paidAt = chargePaidAt(row);
+    if (!paidAt) return false;
+    const value = new Date(paidAt).getTime();
+    return value >= inicioMesAnterior.getTime() && value < inicioMes.getTime();
+  });
+  const receitaMes = currentMonthCharges.reduce((acc, row) => acc + safeNumber(row.valor), 0);
+  const receitaMesAnterior = previousMonthCharges.reduce((acc, row) => acc + safeNumber(row.valor), 0);
+  const revenueDelta = receitaMesAnterior > 0 ? ((receitaMes - receitaMesAnterior) / receitaMesAnterior) * 100 : receitaMes > 0 ? 100 : 0;
+
+  const growthRows = ((saloesCrescimento.data || []) as Array<{ id: string; created_at?: string | null }>);
+  const novosMes = growthRows.filter((row) => row.created_at && new Date(row.created_at).getTime() >= inicioMes.getTime()).length;
+  const novosMesAnterior = growthRows.filter((row) => {
+    if (!row.created_at) return false;
+    const value = new Date(row.created_at).getTime();
+    return value >= inicioMesAnterior.getTime() && value < inicioMes.getTime();
+  }).length;
+  const growthDelta = novosMesAnterior > 0 ? ((novosMes - novosMesAnterior) / novosMesAnterior) * 100 : novosMes > 0 ? 100 : 0;
+
+  const recentSubscriptions = ((assinaturasRecentes.data || []) as Array<{ status?: string | null; trial_inicio_em?: string | null; pago_em?: string | null; updated_at?: string | null }>);
+  const trialsStarted30 = recentSubscriptions.filter((row) => row.trial_inicio_em && new Date(row.trial_inicio_em).getTime() >= inicio30Dias.getTime());
+  const convertedTrials = trialsStarted30.filter((row) => ACTIVE_SUBSCRIPTION_STATUSES.has(normalizeStatus(row.status)) || Boolean(row.pago_em)).length;
+  const conversionRate = trialsStarted30.length ? (convertedTrials / trialsStarted30.length) * 100 : 0;
+  const cancelled30 = recentSubscriptions.filter((row) => normalizeStatus(row.status) === "cancelada" && row.updated_at && new Date(row.updated_at).getTime() >= inicio30Dias.getTime()).length;
+  const activeSubscriptionCount = assinaturasAtivasRows.length;
+  const churnRate = activeSubscriptionCount + cancelled30 > 0 ? (cancelled30 / (activeSubscriptionCount + cancelled30)) * 100 : 0;
+  const delinquencyRate = activeSubscriptionCount > 0 ? (safeCount(cobrancasVencidas) / activeSubscriptionCount) * 100 : 0;
+  const averageTicket = currentMonthCharges.length ? receitaMes / currentMonthCharges.length : 0;
+
+  const revenueTrend = Array.from({ length: 30 }, (_, index) => {
+    const dayStart = new Date();
+    dayStart.setHours(0, 0, 0, 0);
+    dayStart.setDate(dayStart.getDate() - (29 - index));
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+    return paidCharges
+      .filter((row) => {
+        const paidAt = chargePaidAt(row);
+        if (!paidAt) return false;
+        const value = new Date(paidAt).getTime();
+        return value >= dayStart.getTime() && value < dayEnd.getTime();
+      })
+      .reduce((acc, row) => acc + safeNumber(row.valor), 0);
+  });
   const totalClientesCount = safeCount(totalClientes);
   const clientesAppCount = safeCount(clientesAppVinculados);
   const taxaDigitalizacao =
@@ -544,6 +617,15 @@ export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardDat
         tone: taxaDigitalizacao >= 35 ? "green" : "blue",
       },
     ] satisfies AdminKpi[],
+    insights: [
+      { label: "Receita", value: currency(receitaMes), delta: revenueDelta, hint: "vs mês anterior", tone: revenueDelta >= 0 ? "green" : "red" },
+      { label: "Crescimento da base", value: `${novosMes} novo(s)`, delta: growthDelta, hint: "novos salões vs mês anterior", tone: growthDelta >= 0 ? "blue" : "amber" },
+      { label: "Trial → pago", value: percent(conversionRate), hint: `${convertedTrials} de ${trialsStarted30.length} trials recentes`, tone: conversionRate >= 35 ? "green" : "blue" },
+      { label: "Churn 30d", value: percent(churnRate), hint: `${cancelled30} cancelamento(s) recente(s)`, tone: churnRate <= 5 ? "green" : churnRate <= 10 ? "amber" : "red" },
+      { label: "Inadimplência", value: percent(delinquencyRate), hint: `${safeCount(cobrancasVencidas)} cobrança(s) vencida(s)`, tone: delinquencyRate <= 5 ? "green" : delinquencyRate <= 12 ? "amber" : "red" },
+      { label: "Ticket médio", value: currency(averageTicket), hint: `${currentMonthCharges.length} recebimento(s) no mês`, tone: "blue" },
+    ],
+    revenueTrend,
     planos: (planos.data || []) as AdminTableRow[],
     recentes: ((recentes.data || []) as {
       id: string;
@@ -1177,6 +1259,8 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
   const inicioMes = new Date();
   inicioMes.setDate(1);
   inicioMes.setHours(0, 0, 0, 0);
+  const inicioMesAnterior = new Date(inicioMes);
+  inicioMesAnterior.setMonth(inicioMesAnterior.getMonth() - 1);
 
   const [
     { data: assinaturasContexto },

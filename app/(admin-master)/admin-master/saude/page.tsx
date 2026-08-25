@@ -363,10 +363,10 @@ export default async function AdminMasterSaudePage() {
 
           <Link
             href="/status"
-            className="flex items-center justify-between rounded-[28px] border border-zinc-900 bg-zinc-950 p-5 text-white shadow-sm"
+            className="flex items-center justify-between rounded-2xl border border-violet-200 bg-violet-50 p-5 text-violet-950 shadow-sm"
           >
             <div>
-              <div className="text-xs font-black uppercase tracking-[0.16em] text-zinc-400">
+              <div className="text-xs font-black uppercase tracking-[0.16em] text-violet-500">
                 Página pública
               </div>
               <div className="mt-1 text-lg font-black">Abrir /status</div>

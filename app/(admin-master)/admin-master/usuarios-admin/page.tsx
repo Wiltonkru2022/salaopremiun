@@ -1,4 +1,4 @@
-import { AdminSectionView } from "@/components/admin-master/AdminMasterViews";
+import AdminMasterSectionSimple from "@/components/admin-master/AdminMasterSectionSimple";
 import { AdminMasterUsersEditor } from "@/components/admin-master/AdminMasterGovernanceEditor";
 import { salvarUsuarioAdminMaster } from "@/app/(admin-master)/admin-master/usuarios-admin/actions";
 import { getAdminMasterSection } from "@/lib/admin-master/data";
@@ -14,7 +14,7 @@ export default async function AdminMasterUsuariosAdminPage() {
 
   return (
     <div className="space-y-6">
-      <AdminSectionView data={data} />
+      <AdminMasterSectionSimple data={data} />
       <AdminMasterUsersEditor
         data={editorData}
         salvarUsuario={salvarUsuarioAdminMaster}

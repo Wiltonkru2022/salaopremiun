@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { normalizeExternalDestination } from "@/lib/parcerias/urls";
 
 export const dynamic = "force-dynamic";
 
@@ -49,7 +50,7 @@ function asCampaign(campanha: any) {
     ctaTexto:
       criativo?.cta_texto ||
       (origem === "salao_premium" ? "Saiba mais" : "Conhecer parceiro"),
-    destinoUrl: criativo?.destino_url || campanha.destino_url || null,
+    destinoUrl: normalizeExternalDestination(criativo?.destino_url || campanha.destino_url),
     cupomCodigo: campanha.cupom_codigo || null,
     prioridade: Number(campanha.prioridade || 0),
     pesoRotacao: Number(campanha.peso_rotacao || 1),

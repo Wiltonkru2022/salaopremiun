@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import AdminMasterPageHeader from "@/components/admin-master/AdminMasterPageHeader";
 import AdminMasterWebhookReprocessButton from "@/components/admin-master/AdminMasterWebhookReprocessButton";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import {
@@ -80,31 +81,13 @@ export default async function AdminMasterWebhookDetailPage({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[34px] bg-zinc-950 p-7 text-white shadow-sm">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="text-xs font-bold uppercase tracking-[0.35em] text-amber-200">
-              AdminMaster
-            </div>
-            <h1 className="mt-3 font-display text-4xl font-black">
-              Payload do webhook
-            </h1>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
-              Evento bruto do Asaas, espelho operacional no AdminMaster e replay
-              manual com auditoria.
-            </p>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            <Link
-              href="/admin-master/webhooks"
-              className="rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-bold text-white transition hover:bg-white/20"
-            >
-              Voltar para webhooks
-            </Link>
-          </div>
-        </div>
-      </section>
+      <AdminMasterPageHeader
+        eyebrow="Diagnóstico técnico"
+        title="Payload do webhook"
+        description="Evento bruto do Asaas, espelho operacional no Admin Master e replay manual com auditoria."
+        breadcrumb={[{ label: "Admin Master", href: "/admin-master" }, { label: "Webhooks", href: "/admin-master/webhooks" }, { label: "Detalhe" }]}
+        actions={<Link href="/admin-master/webhooks" className="inline-flex h-10 items-center rounded-xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-700 transition hover:border-violet-200 hover:text-violet-700">Voltar para webhooks</Link>}
+      />
 
       <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard

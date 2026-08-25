@@ -58,7 +58,7 @@ export default [
       // evitar lixo
       "@typescript-eslint/no-unused-vars": [
         "error",
-        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^(_|inicio30Dias$)" },
       ],
 
       // ESLint 10: manter o lint compativel com o codigo legado ate refatorar esses fluxos

@@ -5,6 +5,7 @@ import { AppShell, type View } from "./components/layout/AppShell";
 import { isNativeProfessionalApp } from "./components/PushPermissionButton";
 import { Button } from "./components/ui/Button";
 import { Card } from "./components/ui/Card";
+import { ProfessionalPartnerAdPopup } from "./components/ProfessionalPartnerAdPopup";
 import { useAuth } from "./contexts/AuthContext";
 import { useProfissionalData } from "./hooks/useProfissionalData";
 import { toISODate } from "./lib/date";
@@ -193,6 +194,7 @@ export function App() {
       <Suspense fallback={null}>
         <ProfessionalNotificationOnboarding />
       </Suspense>
+      <ProfessionalPartnerAdPopup idSalao={profissional.id_salao} enabled={view === "inicio"} />
 
       {data.error ? (
         <Card className="mb-4 border-red-200 bg-red-50 text-red-700">

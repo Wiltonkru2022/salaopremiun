@@ -97,6 +97,7 @@ type TicketListRow = {
   solicitante_nome: string | null;
   sla_limite_em?: string | null;
   origem_contexto?: Record<string, unknown> | null;
+  id_responsavel_admin?: string | null;
 };
 
 type TicketMessageRow = {
@@ -149,6 +150,8 @@ export type TicketSummary = {
   recoveryStatus?: string | null;
   recoveryReviewStatus?: string | null;
   recoveryReadyToComplete?: boolean;
+  responsavelAdminId?: string | null;
+  responsavelAdminNome?: string | null;
 };
 
 export type TicketMetrics = {
@@ -361,7 +364,8 @@ function buildTicketMetrics(items: TicketSummary[]): TicketMetrics {
 function mapTicketSummary(
   row: TicketListRow,
   latestMessage?: TicketMessageRow | null,
-  salaoNome?: string | null
+  salaoNome?: string | null,
+  responsavelAdminNome?: string | null
 ): TicketSummary {
   const recoveryContext =
     row.origem_contexto && typeof row.origem_contexto === "object"
@@ -412,6 +416,8 @@ function mapTicketSummary(
     recoveryStatus,
     recoveryReviewStatus,
     recoveryReadyToComplete,
+    responsavelAdminId: row.id_responsavel_admin || null,
+    responsavelAdminNome: normalizeText(responsavelAdminNome) || null,
   };
 }
 
@@ -631,7 +637,20 @@ export async function listSalaoTickets(idSalao: string) {
   });
 }
 
-export async function listAdminTickets(params?: { page?: number; limit?: number }) {
+export type AdminTicketListParams = {
+  page?: number;
+  limit?: number;
+  search?: string;
+  status?: string;
+  prioridade?: string;
+  sla?: "todos" | "vencido" | "proximo" | "ok";
+  responsavelAdminId?: string;
+  recovery?: "todos" | "sim" | "nao";
+  periodDays?: number;
+  order?: "recentes" | "antigos" | "sla";
+};
+
+export async function listAdminTickets(params?: AdminTicketListParams) {
   return runAdminOperation({
     action: "support_list_admin_tickets",
     run: async (supabase) => {
@@ -639,15 +658,86 @@ export async function listAdminTickets(params?: { page?: number; limit?: number 
       const page = Math.max(params?.page ?? 0, 0);
       const from = page * limit;
       const to = from + limit - 1;
-      const { data: tickets, error, count } = await supabase
+      const search = normalizeText(params?.search).slice(0, 80);
+      const now = new Date();
+      const nowIso = now.toISOString();
+      let salaoSearchIds: string[] = [];
+
+      if (search.length >= 2) {
+        const cleanSearch = search.replace(/[,%()]/g, " ").trim();
+        const { data: salaoMatches } = await supabase
+          .from("saloes")
+          .select("id")
+          .or(
+            `nome.ilike.%${cleanSearch}%,responsavel.ilike.%${cleanSearch}%,email.ilike.%${cleanSearch}%`
+          )
+          .limit(40);
+        salaoSearchIds = ((salaoMatches || []) as Array<{ id: string }>).map((item) => item.id);
+      }
+
+      let query = supabase
         .from("tickets")
         .select(
-          "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, sla_limite_em, origem_contexto",
+          "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, sla_limite_em, origem_contexto, id_responsavel_admin",
           { count: "exact" }
         )
-        .neq("origem", "app_profissional_login")
-        .order("ultima_interacao_em", { ascending: false })
-        .range(from, to);
+        .neq("origem", "app_profissional_login");
+
+      if (params?.status && params.status !== "todos") query = query.eq("status", params.status);
+      if (params?.prioridade && params.prioridade !== "todas") query = query.eq("prioridade", params.prioridade);
+
+      if (params?.responsavelAdminId === "sem_responsavel") {
+        query = query.is("id_responsavel_admin", null);
+      } else if (params?.responsavelAdminId && params.responsavelAdminId !== "todos") {
+        query = query.eq("id_responsavel_admin", params.responsavelAdminId);
+      }
+
+      if (params?.recovery === "sim") {
+        query = query.contains("origem_contexto", { tipo_fluxo: "recuperacao_2fa" });
+      } else if (params?.recovery === "nao") {
+        query = query.or("origem_contexto.is.null,origem_contexto->>tipo_fluxo.neq.recuperacao_2fa");
+      }
+
+      if (params?.periodDays && params.periodDays > 0) {
+        query = query.gte(
+          "criado_em",
+          new Date(now.getTime() - params.periodDays * 24 * 60 * 60 * 1000).toISOString()
+        );
+      }
+
+      if (params?.sla === "vencido") {
+        query = query
+          .in("status", ["aberto", "em_atendimento", "aguardando_cliente", "aguardando_tecnico"])
+          .lt("sla_limite_em", nowIso);
+      } else if (params?.sla === "proximo") {
+        query = query
+          .in("status", ["aberto", "em_atendimento", "aguardando_cliente", "aguardando_tecnico"])
+          .gte("sla_limite_em", nowIso)
+          .lte("sla_limite_em", new Date(now.getTime() + 4 * 60 * 60 * 1000).toISOString());
+      } else if (params?.sla === "ok") {
+        query = query.gte("sla_limite_em", nowIso);
+      }
+
+      if (search.length >= 2) {
+        const cleanSearch = search.replace(/[,%()]/g, " ").trim();
+        const searchParts = [
+          `assunto.ilike.%${cleanSearch}%`,
+          `solicitante_nome.ilike.%${cleanSearch}%`,
+        ];
+        if (/^\d+$/.test(cleanSearch)) searchParts.push(`numero.eq.${Number(cleanSearch)}`);
+        if (salaoSearchIds.length) searchParts.push(`id_salao.in.(${salaoSearchIds.join(",")})`);
+        query = query.or(searchParts.join(","));
+      }
+
+      if (params?.order === "antigos") {
+        query = query.order("ultima_interacao_em", { ascending: true });
+      } else if (params?.order === "sla") {
+        query = query.order("sla_limite_em", { ascending: true, nullsFirst: false });
+      } else {
+        query = query.order("ultima_interacao_em", { ascending: false });
+      }
+
+      const { data: tickets, error, count } = await query.range(from, to);
 
       if (error) {
         throw new Error(error.message || "Erro ao listar tickets do AdminMaster.");
@@ -655,68 +745,52 @@ export async function listAdminTickets(params?: { page?: number; limit?: number 
 
       const ticketRows = (tickets || []) as TicketListRow[];
       const ids = ticketRows.map((ticket) => ticket.id);
-      const salaoIds = Array.from(
-        new Set(ticketRows.map((ticket) => ticket.id_salao).filter(Boolean))
-      ) as string[];
+      const salaoIds = Array.from(new Set(ticketRows.map((ticket) => ticket.id_salao).filter(Boolean))) as string[];
+      const adminIds = Array.from(new Set(ticketRows.map((ticket) => ticket.id_responsavel_admin).filter(Boolean))) as string[];
       let latestMessages: TicketMessageRow[] = [];
       let saloes: Array<{ id: string; nome?: string | null }> = [];
+      let admins: Array<{ id: string; nome?: string | null; email?: string | null }> = [];
 
-      if (salaoIds.length > 0) {
-        const { data: saloesData, error: saloesError } = await supabase
-          .from("saloes")
-          .select("id, nome")
-          .in("id", salaoIds)
-          .limit(salaoIds.length);
+      const [saloesResult, adminsResult] = await Promise.all([
+        salaoIds.length
+          ? supabase.from("saloes").select("id, nome").in("id", salaoIds).limit(salaoIds.length)
+          : Promise.resolve({ data: [] as Array<{ id: string; nome?: string | null }>, error: null }),
+        adminIds.length
+          ? supabase.from("admin_master_usuarios").select("id, nome, email").in("id", adminIds).limit(adminIds.length)
+          : Promise.resolve({ data: [] as Array<{ id: string; nome?: string | null; email?: string | null }>, error: null }),
+      ]);
 
-        if (saloesError) {
-          throw new Error(
-            saloesError.message || "Erro ao carregar saloes dos tickets."
-          );
-        }
-
-        saloes = (saloesData || []) as Array<{ id: string; nome?: string | null }>;
-      }
+      if (saloesResult.error) throw new Error(saloesResult.error.message || "Erro ao carregar salões dos tickets.");
+      if (adminsResult.error) throw new Error(adminsResult.error.message || "Erro ao carregar responsáveis dos tickets.");
+      saloes = (saloesResult.data || []) as typeof saloes;
+      admins = (adminsResult.data || []) as typeof admins;
 
       if (ids.length > 0) {
-        const mensagensLimit = Math.max(ids.length * 4, 240);
+        const mensagensLimit = Math.max(ids.length * 4, 120);
         const { data: mensagens, error: mensagensError } = await supabase
           .from("ticket_mensagens")
-          .select(
-            "id, id_ticket, mensagem, criada_em, autor_tipo, autor_nome, interna"
-          )
+          .select("id, id_ticket, mensagem, criada_em, autor_tipo, autor_nome, interna")
           .in("id_ticket", ids)
           .order("criada_em", { ascending: false })
           .limit(mensagensLimit);
-
-        if (mensagensError) {
-          throw new Error(
-            mensagensError.message || "Erro ao carregar mensagens dos tickets."
-          );
-        }
-
+        if (mensagensError) throw new Error(mensagensError.message || "Erro ao carregar mensagens dos tickets.");
         latestMessages = (mensagens || []) as TicketMessageRow[];
       }
 
-      const salaoById = new Map(
-        ((saloes || []) as { id: string; nome?: string | null }[]).map(
-          (salao) => [salao.id, salao.nome || salao.id]
-        )
-      );
+      const salaoById = new Map(saloes.map((salao) => [salao.id, salao.nome || salao.id]));
+      const adminById = new Map(admins.map((admin) => [admin.id, admin.nome || admin.email || "Admin Master"]));
       const latestMap = buildLatestMessageMap(latestMessages);
       const items = ticketRows.map((ticket) =>
         mapTicketSummary(
           ticket,
           latestMap.get(ticket.id),
-          ticket.id_salao ? salaoById.get(ticket.id_salao) || ticket.id_salao : null
+          ticket.id_salao ? salaoById.get(ticket.id_salao) || ticket.id_salao : null,
+          ticket.id_responsavel_admin ? adminById.get(ticket.id_responsavel_admin) || null : null
         )
       );
 
-      return {
-        items,
-        metrics: buildTicketMetrics(items),
-        total: count || 0,
-      };
-    }
+      return { items, metrics: buildTicketMetrics(items), total: count || 0 };
+    },
   });
 }
 
@@ -1335,6 +1409,7 @@ export async function updateAdminTicketStatus(params: {
   prioridade?: string | null;
   motivo?: string | null;
   assumir?: boolean;
+  responsavelAdminId?: string | null;
   mfaRecoveryAction?: "approve" | "reject" | "complete" | null;
   mfaEvidenceReviewAction?: "valid" | "illegible" | "divergent" | null;
 }) {
@@ -1350,7 +1425,7 @@ export async function updateAdminTicketStatus(params: {
     run: async (supabase) => {
       const { data: ticket, error } = await supabase
         .from("tickets")
-        .select("id, id_salao, prioridade, status, origem_contexto")
+        .select("id, id_salao, prioridade, status, origem_contexto, id_responsavel_admin")
         .eq("id", params.idTicket)
         .maybeSingle();
 
@@ -1608,7 +1683,22 @@ export async function updateAdminTicketStatus(params: {
         origem_contexto: origemContexto as Json,
       };
 
-      if (params.assumir !== false) {
+      if (params.responsavelAdminId !== undefined) {
+        if (params.responsavelAdminId) {
+          const { data: responsavel, error: responsavelError } = await supabase
+            .from("admin_master_usuarios")
+            .select("id")
+            .eq("id", params.responsavelAdminId)
+            .eq("status", "ativo")
+            .maybeSingle();
+          if (responsavelError || !responsavel?.id) {
+            throw new Error("Responsável do atendimento inválido ou inativo.");
+          }
+          updatePayload.id_responsavel_admin = params.responsavelAdminId;
+        } else {
+          updatePayload.id_responsavel_admin = null;
+        }
+      } else if (params.assumir !== false) {
         updatePayload.id_responsavel_admin = params.context.idAdmin;
       }
 
@@ -1643,6 +1733,21 @@ export async function updateAdminTicketStatus(params: {
       return {
         prioridade: String(prioridadeAtualizada || ticket.prioridade || "media"),
         status: effectiveStatus,
+        before: {
+          status: String(ticket.status || "-"),
+          prioridade: String(ticket.prioridade || "-"),
+          responsavelAdminId: ticket.id_responsavel_admin || null,
+        },
+        after: {
+          status: effectiveStatus,
+          prioridade: String(prioridadeAtualizada || ticket.prioridade || "media"),
+          responsavelAdminId:
+            params.responsavelAdminId !== undefined
+              ? params.responsavelAdminId
+              : params.assumir !== false
+                ? params.context.idAdmin
+                : ticket.id_responsavel_admin || null,
+        },
       };
     },
   });
@@ -1664,6 +1769,8 @@ export async function updateAdminTicketStatus(params: {
     ok: true,
     status: statusResult.status,
     prioridade: statusResult.prioridade,
+    before: statusResult.before,
+    after: statusResult.after,
   };
 }
 

@@ -12,6 +12,7 @@ import {
   Tag,
   X,
 } from "lucide-react";
+import { normalizeExternalDestination } from "@/lib/parcerias/urls";
 
 type Campanha = {
   id: string;
@@ -242,7 +243,8 @@ export default function PartnerAdSlot({
     });
 
     if (campanha.destinoUrl) {
-      window.open(campanha.destinoUrl, "_blank", "noopener,noreferrer");
+      const destination = normalizeExternalDestination(campanha.destinoUrl);
+      if (destination) window.open(destination, "_blank", "noopener,noreferrer");
       setDismissed(true);
     }
   }

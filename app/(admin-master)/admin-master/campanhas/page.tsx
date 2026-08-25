@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AdminSectionView } from "@/components/admin-master/AdminMasterViews";
+import AdminMasterSectionSimple from "@/components/admin-master/AdminMasterSectionSimple";
 import { AdminCampaignEditor } from "@/components/admin-master/AdminMasterCommunicationEditor";
 import { salvarCampanhaAdminMaster } from "@/app/(admin-master)/admin-master/campanhas/actions";
 import { getAdminCampaignEditorData } from "@/lib/admin-master/communication-editor";
@@ -25,7 +25,7 @@ export default async function AdminMasterCampanhasPage() {
           Abrir parcerias
         </Link>
       </div>
-      <AdminSectionView data={data} />
+      <AdminMasterSectionSimple data={data} />
       <AdminCampaignEditor
         rows={editorRows}
         salvarCampanha={salvarCampanhaAdminMaster}

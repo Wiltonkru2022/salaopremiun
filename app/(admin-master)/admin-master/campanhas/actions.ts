@@ -49,23 +49,30 @@ export async function salvarCampanhaAdminMaster(formData: FormData) {
     criado_por: access.usuario.id,
   };
 
+  const { data: before } = id
+    ? await supabase.from("campanhas").select("id, nome, tipo, publico_tipo, objetivo, status, inicio_em, fim_em, filtros_json").eq("id", id).maybeSingle()
+    : { data: null };
+
+  let entityId = id || null;
   if (id) {
     const { error } = await supabase.from("campanhas").update(payload).eq("id", id);
     if (error) throw new Error(error.message || "Nao foi possivel salvar a campanha.");
   } else {
-    const { error } = await supabase.from("campanhas").insert(payload);
-    if (error) throw new Error(error.message || "Nao foi possivel criar a campanha.");
+    const { data: created, error } = await supabase.from("campanhas").insert(payload).select("id").single();
+    if (error || !created?.id) throw new Error(error?.message || "Nao foi possivel criar a campanha.");
+    entityId = String(created.id);
   }
 
   await registrarAdminMasterAuditoria({
     idAdmin: access.usuario.id,
     acao: id ? "editar_campanha" : "criar_campanha",
     entidade: "campanhas",
-    entidadeId: id || null,
+    entidadeId: entityId,
     descricao: `Campanha ${nome} salva pelo AdminMaster.`,
-    payload,
+    payload: { antes: before, depois: payload },
   });
 
   revalidatePath("/admin-master/campanhas");
+  revalidatePath("/admin-master/atividades");
   redirect("/admin-master/campanhas");
 }

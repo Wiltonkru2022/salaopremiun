@@ -23,6 +23,7 @@ const atualizarStatusSchema = z.object({
   prioridade: ticketPrioridadeSchema.nullable().optional(),
   motivo: z.string().trim().nullable().optional(),
   assumir: z.boolean().optional(),
+  responsavelAdminId: z.string().uuid().nullable().optional(),
   mfaEvidenceReviewAction: z
     .enum(["valid", "illegible", "divergent"])
     .nullable()
@@ -153,6 +154,7 @@ export async function atualizarAdminMasterTicketStatusUseCase(params: {
       prioridade: input.prioridade || null,
       motivo: input.motivo || null,
       assumir,
+      responsavelAdminId: input.responsavelAdminId,
       mfaEvidenceReviewAction: input.mfaEvidenceReviewAction || null,
       mfaRecoveryAction: input.mfaRecoveryAction || null,
     });
@@ -166,7 +168,10 @@ export async function atualizarAdminMasterTicketStatusUseCase(params: {
       payload: {
         status: result.status,
         prioridade: result.prioridade,
+        antes: result.before,
+        depois: result.after,
         assumir,
+        responsavelAdminId: input.responsavelAdminId ?? null,
         mfaEvidenceReviewAction: input.mfaEvidenceReviewAction || null,
         mfaRecoveryAction: input.mfaRecoveryAction || null,
       },

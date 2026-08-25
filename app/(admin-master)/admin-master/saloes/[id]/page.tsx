@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import AdminMasterSalaoActions from "@/components/admin-master/AdminMasterSalaoActions";
-import { AdminDataTable, AdminKpiGrid } from "@/components/admin-master/AdminMasterViews";
+import AdminMasterDataTableClient from "@/components/admin-master/AdminMasterDataTableClient";
+import { AdminMasterMetricCard } from "@/components/admin-master/AdminMasterPageHeader";
 import { getAdminMasterSalaoDetail } from "@/lib/admin-master/data";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -129,16 +130,14 @@ export default async function AdminMasterSalaoDetalhePage({
             }}
           />
 
-          <AdminKpiGrid
-            kpis={[
-              { label: "Plano", value: data.access.planoNome, hint: data.access.planoCodigo, tone: "blue" },
-              { label: "Assinatura", value: data.access.assinaturaStatus || "-", hint: data.access.bloqueioTotal ? "Bloqueio total" : "Operação liberada", tone: data.access.bloqueioTotal ? "red" : "green" },
-              { label: "Profissionais", value: `${data.access.uso.profissionais}/${data.access.limites.profissionais ?? "Ilimitado"}`, hint: "Uso do limite do plano", tone: "dark" },
-              { label: "Usuários", value: `${data.access.uso.usuarios}/${data.access.limites.usuarios ?? "Ilimitado"}`, hint: "Uso do limite do plano", tone: "dark" },
-              { label: "Score saúde", value: scoreValue, hint: `Atualizado em ${scoreSaude.atualizado_em || "-"}`, tone: typeof scoreSaude.score_total === "number" && scoreSaude.score_total < 70 ? "red" : "green" },
-              { label: "Falhas 24h", value: String(eventosFalhos), hint: `${data.eventos24h.length} evento(s) monitorado(s)`, tone: eventosFalhos ? "red" : "green" },
-            ]}
-          />
+          <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
+            <AdminMasterMetricCard label="Plano" value={data.access.planoNome} hint={data.access.planoCodigo} tone="blue" />
+            <AdminMasterMetricCard label="Assinatura" value={data.access.assinaturaStatus || "-"} hint={data.access.bloqueioTotal ? "Bloqueio total" : "Operação liberada"} tone={data.access.bloqueioTotal ? "red" : "green"} />
+            <AdminMasterMetricCard label="Profissionais" value={`${data.access.uso.profissionais}/${data.access.limites.profissionais ?? "Ilimitado"}`} hint="Uso do limite do plano" />
+            <AdminMasterMetricCard label="Usuários" value={`${data.access.uso.usuarios}/${data.access.limites.usuarios ?? "Ilimitado"}`} hint="Uso do limite do plano" />
+            <AdminMasterMetricCard label="Score saúde" value={scoreValue} hint={`Atualizado em ${scoreSaude.atualizado_em || "-"}`} tone={typeof scoreSaude.score_total === "number" && scoreSaude.score_total < 70 ? "red" : "green"} />
+            <AdminMasterMetricCard label="Falhas 24h" value={String(eventosFalhos)} hint={`${data.eventos24h.length} evento(s) monitorado(s)`} tone={eventosFalhos ? "red" : "green"} />
+          </section>
 
           <section className="grid gap-4 lg:grid-cols-4">
             {[
@@ -191,7 +190,7 @@ export default async function AdminMasterSalaoDetalhePage({
           </section>
           <section className="space-y-3">
             <h2 className="text-lg font-black text-zinc-950">Cobranças</h2>
-            <AdminDataTable rows={data.cobrancas} columns={["referencia", "valor", "status", "data_expiracao", "pago_em"]} />
+            <AdminMasterDataTableClient rows={data.cobrancas} columns={["referencia", "valor", "status", "data_expiracao", "pago_em"]} emptyTitle="Nenhuma cobrança" emptyDescription="Não há cobranças registradas para este salão." />
           </section>
         </div>
       ) : null}
@@ -206,11 +205,11 @@ export default async function AdminMasterSalaoDetalhePage({
               </div>
               <Link href="/admin-master/alertas" className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-bold text-zinc-700 hover:bg-zinc-50">Ver todos os alertas</Link>
             </div>
-            <AdminDataTable rows={data.alertasAtivos} columns={["criado", "gravidade", "origem", "titulo", "detalhe", "acao"]} />
+            <AdminMasterDataTableClient rows={data.alertasAtivos} columns={["criado", "gravidade", "origem", "titulo", "detalhe", "acao"]} emptyTitle="Nenhum alerta ativo" emptyDescription="Este salão não possui alertas pendentes." />
           </section>
           <section className="space-y-3">
             <h2 className="text-lg font-black text-zinc-950">Tickets</h2>
-            <AdminDataTable rows={data.tickets} columns={["numero", "assunto", "status", "prioridade", "criado_em"]} />
+            <AdminMasterDataTableClient rows={data.tickets} columns={["numero", "assunto", "status", "prioridade", "criado_em"]} emptyTitle="Nenhum ticket" emptyDescription="Este salão não possui tickets no histórico atual." />
           </section>
         </div>
       ) : null}
@@ -224,7 +223,7 @@ export default async function AdminMasterSalaoDetalhePage({
             </div>
             <Link href="/admin-master/logs" className="rounded-xl border border-zinc-200 bg-white px-3 py-2 text-sm font-bold text-zinc-700 hover:bg-zinc-50">Abrir diagnóstico técnico</Link>
           </div>
-          <AdminDataTable rows={data.eventos24h} columns={["horario", "modulo", "tipo", "severidade", "rota", "acao", "tempo", "resultado", "detalhe"]} />
+          <AdminMasterDataTableClient rows={data.eventos24h} columns={["horario", "modulo", "tipo", "severidade", "rota", "acao", "tempo", "resultado", "detalhe"]} emptyTitle="Sem eventos nas últimas 24h" emptyDescription="Nenhum evento técnico foi registrado para este salão no período." />
         </section>
       ) : null}
 
@@ -232,7 +231,7 @@ export default async function AdminMasterSalaoDetalhePage({
         <section className="space-y-3">
           <h2 className="text-lg font-black text-zinc-950">Notas internas</h2>
           <p className="text-sm text-zinc-500">Histórico administrativo separado dos dados operacionais.</p>
-          <AdminDataTable rows={data.anotacoes} columns={["titulo", "nota", "criada_em"]} />
+          <AdminMasterDataTableClient rows={data.anotacoes} columns={["titulo", "nota", "criada_em"]} emptyTitle="Nenhuma nota interna" emptyDescription="As anotações administrativas deste salão aparecerão aqui." />
         </section>
       ) : null}
     </div>
