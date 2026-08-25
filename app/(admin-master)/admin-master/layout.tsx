@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import AdminMasterShell from "@/components/admin-master/AdminMasterShell";
+import AdminCampaignPlacementControls from "@/components/admin-master/AdminCampaignPlacementControls";
 import { getAdminMasterShellData } from "@/lib/admin-master/data";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 
@@ -29,6 +30,7 @@ export default async function AdminMasterLayout({
       permissions={admin.permissions}
       shellData={shellData}
     >
+      <AdminCampaignPlacementControls />
       {children}
     </AdminMasterShell>
   );
