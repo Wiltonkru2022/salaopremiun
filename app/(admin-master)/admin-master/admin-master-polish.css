@@ -35,12 +35,17 @@
   background: #faf5ff;
 }
 
-.admin-master-root :is(button, a, summary).bg-zinc-950 {
+/* O Admin Master usa violeta como ação/superfície forte. Evita ilhas pretas herdadas. */
+.admin-master-root .bg-zinc-950 {
   background-color: var(--admin-primary) !important;
+}
+
+.admin-master-root :is(button, a, summary).bg-zinc-950 {
   color: #fff !important;
 }
 
-.admin-master-root :is(button, a, summary).bg-zinc-950:hover {
+.admin-master-root :is(button, a, summary).bg-zinc-950:hover,
+.admin-master-root .hover\:bg-zinc-800:hover {
   background-color: var(--admin-primary-hover) !important;
 }
 
