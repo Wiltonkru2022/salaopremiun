@@ -1,3 +1,4 @@
+import { recordNeonEvent } from "@/lib/neon/observability.server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { captureSystemEvent } from "@/lib/monitoring/server";
 import type { Json } from "@/types/database.generated";
@@ -60,20 +61,35 @@ async function registrarFalhaObservabilidade(params: {
 
 export async function registrarLogSistema(params: RegistrarLogParams) {
   try {
-    const supabase = getSupabaseAdmin();
     const details = sanitizeDetails(params.detalhes);
     const gravidade = normalizeText(params.gravidade) || "info";
     const modulo = normalizeText(params.modulo) || "sistema";
     const mensagem = normalizeText(params.mensagem) || "Evento do sistema";
 
-    await supabase.from("logs_sistema").insert({
-      gravidade,
-      modulo,
-      id_salao: params.idSalao || null,
-      id_usuario: params.idUsuario || null,
-      mensagem,
-      detalhes_json: details as Json,
+    const persistedInNeon = await recordNeonEvent({
+      tenantId: params.idSalao || null,
+      componentKey: modulo,
+      eventType: "system_log",
+      level: gravidade,
+      message: mensagem,
+      metadata: {
+        ...details,
+        idUsuario: params.idUsuario || null,
+        source: "lib/system-logs",
+      },
     });
+
+    if (!persistedInNeon) {
+      const supabase = getSupabaseAdmin();
+      await supabase.from("logs_sistema").insert({
+        gravidade,
+        modulo,
+        id_salao: params.idSalao || null,
+        id_usuario: params.idUsuario || null,
+        mensagem,
+        detalhes_json: details as Json,
+      });
+    }
 
     const shouldMirrorToEventosSistema =
       gravidade === "warning" ||
