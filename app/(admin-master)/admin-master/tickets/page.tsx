@@ -5,7 +5,8 @@ import AdminTicketQueueClient from "@/components/admin-master/tickets/AdminTicke
 import PaginationLinks from "@/components/ui/PaginationLinks";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { listAdminTickets } from "@/lib/support/tickets";
+import { getAdminTicketGlobalMetrics } from "@/lib/support/admin-ticket-metrics";
+import { listAdminTickets, type AdminTicketListParams } from "@/lib/support/tickets";
 
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 15;
@@ -44,20 +45,20 @@ export default async function AdminMasterTicketsPage({ searchParams }: { searchP
   const page = Math.max(0, int(params.pagina, 1) - 1);
   const periodDays = params.periodo && params.periodo !== "todos" ? Math.max(1, int(params.periodo, 30)) : undefined;
   const supabase = getSupabaseAdmin();
+  const filters: AdminTicketListParams = {
+    search: params.busca,
+    status: params.status,
+    prioridade: params.prioridade,
+    sla: (["vencido", "proximo", "ok"].includes(params.sla || "") ? params.sla : "todos") as "todos" | "vencido" | "proximo" | "ok",
+    responsavelAdminId: params.responsavel,
+    recovery: (["sim", "nao"].includes(params.recovery || "") ? params.recovery : "todos") as "todos" | "sim" | "nao",
+    periodDays,
+    order: (["antigos", "sla"].includes(params.ordem || "") ? params.ordem : "recentes") as "recentes" | "antigos" | "sla",
+  };
 
-  const [{ items, metrics, total }, { data: adminsData }] = await Promise.all([
-    listAdminTickets({
-      page,
-      limit: PAGE_SIZE,
-      search: params.busca,
-      status: params.status,
-      prioridade: params.prioridade,
-      sla: (["vencido", "proximo", "ok"].includes(params.sla || "") ? params.sla : "todos") as "todos" | "vencido" | "proximo" | "ok",
-      responsavelAdminId: params.responsavel,
-      recovery: (["sim", "nao"].includes(params.recovery || "") ? params.recovery : "todos") as "todos" | "sim" | "nao",
-      periodDays,
-      order: (["antigos", "sla"].includes(params.ordem || "") ? params.ordem : "recentes") as "recentes" | "antigos" | "sla",
-    }),
+  const [{ items }, globalMetrics, { data: adminsData }] = await Promise.all([
+    listAdminTickets({ ...filters, page, limit: PAGE_SIZE }),
+    getAdminTicketGlobalMetrics(filters),
     supabase.from("admin_master_usuarios").select("id, nome, email").eq("status", "ativo").order("nome", { ascending: true }).limit(40),
   ]);
 
@@ -66,13 +67,6 @@ export default async function AdminMasterTicketsPage({ searchParams }: { searchP
     nome: row.nome || row.email || "Admin Master",
     email: row.email || "",
   }));
-  const now = Date.now();
-  const overdue = items.filter((item) => item.slaLimiteEm && !["resolvido", "fechado"].includes(String(item.status)) && new Date(item.slaLimiteEm).getTime() < now).length;
-  const nextSla = items.filter((item) => {
-    if (!item.slaLimiteEm || ["resolvido", "fechado"].includes(String(item.status))) return false;
-    const diff = new Date(item.slaLimiteEm).getTime() - now;
-    return diff >= 0 && diff <= 4 * 60 * 60 * 1000;
-  }).length;
 
   return (
     <div className="space-y-5">
@@ -88,11 +82,11 @@ export default async function AdminMasterTicketsPage({ searchParams }: { searchP
       />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-        <AdminMasterMetricCard label="Encontrados" value={total} hint="Com os filtros atuais" tone="violet" />
-        <AdminMasterMetricCard label="Em andamento" value={metrics.abertos} hint="Na página atual" tone={metrics.abertos ? "amber" : "green"} />
-        <AdminMasterMetricCard label="SLA vencido" value={overdue} hint="Exige ação imediata" tone={overdue ? "red" : "green"} />
-        <AdminMasterMetricCard label="SLA em até 4h" value={nextSla} hint="Prioridade preventiva" tone={nextSla ? "amber" : "default"} />
-        <AdminMasterMetricCard label="Recuperação MFA" value={metrics.recoveryPending + metrics.recoveryCooldown + metrics.recoveryReadyToComplete} hint="Fluxos de segurança" tone="blue" />
+        <AdminMasterMetricCard label="Encontrados" value={globalMetrics.total} hint="Toda a fila com os filtros atuais" tone="violet" />
+        <AdminMasterMetricCard label="Em andamento" value={globalMetrics.abertos} hint="Total global filtrado" tone={globalMetrics.abertos ? "amber" : "green"} />
+        <AdminMasterMetricCard label="SLA vencido" value={globalMetrics.slaVencido} hint="Exige ação imediata" tone={globalMetrics.slaVencido ? "red" : "green"} />
+        <AdminMasterMetricCard label="SLA em até 4h" value={globalMetrics.slaProximo} hint="Prioridade preventiva" tone={globalMetrics.slaProximo ? "amber" : "default"} />
+        <AdminMasterMetricCard label="Sem responsável" value={globalMetrics.semResponsavel} hint="Tickets abertos sem atribuição" tone={globalMetrics.semResponsavel ? "amber" : "green"} />
       </section>
 
       <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
@@ -134,7 +128,7 @@ export default async function AdminMasterTicketsPage({ searchParams }: { searchP
       <PaginationLinks
         currentPage={page}
         pageSize={PAGE_SIZE}
-        totalItems={total}
+        totalItems={globalMetrics.total}
         getHref={(nextPage) => buildHref(params, nextPage)}
       />
     </div>

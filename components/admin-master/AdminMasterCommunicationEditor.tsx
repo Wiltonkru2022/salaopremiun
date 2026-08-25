@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, type ReactNode } from "react";
+import { useFormStatus } from "react-dom";
 import { MessageSquareText, Megaphone, PackagePlus, Pencil, X } from "lucide-react";
 import type {
   AdminCampaignEditorRow,
@@ -26,14 +27,14 @@ function Dialog({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/55 p-4 backdrop-blur-sm">
-      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-[28px] border border-zinc-200 bg-white p-5 shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-zinc-950/45 p-3 backdrop-blur-sm sm:p-4">
+      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto rounded-3xl border border-zinc-200 bg-white p-4 shadow-2xl sm:p-5">
         <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="text-xs font-black uppercase tracking-[0.28em] text-amber-600">
-              AdminMaster
+          <div className="min-w-0">
+            <div className="text-xs font-black uppercase tracking-[0.22em] text-violet-600">
+              Admin Master
             </div>
-            <h2 className="mt-2 font-display text-2xl font-black text-zinc-950">
+            <h2 className="mt-2 break-words font-display text-2xl font-black text-zinc-950">
               {title}
             </h2>
             <p className="mt-1.5 text-sm leading-6 text-zinc-500">{description}</p>
@@ -41,7 +42,7 @@ function Dialog({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-full border border-zinc-200 p-2 text-zinc-500 transition hover:bg-zinc-950 hover:text-white"
+            className="shrink-0 rounded-xl border border-zinc-200 p-2 text-zinc-500 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-700"
             aria-label="Fechar modal"
           >
             <X size={18} />
@@ -67,8 +68,8 @@ function Field({
   required?: boolean;
 }) {
   return (
-    <label className="block">
-      <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">
+    <label className="block min-w-0">
+      <span className="text-xs font-black uppercase tracking-[0.16em] text-zinc-500">
         {label}
       </span>
       <input
@@ -76,7 +77,7 @@ function Field({
         type={type}
         required={required}
         defaultValue={defaultValue ?? ""}
-        className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-900 outline-none transition focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
+        className="mt-2 w-full min-w-0 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-900 outline-none transition focus:border-violet-300 focus:ring-4 focus:ring-violet-100"
       />
     </label>
   );
@@ -94,14 +95,14 @@ function SelectField({
   options: string[];
 }) {
   return (
-    <label className="block">
-      <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">
+    <label className="block min-w-0">
+      <span className="text-xs font-black uppercase tracking-[0.16em] text-zinc-500">
         {label}
       </span>
       <select
         name={name}
         defaultValue={defaultValue || options[0]}
-        className="mt-2 w-full rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-900 outline-none transition focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
+        className="mt-2 w-full min-w-0 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-900 outline-none transition focus:border-violet-300 focus:ring-4 focus:ring-violet-100"
       >
         {options.map((option) => (
           <option key={option} value={option}>
@@ -127,8 +128,8 @@ function TextArea({
   required?: boolean;
 }) {
   return (
-    <label className="block md:col-span-2">
-      <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500">
+    <label className="block min-w-0 md:col-span-2">
+      <span className="text-xs font-black uppercase tracking-[0.16em] text-zinc-500">
         {label}
       </span>
       <textarea
@@ -136,7 +137,7 @@ function TextArea({
         required={required}
         defaultValue={defaultValue ?? ""}
         rows={rows}
-        className="mt-2 w-full resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-900 outline-none transition focus:border-zinc-950 focus:ring-4 focus:ring-zinc-950/10"
+        className="mt-2 w-full min-w-0 resize-none rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-900 outline-none transition focus:border-violet-300 focus:ring-4 focus:ring-violet-100"
       />
     </label>
   );
@@ -144,29 +145,48 @@ function TextArea({
 
 function Toggle({ label, name, defaultChecked }: { label: string; name: string; defaultChecked?: boolean }) {
   return (
-    <label className="flex items-center justify-between rounded-2xl border border-zinc-200 px-4 py-3">
+    <label className="flex items-center justify-between gap-3 rounded-2xl border border-zinc-200 px-4 py-3">
       <span className="text-sm font-black text-zinc-800">{label}</span>
-      <input name={name} type="checkbox" defaultChecked={defaultChecked} className="h-5 w-5 accent-zinc-950" />
+      <input name={name} type="checkbox" defaultChecked={defaultChecked} className="h-5 w-5 shrink-0 accent-violet-700" />
     </label>
   );
 }
 
-function FormActions({ submitLabel, onCancel }: { submitLabel: string; onCancel: () => void }) {
+function SubmitButton({ label }: { label: string }) {
+  const { pending } = useFormStatus();
   return (
-    <div className="flex gap-2 md:col-span-2">
+    <button
+      type="submit"
+      disabled={pending}
+      className="flex-1 rounded-2xl bg-violet-700 px-4 py-3 text-sm font-black text-white transition hover:bg-violet-800 disabled:cursor-wait disabled:opacity-60"
+    >
+      {pending ? "Salvando..." : label}
+    </button>
+  );
+}
+
+function FormActions({ submitLabel, onCancel }: { submitLabel: string; onCancel: () => void }) {
+  const { pending } = useFormStatus();
+  return (
+    <div className="flex flex-col-reverse gap-2 md:col-span-2 sm:flex-row">
       <button
         type="button"
         onClick={onCancel}
-        className="flex-1 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-black text-zinc-700 transition hover:bg-zinc-50"
+        disabled={pending}
+        className="flex-1 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-black text-zinc-700 transition hover:bg-zinc-50 disabled:opacity-50"
       >
         Cancelar
       </button>
-      <button
-        type="submit"
-        className="flex-1 rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-black text-white transition hover:bg-zinc-800"
-      >
-        {submitLabel}
-      </button>
+      <SubmitButton label={submitLabel} />
+    </div>
+  );
+}
+
+function EmptyEditorState({ title, description }: { title: string; description: string }) {
+  return (
+    <div className="rounded-3xl border border-dashed border-zinc-300 bg-zinc-50/70 px-5 py-10 text-center lg:col-span-3">
+      <div className="text-sm font-black text-zinc-800">{title}</div>
+      <div className="mx-auto mt-1.5 max-w-md text-sm leading-6 text-zinc-500">{description}</div>
     </div>
   );
 }
@@ -185,51 +205,33 @@ export function AdminCampaignEditor({
     <section className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h2 className="font-display text-2xl font-black text-zinc-950">
-            Editor de campanhas
-          </h2>
-          <p className="mt-1 text-sm leading-6 text-zinc-500">
-            Crie ou edite campanhas com objetivo, público, período e filtros.
-          </p>
+          <h2 className="font-display text-2xl font-black text-zinc-950">Editor de campanhas</h2>
+          <p className="mt-1 text-sm leading-6 text-zinc-500">Crie ou edite campanhas com objetivo, público, período e filtros.</p>
         </div>
-        <button
-          type="button"
-          onClick={() => setEditing("new")}
-          className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-black text-white transition hover:bg-zinc-800"
-        >
-          <Megaphone size={16} />
-          Nova campanha
+        <button type="button" onClick={() => setEditing("new")} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-violet-700 px-4 py-3 text-sm font-black text-white transition hover:bg-violet-800 sm:w-auto">
+          <Megaphone size={16} /> Nova campanha
         </button>
       </div>
 
       <div className="grid gap-3 lg:grid-cols-3">
-        {rows.map((row) => (
-          <article key={row.id} className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
-            <div className="text-xs font-black uppercase tracking-[0.24em] text-zinc-400">{row.tipo}</div>
-            <h3 className="mt-2 font-display text-xl font-black text-zinc-950">{row.nome}</h3>
+        {rows.length ? rows.map((row) => (
+          <article key={row.id} className="min-w-0 rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <div className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">{row.tipo}</div>
+            <h3 className="mt-2 break-words font-display text-xl font-black text-zinc-950">{row.nome}</h3>
             <p className="mt-2 text-sm leading-6 text-zinc-500">{row.objetivo || "Sem objetivo definido"}</p>
             <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
               <span className="rounded-full bg-zinc-100 px-3 py-1 text-zinc-600">{row.status}</span>
-              <span className="rounded-full bg-blue-50 px-3 py-1 text-blue-700">{row.publicoTipo}</span>
+              <span className="rounded-full bg-violet-50 px-3 py-1 text-violet-700">{row.publicoTipo}</span>
             </div>
-            <button
-              type="button"
-              onClick={() => setEditing(row)}
-              className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-black text-zinc-800 transition hover:bg-zinc-950 hover:text-white"
-            >
-              <Pencil size={16} />
-              Editar campanha
+            <button type="button" onClick={() => setEditing(row)} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-black text-zinc-800 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800">
+              <Pencil size={16} /> Editar campanha
             </button>
           </article>
-        ))}
+        )) : <EmptyEditorState title="Nenhuma campanha cadastrada" description="Crie a primeira campanha para organizar público, período e objetivo sem deixar disparos soltos." />}
       </div>
 
       {editing ? (
-        <Dialog
-          title={current ? `Editar ${current.nome}` : "Nova campanha"}
-          description="Campanha sem objetivo vira disparo solto. Defina intenção antes de ativar."
-          onClose={() => setEditing(null)}
-        >
+        <Dialog title={current ? `Editar ${current.nome}` : "Nova campanha"} description="Campanha sem objetivo vira disparo solto. Defina intenção antes de ativar." onClose={() => setEditing(null)}>
           <form action={salvarCampanha} className="grid gap-4 md:grid-cols-2">
             <input type="hidden" name="id" value={current?.id || ""} />
             <Field label="Nome" name="nome" defaultValue={current?.nome} required />
@@ -248,40 +250,25 @@ export function AdminCampaignEditor({
   );
 }
 
-export function AdminWhatsappPackagesEditor({
-  rows,
-  salvarPacote,
-}: {
-  rows: AdminWhatsappPackageRow[];
-  salvarPacote: ServerAction;
-}) {
+export function AdminWhatsappPackagesEditor({ rows, salvarPacote }: { rows: AdminWhatsappPackageRow[]; salvarPacote: ServerAction }) {
   const [editing, setEditing] = useState<AdminWhatsappPackageRow | "new" | null>(null);
   const current = editing === "new" ? null : editing;
 
   return (
     <section className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="font-display text-2xl font-black text-zinc-950">Pacotes de WhatsApp</h2>
-          <p className="mt-1 text-sm leading-6 text-zinc-500">Configure preço, créditos e status dos pacotes.</p>
-        </div>
-        <button type="button" onClick={() => setEditing("new")} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-black text-white transition hover:bg-zinc-800">
-          <PackagePlus size={16} />
-          Novo pacote
-        </button>
+        <div><h2 className="font-display text-2xl font-black text-zinc-950">Pacotes de WhatsApp</h2><p className="mt-1 text-sm leading-6 text-zinc-500">Configure preço, créditos e status dos pacotes.</p></div>
+        <button type="button" onClick={() => setEditing("new")} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-violet-700 px-4 py-3 text-sm font-black text-white transition hover:bg-violet-800 sm:w-auto"><PackagePlus size={16} /> Novo pacote</button>
       </div>
       <div className="grid gap-3 lg:grid-cols-3">
-        {rows.map((row) => (
-          <article key={row.id} className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
-            <h3 className="font-display text-xl font-black text-zinc-950">{row.nome}</h3>
+        {rows.length ? rows.map((row) => (
+          <article key={row.id} className="rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <h3 className="break-words font-display text-xl font-black text-zinc-950">{row.nome}</h3>
             <div className="mt-3 text-2xl font-black text-zinc-950">{currency(row.preco)}</div>
             <p className="mt-1 text-sm text-zinc-500">{row.quantidadeCreditos} créditos</p>
-            <button type="button" onClick={() => setEditing(row)} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-black text-zinc-800 transition hover:bg-zinc-950 hover:text-white">
-              <Pencil size={16} />
-              Editar pacote
-            </button>
+            <button type="button" onClick={() => setEditing(row)} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-black text-zinc-800 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800"><Pencil size={16} /> Editar pacote</button>
           </article>
-        ))}
+        )) : <EmptyEditorState title="Nenhum pacote cadastrado" description="Cadastre um pacote quando quiser disponibilizar créditos de WhatsApp aos salões." />}
       </div>
       {editing ? (
         <Dialog title={current ? `Editar ${current.nome}` : "Novo pacote"} description="Pacote define cobrança e saldo de créditos dos salões." onClose={() => setEditing(null)}>
@@ -299,40 +286,25 @@ export function AdminWhatsappPackagesEditor({
   );
 }
 
-export function AdminWhatsappTemplatesEditor({
-  rows,
-  salvarTemplate,
-}: {
-  rows: AdminWhatsappTemplateRow[];
-  salvarTemplate: ServerAction;
-}) {
+export function AdminWhatsappTemplatesEditor({ rows, salvarTemplate }: { rows: AdminWhatsappTemplateRow[]; salvarTemplate: ServerAction }) {
   const [editing, setEditing] = useState<AdminWhatsappTemplateRow | "new" | null>(null);
   const current = editing === "new" ? null : editing;
 
   return (
     <section className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="font-display text-2xl font-black text-zinc-950">Templates de WhatsApp</h2>
-          <p className="mt-1 text-sm leading-6 text-zinc-500">Padronize mensagens aprovadas para atendimento e campanhas.</p>
-        </div>
-        <button type="button" onClick={() => setEditing("new")} className="inline-flex items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-4 py-3 text-sm font-black text-white transition hover:bg-zinc-800">
-          <MessageSquareText size={16} />
-          Novo template
-        </button>
+        <div><h2 className="font-display text-2xl font-black text-zinc-950">Templates de WhatsApp</h2><p className="mt-1 text-sm leading-6 text-zinc-500">Padronize mensagens aprovadas para atendimento e campanhas.</p></div>
+        <button type="button" onClick={() => setEditing("new")} className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-violet-700 px-4 py-3 text-sm font-black text-white transition hover:bg-violet-800 sm:w-auto"><MessageSquareText size={16} /> Novo template</button>
       </div>
       <div className="grid gap-3 lg:grid-cols-3">
-        {rows.map((row) => (
-          <article key={row.id} className="rounded-[24px] border border-zinc-200 bg-white p-4 shadow-sm">
-            <div className="text-xs font-black uppercase tracking-[0.24em] text-zinc-400">{row.categoria}</div>
-            <h3 className="mt-2 font-display text-xl font-black text-zinc-950">{row.nome}</h3>
+        {rows.length ? rows.map((row) => (
+          <article key={row.id} className="min-w-0 rounded-3xl border border-zinc-200 bg-white p-4 shadow-sm">
+            <div className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">{row.categoria}</div>
+            <h3 className="mt-2 break-words font-display text-xl font-black text-zinc-950">{row.nome}</h3>
             <p className="mt-2 line-clamp-3 text-sm leading-6 text-zinc-500">{row.conteudo}</p>
-            <button type="button" onClick={() => setEditing(row)} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-black text-zinc-800 transition hover:bg-zinc-950 hover:text-white">
-              <Pencil size={16} />
-              Editar template
-            </button>
+            <button type="button" onClick={() => setEditing(row)} className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-zinc-200 px-4 py-3 text-sm font-black text-zinc-800 transition hover:border-violet-200 hover:bg-violet-50 hover:text-violet-800"><Pencil size={16} /> Editar template</button>
           </article>
-        ))}
+        )) : <EmptyEditorState title="Nenhum template cadastrado" description="Crie templates para manter mensagens de campanha e atendimento consistentes." />}
       </div>
       {editing ? (
         <Dialog title={current ? `Editar ${current.nome}` : "Novo template"} description="Use texto claro e sem promessa que o sistema não consiga cumprir." onClose={() => setEditing(null)}>
