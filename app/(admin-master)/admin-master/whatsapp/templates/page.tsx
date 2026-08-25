@@ -1,4 +1,4 @@
-import { AdminSectionView } from "@/components/admin-master/AdminMasterViews";
+import AdminMasterSectionSimple from "@/components/admin-master/AdminMasterSectionSimple";
 import { AdminWhatsappTemplatesEditor } from "@/components/admin-master/AdminMasterCommunicationEditor";
 import { salvarWhatsappTemplateAdminMaster } from "@/app/(admin-master)/admin-master/whatsapp/actions";
 import { getAdminWhatsappEditorData } from "@/lib/admin-master/communication-editor";
@@ -14,11 +14,14 @@ export default async function AdminMasterWhatsAppTemplatesPage() {
 
   return (
     <div className="space-y-6">
-      <AdminSectionView data={{ ...data, title: "Templates de WhatsApp" }} />
-      <AdminWhatsappTemplatesEditor
-        rows={editorData.templates}
-        salvarTemplate={salvarWhatsappTemplateAdminMaster}
+      <AdminMasterSectionSimple
+        data={{
+          ...data,
+          title: "Templates de WhatsApp",
+          description: "Modelos de mensagens do canal. Pacotes, tarifas e recargas ficam na mesma subnavegação.",
+        }}
       />
+      <AdminWhatsappTemplatesEditor rows={editorData.templates} salvarTemplate={salvarWhatsappTemplateAdminMaster} />
     </div>
   );
 }
