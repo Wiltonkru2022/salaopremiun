@@ -1,4 +1,4 @@
-import { AdminSectionView } from "@/components/admin-master/AdminMasterViews";
+import AdminMasterSectionSimple from "@/components/admin-master/AdminMasterSectionSimple";
 import { AdminMasterTrialCoherencePanel } from "@/components/admin-master/AdminMasterGovernanceEditor";
 import { AdminMasterPlanEditor } from "@/components/admin-master/AdminMasterPlanEditor";
 import { getAdminMasterSection } from "@/lib/admin-master/data";
@@ -17,12 +17,15 @@ export default async function AdminMasterPlanosPage() {
 
   return (
     <div className="space-y-6">
-      <AdminSectionView data={data} />
-      <AdminMasterTrialCoherencePanel data={governanceData} />
-      <AdminMasterPlanEditor
-        data={editorData}
-        salvarPlano={salvarPlanoAdminMaster}
+      <AdminMasterSectionSimple
+        data={{
+          ...data,
+          title: "Produto e planos",
+          description: "Preços, limites e benefícios. Recursos, flags, configurações e checklists ficam nas abas desta área.",
+        }}
       />
+      <AdminMasterTrialCoherencePanel data={governanceData} />
+      <AdminMasterPlanEditor data={editorData} salvarPlano={salvarPlanoAdminMaster} />
     </div>
   );
 }
