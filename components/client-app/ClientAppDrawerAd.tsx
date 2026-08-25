@@ -38,7 +38,7 @@ export default function ClientAppDrawerAd() {
     let active = true;
     const params = new URLSearchParams({
       publico: "cliente",
-      local: "app_cliente",
+      local: "app_cliente_menu",
       modo: "lista",
       seed: getViewerSeed(),
     });
@@ -77,7 +77,7 @@ export default function ClientAppDrawerAd() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         idCampanha: campanha.id,
-        local: "app_cliente",
+        local: "app_cliente_menu",
         tipo: "impressao",
       }),
       keepalive: true,
@@ -99,7 +99,7 @@ export default function ClientAppDrawerAd() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         idCampanha: campanha.id,
-        local: "app_cliente",
+        local: "app_cliente_menu",
         tipo: "clique",
       }),
       keepalive: true,
