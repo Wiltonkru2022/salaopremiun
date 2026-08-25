@@ -1,7 +1,3 @@
-import "server-only";
-
-import { neon } from "@neondatabase/serverless";
-
 type EventLevel = "debug" | "info" | "warning" | "error" | "critical";
 
 type NeonEventInput = {
@@ -23,18 +19,26 @@ type NeonMetricInput = {
 
 const NEON_WRITE_TIMEOUT_MS = 1_800;
 
-let sqlClient: ReturnType<typeof neon> | null = null;
+type NeonSql = ReturnType<typeof import("@neondatabase/serverless")["neon"]>;
+
+let sqlClient: NeonSql | null = null;
 let configuredUrl = "";
 
+function isServerRuntime() {
+  return typeof window === "undefined";
+}
+
 function databaseUrl() {
+  if (!isServerRuntime()) return "";
   return String(process.env.NEON_DATABASE_URL || "").trim();
 }
 
-function getSql() {
+async function getSql(): Promise<NeonSql | null> {
   const url = databaseUrl();
   if (!url) return null;
 
   if (!sqlClient || configuredUrl !== url) {
+    const { neon } = await import("@neondatabase/serverless");
     sqlClient = neon(url);
     configuredUrl = url;
   }
@@ -67,7 +71,7 @@ export function isNeonObservabilityConfigured() {
 }
 
 export async function recordNeonEvent(input: NeonEventInput): Promise<boolean> {
-  const sql = getSql();
+  const sql = await getSql();
   if (!sql) return false;
 
   try {
@@ -88,7 +92,7 @@ export async function recordNeonEvent(input: NeonEventInput): Promise<boolean> {
 }
 
 export async function recordNeonMetric(input: NeonMetricInput): Promise<boolean> {
-  const sql = getSql();
+  const sql = await getSql();
   if (!sql) return false;
 
   try {
