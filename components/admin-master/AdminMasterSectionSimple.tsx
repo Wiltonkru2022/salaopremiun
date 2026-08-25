@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { Clock3, ChevronRight, SlidersHorizontal } from "lucide-react";
 import AdminMasterDataTableClient from "@/components/admin-master/AdminMasterDataTableClient";
 import AdminMasterModuleActionButton from "@/components/admin-master/AdminMasterModuleActionButton";
@@ -20,7 +21,7 @@ function diagnosticTone(tone?: AdminKpi["tone"]) {
   return "border-zinc-200 bg-zinc-50";
 }
 
-export default function AdminMasterSectionSimple({ data }: { data: AdminSectionData }) {
+export default function AdminMasterSectionSimple({ data, headerActions }: { data: AdminSectionData; headerActions?: ReactNode }) {
   const updatedAt = new Intl.DateTimeFormat("pt-BR", {
     dateStyle: "short",
     timeStyle: "short",
@@ -46,8 +47,9 @@ export default function AdminMasterSectionSimple({ data }: { data: AdminSectionD
             </div>
           </div>
 
-          {data.actions.length ? (
+          {headerActions || data.actions.length ? (
             <div className="flex flex-wrap gap-2">
+              {headerActions}
               {data.actions.slice(0, 3).map((action) => (
                 <AdminMasterModuleActionButton key={action} action={action} variant="pill" />
               ))}
