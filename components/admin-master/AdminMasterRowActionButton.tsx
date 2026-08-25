@@ -63,6 +63,13 @@ function buildActionRequest(actionType: string, actionId: string) {
     } satisfies RowActionRequest;
   }
 
+  if (actionType === "parceria_campaign_edit") {
+    return {
+      kind: "link",
+      href: `/admin-master/parcerias?campanha=${encodeURIComponent(actionId)}#campanhas`,
+    } satisfies RowActionRequest;
+  }
+
   if (actionType === "notificacao_detail") {
     return {
       kind: "link",
@@ -191,7 +198,7 @@ export default function AdminMasterRowActionButton({
     return (
       <Link
         href={request.href}
-        className="inline-flex items-center gap-1 rounded-full bg-zinc-100 px-3 py-1 text-xs font-black text-zinc-700 ring-1 ring-zinc-200 transition hover:bg-zinc-950 hover:text-white hover:ring-zinc-950"
+        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-black text-violet-700 transition hover:border-violet-300 hover:bg-violet-100 hover:text-violet-900"
       >
         {normalizedLabel}
         <ArrowRight size={12} />
@@ -261,13 +268,13 @@ export default function AdminMasterRowActionButton({
     return state.href ? (
       <Link
         href={state.href}
-        className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-200"
+        className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700"
       >
         <CheckCircle2 size={12} />
         {state.label}
       </Link>
     ) : (
-      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-3 py-1 text-xs font-black text-emerald-700 ring-1 ring-emerald-200">
+      <span className="inline-flex min-h-8 items-center gap-1.5 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-xs font-black text-emerald-700">
         <CheckCircle2 size={12} />
         {state.label}
       </span>
@@ -279,14 +286,14 @@ export default function AdminMasterRowActionButton({
       type="button"
       onClick={handleAction}
       disabled={state.status === "loading"}
-      className={`inline-flex rounded-full px-3 py-1 text-xs font-black ring-1 transition ${
+      className={`inline-flex min-h-8 rounded-lg border px-3 py-1.5 text-xs font-black transition ${
         state.status === "error"
-          ? "bg-red-50 text-red-700 ring-red-200"
-          : "bg-zinc-950 text-white ring-zinc-950 hover:bg-zinc-800 disabled:cursor-wait disabled:bg-zinc-400"
+          ? "border-red-200 bg-red-50 text-red-700"
+          : "border-violet-700 bg-violet-700 text-white hover:bg-violet-800 disabled:cursor-wait disabled:border-zinc-300 disabled:bg-zinc-300"
       }`}
       title={state.status === "error" ? state.detail : undefined}
     >
-      <span className="inline-flex items-center gap-1">
+      <span className="inline-flex items-center gap-1.5">
         {state.status === "loading" ? (
           <LoaderCircle size={12} className="animate-spin" />
         ) : state.status === "error" ? (
