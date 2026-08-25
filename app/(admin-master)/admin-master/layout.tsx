@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import AdminMasterShell from "@/components/admin-master/AdminMasterShell";
-import { getAdminMasterShellData } from "@/lib/admin-master/data";
+import { getAdminMasterShellDataCached } from "@/lib/admin-master/shell-data-cache";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import "./admin-master-polish.css";
 
@@ -19,7 +19,7 @@ export default async function AdminMasterLayout({
   children: React.ReactNode;
 }) {
   const admin = await requireAdminMasterUser("dashboard_ver");
-  const shellData = await getAdminMasterShellData();
+  const shellData = await getAdminMasterShellDataCached();
 
   return (
     <div className="admin-master-root">
