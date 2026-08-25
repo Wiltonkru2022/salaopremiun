@@ -7,7 +7,6 @@ import { useMemo, useState } from "react";
 import {
   Activity,
   Bell,
-  BookOpen,
   Building2,
   ChartNoAxesCombined,
   ChevronDown,
@@ -23,7 +22,6 @@ import {
   Ticket,
   Trash2,
   Users,
-  Wallet,
   Webhook,
   X,
 } from "lucide-react";
