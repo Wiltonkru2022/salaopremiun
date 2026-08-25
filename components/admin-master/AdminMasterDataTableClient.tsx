@@ -1,7 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, Download, FileText, Search } from "lucide-react";
+import {
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  Download,
+  FileText,
+  Filter,
+  Search,
+  X,
+} from "lucide-react";
 import AdminMasterRowActionButton from "@/components/admin-master/AdminMasterRowActionButton";
 import type { AdminTableRow } from "@/lib/admin-master/data";
 
@@ -59,7 +68,8 @@ function htmlCell(value: unknown) {
 }
 
 function columnLabel(column: string) {
-  return column.replace(/_/g, " ");
+  const text = column.replace(/_/g, " ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }
 
 export default function AdminMasterDataTableClient({
@@ -70,8 +80,10 @@ export default function AdminMasterDataTableClient({
 }: Props) {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(25);
+  const [pageSize, setPageSize] = useState(10);
   const [filters, setFilters] = useState<Record<string, string>>({});
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const filterColumns = useMemo(
     () =>
@@ -82,7 +94,7 @@ export default function AdminMasterDataTableClient({
             FILTER_PRIORITY.includes(column) ||
             FILTER_PRIORITY.includes(column.split("_")[0] ?? "")
         )
-        .slice(0, 6),
+        .slice(0, 5),
     [columns]
   );
 
@@ -114,6 +126,7 @@ export default function AdminMasterDataTableClient({
     });
   }, [columns, filters, rows, search]);
 
+  const activeFilterCount = Object.values(filters).filter(Boolean).length;
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const start = (currentPage - 1) * pageSize;
@@ -121,6 +134,11 @@ export default function AdminMasterDataTableClient({
 
   function updateFilter(column: string, value: string) {
     setFilters((current) => ({ ...current, [column]: value }));
+    setPage(1);
+  }
+
+  function clearFilters() {
+    setFilters({});
     setPage(1);
   }
 
@@ -139,6 +157,7 @@ export default function AdminMasterDataTableClient({
     link.download = `admin-master-${new Date().toISOString().slice(0, 10)}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+    setExportOpen(false);
   }
 
   function exportPdf() {
@@ -179,10 +198,10 @@ export default function AdminMasterDataTableClient({
       * { box-sizing: border-box; }
       body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #18181b; }
       header { margin-bottom: 18px; }
-      h1 { margin: 0; font-size: 20px; line-height: 1.2; }
+      h1 { margin: 0; font-size: 20px; }
       p { margin: 6px 0 0; color: #52525b; font-size: 12px; }
       table { width: 100%; border-collapse: collapse; font-size: 10px; }
-      th { background: #f4f4f5; color: #3f3f46; text-align: left; text-transform: uppercase; letter-spacing: .08em; }
+      th { background: #f4f4f5; color: #3f3f46; text-align: left; }
       th, td { border: 1px solid #e4e4e7; padding: 8px; vertical-align: top; word-break: break-word; }
       tr:nth-child(even) td { background: #fafafa; }
     </style>
@@ -207,14 +226,15 @@ export default function AdminMasterDataTableClient({
       printFrame.contentWindow?.print();
       window.setTimeout(() => printFrame.remove(), 1200);
     };
+    setExportOpen(false);
   }
 
   return (
-    <div className="overflow-hidden rounded-[24px] border border-zinc-200 bg-white shadow-sm">
+    <div className="overflow-hidden rounded-2xl border border-zinc-200 bg-white shadow-sm shadow-zinc-200/30">
       {columns.length ? (
-        <div className="border-b border-zinc-100 bg-white p-3">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
-            <label className="flex min-h-11 flex-1 items-center gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-600">
+        <div className="border-b border-zinc-100 p-3.5">
+          <div className="flex flex-col gap-2.5 md:flex-row md:items-center">
+            <label className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 text-zinc-500 transition focus-within:border-violet-300 focus-within:bg-white">
               <Search className="h-4 w-4 shrink-0" />
               <input
                 value={search}
@@ -222,19 +242,86 @@ export default function AdminMasterDataTableClient({
                   setSearch(event.target.value);
                   setPage(1);
                 }}
-                placeholder="Buscar nesta lista"
-                className="w-full bg-transparent text-sm font-semibold text-zinc-900 outline-none placeholder:text-zinc-400"
+                placeholder="Buscar"
+                className="w-full bg-transparent text-sm font-medium text-zinc-900 outline-none placeholder:text-zinc-400"
               />
+              {search ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearch("");
+                    setPage(1);
+                  }}
+                  className="rounded-md p-1 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700"
+                  aria-label="Limpar busca"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              ) : null}
             </label>
 
-            {filterColumns.length ? (
-              <div className="flex flex-wrap gap-2">
-                {filterColumns.map((column) => (
+            <div className="flex items-center gap-2">
+              {filterColumns.length ? (
+                <button
+                  type="button"
+                  onClick={() => setFiltersOpen((value) => !value)}
+                  className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition ${
+                    activeFilterCount
+                      ? "border-violet-200 bg-violet-50 text-violet-700"
+                      : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
+                  }`}
+                >
+                  <Filter className="h-4 w-4" />
+                  Filtros
+                  {activeFilterCount ? (
+                    <span className="rounded-full bg-violet-700 px-1.5 py-0.5 text-[10px] font-black text-white">
+                      {activeFilterCount}
+                    </span>
+                  ) : null}
+                </button>
+              ) : null}
+
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setExportOpen((value) => !value)}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
+                >
+                  Exportar
+                  <ChevronDown className="h-4 w-4" />
+                </button>
+                {exportOpen ? (
+                  <div className="absolute right-0 z-20 mt-2 w-40 overflow-hidden rounded-xl border border-zinc-200 bg-white p-1.5 shadow-lg">
+                    <button
+                      type="button"
+                      onClick={exportCsv}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+                    >
+                      <Download className="h-4 w-4" />
+                      CSV
+                    </button>
+                    <button
+                      type="button"
+                      onClick={exportPdf}
+                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
+                    >
+                      <FileText className="h-4 w-4" />
+                      PDF
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+
+          {filtersOpen && filterColumns.length ? (
+            <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-zinc-50 p-2.5">
+              {filterColumns.map((column) => (
                 <select
                   key={column}
                   value={filters[column] ?? ""}
                   onChange={(event) => updateFilter(column, event.target.value)}
-                  className="h-11 rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-bold text-zinc-700 outline-none transition hover:border-zinc-300"
+                  className="h-9 min-w-[150px] rounded-lg border border-zinc-200 bg-white px-2.5 text-sm font-medium text-zinc-700 outline-none focus:border-violet-300"
                   aria-label={`Filtrar por ${columnLabel(column)}`}
                 >
                   <option value="">{columnLabel(column)}</option>
@@ -244,38 +331,28 @@ export default function AdminMasterDataTableClient({
                     </option>
                   ))}
                 </select>
-                ))}
-              </div>
-            ) : null}
+              ))}
 
-            <div className="flex flex-wrap gap-2">
-              <button
-                type="button"
-                onClick={exportCsv}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-black text-zinc-800 transition hover:border-zinc-300 hover:bg-zinc-50"
-              >
-                <Download className="h-4 w-4" />
-                CSV
-              </button>
-              <button
-                type="button"
-                onClick={exportPdf}
-                className="inline-flex h-11 items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-3 text-sm font-black text-zinc-800 transition hover:border-zinc-300 hover:bg-zinc-50"
-              >
-                <FileText className="h-4 w-4" />
-                PDF
-              </button>
+              {activeFilterCount ? (
+                <button
+                  type="button"
+                  onClick={clearFilters}
+                  className="h-9 rounded-lg px-2.5 text-sm font-semibold text-zinc-500 transition hover:bg-white hover:text-zinc-900"
+                >
+                  Limpar filtros
+                </button>
+              ) : null}
             </div>
-          </div>
+          ) : null}
         </div>
       ) : null}
 
       <div className="scroll-premium overflow-x-auto">
-        <table className="min-w-full divide-y divide-zinc-100 text-sm">
-          <thead className="bg-zinc-50 text-left text-xs uppercase tracking-[0.2em] text-zinc-500">
+        <table className="min-w-full text-sm">
+          <thead className="border-b border-zinc-100 bg-zinc-50/80 text-left text-xs text-zinc-500">
             <tr>
               {columns.map((column) => (
-                <th key={column} className="px-4 py-3.5 font-bold">
+                <th key={column} className="whitespace-nowrap px-4 py-3 font-semibold">
                   {columnLabel(column)}
                 </th>
               ))}
@@ -284,12 +361,12 @@ export default function AdminMasterDataTableClient({
           <tbody className="divide-y divide-zinc-100">
             {pagedRows.length ? (
               pagedRows.map((row, index) => (
-                <tr key={`${currentPage}-${index}`} className="hover:bg-zinc-50/80">
+                <tr key={`${currentPage}-${index}`} className="transition hover:bg-zinc-50/70">
                   {columns.map((column) => (
                     <td
                       key={column}
                       title={String(row[column] ?? "-")}
-                      className={`max-w-[320px] px-4 py-3.5 ${
+                      className={`max-w-[320px] px-4 py-3 text-zinc-700 ${
                         column === "detalhe" || column === "titulo"
                           ? "whitespace-normal break-words leading-5"
                           : "truncate"
@@ -310,12 +387,10 @@ export default function AdminMasterDataTableClient({
               ))
             ) : (
               <tr>
-                <td colSpan={columns.length} className="px-4 py-10 text-center">
+                <td colSpan={columns.length} className="px-4 py-12 text-center">
                   <div className="mx-auto max-w-md">
-                    <div className="text-sm font-black text-zinc-800">{emptyTitle}</div>
-                    <div className="mt-2 text-sm leading-6 text-zinc-500">
-                      {emptyDescription}
-                    </div>
+                    <div className="text-sm font-bold text-zinc-800">{emptyTitle}</div>
+                    <div className="mt-1.5 text-sm leading-6 text-zinc-500">{emptyDescription}</div>
                   </div>
                 </td>
               </tr>
@@ -325,24 +400,23 @@ export default function AdminMasterDataTableClient({
       </div>
 
       {columns.length ? (
-        <div className="flex flex-col gap-3 border-t border-zinc-100 bg-zinc-50 px-3 py-3 text-sm text-zinc-600 md:flex-row md:items-center md:justify-between">
-          <div className="font-semibold">
-            Mostrando {filteredRows.length ? start + 1 : 0}-
-            {Math.min(start + pageSize, filteredRows.length)} de {filteredRows.length}
+        <div className="flex flex-col gap-2.5 border-t border-zinc-100 bg-white px-3.5 py-3 text-sm text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
+          <div className="text-xs font-medium">
+            {filteredRows.length ? `${start + 1}-${Math.min(start + pageSize, filteredRows.length)}` : "0"} de {filteredRows.length}
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-2">
             <select
               value={pageSize}
               onChange={(event) => {
                 setPageSize(Number(event.target.value));
                 setPage(1);
               }}
-              className="h-10 rounded-xl border border-zinc-200 bg-white px-2 text-sm font-bold text-zinc-700"
-              aria-label="Quantidade por pagina"
+              className="h-9 rounded-lg border border-zinc-200 bg-white px-2 text-xs font-semibold text-zinc-600"
+              aria-label="Quantidade por página"
             >
               {PAGE_SIZES.map((size) => (
                 <option key={size} value={size}>
-                  {size} por pagina
+                  {size} por página
                 </option>
               ))}
             </select>
@@ -350,20 +424,20 @@ export default function AdminMasterDataTableClient({
               type="button"
               onClick={() => setPage((value) => Math.max(1, value - 1))}
               disabled={currentPage <= 1}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label="Pagina anterior"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-600 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-35"
+              aria-label="Página anterior"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
-            <div className="min-w-24 text-center text-sm font-black text-zinc-800">
-              {currentPage} / {totalPages}
+            <div className="min-w-14 text-center text-xs font-bold text-zinc-700">
+              {currentPage}/{totalPages}
             </div>
             <button
               type="button"
               onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
               disabled={currentPage >= totalPages}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-700 disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label="Proxima pagina"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-600 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-35"
+              aria-label="Próxima página"
             >
               <ChevronRight className="h-4 w-4" />
             </button>
