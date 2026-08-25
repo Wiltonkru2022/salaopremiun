@@ -129,7 +129,7 @@ export async function archiveNeonRows(
 
   try {
     const payload = JSON.stringify(rows.slice(0, 500));
-    const result = await withTimeout(
+    const rawResult = await withTimeout(
       sql`
         with incoming as (
           select value
@@ -153,10 +153,11 @@ export async function archiveNeonRows(
           returning source_id
         )
         select count(*)::int as archived from archived
-      ` as Promise<Array<{ archived: number }>>,
+      ` as Promise<unknown>,
       NEON_ARCHIVE_TIMEOUT_MS
     );
 
+    const result = rawResult as Array<{ archived?: number }>;
     return { ok: true, archived: Number(result?.[0]?.archived || 0) };
   } catch (error) {
     console.warn("Neon archive batch write failed:", error);
