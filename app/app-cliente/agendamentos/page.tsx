@@ -8,6 +8,7 @@ import { requireClienteAppContext } from "@/lib/client-context.server";
 import { listClienteAppAppointments } from "@/lib/client-app/queries";
 import { getSalonTimeZoneMap } from "@/lib/client-app/appointment-timezones.server";
 import { toDeterministicSalonLocalDateTime } from "@/lib/client-app/deterministic-date";
+import styles from "./appointments-actions.module.css";
 
 const ClientAppointmentsManager = dynamic(
   () => import("@/components/client-app/ClientAppointmentsManager"),
@@ -93,12 +94,14 @@ export default async function ClienteAppointmentsPage({
           </h1>
           <ClientAppDrawerNav />
         </header>
-        <ClientAppointmentsManager
-          agendamentos={hydrationStableAppointments.slice(0, pageSize)}
-          successKey={params?.status || null}
-          currentPage={paginaAtual}
-          hasMore={hasMore}
-        />
+        <div className={styles.actionsScope}>
+          <ClientAppointmentsManager
+            agendamentos={hydrationStableAppointments.slice(0, pageSize)}
+            successKey={params?.status || null}
+            currentPage={paginaAtual}
+            hasMore={hasMore}
+          />
+        </div>
       </section>
     </ClientAppFrame>
   );
