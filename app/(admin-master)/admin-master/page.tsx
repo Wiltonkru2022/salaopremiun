@@ -1,4 +1,4 @@
-import { AdminDashboardView } from "@/components/admin-master/AdminMasterViews";
+import AdminMasterDashboardSimple from "@/components/admin-master/AdminMasterDashboardSimple";
 import { getAdminMasterDashboard } from "@/lib/admin-master/data";
 
 export const dynamic = "force-dynamic";
@@ -7,7 +7,7 @@ export default async function AdminMasterPage() {
   const data = await getAdminMasterDashboard();
 
   return (
-    <AdminDashboardView
+    <AdminMasterDashboardSimple
       kpis={data.kpis}
       recentes={data.recentes}
       planos={data.planos}
