@@ -6,6 +6,7 @@ import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMast
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { renderContratoParceria } from "@/lib/parcerias/contrato";
+import { removeCampanhaImage, uploadCampanhaImage } from "@/services/campanhaMediaService";
 
 function text(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
@@ -24,6 +25,17 @@ function intValue(formData: FormData, key: string, fallback: number) {
 function requireDeleteConfirmation(formData: FormData) {
   if (text(formData, "confirmacao").toUpperCase() !== "EXCLUIR") {
     throw new Error("Digite EXCLUIR para confirmar a exclusão.");
+  }
+}
+
+async function cleanupCampanhaImages(idCampanha: string) {
+  const supabase = getSupabaseAdmin() as any;
+  const { data } = await supabase
+    .from("parceria_criativos")
+    .select("imagem_url")
+    .eq("id_campanha", idCampanha);
+  for (const row of data || []) {
+    await removeCampanhaImage(row.imagem_url);
   }
 }
 
@@ -87,6 +99,14 @@ export async function excluirParceiro(formData: FormData) {
   if (contratosError) throw new Error(contratosError.message);
   if (Number(contratos || 0) > 0) {
     throw new Error("Esta empresa possui contrato registrado e não pode ser apagada. Encerre as campanhas e mantenha o histórico contratual.");
+  }
+
+  const { data: campanhas } = await supabase
+    .from("parceria_campanhas")
+    .select("id")
+    .eq("id_parceiro", id);
+  for (const campanha of campanhas || []) {
+    await cleanupCampanhaImages(campanha.id);
   }
 
   const { error } = await supabase.from("parceiros_comerciais").delete().eq("id", id);
@@ -220,6 +240,7 @@ export async function excluirCampanhaParceria(formData: FormData) {
     throw new Error(campanhaError?.message || "Campanha não encontrada.");
   }
 
+  await cleanupCampanhaImages(id);
   const { error } = await supabase.from("parceria_campanhas").delete().eq("id", id);
   if (error) throw new Error(error.message || "Não foi possível excluir a campanha.");
 
@@ -243,11 +264,20 @@ export async function salvarCriativoParceria(formData: FormData) {
 
   const formatoInformado = text(formData, "formato");
   const formato = ["card", "banner", "poster"].includes(formatoInformado) ? formatoInformado : "card";
+  const arquivo = formData.get("imagem_arquivo");
+  let imagemUrl = text(formData, "imagem_url") || null;
+  let uploadedUrl: string | null = null;
+
+  if (arquivo instanceof File && arquivo.size > 0) {
+    uploadedUrl = await uploadCampanhaImage({ idCampanha, file: arquivo });
+    imagemUrl = uploadedUrl;
+  }
+
   const payload = {
     id_campanha: idCampanha,
     titulo,
     subtitulo: text(formData, "subtitulo") || null,
-    imagem_url: text(formData, "imagem_url") || null,
+    imagem_url: imagemUrl,
     alt_text: text(formData, "alt_text") || titulo,
     cta_texto: text(formData, "cta_texto") || "Saiba mais",
     destino_url: text(formData, "destino_url") || null,
@@ -261,7 +291,10 @@ export async function salvarCriativoParceria(formData: FormData) {
     .insert(payload)
     .select("id")
     .single();
-  if (error) throw new Error(error.message || "Não foi possível salvar o criativo.");
+  if (error) {
+    if (uploadedUrl) await removeCampanhaImage(uploadedUrl);
+    throw new Error(error.message || "Não foi possível salvar o criativo.");
+  }
 
   await registrarAdminMasterAuditoria({
     idAdmin: access.usuario.id,
@@ -269,7 +302,7 @@ export async function salvarCriativoParceria(formData: FormData) {
     entidade: "parceria_criativos",
     entidadeId: data?.id || null,
     descricao: `Criativo ${titulo} adicionado à campanha.`,
-    payload,
+    payload: { ...payload, imagem_enviada: Boolean(uploadedUrl) },
   });
   revalidatePath("/admin-master/parcerias");
 }
@@ -283,7 +316,7 @@ export async function excluirCriativoParceria(formData: FormData) {
 
   const { data: criativo, error: criativoError } = await supabase
     .from("parceria_criativos")
-    .select("id,id_campanha,titulo")
+    .select("id,id_campanha,titulo,imagem_url")
     .eq("id", id)
     .maybeSingle();
   if (criativoError || !criativo) {
@@ -292,6 +325,7 @@ export async function excluirCriativoParceria(formData: FormData) {
 
   const { error } = await supabase.from("parceria_criativos").delete().eq("id", id);
   if (error) throw new Error(error.message || "Não foi possível excluir o criativo.");
+  await removeCampanhaImage(criativo.imagem_url);
 
   await registrarAdminMasterAuditoria({
     idAdmin: access.usuario.id,
