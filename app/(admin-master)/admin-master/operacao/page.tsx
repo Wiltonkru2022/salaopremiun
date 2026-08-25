@@ -1,9 +1,7 @@
-import { AdminSectionView } from "@/components/admin-master/AdminMasterViews";
-import { getAdminMasterSection } from "@/lib/admin-master/data";
+import { redirect } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 
-export default async function AdminMasterOperacaoPage() {
-  const data = await getAdminMasterSection("operacao");
-  return <AdminSectionView data={data} />;
+export default function AdminMasterOperacaoPage() {
+  redirect("/admin-master/saude");
 }
