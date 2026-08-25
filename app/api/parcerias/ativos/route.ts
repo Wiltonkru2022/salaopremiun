@@ -22,14 +22,23 @@ function campaignLabel(origem: string, categoria?: string | null) {
   return "Novidade Salão Premium";
 }
 
-function asCampaign(campanha: any) {
+function asCampaign(campanha: any, local: string) {
   const parceiro = Array.isArray(campanha.parceiros_comerciais)
     ? campanha.parceiros_comerciais[0]
     : campanha.parceiros_comerciais;
+
   const criativos = (campanha.parceria_criativos || [])
     .filter((item: any) => item.ativo !== false)
     .sort((a: any, b: any) => Number(a.ordem || 0) - Number(b.ordem || 0));
   const criativo = criativos[0] || null;
+
+  const arteLocal =
+    (campanha.parceria_criativos_locais || []).find(
+      (item: any) =>
+        item.ativo !== false &&
+        String(item.local_exibicao || "") === String(local || "")
+    ) || null;
+
   const origem = campanha.origem || "parceiro";
   const categoria = campanha.categoria_interna || null;
 
@@ -44,13 +53,15 @@ function asCampaign(campanha: any) {
         : parceiro?.nome_fantasia || parceiro?.razao_social || "Parceiro Salão Premium",
     titulo: criativo?.titulo || campanha.nome,
     subtitulo: criativo?.subtitulo || campanha.descricao || null,
-    imagemUrl: criativo?.imagem_url || null,
+    imagemUrl: arteLocal?.imagem_url || criativo?.imagem_url || null,
     altText: criativo?.alt_text || campanha.nome,
-    formato: criativo?.formato || "card",
+    formato: arteLocal?.formato || criativo?.formato || "card",
     ctaTexto:
       criativo?.cta_texto ||
       (origem === "salao_premium" ? "Saiba mais" : "Conhecer parceiro"),
-    destinoUrl: normalizeExternalDestination(criativo?.destino_url || campanha.destino_url),
+    destinoUrl: normalizeExternalDestination(
+      criativo?.destino_url || campanha.destino_url
+    ),
     cupomCodigo: campanha.cupom_codigo || null,
     prioridade: Number(campanha.prioridade || 0),
     pesoRotacao: Number(campanha.peso_rotacao || 1),
@@ -86,7 +97,7 @@ export async function GET(request: NextRequest) {
     supabase
       .from("parceria_campanhas")
       .select(
-        "id,nome,descricao,destino_url,cupom_codigo,publico,locais_exibicao,regioes,inicio_em,fim_em,status,prioridade,peso_rotacao,limite_frequencia_dia,limite_impressoes_dia,exclusiva,origem,categoria_interna,parceiros_comerciais(nome_fantasia,razao_social),parceria_criativos(id,titulo,subtitulo,imagem_url,alt_text,cta_texto,destino_url,formato,ordem,ativo)"
+        "id,nome,descricao,destino_url,cupom_codigo,publico,locais_exibicao,regioes,inicio_em,fim_em,status,prioridade,peso_rotacao,limite_frequencia_dia,limite_impressoes_dia,exclusiva,origem,categoria_interna,parceiros_comerciais(nome_fantasia,razao_social),parceria_criativos(id,titulo,subtitulo,imagem_url,alt_text,cta_texto,destino_url,formato,ordem,ativo),parceria_criativos_locais(id,local_exibicao,imagem_url,formato,ativo)"
       )
       .in("status", ["ativa", "agendada"])
       .lte("inicio_em", now)
@@ -146,7 +157,7 @@ export async function GET(request: NextRequest) {
           return Number(b.prioridade || 0) - Number(a.prioridade || 0);
         })
         .slice(0, 50)
-        .map(asCampaign),
+        .map((campanha: any) => asCampaign(campanha, local)),
     });
   }
 
@@ -180,7 +191,7 @@ export async function GET(request: NextRequest) {
     return hashScore(seed, a.id) - hashScore(seed, b.id);
   });
 
-  return NextResponse.json({ campanha: asCampaign(faixa[0]) });
+  return NextResponse.json({ campanha: asCampaign(faixa[0], local) });
 }
 
 export async function POST(request: NextRequest) {
