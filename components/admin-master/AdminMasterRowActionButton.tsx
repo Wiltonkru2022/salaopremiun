@@ -8,6 +8,7 @@ import {
   ArrowRight,
   CheckCircle2,
   LoaderCircle,
+  Trash2,
 } from "lucide-react";
 
 type RowActionState =
@@ -35,6 +36,8 @@ type RowActionRequest =
       body: Record<string, unknown>;
       successLabel: string | null;
       loadingLabel: string;
+      confirmMessage?: string;
+      tone?: "default" | "danger";
     }
   | {
       kind: "link";
@@ -67,6 +70,19 @@ function buildActionRequest(actionType: string, actionId: string) {
     return {
       kind: "link",
       href: `/admin-master/notificacoes/${encodeURIComponent(actionId)}`,
+    } satisfies RowActionRequest;
+  }
+
+  if (actionType === "notificacao_delete") {
+    return {
+      kind: "api",
+      endpoint: `/api/admin-master/notificacoes/${encodeURIComponent(actionId)}/excluir`,
+      body: {},
+      successLabel: "Excluído",
+      loadingLabel: "Excluindo...",
+      confirmMessage:
+        "Excluir esta notificação definitivamente? O registro e os destinos vinculados serão removidos.",
+      tone: "danger",
     } satisfies RowActionRequest;
   }
 
@@ -202,6 +218,10 @@ export default function AdminMasterRowActionButton({
   const apiRequest = request;
 
   async function handleAction() {
+    if (apiRequest.confirmMessage && !window.confirm(apiRequest.confirmMessage)) {
+      return;
+    }
+
     setState({ status: "loading", label: apiRequest.loadingLabel });
 
     try {
@@ -282,7 +302,9 @@ export default function AdminMasterRowActionButton({
       className={`inline-flex rounded-full px-3 py-1 text-xs font-black ring-1 transition ${
         state.status === "error"
           ? "bg-red-50 text-red-700 ring-red-200"
-          : "bg-zinc-950 text-white ring-zinc-950 hover:bg-zinc-800 disabled:cursor-wait disabled:bg-zinc-400"
+          : apiRequest.tone === "danger"
+            ? "bg-red-600 text-white ring-red-600 hover:bg-red-700 disabled:cursor-wait disabled:bg-red-300"
+            : "bg-zinc-950 text-white ring-zinc-950 hover:bg-zinc-800 disabled:cursor-wait disabled:bg-zinc-400"
       }`}
       title={state.status === "error" ? state.detail : undefined}
     >
@@ -291,6 +313,8 @@ export default function AdminMasterRowActionButton({
           <LoaderCircle size={12} className="animate-spin" />
         ) : state.status === "error" ? (
           <AlertTriangle size={12} />
+        ) : apiRequest.tone === "danger" ? (
+          <Trash2 size={12} />
         ) : null}
         {state.label}
       </span>

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { Bell, CalendarDays, Gift, Handshake, Heart, Home, Menu, Search, UserRound, X } from "lucide-react";
+import ClientAppDrawerAd from "@/components/client-app/ClientAppDrawerAd";
 import ClientAppPendingLink from "@/components/client-app/ClientAppPendingLink";
 
 const navItems = [
@@ -38,9 +39,12 @@ export default function ClientAppDrawerNav({ isDark = false, floating = false }:
             <div className="min-w-0"><p className="text-xs font-black uppercase tracking-[0.16em] text-amber-700">Salao Premium</p><p className="mt-1 truncate text-xl font-black tracking-[-0.04em]">{activeLabel}</p></div>
             <button type="button" onClick={() => setOpen(false)} aria-label="Fechar menu" className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-zinc-100 text-zinc-950"><X size={22} /></button>
           </div>
-          <nav className="mt-5 flex flex-col gap-2 overflow-y-auto pb-4">
-            {navItems.map((item) => { const Icon = item.icon; const active = item.match(pathname); return <ClientAppPendingLink key={item.href} href={item.href} icon={Icon} iconSize={22} className={`flex min-h-14 items-center gap-3 rounded-2xl px-4 text-base font-black transition ${active ? "bg-zinc-950 text-white [&_span]:text-white [&_svg]:text-white" : "bg-zinc-50 text-zinc-700 hover:bg-zinc-100 [&_span]:text-zinc-700 [&_svg]:text-zinc-700"}`}>{item.label}</ClientAppPendingLink>; })}
-          </nav>
+          <div className="mt-5 min-h-0 flex-1 overflow-y-auto pb-4">
+            <nav className="flex flex-col gap-2">
+              {navItems.map((item) => { const Icon = item.icon; const active = item.match(pathname); return <ClientAppPendingLink key={item.href} href={item.href} icon={Icon} iconSize={22} className={`flex min-h-14 items-center gap-3 rounded-2xl px-4 text-base font-black transition ${active ? "bg-zinc-950 text-white [&_span]:text-white [&_svg]:text-white" : "bg-zinc-50 text-zinc-700 hover:bg-zinc-100 [&_span]:text-zinc-700 [&_svg]:text-zinc-700"}`}>{item.label}</ClientAppPendingLink>; })}
+            </nav>
+            <ClientAppDrawerAd />
+          </div>
         </aside>
       </div>, document.body) : null}
   </>;
