@@ -1,8 +1,8 @@
+import dynamic from "next/dynamic";
 import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
-import ClientBookingForm from "@/components/client-app/ClientBookingForm";
 import ClientBookingPersonStep from "@/components/client-app/ClientBookingPersonStep";
 import { resetBookingPersonAction } from "@/app/app-cliente/salao/[id]/reserva/person-actions";
 import { getClientAppSalonDetail, listClienteAppAvailableCoupons } from "@/lib/client-app/queries";
@@ -10,6 +10,19 @@ import { getCampaignAvailability, loadPublicCampaign } from "@/lib/campanhas/pub
 import { validateClienteAppSession } from "@/lib/client-context.server";
 import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 import { bookingPersonCookieName, parseBookingPersonSelection } from "@/lib/client-app/booking-person-selection";
+
+const ClientBookingForm = dynamic(() => import("@/components/client-app/ClientBookingForm"), {
+  loading: () => (
+    <div className="mx-auto max-w-md px-5 py-8">
+      <div className="animate-pulse rounded-[1.5rem] border border-white/10 bg-[#111214] p-5">
+        <div className="h-4 w-32 rounded bg-white/10" />
+        <div className="mt-5 h-14 rounded-2xl bg-white/10" />
+        <div className="mt-3 h-14 rounded-2xl bg-white/10" />
+        <div className="mt-6 h-48 rounded-2xl bg-white/10" />
+      </div>
+    </div>
+  ),
+});
 
 export const metadata = { title: "Reserva online" };
 
