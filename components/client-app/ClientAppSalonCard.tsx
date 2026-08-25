@@ -6,20 +6,29 @@ import { buildSalaoPublicPath } from "@/lib/saloes/public-link";
 export default function ClientAppSalonCard({
   salao,
   distanceKm = null,
+  variant = "dark",
 }: {
   salao: ClientAppSalonListItem;
   distanceKm?: number | null;
   isLoggedIn?: boolean;
+  variant?: "dark" | "light";
 }) {
   const publicPath = buildSalaoPublicPath(salao.appClienteSlug || salao.id);
   const address =
     [salao.bairro, salao.cidade, salao.estado].filter(Boolean).join(" - ") ||
     salao.enderecoCompleto;
+  const light = variant === "light";
 
   return (
-    <article className="overflow-hidden rounded-[1.35rem] border border-white/8 bg-[#121315] shadow-[0_20px_55px_rgba(0,0,0,0.38)]">
+    <article
+      className={`overflow-hidden rounded-[1.35rem] border transition-shadow ${
+        light
+          ? "border-zinc-200 bg-white shadow-[0_10px_30px_rgba(15,23,42,0.07)]"
+          : "border-white/8 bg-[#121315] shadow-[0_20px_55px_rgba(0,0,0,0.38)]"
+      }`}
+    >
       <ClientAppPendingLink href={publicPath} className="block">
-        <div className="relative h-[260px] overflow-hidden bg-zinc-900">
+        <div className="relative h-[240px] overflow-hidden bg-zinc-100 sm:h-[260px]">
           {salao.fotoCapaUrl ? (
             <img
               src={salao.fotoCapaUrl}
@@ -32,14 +41,14 @@ export default function ClientAppSalonCard({
             </div>
           )}
 
-          <div className="absolute right-5 top-5 rounded-2xl bg-white px-4 py-3 text-base font-black text-zinc-950">
+          <div className="absolute right-4 top-4 rounded-xl bg-white/95 px-3 py-2 text-sm font-black text-zinc-950 shadow-sm backdrop-blur">
             {salao.notaMedia !== null && salao.totalAvaliacoes > 0
               ? salao.notaMedia.toFixed(1)
               : "Novo"}
           </div>
 
           {distanceKm !== null ? (
-            <div className="absolute bottom-5 left-5 rounded-full bg-black/65 px-4 py-2 text-sm font-bold text-white backdrop-blur">
+            <div className="absolute bottom-4 left-4 rounded-full bg-black/70 px-3 py-2 text-xs font-bold text-white backdrop-blur">
               {distanceKm < 1
                 ? `A ${Math.max(100, Math.round(distanceKm * 1000))}m de você`
                 : `A ${distanceKm.toLocaleString("pt-BR", {
@@ -51,31 +60,45 @@ export default function ClientAppSalonCard({
 
         <div className="p-5">
           <div className="flex items-start justify-between gap-3">
-            <h2 className="min-w-0 text-[1.65rem] font-black leading-tight tracking-[-0.04em] text-white">
+            <h2
+              className={`min-w-0 text-[1.45rem] font-black leading-tight tracking-[-0.04em] ${
+                light ? "text-zinc-950" : "text-white"
+              }`}
+            >
               {salao.nome}
             </h2>
 
             {salao.notaMedia !== null && salao.totalAvaliacoes > 0 ? (
-              <div className="inline-flex shrink-0 items-center gap-1 text-lg text-white">
-                <Star size={18} className="text-[#f5b83d]" fill="currentColor" />
+              <div
+                className={`inline-flex shrink-0 items-center gap-1 text-sm ${
+                  light ? "text-zinc-800" : "text-white"
+                }`}
+              >
+                <Star size={17} className="text-[#b7791f]" fill="currentColor" />
                 <span className="font-black">{salao.notaMedia.toFixed(1)}</span>
-                <span className="text-zinc-400">({salao.totalAvaliacoes})</span>
+                <span className={light ? "text-zinc-400" : "text-zinc-400"}>
+                  ({salao.totalAvaliacoes})
+                </span>
               </div>
             ) : null}
           </div>
 
           {address ? (
-            <div className="mt-3 flex items-start gap-2 text-base text-zinc-300">
-              <MapPin size={18} className="mt-1 shrink-0" />
+            <div
+              className={`mt-3 flex items-start gap-2 text-sm ${
+                light ? "text-zinc-500" : "text-zinc-300"
+              }`}
+            >
+              <MapPin size={17} className="mt-0.5 shrink-0" />
               <span>{address}</span>
             </div>
           ) : null}
 
-          <div className="mt-5 text-lg text-white">
+          <div className={`mt-4 text-base ${light ? "text-zinc-700" : "text-white"}`}>
             {salao.precoMinimo !== null ? (
               <>
                 A partir de{" "}
-                <span className="font-black text-[#f5b83d]">
+                <span className="font-black text-[#9b6a14]">
                   {salao.precoMinimo.toLocaleString("pt-BR", {
                     style: "currency",
                     currency: "BRL",
@@ -83,7 +106,9 @@ export default function ClientAppSalonCard({
                 </span>
               </>
             ) : (
-              <span className="font-semibold text-zinc-300">Preço sob consulta</span>
+              <span className={light ? "font-semibold text-zinc-500" : "font-semibold text-zinc-300"}>
+                Preço sob consulta
+              </span>
             )}
           </div>
         </div>
