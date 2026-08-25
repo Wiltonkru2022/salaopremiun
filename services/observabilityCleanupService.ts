@@ -9,6 +9,7 @@ import type { Json } from "@/types/database.generated";
 
 const CRON_NAME = "limpar_observabilidade";
 const CRON_ROUTE = "/api/cron/limpar-observabilidade";
+const OPERATIONAL_PROBE_HISTORY_DAYS = 3;
 
 async function registrarInicioCron() {
   const supabaseAdmin = getSupabaseAdmin();
@@ -70,7 +71,7 @@ export async function limparObservabilidade() {
         p_batch_limit: OBSERVABILITY_RETENTION_DEFAULTS.batchLimit,
       }),
       (supabaseAdmin as any).rpc("fn_operational_retention_cleanup", {
-        p_probe_history_days: 30,
+        p_probe_history_days: OPERATIONAL_PROBE_HISTORY_DAYS,
         p_incident_update_days: 365,
         p_delivery_days: 180,
         p_batch_limit: Math.min(
@@ -97,7 +98,7 @@ export async function limparObservabilidade() {
       tabelas: summary.detail,
       retention: {
         ...OBSERVABILITY_RETENTION_DEFAULTS,
-        operationalProbeHistoryDays: 30,
+        operationalProbeHistoryDays: OPERATIONAL_PROBE_HISTORY_DAYS,
         incidentUpdatesDays: 365,
         statusDeliveriesDays: 180,
       },
