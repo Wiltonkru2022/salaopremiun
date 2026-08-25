@@ -1,4 +1,4 @@
-import { AdminSectionView } from "@/components/admin-master/AdminMasterViews";
+import AdminMasterSectionSimple from "@/components/admin-master/AdminMasterSectionSimple";
 import { AdminMasterFeatureFlagsEditor } from "@/components/admin-master/AdminMasterGovernanceEditor";
 import {
   salvarFeatureFlagAdminMaster,
@@ -17,7 +17,7 @@ export default async function AdminMasterFeatureFlagsPage() {
 
   return (
     <div className="space-y-6">
-      <AdminSectionView data={data} />
+      <AdminMasterSectionSimple data={{ ...data, description: "Liberações controladas por escopo. Use os controles visuais abaixo e deixe detalhes técnicos para investigação." }} />
       <AdminMasterFeatureFlagsEditor
         data={editorData}
         salvarFeatureFlag={salvarFeatureFlagAdminMaster}
