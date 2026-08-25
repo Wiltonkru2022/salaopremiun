@@ -5,7 +5,7 @@ import type {
   MutableRefObject,
   SetStateAction,
 } from "react";
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import { initAgendaPage } from "@/lib/agenda/initAgendaPage";
 import { loadAgendaData } from "@/lib/agenda/loadAgendaData";
@@ -85,6 +85,24 @@ export function useAgendaData({
     },
     [router]
   );
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const handleAgendaSaved = (event: Event) => {
+      const detail = (event as CustomEvent<{ profissionalId?: string }>).detail;
+      const profissionalId = String(detail?.profissionalId || "").trim();
+      if (!profissionalId) return;
+
+      setSelectedProfissionalId((current) =>
+        current === profissionalId ? current : profissionalId
+      );
+    };
+
+    window.addEventListener("salaopremium:agenda:saved", handleAgendaSaved);
+    return () =>
+      window.removeEventListener("salaopremium:agenda:saved", handleAgendaSaved);
+  }, [setSelectedProfissionalId]);
 
   const isAuthLockError = useCallback((error: unknown) => {
     const message = String(
