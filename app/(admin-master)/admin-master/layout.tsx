@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import AdminMasterShell from "@/components/admin-master/AdminMasterShell";
 import { getAdminMasterShellData } from "@/lib/admin-master/data";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
+import "./admin-master-polish.css";
 
 export const dynamic = "force-dynamic";
 
@@ -21,15 +22,17 @@ export default async function AdminMasterLayout({
   const shellData = await getAdminMasterShellData();
 
   return (
-    <AdminMasterShell
-      adminId={admin.usuario.id}
-      adminName={admin.usuario.nome}
-      adminEmail={admin.usuario.email}
-      perfil={admin.usuario.perfil}
-      permissions={admin.permissions}
-      shellData={shellData}
-    >
-      {children}
-    </AdminMasterShell>
+    <div className="admin-master-root">
+      <AdminMasterShell
+        adminId={admin.usuario.id}
+        adminName={admin.usuario.nome}
+        adminEmail={admin.usuario.email}
+        perfil={admin.usuario.perfil}
+        permissions={admin.permissions}
+        shellData={shellData}
+      >
+        {children}
+      </AdminMasterShell>
+    </div>
   );
 }
