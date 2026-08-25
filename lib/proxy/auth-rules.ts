@@ -2,6 +2,21 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 
+const PROXY_FETCH_TIMEOUT_MS = 2500;
+
+function proxyFetch(input: RequestInfo | URL, init?: RequestInit) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), PROXY_FETCH_TIMEOUT_MS);
+  const upstreamSignal = init?.signal;
+
+  if (upstreamSignal) {
+    if (upstreamSignal.aborted) controller.abort();
+    else upstreamSignal.addEventListener("abort", () => controller.abort(), { once: true });
+  }
+
+  return fetch(input, { ...init, signal: controller.signal }).finally(() => clearTimeout(timeout));
+}
+
 export function getProxySupabaseConfig() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -24,6 +39,9 @@ export function createProxySupabaseClient(params: {
   const supabaseCookieOptions = getSupabaseCookieOptions(params.host);
 
   const client = createServerClient(config.supabaseUrl, config.supabaseAnonKey, {
+    global: {
+      fetch: proxyFetch,
+    },
     cookieOptions: supabaseCookieOptions,
     cookies: {
       getAll() {
@@ -51,15 +69,23 @@ export function createProxySupabaseClient(params: {
   // conforme o fluxo SSR atual do Supabase, preservando a interface esperada pelo proxy.
   const getClaims = client.auth.getClaims.bind(client.auth);
   client.auth.getUser = (async () => {
-    const { data, error } = await getClaims();
-    const sub = data?.claims?.sub;
+    try {
+      const { data, error } = await getClaims();
+      const sub = data?.claims?.sub;
 
-    return {
-      data: {
-        user: sub ? ({ id: String(sub) } as any) : null,
-      },
-      error,
-    } as any;
+      return {
+        data: {
+          user: sub ? ({ id: String(sub) } as any) : null,
+        },
+        error,
+      } as any;
+    } catch (error) {
+      console.error("Proxy Supabase auth timeout/failure:", error);
+      return {
+        data: { user: null },
+        error: error instanceof Error ? error : new Error("Falha ao validar sessão no proxy."),
+      } as any;
+    }
   }) as typeof client.auth.getUser;
 
   return client;
