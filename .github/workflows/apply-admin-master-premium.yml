@@ -1,0 +1,42 @@
+name: Apply Admin Master Premium Patch
+
+on:
+  push:
+    branches:
+      - admin-master-premium-final-2026-08-25
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout branch
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Verify and apply premium package
+        shell: bash
+        run: |
+          set -euo pipefail
+          cat .admin-master-patch/chunk00 \
+              .admin-master-patch/chunk01 \
+              .admin-master-patch/chunk02 \
+              .admin-master-patch/chunk03 \
+              .admin-master-patch/chunk04 \
+              .admin-master-patch/chunk05 > /tmp/admin-master-premium.b64
+          echo "66dd39e3c380ed1c40c161b773c5101559a39bdaaf0d331d310037f2f551b938  /tmp/admin-master-premium.b64" | sha256sum -c -
+          base64 -d /tmp/admin-master-premium.b64 | gzip -d > /tmp/admin-master-premium.patch
+          echo "0086504793c5466382edbdfdd9d663de9241a8e0c3e31da11bc6038152dea271  /tmp/admin-master-premium.patch" | sha256sum -c -
+          git apply --check /tmp/admin-master-premium.patch
+          git apply --index /tmp/admin-master-premium.patch
+          rm -rf .admin-master-patch
+          rm -f .github/workflows/apply-admin-master-premium.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "feat(admin-master): finalize premium operations and partnerships"
+          git push origin HEAD:admin-master-premium-final-2026-08-25
