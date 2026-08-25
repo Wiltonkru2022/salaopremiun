@@ -28,7 +28,6 @@ jobs:
               .admin-master-patch/chunk03 \
               .admin-master-patch/chunk04 \
               .admin-master-patch/chunk05 > /tmp/admin-master-premium.b64
-          echo "66dd39e3c380ed1c40c161b773c5101559a39bdaaf0d331d310037f2f551b938  /tmp/admin-master-premium.b64" | sha256sum -c -
           base64 -d /tmp/admin-master-premium.b64 | gzip -d > /tmp/admin-master-premium.patch
           echo "0086504793c5466382edbdfdd9d663de9241a8e0c3e31da11bc6038152dea271  /tmp/admin-master-premium.patch" | sha256sum -c -
           git apply --check /tmp/admin-master-premium.patch
