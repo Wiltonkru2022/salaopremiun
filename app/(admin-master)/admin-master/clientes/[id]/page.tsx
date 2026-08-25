@@ -45,6 +45,8 @@ export default async function AdminMasterClienteDetalhePage({ params }: { params
 
   const appConectado = Boolean(auth?.app_conta_id && auth?.app_ativo !== false);
   const contato = cliente.whatsapp || cliente.telefone || cliente.email || "Não informado";
+  const clienteStatus = String(cliente.status || cliente.ativo || "ativo").trim().toLowerCase();
+  const clienteInativo = ["inativo", "false", "0", "bloqueado"].includes(clienteStatus);
 
   return (
     <div className="space-y-5">
@@ -61,7 +63,7 @@ export default async function AdminMasterClienteDetalhePage({ params }: { params
       />
 
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-        <AdminMasterMetricCard label="Status" value={cliente.status || (cliente.ativo === false ? "inativo" : "ativo")} hint="Estado atual do cadastro" tone={cliente.ativo === false ? "amber" : "green"} />
+        <AdminMasterMetricCard label="Status" value={clienteStatus || "ativo"} hint="Estado atual do cadastro" tone={clienteInativo ? "amber" : "green"} />
         <AdminMasterMetricCard label="App Cliente" value={appConectado ? "Conectado" : "Pendente"} hint={appConectado ? "Conta digital vinculada" : "Sem vínculo ativo no app"} tone={appConectado ? "green" : "amber"} />
         <AdminMasterMetricCard label="Cashback" value={`R$ ${Number(cliente.cashback || 0).toFixed(2).replace(".", ",")}`} hint="Saldo registrado" tone="violet" />
         <AdminMasterMetricCard label="Cadastro" value={formatDate(cliente.created_at)} hint={salao?.nome ? `Cliente de ${salao.nome}` : "Salão não identificado"} />
