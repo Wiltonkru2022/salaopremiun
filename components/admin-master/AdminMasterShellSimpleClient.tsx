@@ -12,7 +12,6 @@ import {
   Building2,
   ChartNoAxesCombined,
   ChevronDown,
-  ChevronRight,
   CreditCard,
   Flag,
   Headphones,
