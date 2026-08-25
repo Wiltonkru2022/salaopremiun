@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import {
+  CalendarDays,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -36,6 +37,12 @@ const FILTER_PRIORITY = [
 ];
 
 const PAGE_SIZES = [10, 25, 50, 100];
+const PERIODS = [
+  ["all", "Todo período"],
+  ["30", "Últimos 30 dias"],
+  ["90", "Últimos 90 dias"],
+  ["365", "Últimos 12 meses"],
+] as const;
 
 function isActionColumn(column: string) {
   return column === "acao" || column.endsWith("_acao");
@@ -68,8 +75,78 @@ function htmlCell(value: unknown) {
 }
 
 function columnLabel(column: string) {
+  const aliases: Record<string, string> = {
+    salao: "Salão",
+    saloes: "Salões",
+    acao: "Ação",
+    acoes: "Ações",
+    criado_em: "Criado em",
+    created_at: "Criado em",
+    atualizado_em: "Atualizado em",
+    pago_em: "Pago em",
+    data_expiracao: "Vencimento",
+    ultima_falha: "Última falha",
+    gravidade: "Gravidade",
+    inadimplencia: "Inadimplência",
+  };
+  if (aliases[column]) return aliases[column];
   const text = column.replace(/_/g, " ");
   return text.charAt(0).toUpperCase() + text.slice(1);
+}
+
+function isDateColumn(column: string) {
+  const value = column.toLowerCase();
+  return (
+    value === "data" ||
+    value === "horario" ||
+    value.includes("criado") ||
+    value.includes("created") ||
+    value.includes("atualizado") ||
+    value.includes("vencimento") ||
+    value.includes("expiracao") ||
+    value.includes("pago_em") ||
+    value.includes("ultima") ||
+    value.endsWith("_em")
+  );
+}
+
+function parseDate(value: unknown) {
+  if (!value) return null;
+  const text = String(value).trim();
+  const direct = new Date(text);
+  if (!Number.isNaN(direct.getTime())) return direct;
+
+  const match = text.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:,?\s+(\d{2}):(\d{2}))?/);
+  if (!match) return null;
+  const [, day, month, year, hour = "00", minute = "00"] = match;
+  const parsed = new Date(`${year}-${month}-${day}T${hour}:${minute}:00`);
+  return Number.isNaN(parsed.getTime()) ? null : parsed;
+}
+
+function badgeClass(value: unknown) {
+  const text = normalize(value).replace(/\s+/g, "_");
+  if (["ativo", "ativa", "active", "pago", "paid", "received", "confirmado", "concluido", "concluida", "resolvido", "resolvida", "ok", "success", "sucesso", "creditado", "entregue", "saudavel"].includes(text)) {
+    return "border-emerald-200 bg-emerald-50 text-emerald-700";
+  }
+  if (["trial", "em_teste", "pendente", "aguardando", "processando", "aberto", "aberta", "media", "medio", "aviso", "yellow", "warning"].includes(text)) {
+    return "border-amber-200 bg-amber-50 text-amber-700";
+  }
+  if (["inadimplente", "vencido", "vencida", "falhou", "falha", "erro", "critico", "critica", "bloqueado", "bloqueada", "cancelado", "cancelada", "red", "failed"].includes(text)) {
+    return "border-rose-200 bg-rose-50 text-rose-700";
+  }
+  if (["confirmada", "agendado", "agendada", "em_andamento", "blue", "info", "alta"].includes(text)) {
+    return "border-blue-200 bg-blue-50 text-blue-700";
+  }
+  return "border-zinc-200 bg-zinc-50 text-zinc-600";
+}
+
+function shouldBadge(column: string) {
+  return ["status", "gravidade", "prioridade", "resultado", "situacao", "estado"].includes(column.toLowerCase());
+}
+
+function displayValue(value: unknown) {
+  if (typeof value === "boolean") return value ? "Sim" : "Não";
+  return String(value ?? "-");
 }
 
 export default function AdminMasterDataTableClient({
@@ -81,19 +158,17 @@ export default function AdminMasterDataTableClient({
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [period, setPeriod] = useState("all");
   const [filters, setFilters] = useState<Record<string, string>>({});
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
+  const dateColumn = useMemo(() => columns.find(isDateColumn), [columns]);
   const filterColumns = useMemo(
     () =>
       columns
         .filter((column) => !isActionColumn(column))
-        .filter(
-          (column) =>
-            FILTER_PRIORITY.includes(column) ||
-            FILTER_PRIORITY.includes(column.split("_")[0] ?? "")
-        )
+        .filter((column) => FILTER_PRIORITY.includes(column) || FILTER_PRIORITY.includes(column.split("_")[0] ?? ""))
         .slice(0, 5),
     [columns]
   );
@@ -101,9 +176,7 @@ export default function AdminMasterDataTableClient({
   const filterOptions = useMemo(() => {
     const options: Record<string, string[]> = {};
     for (const column of filterColumns) {
-      options[column] = Array.from(
-        new Set(rows.map((row) => String(row[column] ?? "-")).filter(Boolean))
-      )
+      options[column] = Array.from(new Set(rows.map((row) => String(row[column] ?? "-")).filter(Boolean)))
         .sort((a, b) => a.localeCompare(b, "pt-BR"))
         .slice(0, 80);
     }
@@ -112,19 +185,24 @@ export default function AdminMasterDataTableClient({
 
   const filteredRows = useMemo(() => {
     const normalizedSearch = normalize(search);
-    return rows.filter((row) => {
-      const matchesSearch =
-        !normalizedSearch ||
-        columns.some((column) => normalize(row[column]).includes(normalizedSearch));
+    const periodDays = period === "all" ? null : Number(period);
+    const cutoff = periodDays ? Date.now() - periodDays * 24 * 60 * 60 * 1000 : null;
 
+    return rows.filter((row) => {
+      const matchesSearch = !normalizedSearch || columns.some((column) => normalize(row[column]).includes(normalizedSearch));
       if (!matchesSearch) return false;
+
+      if (cutoff && dateColumn) {
+        const date = parseDate(row[dateColumn]);
+        if (date && date.getTime() < cutoff) return false;
+      }
 
       return Object.entries(filters).every(([column, value]) => {
         if (!value) return true;
         return String(row[column] ?? "-") === value;
       });
     });
-  }, [columns, filters, rows, search]);
+  }, [columns, dateColumn, filters, period, rows, search]);
 
   const activeFilterCount = Object.values(filters).filter(Boolean).length;
   const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize));
@@ -139,18 +217,15 @@ export default function AdminMasterDataTableClient({
 
   function clearFilters() {
     setFilters({});
+    setPeriod("all");
     setPage(1);
   }
 
   function exportCsv() {
     const exportColumns = columns.filter((column) => !isActionColumn(column));
     const header = exportColumns.map(columnLabel).map(csvCell).join(",");
-    const body = filteredRows
-      .map((row) => exportColumns.map((column) => csvCell(row[column])).join(","))
-      .join("\n");
-    const blob = new Blob([[header, body].filter(Boolean).join("\n")], {
-      type: "text/csv;charset=utf-8;",
-    });
+    const body = filteredRows.map((row) => exportColumns.map((column) => csvCell(row[column])).join(",")).join("\n");
+    const blob = new Blob([[header, body].filter(Boolean).join("\n")], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -163,23 +238,11 @@ export default function AdminMasterDataTableClient({
   function exportPdf() {
     const exportColumns = columns.filter((column) => !isActionColumn(column));
     const title = document.title || "AdminMaster";
-    const generatedAt = new Intl.DateTimeFormat("pt-BR", {
-      dateStyle: "short",
-      timeStyle: "short",
-      timeZone: "America/Sao_Paulo",
-    }).format(new Date());
+    const generatedAt = new Intl.DateTimeFormat("pt-BR", { dateStyle: "short", timeStyle: "short", timeZone: "America/Campo_Grande" }).format(new Date());
     const tableRows = filteredRows.length
-      ? filteredRows
-          .map(
-            (row) =>
-              `<tr>${exportColumns
-                .map((column) => `<td>${htmlCell(row[column])}</td>`)
-                .join("")}</tr>`
-          )
-          .join("")
+      ? filteredRows.map((row) => `<tr>${exportColumns.map((column) => `<td>${htmlCell(row[column])}</td>`).join("")}</tr>`).join("")
       : `<tr><td colspan="${exportColumns.length}">${htmlCell(emptyTitle)}</td></tr>`;
     const printFrame = document.createElement("iframe");
-
     printFrame.setAttribute("title", "Exportar tabela em PDF");
     printFrame.style.position = "fixed";
     printFrame.style.right = "0";
@@ -187,39 +250,7 @@ export default function AdminMasterDataTableClient({
     printFrame.style.width = "0";
     printFrame.style.height = "0";
     printFrame.style.border = "0";
-
-    printFrame.srcdoc = `<!doctype html>
-<html lang="pt-BR">
-  <head>
-    <meta charset="utf-8" />
-    <title>${htmlCell(title)}</title>
-    <style>
-      @page { size: A4 landscape; margin: 12mm; }
-      * { box-sizing: border-box; }
-      body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #18181b; }
-      header { margin-bottom: 18px; }
-      h1 { margin: 0; font-size: 20px; }
-      p { margin: 6px 0 0; color: #52525b; font-size: 12px; }
-      table { width: 100%; border-collapse: collapse; font-size: 10px; }
-      th { background: #f4f4f5; color: #3f3f46; text-align: left; }
-      th, td { border: 1px solid #e4e4e7; padding: 8px; vertical-align: top; word-break: break-word; }
-      tr:nth-child(even) td { background: #fafafa; }
-    </style>
-  </head>
-  <body>
-    <header>
-      <h1>${htmlCell(title)}</h1>
-      <p>Exportado em ${htmlCell(generatedAt)}. Registros: ${filteredRows.length}.</p>
-    </header>
-    <table>
-      <thead>
-        <tr>${exportColumns.map((column) => `<th>${htmlCell(columnLabel(column))}</th>`).join("")}</tr>
-      </thead>
-      <tbody>${tableRows}</tbody>
-    </table>
-  </body>
-</html>`;
-
+    printFrame.srcdoc = `<!doctype html><html lang="pt-BR"><head><meta charset="utf-8" /><title>${htmlCell(title)}</title><style>@page{size:A4 landscape;margin:12mm}*{box-sizing:border-box}body{margin:0;font-family:Arial,Helvetica,sans-serif;color:#18181b}header{margin-bottom:18px}h1{margin:0;font-size:20px}p{margin:6px 0 0;color:#52525b;font-size:12px}table{width:100%;border-collapse:collapse;font-size:10px}th{background:#f4f4f5;color:#3f3f46;text-align:left}th,td{border:1px solid #e4e4e7;padding:8px;vertical-align:top;word-break:break-word}tr:nth-child(even) td{background:#fafafa}</style></head><body><header><h1>${htmlCell(title)}</h1><p>Exportado em ${htmlCell(generatedAt)}. Registros: ${filteredRows.length}.</p></header><table><thead><tr>${exportColumns.map((column) => `<th>${htmlCell(columnLabel(column))}</th>`).join("")}</tr></thead><tbody>${tableRows}</tbody></table></body></html>`;
     document.body.appendChild(printFrame);
     printFrame.onload = () => {
       printFrame.contentWindow?.focus();
@@ -238,76 +269,38 @@ export default function AdminMasterDataTableClient({
               <Search className="h-4 w-4 shrink-0" />
               <input
                 value={search}
-                onChange={(event) => {
-                  setSearch(event.target.value);
-                  setPage(1);
-                }}
+                onChange={(event) => { setSearch(event.target.value); setPage(1); }}
                 placeholder="Buscar"
                 className="w-full bg-transparent text-sm font-medium text-zinc-900 outline-none placeholder:text-zinc-400"
               />
-              {search ? (
-                <button
-                  type="button"
-                  onClick={() => {
-                    setSearch("");
-                    setPage(1);
-                  }}
-                  className="rounded-md p-1 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700"
-                  aria-label="Limpar busca"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              ) : null}
+              {search ? <button type="button" onClick={() => { setSearch(""); setPage(1); }} className="rounded-md p-1 text-zinc-400 hover:bg-zinc-200 hover:text-zinc-700" aria-label="Limpar busca"><X className="h-3.5 w-3.5" /></button> : null}
             </label>
 
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
+              {dateColumn ? (
+                <label className="inline-flex h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700">
+                  <CalendarDays className="h-4 w-4 text-zinc-400" />
+                  <select value={period} onChange={(event) => { setPeriod(event.target.value); setPage(1); }} className="bg-transparent text-sm font-semibold outline-none" aria-label="Período">
+                    {PERIODS.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                  </select>
+                </label>
+              ) : null}
+
               {filterColumns.length ? (
-                <button
-                  type="button"
-                  onClick={() => setFiltersOpen((value) => !value)}
-                  className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition ${
-                    activeFilterCount
-                      ? "border-violet-200 bg-violet-50 text-violet-700"
-                      : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"
-                  }`}
-                >
-                  <Filter className="h-4 w-4" />
-                  Filtros
-                  {activeFilterCount ? (
-                    <span className="rounded-full bg-violet-700 px-1.5 py-0.5 text-[10px] font-black text-white">
-                      {activeFilterCount}
-                    </span>
-                  ) : null}
+                <button type="button" onClick={() => setFiltersOpen((value) => !value)} className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-sm font-semibold transition ${activeFilterCount ? "border-violet-200 bg-violet-50 text-violet-700" : "border-zinc-200 bg-white text-zinc-700 hover:bg-zinc-50"}`}>
+                  <Filter className="h-4 w-4" /> Filtros
+                  {activeFilterCount ? <span className="rounded-full bg-violet-700 px-1.5 py-0.5 text-[10px] font-black text-white">{activeFilterCount}</span> : null}
                 </button>
               ) : null}
 
               <div className="relative">
-                <button
-                  type="button"
-                  onClick={() => setExportOpen((value) => !value)}
-                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50"
-                >
-                  Exportar
-                  <ChevronDown className="h-4 w-4" />
+                <button type="button" onClick={() => setExportOpen((value) => !value)} className="inline-flex h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700 transition hover:bg-zinc-50">
+                  Exportar <ChevronDown className="h-4 w-4" />
                 </button>
                 {exportOpen ? (
                   <div className="absolute right-0 z-20 mt-2 w-40 overflow-hidden rounded-xl border border-zinc-200 bg-white p-1.5 shadow-lg">
-                    <button
-                      type="button"
-                      onClick={exportCsv}
-                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
-                    >
-                      <Download className="h-4 w-4" />
-                      CSV
-                    </button>
-                    <button
-                      type="button"
-                      onClick={exportPdf}
-                      className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-zinc-700 hover:bg-zinc-50"
-                    >
-                      <FileText className="h-4 w-4" />
-                      PDF
-                    </button>
+                    <button type="button" onClick={exportCsv} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-zinc-700 hover:bg-zinc-50"><Download className="h-4 w-4" />CSV</button>
+                    <button type="button" onClick={exportPdf} className="flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-sm font-semibold text-zinc-700 hover:bg-zinc-50"><FileText className="h-4 w-4" />PDF</button>
                   </div>
                 ) : null}
               </div>
@@ -317,31 +310,12 @@ export default function AdminMasterDataTableClient({
           {filtersOpen && filterColumns.length ? (
             <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl bg-zinc-50 p-2.5">
               {filterColumns.map((column) => (
-                <select
-                  key={column}
-                  value={filters[column] ?? ""}
-                  onChange={(event) => updateFilter(column, event.target.value)}
-                  className="h-9 min-w-[150px] rounded-lg border border-zinc-200 bg-white px-2.5 text-sm font-medium text-zinc-700 outline-none focus:border-violet-300"
-                  aria-label={`Filtrar por ${columnLabel(column)}`}
-                >
+                <select key={column} value={filters[column] ?? ""} onChange={(event) => updateFilter(column, event.target.value)} className="h-9 min-w-[150px] rounded-lg border border-zinc-200 bg-white px-2.5 text-sm font-medium text-zinc-700 outline-none focus:border-violet-300" aria-label={`Filtrar por ${columnLabel(column)}`}>
                   <option value="">{columnLabel(column)}</option>
-                  {(filterOptions[column] ?? []).map((option) => (
-                    <option key={option} value={option}>
-                      {option}
-                    </option>
-                  ))}
+                  {(filterOptions[column] ?? []).map((option) => <option key={option} value={option}>{option}</option>)}
                 </select>
               ))}
-
-              {activeFilterCount ? (
-                <button
-                  type="button"
-                  onClick={clearFilters}
-                  className="h-9 rounded-lg px-2.5 text-sm font-semibold text-zinc-500 transition hover:bg-white hover:text-zinc-900"
-                >
-                  Limpar filtros
-                </button>
-              ) : null}
+              {(activeFilterCount || period !== "all") ? <button type="button" onClick={clearFilters} className="h-9 rounded-lg px-2.5 text-sm font-semibold text-zinc-500 transition hover:bg-white hover:text-zinc-900">Limpar filtros</button> : null}
             </div>
           ) : null}
         </div>
@@ -350,50 +324,25 @@ export default function AdminMasterDataTableClient({
       <div className="scroll-premium overflow-x-auto">
         <table className="min-w-full text-sm">
           <thead className="border-b border-zinc-100 bg-zinc-50/80 text-left text-xs text-zinc-500">
-            <tr>
-              {columns.map((column) => (
-                <th key={column} className="whitespace-nowrap px-4 py-3 font-semibold">
-                  {columnLabel(column)}
-                </th>
-              ))}
-            </tr>
+            <tr>{columns.map((column) => <th key={column} className="whitespace-nowrap px-4 py-3 font-semibold">{columnLabel(column)}</th>)}</tr>
           </thead>
           <tbody className="divide-y divide-zinc-100">
-            {pagedRows.length ? (
-              pagedRows.map((row, index) => (
-                <tr key={`${currentPage}-${index}`} className="transition hover:bg-zinc-50/70">
-                  {columns.map((column) => (
-                    <td
-                      key={column}
-                      title={String(row[column] ?? "-")}
-                      className={`max-w-[320px] px-4 py-3 text-zinc-700 ${
-                        column === "detalhe" || column === "titulo"
-                          ? "whitespace-normal break-words leading-5"
-                          : "truncate"
-                      }`}
-                    >
-                      {isActionColumn(column) ? (
-                        <AdminMasterRowActionButton
-                          actionType={String(row[getActionField(column, "tipo")] || "")}
-                          actionId={String(row[getActionField(column, "id")] || "")}
-                          label={String(row[column] || "-")}
-                        />
-                      ) : (
-                        String(row[column] ?? "-")
-                      )}
-                    </td>
-                  ))}
-                </tr>
-              ))
-            ) : (
-              <tr>
-                <td colSpan={columns.length} className="px-4 py-12 text-center">
-                  <div className="mx-auto max-w-md">
-                    <div className="text-sm font-bold text-zinc-800">{emptyTitle}</div>
-                    <div className="mt-1.5 text-sm leading-6 text-zinc-500">{emptyDescription}</div>
-                  </div>
-                </td>
+            {pagedRows.length ? pagedRows.map((row, index) => (
+              <tr key={`${currentPage}-${index}`} className="transition hover:bg-zinc-50/70">
+                {columns.map((column) => (
+                  <td key={column} title={String(row[column] ?? "-")} className={`max-w-[320px] px-4 py-3 text-zinc-700 ${column === "detalhe" || column === "titulo" || column === "descricao" ? "whitespace-normal break-words leading-5" : "truncate"}`}>
+                    {isActionColumn(column) ? (
+                      <AdminMasterRowActionButton actionType={String(row[getActionField(column, "tipo")] || "")} actionId={String(row[getActionField(column, "id")] || "")} label={String(row[column] || "-")} />
+                    ) : shouldBadge(column) ? (
+                      <span className={`inline-flex max-w-full rounded-full border px-2.5 py-1 text-xs font-bold ${badgeClass(row[column])}`}>{displayValue(row[column])}</span>
+                    ) : (
+                      displayValue(row[column])
+                    )}
+                  </td>
+                ))}
               </tr>
+            )) : (
+              <tr><td colSpan={columns.length} className="px-4 py-12 text-center"><div className="mx-auto max-w-md"><div className="text-sm font-bold text-zinc-800">{emptyTitle}</div><div className="mt-1.5 text-sm leading-6 text-zinc-500">{emptyDescription}</div></div></td></tr>
             )}
           </tbody>
         </table>
@@ -401,46 +350,14 @@ export default function AdminMasterDataTableClient({
 
       {columns.length ? (
         <div className="flex flex-col gap-2.5 border-t border-zinc-100 bg-white px-3.5 py-3 text-sm text-zinc-500 sm:flex-row sm:items-center sm:justify-between">
-          <div className="text-xs font-medium">
-            {filteredRows.length ? `${start + 1}-${Math.min(start + pageSize, filteredRows.length)}` : "0"} de {filteredRows.length}
-          </div>
+          <div className="text-xs font-medium">{filteredRows.length ? `${start + 1}-${Math.min(start + pageSize, filteredRows.length)}` : "0"} de {filteredRows.length}</div>
           <div className="flex items-center gap-2">
-            <select
-              value={pageSize}
-              onChange={(event) => {
-                setPageSize(Number(event.target.value));
-                setPage(1);
-              }}
-              className="h-9 rounded-lg border border-zinc-200 bg-white px-2 text-xs font-semibold text-zinc-600"
-              aria-label="Quantidade por página"
-            >
-              {PAGE_SIZES.map((size) => (
-                <option key={size} value={size}>
-                  {size} por página
-                </option>
-              ))}
+            <select value={pageSize} onChange={(event) => { setPageSize(Number(event.target.value)); setPage(1); }} className="h-9 rounded-lg border border-zinc-200 bg-white px-2 text-xs font-semibold text-zinc-600" aria-label="Quantidade por página">
+              {PAGE_SIZES.map((size) => <option key={size} value={size}>{size} por página</option>)}
             </select>
-            <button
-              type="button"
-              onClick={() => setPage((value) => Math.max(1, value - 1))}
-              disabled={currentPage <= 1}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-600 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-35"
-              aria-label="Página anterior"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-            <div className="min-w-14 text-center text-xs font-bold text-zinc-700">
-              {currentPage}/{totalPages}
-            </div>
-            <button
-              type="button"
-              onClick={() => setPage((value) => Math.min(totalPages, value + 1))}
-              disabled={currentPage >= totalPages}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-600 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-35"
-              aria-label="Próxima página"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
+            <button type="button" onClick={() => setPage((value) => Math.max(1, value - 1))} disabled={currentPage <= 1} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-600 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-35" aria-label="Página anterior"><ChevronLeft className="h-4 w-4" /></button>
+            <div className="min-w-14 text-center text-xs font-bold text-zinc-700">{currentPage}/{totalPages}</div>
+            <button type="button" onClick={() => setPage((value) => Math.min(totalPages, value + 1))} disabled={currentPage >= totalPages} className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-200 bg-white text-zinc-600 transition hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-35" aria-label="Próxima página"><ChevronRight className="h-4 w-4" /></button>
           </div>
         </div>
       ) : null}
