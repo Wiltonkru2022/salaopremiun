@@ -139,7 +139,7 @@ export default function PartnerAdSlot({
     if (typeof window === "undefined" || !shouldShow) return null;
     const { counts, caps } = readFrequency();
     const blocked = Object.entries(counts)
-      .filter(([, count]) => count >= Math.max(1, Number(caps[arguments[0]] || 2)))
+      .filter(([id, count]) => count >= Math.max(1, Number(caps[id] || 2)))
       .map(([id]) => id);
     const params = new URLSearchParams({ publico, local, seed: getViewerSeed() });
     if (idSalao) params.set("idSalao", idSalao);
