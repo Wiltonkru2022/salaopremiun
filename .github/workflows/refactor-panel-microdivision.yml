@@ -1,0 +1,34 @@
+name: Refactor painel microdivision
+
+on:
+  push:
+    branches:
+      - refactor/painel-microdivisao-final
+
+permissions:
+  contents: write
+
+jobs:
+  refactor:
+    if: ${{ !contains(github.event.head_commit.message, '[microdivision-done]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Aplicar microdivisão
+        run: python scripts/refactor-panel-microdivision.py
+      - name: Commitar resultado
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app components
+          if git diff --cached --quiet; then
+            echo "Sem alterações adicionais."
+            exit 0
+          fi
+          git commit -m "refactor(painel): extrair tipos helpers e suporte [microdivision-done]"
+          git push origin HEAD:${GITHUB_REF_NAME}
