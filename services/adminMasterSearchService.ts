@@ -112,13 +112,11 @@ export function createAdminMasterSearchService() {
           type: "cliente" as const,
           title: item.nome || "Cliente sem nome",
           subtitle: `${item.whatsapp || item.telefone || item.email || "Sem contato"} / ${item.status || "-"}`,
-          href: item.id_salao ? `/admin-master/saloes/${item.id_salao}?tab=resumo&cliente=${encodeURIComponent(String(item.id || ""))}` : "/admin-master/saloes",
-          actions: item.id_salao
-            ? [
-                { label: "Ver cliente", href: `/admin-master/saloes/${item.id_salao}?tab=resumo&cliente=${encodeURIComponent(String(item.id || ""))}` },
-                { label: "Abrir salão", href: `/admin-master/saloes/${item.id_salao}` },
-              ]
-            : undefined,
+          href: `/admin-master/clientes/${item.id}`,
+          actions: [
+            { label: "Ver cliente", href: `/admin-master/clientes/${item.id}` },
+            ...(item.id_salao ? [{ label: "Abrir salão", href: `/admin-master/saloes/${item.id_salao}` }] : []),
+          ],
         })),
         ...((parceiros || []) as Array<{ id?: string | null; razao_social?: string | null; nome_fantasia?: string | null; segmento?: string | null; cidade?: string | null; uf?: string | null; status?: string | null; email?: string | null; whatsapp?: string | null }>).map((item) => ({
           id: String(item.id || ""),
