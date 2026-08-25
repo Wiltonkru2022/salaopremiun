@@ -151,12 +151,6 @@ export function SearchPicker({
                 <button
                   key={item.value}
                   type="button"
-                  onPointerDown={(event) => {
-                    if (event.pointerType === "touch" || event.pointerType === "pen") {
-                      event.preventDefault();
-                      selectOption(item.value);
-                    }
-                  }}
                   onClick={() => selectOption(item.value)}
                   className="block w-full touch-manipulation border-b border-zinc-100 px-4 py-3 text-left last:border-b-0 active:bg-zinc-50"
                 >
