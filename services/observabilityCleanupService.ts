@@ -1,4 +1,4 @@
-import { recordNeonEvent } from "@/lib/neon/observability.server";
+import { archiveNeonRows, recordNeonEvent } from "@/lib/neon/observability.server";
 import {
   formatObservabilityCleanupSummary,
   OBSERVABILITY_RETENTION_DEFAULTS,
@@ -11,6 +11,25 @@ import type { Json } from "@/types/database.generated";
 const CRON_NAME = "limpar_observabilidade";
 const CRON_ROUTE = "/api/cron/limpar-observabilidade";
 const OPERATIONAL_PROBE_HISTORY_DAYS = 3;
+const AUDIT_ARCHIVE_DAYS = 30;
+const AUDIT_ARCHIVE_BATCH = 500;
+const AUDIT_ARCHIVE_MAX_BATCHES = 3;
+
+type AuditArchiveRow = {
+  id: string;
+  id_salao: string | null;
+  auth_user_id: string | null;
+  id_usuario: string | null;
+  modulo: string | null;
+  entidade: string | null;
+  entidade_id: string | null;
+  acao: string | null;
+  descricao: string | null;
+  dados_anteriores: Json | null;
+  dados_novos: Json | null;
+  metadata: Json | null;
+  created_at: string;
+};
 
 async function recordCron(
   status: string,
@@ -45,13 +64,64 @@ async function recordCron(
   });
 }
 
+async function archiveOldAuditLogs() {
+  const supabaseAdmin = getSupabaseAdmin();
+  const cutoff = new Date(Date.now() - AUDIT_ARCHIVE_DAYS * 24 * 60 * 60 * 1000).toISOString();
+  let archived = 0;
+  let batches = 0;
+
+  for (let batch = 0; batch < AUDIT_ARCHIVE_MAX_BATCHES; batch += 1) {
+    const { data, error } = await supabaseAdmin
+      .from("auditoria_logs")
+      .select(
+        "id,id_salao,auth_user_id,id_usuario,modulo,entidade,entidade_id,acao,descricao,dados_anteriores,dados_novos,metadata,created_at"
+      )
+      .lt("created_at", cutoff)
+      .order("created_at", { ascending: true })
+      .limit(AUDIT_ARCHIVE_BATCH);
+
+    if (error) throw error;
+
+    const rows = (data || []) as AuditArchiveRow[];
+    if (!rows.length) break;
+
+    const archiveResult = await archiveNeonRows("auditoria_logs", rows);
+    if (!archiveResult.ok || archiveResult.archived !== rows.length) {
+      await recordNeonEvent({
+        componentKey: "cron.observability_cleanup",
+        eventType: "audit_archive_deferred",
+        level: "warning",
+        message: "Arquivamento de auditoria adiado; nenhum registro foi removido do Supabase.",
+        metadata: {
+          expected: rows.length,
+          archived: archiveResult.archived,
+          batch: batch + 1,
+        },
+      });
+      break;
+    }
+
+    const ids = rows.map((row) => row.id);
+    const { error: deleteError } = await supabaseAdmin.from("auditoria_logs").delete().in("id", ids);
+    if (deleteError) throw deleteError;
+
+    archived += rows.length;
+    batches += 1;
+    if (rows.length < AUDIT_ARCHIVE_BATCH) break;
+  }
+
+  return { archived, batches, cutoff, retentionDays: AUDIT_ARCHIVE_DAYS };
+}
+
 export async function limparObservabilidade() {
   await recordCron("executando", "Iniciando limpeza de observabilidade.", {
     route: CRON_ROUTE,
     retention: OBSERVABILITY_RETENTION_DEFAULTS,
+    auditArchiveDays: AUDIT_ARCHIVE_DAYS,
   });
 
   const supabaseAdmin = getSupabaseAdmin();
+  const auditArchive = await archiveOldAuditLogs();
 
   const [{ data, error }, { data: operationalData, error: operationalError }] =
     await Promise.all([
@@ -90,20 +160,27 @@ export async function limparObservabilidade() {
     route: CRON_ROUTE,
     totalRemovido: summary.total,
     tabelas: summary.detail,
+    auditArchive,
     retention: {
       ...OBSERVABILITY_RETENTION_DEFAULTS,
+      auditArchiveDays: AUDIT_ARCHIVE_DAYS,
       operationalProbeHistoryDays: OPERATIONAL_PROBE_HISTORY_DAYS,
       incidentUpdatesDays: 365,
       statusDeliveriesDays: 180,
     },
   };
 
-  await recordCron("sucesso", summary.summary, payload);
+  await recordCron(
+    "sucesso",
+    `${summary.summary} ${auditArchive.archived} auditoria(s) arquivada(s) no Neon.`,
+    payload
+  );
 
   return {
     route: CRON_ROUTE,
     totalRemovido: summary.total,
     tabelas: summary.detail,
+    auditArchive,
     retention: OBSERVABILITY_RETENTION_DEFAULTS,
     resumo: summary.summary,
   };
