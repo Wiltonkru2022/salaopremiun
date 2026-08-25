@@ -42,7 +42,7 @@ type RowActionRequest =
     };
 
 function buildActionRequest(actionType: string, actionId: string) {
-  if (actionType === "salao_detail") {
+  if (actionType === "salao_detail" || actionType === "abrir_salao") {
     return {
       kind: "link",
       href: `/admin-master/saloes/${encodeURIComponent(actionId)}`,
@@ -241,8 +241,7 @@ export default function AdminMasterRowActionButton({
       });
       router.refresh();
     } catch (error) {
-      const detail =
-        error instanceof Error ? error.message : "Erro ao executar acao.";
+      const detail = error instanceof Error ? error.message : "Erro ao executar acao.";
       const time = new Date().toLocaleTimeString("pt-BR", {
         hour: "2-digit",
         minute: "2-digit",
@@ -295,9 +294,7 @@ export default function AdminMasterRowActionButton({
         ) : null}
         {state.label}
       </span>
-      {state.status === "error" ? (
-        <span className="sr-only">{state.detail}</span>
-      ) : null}
+      {state.status === "error" ? <span className="sr-only">{state.detail}</span> : null}
     </button>
   );
 }
