@@ -1,13 +1,33 @@
+import dynamic from "next/dynamic";
 import Link from "next/link";
 import { ArrowLeft } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientAppDrawerNav from "@/components/client-app/ClientAppDrawerNav";
-import ClientAppointmentsManager from "@/components/client-app/ClientAppointmentsManager";
 import ClientBookingDraftCleanup from "@/components/client-app/ClientBookingDraftCleanup";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 import { listClienteAppAppointments } from "@/lib/client-app/queries";
 import { getSalonTimeZoneMap } from "@/lib/client-app/appointment-timezones.server";
 import { toDeterministicSalonLocalDateTime } from "@/lib/client-app/deterministic-date";
+
+const ClientAppointmentsManager = dynamic(
+  () => import("@/components/client-app/ClientAppointmentsManager"),
+  {
+    loading: () => (
+      <div className="space-y-3" aria-label="Carregando agendamentos">
+        {[0, 1, 2].map((item) => (
+          <div
+            key={item}
+            className="animate-pulse rounded-[1.4rem] border border-zinc-200 bg-zinc-50 p-4"
+          >
+            <div className="h-4 w-32 rounded bg-zinc-200" />
+            <div className="mt-3 h-6 w-3/4 rounded bg-zinc-200" />
+            <div className="mt-3 h-12 rounded-2xl bg-zinc-200" />
+          </div>
+        ))}
+      </div>
+    ),
+  }
+);
 
 export const metadata = {
   title: "Meus Agendamentos",
