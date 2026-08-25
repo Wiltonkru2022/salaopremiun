@@ -1,5 +1,6 @@
 import "server-only";
 
+import { recordNeonEvent } from "@/lib/neon/observability.server";
 import { reconcileOperationalIncidents } from "@/lib/monitoring/operational-reconciler.server";
 import { syncOperationalComponentRegistry } from "@/lib/monitoring/operational-registry.server";
 import { runOperationalProbes } from "@/lib/monitoring/operational-probes.server";
@@ -9,44 +10,43 @@ import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const CRON_NAME = "operational_health";
 
-async function startCron() {
-  const supabase = getSupabaseAdmin() as any;
-  const { data, error } = await supabase
-    .from("eventos_cron")
-    .insert({
-      nome: CRON_NAME,
-      status: "executando",
-      resumo: "Iniciando ciclo de saúde operacional.",
-      payload_json: { version: "operational-health-v1" },
-    })
-    .select("id")
-    .single();
-  if (error) throw error;
-  return data.id as string;
-}
-
-async function finishCron(
-  id: string,
+async function recordCron(
   status: string,
   resumo: string,
   payload: Record<string, unknown>,
   errorText?: string | null
 ) {
-  const supabase = getSupabaseAdmin() as any;
-  await supabase
-    .from("eventos_cron")
-    .update({
+  const storedInNeon = await recordNeonEvent({
+    componentKey: "cron.operational_health",
+    eventType: `cron_${status}`,
+    level: status === "erro" ? "error" : "info",
+    message: resumo,
+    metadata: {
+      cronName: CRON_NAME,
       status,
-      resumo,
-      payload_json: payload,
-      erro_texto: errorText || null,
-      finalizado_em: new Date().toISOString(),
-    })
-    .eq("id", id);
+      payload,
+      errorText: errorText || null,
+    },
+  });
+
+  if (storedInNeon) return;
+
+  const supabase = getSupabaseAdmin() as any;
+  await supabase.from("eventos_cron").insert({
+    nome: CRON_NAME,
+    status,
+    resumo,
+    payload_json: payload,
+    erro_texto: errorText || null,
+    finalizado_em: status === "executando" ? null : new Date().toISOString(),
+  });
 }
 
 export async function runOperationalHealthCycle() {
-  const cronId = await startCron();
+  await recordCron("executando", "Iniciando ciclo de saúde operacional.", {
+    version: "operational-health-v1",
+  });
+
   try {
     const registry = await syncOperationalComponentRegistry();
     const [probes, securityPosture] = await Promise.all([
@@ -66,18 +66,19 @@ export async function runOperationalHealthCycle() {
       reconciliation,
       notifications,
     };
-    await finishCron(
-      cronId,
+
+    await recordCron(
       "sucesso",
       `Saúde operacional atualizada: ${probes.length} probes, ${reconciliation.autoResolved} incidente(s) resolvido(s) automaticamente.`,
       payload
     );
+
     return { ok: true, ...payload };
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Falha no ciclo de saúde operacional.";
-    await finishCron(
-      cronId,
+
+    await recordCron(
       "erro",
       "Ciclo de saúde operacional falhou.",
       {},
