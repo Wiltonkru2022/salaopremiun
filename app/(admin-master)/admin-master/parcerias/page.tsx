@@ -1,3 +1,14 @@
+import {
+  BarChart3,
+  Building2,
+  ChevronDown,
+  ExternalLink,
+  FileSignature,
+  Image as ImageIcon,
+  Megaphone,
+  Plus,
+  Trash2,
+} from "lucide-react";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { autentiqueConfigurado } from "@/lib/parcerias/autentique";
@@ -5,6 +16,9 @@ import {
   atualizarCampanhaParceria,
   criarCampanhaParceria,
   criarParceiro,
+  excluirCampanhaParceria,
+  excluirCriativoParceria,
+  excluirParceiro,
   gerarContratoParceria,
   salvarCriativoParceria,
 } from "./actions";
@@ -12,8 +26,38 @@ import { enviarContratoAutentique, sincronizarContratoAutentique } from "./auten
 
 export const dynamic = "force-dynamic";
 
+const inputClass = "h-11 rounded-2xl border border-zinc-200 bg-white px-4 text-sm text-zinc-950 outline-none transition focus:border-zinc-400 focus:ring-2 focus:ring-zinc-100";
+const buttonClass = "inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 text-sm font-black text-white transition hover:bg-zinc-800";
+const subtleButtonClass = "inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 text-xs font-black text-zinc-800 transition hover:bg-zinc-50";
+
 function brl(value: unknown) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(Number(value || 0));
+}
+
+function statusLabel(status: string) {
+  const labels: Record<string, string> = {
+    prospect: "Prospect",
+    negociacao: "Negociação",
+    ativo: "Ativo",
+    pausado: "Pausado",
+    encerrado: "Encerrado",
+    aguardando_contrato: "Aguardando contrato",
+    agendada: "Agendada",
+    ativa: "Ativa",
+    pausada: "Pausada",
+    rascunho: "Rascunho",
+    enviado_assinatura: "Enviado para assinatura",
+    assinado: "Assinado",
+    recusado: "Recusado",
+  };
+  return labels[status] || status.replaceAll("_", " ");
+}
+
+function statusClass(status: string) {
+  if (["ativo", "ativa", "assinado"].includes(status)) return "bg-emerald-50 text-emerald-700";
+  if (["pausado", "pausada", "encerrado", "encerrada", "recusado"].includes(status)) return "bg-zinc-100 text-zinc-600";
+  if (["aguardando_contrato", "negociacao", "agendada", "enviado_assinatura"].includes(status)) return "bg-amber-50 text-amber-800";
+  return "bg-sky-50 text-sky-700";
 }
 
 export default async function AdminMasterParceriasPage() {
@@ -21,17 +65,46 @@ export default async function AdminMasterParceriasPage() {
   const supabase = getSupabaseAdmin() as any;
   const autentiqueAtivo = autentiqueConfigurado();
 
-  const [{ data: parceiros }, { data: campanhas }, { data: contratos }, { data: metricas }] = await Promise.all([
-    supabase.from("parceiros_comerciais").select("id,razao_social,nome_fantasia,segmento,cidade,uf,status,email,whatsapp").order("criado_em", { ascending: false }).limit(100),
-    supabase.from("parceria_campanhas").select("id,id_parceiro,nome,status,valor_contratado,inicio_em,fim_em,publico,locais_exibicao,prioridade,peso_rotacao,limite_frequencia_dia,limite_impressoes_dia,exclusiva,origem,categoria_interna,parceiros_comerciais(razao_social,nome_fantasia)").order("criado_em", { ascending: false }).limit(150),
-    supabase.from("parceria_contratos").select("id,id_campanha,numero,status,valor,assinado_em,signatario_email,envelope_externo_id,url_assinatura").order("criado_em", { ascending: false }).limit(100),
-    supabase.from("parceria_metricas_diarias").select("id_campanha,impressoes,cliques,conversoes,cupons").order("data", { ascending: false }).limit(5000),
+  const [
+    { data: parceiros },
+    { data: campanhas },
+    { data: criativos },
+    { data: contratos },
+    { data: metricas },
+  ] = await Promise.all([
+    supabase
+      .from("parceiros_comerciais")
+      .select("id,razao_social,nome_fantasia,segmento,cidade,uf,status,email,whatsapp")
+      .order("criado_em", { ascending: false })
+      .limit(100),
+    supabase
+      .from("parceria_campanhas")
+      .select("id,id_parceiro,nome,status,valor_contratado,inicio_em,fim_em,publico,locais_exibicao,prioridade,peso_rotacao,limite_frequencia_dia,limite_impressoes_dia,exclusiva,origem,categoria_interna,parceiros_comerciais(razao_social,nome_fantasia)")
+      .order("criado_em", { ascending: false })
+      .limit(150),
+    supabase
+      .from("parceria_criativos")
+      .select("id,id_campanha,titulo,subtitulo,imagem_url,cta_texto,destino_url,formato,ativo")
+      .order("criado_em", { ascending: false })
+      .limit(300),
+    supabase
+      .from("parceria_contratos")
+      .select("id,id_parceiro,id_campanha,numero,status,valor,assinado_em,signatario_email,envelope_externo_id,url_assinatura")
+      .order("criado_em", { ascending: false })
+      .limit(150),
+    supabase
+      .from("parceria_metricas_diarias")
+      .select("id_campanha,impressoes,cliques,conversoes,cupons_utilizados")
+      .order("data", { ascending: false })
+      .limit(5000),
   ]);
 
   const parceirosRows = parceiros || [];
   const campanhasRows = campanhas || [];
+  const criativosRows = criativos || [];
   const contratosRows = contratos || [];
   const metricasRows = metricas || [];
+
   const comerciais = campanhasRows.filter((c: any) => c.origem !== "salao_premium");
   const internas = campanhasRows.filter((c: any) => c.origem === "salao_premium");
   const receitaContratada = comerciais.reduce((sum: number, row: any) => sum + Number(row.valor_contratado || 0), 0);
@@ -48,123 +121,397 @@ export default async function AdminMasterParceriasPage() {
     metricasPorCampanha.set(row.id_campanha, current);
   }
 
+  const contratosPorParceiro = new Map<string, number>();
+  for (const contrato of contratosRows) {
+    if (!contrato.id_parceiro) continue;
+    contratosPorParceiro.set(contrato.id_parceiro, (contratosPorParceiro.get(contrato.id_parceiro) || 0) + 1);
+  }
+
+  const campanhasPorParceiro = new Map<string, number>();
+  for (const campanha of comerciais) {
+    if (!campanha.id_parceiro) continue;
+    campanhasPorParceiro.set(campanha.id_parceiro, (campanhasPorParceiro.get(campanha.id_parceiro) || 0) + 1);
+  }
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 pb-10">
       <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">
-        <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex flex-wrap items-start justify-between gap-5">
+          <div className="max-w-3xl">
+            <div className="text-xs font-black uppercase tracking-[0.22em] text-amber-700">Publicidade e parcerias</div>
+            <h1 className="mt-2 text-3xl font-black tracking-tight text-zinc-950">Empresas e anúncios</h1>
+            <p className="mt-2 text-sm leading-6 text-zinc-600">
+              Organize tudo em ordem: cadastre a empresa, crie a campanha e depois adicione a imagem do anúncio. Campanhas do próprio Salão Premiun não precisam de empresa.
+            </p>
+          </div>
+          <div className="rounded-2xl bg-zinc-950 px-5 py-4 text-white">
+            <div className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Receita contratada</div>
+            <div className="mt-1 text-2xl font-black">{brl(receitaContratada)}</div>
+          </div>
+        </div>
+
+        <div className="mt-6 grid gap-3 md:grid-cols-3">
+          {[
+            ["1", "Empresa", "Cadastre quem está anunciando.", Building2],
+            ["2", "Campanha", "Escolha público, local e período.", Megaphone],
+            ["3", "Anúncio", "Adicione imagem, texto e link.", ImageIcon],
+          ].map(([step, title, description, Icon]: any) => (
+            <div key={step} className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-zinc-950 text-sm font-black text-white">{step}</div>
+                <Icon size={19} className="text-amber-700" />
+                <div className="font-black text-zinc-950">{title}</div>
+              </div>
+              <p className="mt-3 text-sm text-zinc-500">{description}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+          {[
+            ["Empresas", parceirosRows.length],
+            ["Campanhas de parceiros", comerciais.length],
+            ["Campanhas Salão Premiun", internas.length],
+            ["Impressões", totalImpressoes],
+            ["CTR", `${ctr.toFixed(1)}%`],
+          ].map(([label, value]) => (
+            <div key={String(label)} className="rounded-2xl border border-zinc-100 bg-white p-4 shadow-sm">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-zinc-400">{label}</div>
+              <div className="mt-1 text-xl font-black text-zinc-950">{value}</div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section id="empresas" className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <div className="text-xs font-black uppercase tracking-[0.24em] text-amber-700">Comunicação • Receita • Distribuição</div>
-            <h1 className="mt-2 font-display text-3xl font-bold text-zinc-950">Publicidade e Campanhas Salão Premium</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-600">O mesmo motor distribui campanhas de parceiros e comunicações próprias. Cada slot mostra somente uma campanha por vez, com segmentação, prioridade, rotação e limite de frequência.</p>
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500"><Building2 size={15} /> Etapa 1</div>
+            <h2 className="mt-1 text-2xl font-black text-zinc-950">Empresas anunciantes</h2>
+            <p className="mt-1 text-sm text-zinc-500">Aqui você cadastra, consulta e exclui empresas.</p>
           </div>
-          <div className="rounded-2xl bg-zinc-950 px-5 py-4 text-white"><div className="text-xs uppercase tracking-[0.2em] text-zinc-400">Receita comercial</div><div className="mt-1 text-2xl font-black">{brl(receitaContratada)}</div></div>
+          <details className="group relative">
+            <summary className={`${buttonClass} cursor-pointer list-none`}><Plus size={16} /> Nova empresa</summary>
+            <div className="mt-4 w-full rounded-[22px] border border-zinc-200 bg-zinc-50 p-5 sm:min-w-[650px]">
+              <form action={criarParceiro}>
+                <div className="mb-4">
+                  <div className="font-black text-zinc-950">Cadastrar empresa</div>
+                  <div className="mt-1 text-xs text-zinc-500">Use somente para anunciantes externos. Campanha do Salão Premiun não precisa disso.</div>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <input name="razao_social" required placeholder="Razão social *" className={inputClass} />
+                  <input name="nome_fantasia" placeholder="Nome fantasia" className={inputClass} />
+                  <input name="cpf_cnpj" placeholder="CPF/CNPJ" className={inputClass} />
+                  <input name="segmento" placeholder="Segmento" className={inputClass} />
+                  <input name="email" type="email" placeholder="E-mail" className={inputClass} />
+                  <input name="whatsapp" placeholder="WhatsApp" className={inputClass} />
+                  <input name="cidade" placeholder="Cidade" className={inputClass} />
+                  <input name="uf" placeholder="UF" maxLength={2} className={inputClass} />
+                </div>
+                <button className={`${buttonClass} mt-4`}>Cadastrar empresa</button>
+              </form>
+            </div>
+          </details>
         </div>
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-6">
-          {[['Parceiros', parceirosRows.length], ['Publicidade', comerciais.length], ['Campanhas próprias', internas.length], ['Impressões', totalImpressoes], ['Cliques', totalCliques], ['CTR', `${ctr.toFixed(1)}%`]].map(([label, value]) => <div key={String(label)} className="rounded-2xl bg-zinc-50 p-4"><div className="text-xs font-bold uppercase text-zinc-500">{label}</div><div className="mt-1 text-2xl font-black">{value}</div></div>)}
+
+        <div className="mt-5 grid gap-3 xl:grid-cols-2">
+          {parceirosRows.length ? parceirosRows.map((p: any) => {
+            const contratosCount = contratosPorParceiro.get(p.id) || 0;
+            const campanhasCount = campanhasPorParceiro.get(p.id) || 0;
+            return (
+              <article key={p.id} className="rounded-[22px] border border-zinc-200 bg-zinc-50/60 p-5">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <div className={`inline-flex rounded-full px-3 py-1 text-[10px] font-black uppercase ${statusClass(p.status)}`}>{statusLabel(p.status)}</div>
+                    <h3 className="mt-2 text-lg font-black text-zinc-950">{p.nome_fantasia || p.razao_social}</h3>
+                    {p.nome_fantasia ? <div className="mt-1 text-xs text-zinc-500">{p.razao_social}</div> : null}
+                  </div>
+                  <div className="text-right text-xs text-zinc-500">
+                    <div><b className="text-zinc-800">{campanhasCount}</b> campanha(s)</div>
+                    <div className="mt-1"><b className="text-zinc-800">{contratosCount}</b> contrato(s)</div>
+                  </div>
+                </div>
+                <div className="mt-4 grid gap-2 text-sm text-zinc-600 sm:grid-cols-2">
+                  <div><b>Segmento:</b> {p.segmento || "Não informado"}</div>
+                  <div><b>Local:</b> {[p.cidade, p.uf].filter(Boolean).join(" / ") || "Não informado"}</div>
+                  <div><b>E-mail:</b> {p.email || "Não informado"}</div>
+                  <div><b>WhatsApp:</b> {p.whatsapp || "Não informado"}</div>
+                </div>
+
+                <div className="mt-4 border-t border-zinc-200 pt-4">
+                  {contratosCount === 0 ? (
+                    <details>
+                      <summary className="inline-flex cursor-pointer list-none items-center gap-2 text-xs font-black text-red-700"><Trash2 size={14} /> Excluir empresa</summary>
+                      <form action={excluirParceiro} className="mt-3 rounded-2xl border border-red-200 bg-red-50 p-4">
+                        <input type="hidden" name="id_parceiro" value={p.id} />
+                        <p className="text-xs leading-5 text-red-800">Isso exclui também as campanhas dessa empresa que não possuem contrato. Para confirmar, digite <b>EXCLUIR</b>.</p>
+                        <div className="mt-3 flex flex-wrap gap-2">
+                          <input name="confirmacao" required placeholder="Digite EXCLUIR" className={`${inputClass} flex-1 border-red-200`} />
+                          <button className="h-11 rounded-2xl bg-red-600 px-5 text-sm font-black text-white hover:bg-red-700">Excluir definitivamente</button>
+                        </div>
+                      </form>
+                    </details>
+                  ) : (
+                    <div className="text-xs font-semibold text-zinc-500">Não é possível excluir: há contrato registrado. O histórico contratual deve ser preservado.</div>
+                  )}
+                </div>
+              </article>
+            );
+          }) : (
+            <div className="rounded-2xl border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500 xl:col-span-2">Nenhuma empresa cadastrada.</div>
+          )}
         </div>
-        <div className="mt-5 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm leading-6 text-sky-950"><b>Prioridade automática:</b> comunicado crítico do Salão Premium sempre passa à frente de publicidade comercial elegível. Novidades e benefícios normais entram na rotação pela prioridade configurada.</div>
-        <div className={`mt-3 rounded-2xl border p-4 text-sm ${autentiqueAtivo ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}><b>Autentique:</b> {autentiqueAtivo ? "configurado para contratos comerciais." : "integração pronta, aguardando AUTENTIQUE_API_TOKEN na Vercel."}</div>
       </section>
 
-      <div className="grid gap-6 xl:grid-cols-2">
-        <form action={criarParceiro} className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-black">Novo parceiro comercial</h2>
-          <p className="mt-1 text-sm text-zinc-500">Necessário somente para publicidade paga ou permuta.</p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <input name="razao_social" required placeholder="Razão social *" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-            <input name="nome_fantasia" placeholder="Nome fantasia" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-            <input name="cpf_cnpj" placeholder="CPF/CNPJ" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-            <input name="segmento" placeholder="Segmento" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-            <input name="email" type="email" placeholder="E-mail" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-            <input name="whatsapp" placeholder="WhatsApp" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-            <input name="cidade" placeholder="Cidade" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-            <input name="uf" placeholder="UF" maxLength={2} className="rounded-2xl border border-zinc-200 px-4 py-3" />
+      <section id="campanhas" className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500"><Megaphone size={15} /> Etapa 2</div>
+            <h2 className="mt-1 text-2xl font-black text-zinc-950">Campanhas</h2>
+            <p className="mt-1 text-sm text-zinc-500">Crie, pause, configure ou exclua uma campanha.</p>
           </div>
-          <button className="mt-4 rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-black text-white">Cadastrar parceiro</button>
-        </form>
+          <details className="group">
+            <summary className={`${buttonClass} cursor-pointer list-none`}><Plus size={16} /> Nova campanha</summary>
+            <div className="mt-4 rounded-[22px] border border-zinc-200 bg-zinc-50 p-5 xl:min-w-[850px]">
+              <form action={criarCampanhaParceria}>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <label className="space-y-1 text-xs font-bold text-zinc-600">
+                    Tipo da campanha
+                    <select name="origem" defaultValue="salao_premium" className={`${inputClass} w-full`}>
+                      <option value="salao_premium">Campanha do Salão Premiun</option>
+                      <option value="parceiro">Publicidade de empresa parceira</option>
+                    </select>
+                  </label>
+                  <label className="space-y-1 text-xs font-bold text-zinc-600">
+                    Empresa anunciante
+                    <select name="id_parceiro" className={`${inputClass} w-full`}>
+                      <option value="">Não se aplica / escolha uma empresa</option>
+                      {parceirosRows.map((p: any) => <option key={p.id} value={p.id}>{p.nome_fantasia || p.razao_social}</option>)}
+                    </select>
+                  </label>
+                  <input name="nome" required placeholder="Nome da campanha *" className={inputClass} />
+                  <input name="descricao" placeholder="Descrição curta" className={inputClass} />
+                  <input name="destino_url" placeholder="Link de destino" className={`${inputClass} sm:col-span-2`} />
+                </div>
 
-        <form action={criarCampanhaParceria} className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">
-          <h2 className="text-xl font-black">Nova campanha</h2>
-          <p className="mt-1 text-sm text-zinc-500">Use para parceiro comercial ou divulgação do próprio Salão Premium.</p>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
-            <select name="origem" defaultValue="parceiro" className="rounded-2xl border border-zinc-200 px-4 py-3"><option value="parceiro">Parceiro comercial</option><option value="salao_premium">Campanha Salão Premium</option></select>
-            <select name="categoria_interna" defaultValue="novidade" className="rounded-2xl border border-zinc-200 px-4 py-3"><option value="novidade">Novidade</option><option value="beneficio">Benefício</option><option value="comunicado">Comunicado</option><option value="critico">Comunicado crítico</option></select>
-            <select name="id_parceiro" className="rounded-2xl border border-zinc-200 px-4 py-3"><option value="">Parceiro (somente publicidade)</option>{parceirosRows.map((p: any) => <option key={p.id} value={p.id}>{p.nome_fantasia || p.razao_social}</option>)}</select>
-            <input name="nome" required placeholder="Nome da campanha *" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-            <input name="valor_contratado" inputMode="decimal" placeholder="Valor contratado (publicidade)" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-            <select name="modelo_cobranca" className="rounded-2xl border border-zinc-200 px-4 py-3"><option value="mensal">Mensal</option><option value="periodo">Período fechado</option><option value="cpm">CPM</option><option value="cpc">CPC</option><option value="cpa">CPA</option><option value="permuta">Permuta</option></select>
-            <input name="inicio_em" type="datetime-local" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-            <input name="fim_em" type="datetime-local" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-            <input name="cidade" placeholder="Cidade alvo (vazio = qualquer)" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-            <input name="uf" placeholder="UF alvo" maxLength={2} className="rounded-2xl border border-zinc-200 px-4 py-3" />
-            <input name="destino_url" placeholder="Link de destino" className="rounded-2xl border border-zinc-200 px-4 py-3 sm:col-span-2" />
-            <input name="cupom_codigo" placeholder="Cupom opcional" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-            <input name="descricao" placeholder="Descrição" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-            <input name="prioridade" type="number" min={0} max={100} defaultValue={50} placeholder="Prioridade 0-100" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-            <input name="peso_rotacao" type="number" min={1} max={100} defaultValue={1} placeholder="Peso de rotação" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-            <input name="limite_frequencia_dia" type="number" min={1} max={50} defaultValue={2} placeholder="Exibições por navegador/dia" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-            <input name="limite_impressoes_dia" type="number" min={1} placeholder="Teto total/dia (opcional)" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-          </div>
-          <div className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
-            <label className="flex gap-2"><input type="checkbox" name="publico" value="salao" defaultChecked /> Salões</label>
-            <label className="flex gap-2"><input type="checkbox" name="publico" value="profissional" /> Profissionais</label>
-            <label className="flex gap-2"><input type="checkbox" name="publico" value="cliente" defaultChecked /> Clientes</label>
-            <label className="flex gap-2"><input type="checkbox" name="locais_exibicao" value="dashboard" defaultChecked /> Dashboard do salão</label>
-            <label className="flex gap-2"><input type="checkbox" name="locais_exibicao" value="app_cliente" defaultChecked /> App Cliente</label>
-            <label className="flex gap-2"><input type="checkbox" name="locais_exibicao" value="parceiros" defaultChecked /> Parceiros e benefícios</label>
-            <label className="flex gap-2 font-bold text-amber-800"><input type="checkbox" name="exclusiva" /> Exclusiva na prioridade</label>
-          </div>
-          <button className="mt-4 rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-black text-white">Criar campanha</button>
-        </form>
-      </div>
+                <div className="mt-4 grid gap-4 rounded-2xl border border-zinc-200 bg-white p-4 md:grid-cols-2">
+                  <div>
+                    <div className="text-xs font-black uppercase text-zinc-500">Quem vai ver?</div>
+                    <div className="mt-3 space-y-2 text-sm">
+                      <label className="flex gap-2"><input type="checkbox" name="publico" value="salao" defaultChecked /> Salões</label>
+                      <label className="flex gap-2"><input type="checkbox" name="publico" value="profissional" /> Profissionais</label>
+                      <label className="flex gap-2"><input type="checkbox" name="publico" value="cliente" /> Clientes</label>
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-xs font-black uppercase text-zinc-500">Onde vai aparecer?</div>
+                    <div className="mt-3 space-y-2 text-sm">
+                      <label className="flex gap-2"><input type="checkbox" name="locais_exibicao" value="dashboard" defaultChecked /> Dashboard do salão</label>
+                      <label className="flex gap-2"><input type="checkbox" name="locais_exibicao" value="app_cliente" /> App Cliente</label>
+                      <label className="flex gap-2"><input type="checkbox" name="locais_exibicao" value="parceiros" /> Parceiros e benefícios</label>
+                    </div>
+                  </div>
+                </div>
 
-      <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-black">Criativo / conteúdo</h2>
-        <form action={salvarCriativoParceria} className="mt-4 grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          <select name="id_campanha" required className="rounded-2xl border border-zinc-200 px-4 py-3"><option value="">Campanha *</option>{campanhasRows.map((c: any) => <option key={c.id} value={c.id}>{c.origem === "salao_premium" ? "Salão Premium" : "Parceiro"} • {c.nome}</option>)}</select>
-          <input name="titulo" required placeholder="Título *" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-          <input name="subtitulo" placeholder="Texto de apoio" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-          <input name="imagem_url" placeholder="URL da imagem" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-          <input name="cta_texto" placeholder="Texto do botão" defaultValue="Saiba mais" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-          <input name="destino_url" placeholder="Link do botão" className="rounded-2xl border border-zinc-200 px-4 py-3" />
-          <button className="rounded-2xl bg-zinc-950 px-5 py-3 text-sm font-black text-white">Salvar conteúdo</button>
-        </form>
-      </section>
+                <details className="mt-4 rounded-2xl border border-zinc-200 bg-white p-4">
+                  <summary className="flex cursor-pointer list-none items-center justify-between text-sm font-black text-zinc-800">Configurações avançadas <ChevronDown size={16} /></summary>
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    <select name="categoria_interna" defaultValue="novidade" className={inputClass}><option value="novidade">Novidade</option><option value="beneficio">Benefício</option><option value="comunicado">Comunicado</option><option value="critico">Comunicado crítico</option></select>
+                    <select name="modelo_cobranca" defaultValue="mensal" className={inputClass}><option value="mensal">Mensal</option><option value="periodo">Período fechado</option><option value="cpm">CPM</option><option value="cpc">CPC</option><option value="cpa">CPA</option><option value="permuta">Permuta</option></select>
+                    <input name="valor_contratado" inputMode="decimal" placeholder="Valor contratado" className={inputClass} />
+                    <input name="inicio_em" type="datetime-local" className={inputClass} />
+                    <input name="fim_em" type="datetime-local" className={inputClass} />
+                    <input name="cupom_codigo" placeholder="Cupom opcional" className={inputClass} />
+                    <input name="cidade" placeholder="Cidade alvo" className={inputClass} />
+                    <input name="uf" placeholder="UF alvo" maxLength={2} className={inputClass} />
+                    <input name="prioridade" type="number" min={0} max={100} defaultValue={50} placeholder="Prioridade" className={inputClass} />
+                    <input name="peso_rotacao" type="number" min={1} max={100} defaultValue={1} placeholder="Peso" className={inputClass} />
+                    <input name="limite_frequencia_dia" type="number" min={1} max={50} defaultValue={2} placeholder="Exibições/navegador/dia" className={inputClass} />
+                    <input name="limite_impressoes_dia" type="number" min={1} placeholder="Teto de impressões/dia" className={inputClass} />
+                    <label className="flex h-11 items-center gap-2 rounded-2xl border border-zinc-200 px-4 text-sm font-bold"><input type="checkbox" name="exclusiva" /> Campanha exclusiva</label>
+                  </div>
+                </details>
 
-      <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">
-        <h2 className="text-xl font-black">Campanhas, distribuição e contratos</h2>
-        <div className="mt-4 space-y-4">
-          {campanhasRows.map((c: any) => {
+                <button className={`${buttonClass} mt-4`}>Criar campanha</button>
+              </form>
+            </div>
+          </details>
+        </div>
+
+        <div className="mt-5 space-y-3">
+          {campanhasRows.length ? campanhasRows.map((c: any) => {
             const parceiro = Array.isArray(c.parceiros_comerciais) ? c.parceiros_comerciais[0] : c.parceiros_comerciais;
             const contrato = contratosRows.find((x: any) => x.id_campanha === c.id);
             const m = metricasPorCampanha.get(c.id) || { impressoes: 0, cliques: 0, conversoes: 0 };
             const interna = c.origem === "salao_premium";
-            return <article key={c.id} className="rounded-[22px] border border-zinc-200 p-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div><div className={`inline-flex rounded-full px-3 py-1 text-[10px] font-black uppercase ${interna ? "bg-sky-50 text-sky-700" : "bg-amber-50 text-amber-800"}`}>{interna ? `Salão Premium • ${c.categoria_interna || "novidade"}` : `Publicidade • ${parceiro?.nome_fantasia || parceiro?.razao_social || "Parceiro"}`}</div><h3 className="mt-2 text-lg font-black">{c.nome}</h3><div className="mt-2 text-xs text-zinc-500">{m.impressoes} impressões • {m.cliques} cliques • {m.conversoes} conversões</div></div>
-                <div className="text-right"><div className="text-sm font-black">{interna ? "Campanha própria" : brl(c.valor_contratado)}</div><div className="mt-1 text-xs font-bold uppercase text-zinc-500">{c.status}</div></div>
-              </div>
-              <form action={atualizarCampanhaParceria} className="mt-4 grid gap-2 md:grid-cols-7">
-                <input type="hidden" name="id_campanha" value={c.id} />
-                <select name="status" defaultValue={c.status} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm"><option value="aguardando_contrato">Aguardando contrato</option><option value="agendada">Agendada</option><option value="ativa">Ativa</option><option value="pausada">Pausada</option><option value="encerrada">Encerrada</option></select>
-                <select name="categoria_interna" defaultValue={c.categoria_interna || ""} className="rounded-xl border border-zinc-200 px-3 py-2 text-sm"><option value="">Publicidade</option><option value="novidade">Novidade</option><option value="beneficio">Benefício</option><option value="comunicado">Comunicado</option><option value="critico">Crítico</option></select>
-                <input name="prioridade" type="number" min={0} max={100} defaultValue={c.prioridade || 0} title="Prioridade" className="rounded-xl border border-zinc-200 px-3 py-2 text-sm" />
-                <input name="peso_rotacao" type="number" min={1} max={100} defaultValue={c.peso_rotacao || 1} title="Peso" className="rounded-xl border border-zinc-200 px-3 py-2 text-sm" />
-                <input name="limite_frequencia_dia" type="number" min={1} max={50} defaultValue={c.limite_frequencia_dia || 2} title="Frequência/dia" className="rounded-xl border border-zinc-200 px-3 py-2 text-sm" />
-                <input name="limite_impressoes_dia" type="number" min={1} defaultValue={c.limite_impressoes_dia || ""} title="Teto/dia" className="rounded-xl border border-zinc-200 px-3 py-2 text-sm" />
-                <label className="flex items-center gap-2 rounded-xl border border-zinc-200 px-3 py-2 text-xs font-bold"><input type="checkbox" name="exclusiva" defaultChecked={Boolean(c.exclusiva)} /> Exclusiva</label>
-                <button className="rounded-xl bg-zinc-950 px-3 py-2 text-xs font-black text-white md:col-span-7 md:justify-self-start">Salvar distribuição</button>
-              </form>
-              {!interna ? <div className="mt-3 flex flex-wrap gap-2">
-                {!contrato ? <form action={gerarContratoParceria}><input type="hidden" name="id_campanha" value={c.id} /><button className="rounded-xl border border-zinc-300 px-3 py-2 text-xs font-black">Gerar contrato</button></form> : <>
-                  <span className="rounded-full bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">{contrato.status} • {contrato.numero}</span>
-                  {!contrato.envelope_externo_id ? <form action={enviarContratoAutentique}><input type="hidden" name="id_contrato" value={contrato.id} /><button disabled={!autentiqueAtivo || !contrato.signatario_email} className="rounded-xl bg-zinc-950 px-3 py-2 text-xs font-black text-white disabled:opacity-40">Enviar para assinatura</button></form> : <form action={sincronizarContratoAutentique}><input type="hidden" name="id_contrato" value={contrato.id} /><button disabled={!autentiqueAtivo} className="rounded-xl border border-zinc-300 px-3 py-2 text-xs font-black disabled:opacity-40">Sincronizar</button></form>}
-                  {contrato.url_assinatura ? <a href={contrato.url_assinatura} target="_blank" rel="noreferrer" className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-black text-amber-900">Abrir assinatura</a> : null}
-                </>}
-              </div> : <div className="mt-3 text-xs font-semibold text-sky-700">Campanha própria: não exige contrato comercial.</div>}
-            </article>;
-          })}
+            const criativosCount = criativosRows.filter((x: any) => x.id_campanha === c.id).length;
+            return (
+              <article key={c.id} className="rounded-[22px] border border-zinc-200 p-5">
+                <div className="flex flex-wrap items-start justify-between gap-4">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase ${interna ? "bg-sky-50 text-sky-700" : "bg-amber-50 text-amber-800"}`}>{interna ? "Salão Premiun" : parceiro?.nome_fantasia || parceiro?.razao_social || "Empresa"}</span>
+                      <span className={`rounded-full px-3 py-1 text-[10px] font-black uppercase ${statusClass(c.status)}`}>{statusLabel(c.status)}</span>
+                    </div>
+                    <h3 className="mt-2 text-lg font-black text-zinc-950">{c.nome}</h3>
+                    <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-zinc-500">
+                      <span>{m.impressoes} impressões</span>
+                      <span>{m.cliques} cliques</span>
+                      <span>{m.conversoes} conversões</span>
+                      <span>{criativosCount} anúncio(s)</span>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm font-black text-zinc-950">{interna ? "Campanha própria" : brl(c.valor_contratado)}</div>
+                    <div className="mt-1 text-xs text-zinc-500">Prioridade {c.prioridade || 0}</div>
+                  </div>
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-zinc-100 pt-4">
+                  <details>
+                    <summary className={`${subtleButtonClass} cursor-pointer list-none`}>Configurar campanha <ChevronDown size={14} /></summary>
+                    <form action={atualizarCampanhaParceria} className="mt-3 grid gap-2 rounded-2xl border border-zinc-200 bg-zinc-50 p-4 md:grid-cols-3 xl:grid-cols-6">
+                      <input type="hidden" name="id_campanha" value={c.id} />
+                      <select name="status" defaultValue={c.status} className={inputClass}><option value="aguardando_contrato">Aguardando contrato</option><option value="agendada">Agendada</option><option value="ativa">Ativa</option><option value="pausada">Pausada</option><option value="encerrada">Encerrada</option></select>
+                      <select name="categoria_interna" defaultValue={c.categoria_interna || ""} className={inputClass}><option value="">Publicidade</option><option value="novidade">Novidade</option><option value="beneficio">Benefício</option><option value="comunicado">Comunicado</option><option value="critico">Crítico</option></select>
+                      <input name="prioridade" type="number" min={0} max={100} defaultValue={c.prioridade || 0} className={inputClass} title="Prioridade" />
+                      <input name="peso_rotacao" type="number" min={1} max={100} defaultValue={c.peso_rotacao || 1} className={inputClass} title="Peso de rotação" />
+                      <input name="limite_frequencia_dia" type="number" min={1} max={50} defaultValue={c.limite_frequencia_dia || 2} className={inputClass} title="Frequência por dia" />
+                      <input name="limite_impressoes_dia" type="number" min={1} defaultValue={c.limite_impressoes_dia || ""} className={inputClass} title="Teto por dia" />
+                      <label className="flex h-11 items-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 text-xs font-bold"><input type="checkbox" name="exclusiva" defaultChecked={Boolean(c.exclusiva)} /> Exclusiva</label>
+                      <button className={`${buttonClass} md:col-span-2`}>Salvar</button>
+                    </form>
+                  </details>
+
+                  {!interna && !contrato ? (
+                    <form action={gerarContratoParceria}>
+                      <input type="hidden" name="id_campanha" value={c.id} />
+                      <button className={subtleButtonClass}><FileSignature size={14} /> Gerar contrato</button>
+                    </form>
+                  ) : null}
+
+                  {contrato ? <span className="inline-flex h-10 items-center rounded-xl bg-emerald-50 px-4 text-xs font-black text-emerald-700">Contrato: {statusLabel(contrato.status)}</span> : null}
+
+                  <details>
+                    <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-xl px-3 text-xs font-black text-red-700 hover:bg-red-50"><Trash2 size={14} /> Excluir</summary>
+                    <form action={excluirCampanhaParceria} className="mt-3 max-w-xl rounded-2xl border border-red-200 bg-red-50 p-4">
+                      <input type="hidden" name="id_campanha" value={c.id} />
+                      <p className="text-xs leading-5 text-red-800">A campanha, seus anúncios e métricas serão removidos. Contratos históricos continuam salvos. Digite <b>EXCLUIR</b> para confirmar.</p>
+                      <div className="mt-3 flex flex-wrap gap-2">
+                        <input name="confirmacao" required placeholder="Digite EXCLUIR" className={`${inputClass} flex-1 border-red-200`} />
+                        <button className="h-11 rounded-2xl bg-red-600 px-5 text-sm font-black text-white hover:bg-red-700">Excluir campanha</button>
+                      </div>
+                    </form>
+                  </details>
+                </div>
+              </article>
+            );
+          }) : <div className="rounded-2xl border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500">Nenhuma campanha criada.</div>}
         </div>
+      </section>
+
+      <section id="anuncios" className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500"><ImageIcon size={15} /> Etapa 3</div>
+            <h2 className="mt-1 text-2xl font-black text-zinc-950">Anúncios / criativos</h2>
+            <p className="mt-1 text-sm text-zinc-500">Aqui fica a imagem, o texto e o botão que o usuário realmente verá.</p>
+          </div>
+          <details>
+            <summary className={`${buttonClass} cursor-pointer list-none`}><Plus size={16} /> Novo anúncio</summary>
+            <form action={salvarCriativoParceria} className="mt-4 grid gap-3 rounded-[22px] border border-zinc-200 bg-zinc-50 p-5 md:grid-cols-2 xl:min-w-[850px] xl:grid-cols-3">
+              <select name="id_campanha" required className={inputClass}><option value="">Escolha a campanha *</option>{campanhasRows.map((c: any) => <option key={c.id} value={c.id}>{c.origem === "salao_premium" ? "Salão Premiun" : "Parceiro"} • {c.nome}</option>)}</select>
+              <input name="titulo" required placeholder="Título do anúncio *" className={inputClass} />
+              <select name="formato" defaultValue="poster" className={inputClass}><option value="poster">Popup / poster</option><option value="card">Card</option><option value="banner">Banner</option></select>
+              <input name="subtitulo" placeholder="Texto de apoio" className={inputClass} />
+              <input name="imagem_url" placeholder="URL da imagem" className={inputClass} />
+              <input name="cta_texto" placeholder="Texto do botão" defaultValue="Saiba mais" className={inputClass} />
+              <input name="destino_url" placeholder="Link do botão" className={`${inputClass} md:col-span-2`} />
+              <button className={buttonClass}>Salvar anúncio</button>
+            </form>
+          </details>
+        </div>
+
+        <div className="mt-5 grid gap-3 xl:grid-cols-2">
+          {criativosRows.length ? criativosRows.map((criativo: any) => {
+            const campanha = campanhasRows.find((c: any) => c.id === criativo.id_campanha);
+            return (
+              <article key={criativo.id} className="flex gap-4 rounded-[22px] border border-zinc-200 p-4">
+                {criativo.imagem_url ? (
+                  <img src={criativo.imagem_url} alt={criativo.titulo || "Criativo"} className="h-28 w-24 shrink-0 rounded-2xl border border-zinc-200 bg-zinc-50 object-cover" />
+                ) : (
+                  <div className="grid h-28 w-24 shrink-0 place-items-center rounded-2xl bg-zinc-950 text-white"><ImageIcon size={24} /></div>
+                )}
+                <div className="min-w-0 flex-1">
+                  <div className="text-[10px] font-black uppercase tracking-[0.14em] text-amber-700">{criativo.formato || "card"} • {criativo.ativo === false ? "inativo" : "ativo"}</div>
+                  <h3 className="mt-1 truncate font-black text-zinc-950">{criativo.titulo || "Sem título"}</h3>
+                  <div className="mt-1 truncate text-xs text-zinc-500">{campanha?.nome || "Campanha não encontrada"}</div>
+                  {criativo.subtitulo ? <p className="mt-2 line-clamp-2 text-xs leading-5 text-zinc-600">{criativo.subtitulo}</p> : null}
+                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                    {criativo.destino_url ? <a href={criativo.destino_url} target="_blank" rel="noreferrer" className={subtleButtonClass}>{criativo.cta_texto || "Abrir link"} <ExternalLink size={13} /></a> : null}
+                    <details>
+                      <summary className="inline-flex h-10 cursor-pointer list-none items-center gap-2 rounded-xl px-3 text-xs font-black text-red-700 hover:bg-red-50"><Trash2 size={13} /> Excluir</summary>
+                      <form action={excluirCriativoParceria} className="mt-2 rounded-2xl border border-red-200 bg-red-50 p-3">
+                        <input type="hidden" name="id_criativo" value={criativo.id} />
+                        <input name="confirmacao" required placeholder="Digite EXCLUIR" className={`${inputClass} w-full border-red-200`} />
+                        <button className="mt-2 h-10 w-full rounded-xl bg-red-600 px-4 text-xs font-black text-white">Excluir anúncio</button>
+                      </form>
+                    </details>
+                  </div>
+                </div>
+              </article>
+            );
+          }) : <div className="rounded-2xl border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500 xl:col-span-2">Nenhum anúncio criado.</div>}
+        </div>
+      </section>
+
+      <details className="rounded-[28px] border border-zinc-200 bg-white shadow-sm">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 p-6">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500"><FileSignature size={15} /> Etapa opcional</div>
+            <h2 className="mt-1 text-xl font-black text-zinc-950">Contratos comerciais</h2>
+            <p className="mt-1 text-sm text-zinc-500">Abra somente quando estiver trabalhando com publicidade paga ou permuta.</p>
+          </div>
+          <ChevronDown size={20} className="text-zinc-400" />
+        </summary>
+        <div className="border-t border-zinc-100 p-6">
+          <div className={`mb-4 rounded-2xl border p-4 text-sm ${autentiqueAtivo ? "border-emerald-200 bg-emerald-50 text-emerald-900" : "border-amber-200 bg-amber-50 text-amber-900"}`}>
+            <b>Autentique:</b> {autentiqueAtivo ? "configurado e pronto para envio." : "integração pronta, aguardando AUTENTIQUE_API_TOKEN na Vercel."}
+          </div>
+          <div className="space-y-3">
+            {contratosRows.length ? contratosRows.map((contrato: any) => {
+              const campanha = campanhasRows.find((c: any) => c.id === contrato.id_campanha);
+              const parceiro = parceirosRows.find((p: any) => p.id === contrato.id_parceiro);
+              return (
+                <div key={contrato.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-zinc-200 p-4">
+                  <div>
+                    <div className="font-black text-zinc-950">{contrato.numero}</div>
+                    <div className="mt-1 text-xs text-zinc-500">{parceiro?.nome_fantasia || parceiro?.razao_social || "Empresa"} • {campanha?.nome || "Campanha removida"}</div>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className={`rounded-full px-3 py-2 text-xs font-black ${statusClass(contrato.status)}`}>{statusLabel(contrato.status)}</span>
+                    {!contrato.envelope_externo_id ? (
+                      <form action={enviarContratoAutentique}>
+                        <input type="hidden" name="id_contrato" value={contrato.id} />
+                        <button disabled={!autentiqueAtivo || !contrato.signatario_email} className={`${subtleButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}>Enviar para assinatura</button>
+                      </form>
+                    ) : (
+                      <form action={sincronizarContratoAutentique}>
+                        <input type="hidden" name="id_contrato" value={contrato.id} />
+                        <button disabled={!autentiqueAtivo} className={`${subtleButtonClass} disabled:cursor-not-allowed disabled:opacity-40`}>Sincronizar</button>
+                      </form>
+                    )}
+                    {contrato.url_assinatura ? <a href={contrato.url_assinatura} target="_blank" rel="noreferrer" className={subtleButtonClass}>Abrir assinatura <ExternalLink size={13} /></a> : null}
+                  </div>
+                </div>
+              );
+            }) : <div className="text-sm text-zinc-500">Nenhum contrato gerado.</div>}
+          </div>
+        </div>
+      </details>
+
+      <section className="rounded-[24px] border border-zinc-200 bg-zinc-950 p-5 text-white">
+        <div className="flex items-center gap-3"><BarChart3 size={20} className="text-amber-300" /><div><div className="font-black">Como usar sem se perder</div><div className="mt-1 text-sm text-zinc-400">Empresa → Campanha → Anúncio. Contrato só é necessário para parceiro comercial.</div></div></div>
       </section>
     </div>
   );
