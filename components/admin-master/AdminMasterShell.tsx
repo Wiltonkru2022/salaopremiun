@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { AdminMasterPermissions } from "@/lib/admin-master/auth/adminMasterPermissions";
 import type { AdminMasterShellData } from "@/lib/admin-master/data";
-import AdminMasterShellClient from "@/components/admin-master/AdminMasterShellSimpleClient";
+import AdminMasterShellClient from "@/components/admin-master/AdminMasterUnifiedShellClient";
 
 type Props = {
   children: ReactNode;
