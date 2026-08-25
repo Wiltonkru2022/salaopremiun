@@ -39,7 +39,7 @@ export default async function AdminMasterClienteDetalhePage({ params }: { params
       ? supabase.from("saloes").select("id, nome, responsavel, status").eq("id", cliente.id_salao).maybeSingle()
       : Promise.resolve({ data: null }),
     cliente.id_salao
-      ? supabase.from("clientes_auth").select("app_conta_id, app_ativo, atualizado_em").eq("id_salao", cliente.id_salao).eq("id_cliente", cliente.id).maybeSingle()
+      ? supabase.from("clientes_auth").select("app_conta_id, app_ativo").eq("id_salao", cliente.id_salao).eq("id_cliente", cliente.id).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
 
