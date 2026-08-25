@@ -57,8 +57,8 @@ export default function AdminMasterSecurityActionButton(props: Props) {
       </button>
 
       {open ? (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950/40 p-4 backdrop-blur-sm" onMouseDown={() => !pending && setOpen(false)}>
-          <div className="w-full max-w-lg rounded--xl border border-zinc-200 bg-white p-5 shadow-2xl" onMouseDown={(event) => event.stopPropagation()}>
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-zinc-950/40 p-3 backdrop-blur-sm sm:p-4" onMouseDown={() => !pending && setOpen(false)}>
+          <div className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-3xl border border-zinc-200 bg-white p-4 shadow-2xl sm:p-5" onMouseDown={(event) => event.stopPropagation()}>
             <div className="flex items-start justify-between gap-4">
               <div>
                 <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-amber-700"><AlertTriangle size={14} /> Ação sensível</div>
@@ -78,7 +78,7 @@ export default function AdminMasterSecurityActionButton(props: Props) {
               </div>
             ) : null}
 
-            <div className="mt-5 flex justify-end gap-2"><button type="button" onClick={() => setOpen(false)} disabled={pending} className="h-10 rounded-xl border border-zinc-200 px-4 text-sm font-bold text-zinc-600 hover:bg-zinc-50">Cancelar</button><button type="button" onClick={submit} disabled={pending || !confirmed || motivo.trim().length < 8} className="h-10 rounded-xl bg-violet-700 px-4 text-sm font-bold text-white hover:bg-violet-800 disabled:cursor-not-allowed disabled:opacity-40">{pending ? "Validando..." : "Confirmar com MFA"}</button></div>
+            <div className="mt-5 flex flex-col-reverse gap-2 sm:flex-row sm:justify-end"><button type="button" onClick={() => setOpen(false)} disabled={pending} className="h-10 rounded-xl border border-zinc-200 px-4 text-sm font-bold text-zinc-600 hover:bg-zinc-50">Cancelar</button><button type="button" onClick={submit} disabled={pending || !confirmed || motivo.trim().length < 8} className="h-10 rounded-xl bg-violet-700 px-4 text-sm font-bold text-white hover:bg-violet-800 disabled:cursor-not-allowed disabled:opacity-40">{pending ? "Validando..." : "Confirmar com MFA"}</button></div>
           </div>
         </div>
       ) : null}
