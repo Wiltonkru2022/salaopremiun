@@ -374,7 +374,10 @@ export default function AdminCampaignMediaKit() {
 
       const title = Array.from(document.querySelectorAll<HTMLElement>("#anuncios h2")).find((element) => element.textContent?.includes("Anúncios / criativos"));
       const description = title?.parentElement?.querySelector("p");
-      if (description) description.textContent = "Clique em “Enviar imagem” para abrir o Kit de mídia por posição.";
+      const nextDescription = "Clique em “Enviar imagem” para abrir o Kit de mídia por posição.";
+      if (description && description.textContent !== nextDescription) {
+        description.textContent = nextDescription;
+      }
     };
 
     cleanupLegacyControls();
