@@ -37,12 +37,18 @@ function asCampaign(campanha: any) {
     origem,
     categoria,
     label: campaignLabel(origem, categoria),
-    parceiro: origem === "salao_premium" ? "Salão Premium" : (parceiro?.nome_fantasia || parceiro?.razao_social || "Parceiro Salão Premium"),
+    parceiro:
+      origem === "salao_premium"
+        ? "Salão Premium"
+        : parceiro?.nome_fantasia || parceiro?.razao_social || "Parceiro Salão Premium",
     titulo: criativo?.titulo || campanha.nome,
     subtitulo: criativo?.subtitulo || campanha.descricao || null,
     imagemUrl: criativo?.imagem_url || null,
     altText: criativo?.alt_text || campanha.nome,
-    ctaTexto: criativo?.cta_texto || (origem === "salao_premium" ? "Saiba mais" : "Conhecer parceiro"),
+    formato: criativo?.formato || "card",
+    ctaTexto:
+      criativo?.cta_texto ||
+      (origem === "salao_premium" ? "Saiba mais" : "Conhecer parceiro"),
     destinoUrl: criativo?.destino_url || campanha.destino_url || null,
     cupomCodigo: campanha.cupom_codigo || null,
     prioridade: Number(campanha.prioridade || 0),
@@ -78,7 +84,9 @@ export async function GET(request: NextRequest) {
       : Promise.resolve({ data: null }),
     supabase
       .from("parceria_campanhas")
-      .select("id,nome,descricao,destino_url,cupom_codigo,publico,locais_exibicao,regioes,inicio_em,fim_em,status,prioridade,peso_rotacao,limite_frequencia_dia,limite_impressoes_dia,exclusiva,origem,categoria_interna,parceiros_comerciais(nome_fantasia,razao_social),parceria_criativos(id,titulo,subtitulo,imagem_url,alt_text,cta_texto,destino_url,formato,ordem,ativo)")
+      .select(
+        "id,nome,descricao,destino_url,cupom_codigo,publico,locais_exibicao,regioes,inicio_em,fim_em,status,prioridade,peso_rotacao,limite_frequencia_dia,limite_impressoes_dia,exclusiva,origem,categoria_interna,parceiros_comerciais(nome_fantasia,razao_social),parceria_criativos(id,titulo,subtitulo,imagem_url,alt_text,cta_texto,destino_url,formato,ordem,ativo)"
+      )
       .in("status", ["ativa", "agendada"])
       .lte("inicio_em", now)
       .or(`fim_em.is.null,fim_em.gte.${now}`)
@@ -91,7 +99,8 @@ export async function GET(request: NextRequest) {
 
   let elegiveis = (campanhas || []).filter((campanha: any) => {
     const publicoOk = Array.isArray(campanha.publico) && campanha.publico.includes(publico);
-    const localOk = Array.isArray(campanha.locais_exibicao) && campanha.locais_exibicao.includes(local);
+    const localOk =
+      Array.isArray(campanha.locais_exibicao) && campanha.locais_exibicao.includes(local);
     if (!publicoOk || !localOk) return false;
 
     const regioes = campanha.regioes || {};
@@ -112,10 +121,15 @@ export async function GET(request: NextRequest) {
     .eq("local_exibicao", local);
 
   const impressoesHoje = new Map<string, number>();
-  for (const row of metricas || []) impressoesHoje.set(String(row.id_campanha), Number(row.impressoes || 0));
+  for (const row of metricas || []) {
+    impressoesHoje.set(String(row.id_campanha), Number(row.impressoes || 0));
+  }
 
   elegiveis = elegiveis.filter((campanha: any) => {
-    const limite = campanha.limite_impressoes_dia == null ? null : Number(campanha.limite_impressoes_dia);
+    const limite =
+      campanha.limite_impressoes_dia == null
+        ? null
+        : Number(campanha.limite_impressoes_dia);
     return limite == null || (impressoesHoje.get(campanha.id) || 0) < limite;
   });
 
@@ -123,8 +137,10 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({
       campanhas: elegiveis
         .sort((a: any, b: any) => {
-          const aCritico = a.origem === "salao_premium" && a.categoria_interna === "critico" ? 1 : 0;
-          const bCritico = b.origem === "salao_premium" && b.categoria_interna === "critico" ? 1 : 0;
+          const aCritico =
+            a.origem === "salao_premium" && a.categoria_interna === "critico" ? 1 : 0;
+          const bCritico =
+            b.origem === "salao_premium" && b.categoria_interna === "critico" ? 1 : 0;
           if (aCritico !== bCritico) return bCritico - aCritico;
           return Number(b.prioridade || 0) - Number(a.prioridade || 0);
         })
@@ -137,7 +153,9 @@ export async function GET(request: NextRequest) {
   if (semBloqueadas.length) elegiveis = semBloqueadas;
   else if (excluded.size) return NextResponse.json({ campanha: null });
 
-  const criticas = elegiveis.filter((c: any) => c.origem === "salao_premium" && c.categoria_interna === "critico");
+  const criticas = elegiveis.filter(
+    (c: any) => c.origem === "salao_premium" && c.categoria_interna === "critico"
+  );
   if (criticas.length) {
     elegiveis = criticas;
   } else {
@@ -145,8 +163,12 @@ export async function GET(request: NextRequest) {
     if (exclusivas.length) elegiveis = exclusivas;
   }
 
-  const maiorPrioridade = Math.max(...elegiveis.map((c: any) => Number(c.prioridade || 0)));
-  const faixa = elegiveis.filter((c: any) => Number(c.prioridade || 0) === maiorPrioridade);
+  const maiorPrioridade = Math.max(
+    ...elegiveis.map((c: any) => Number(c.prioridade || 0))
+  );
+  const faixa = elegiveis.filter(
+    (c: any) => Number(c.prioridade || 0) === maiorPrioridade
+  );
 
   faixa.sort((a: any, b: any) => {
     const aPeso = Math.max(1, Number(a.peso_rotacao || 1));
@@ -166,7 +188,10 @@ export async function POST(request: NextRequest) {
     const idCampanha = String(body?.idCampanha || "");
     const local = String(body?.local || "dashboard");
     const tipo = String(body?.tipo || "");
-    if (!/^[0-9a-f-]{36}$/i.test(idCampanha) || !["impressao", "clique", "conversao", "cupom"].includes(tipo)) {
+    if (
+      !/^[0-9a-f-]{36}$/i.test(idCampanha) ||
+      !["impressao", "clique", "conversao", "cupom"].includes(tipo)
+    ) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
     const supabase = getSupabaseAdmin() as any;
