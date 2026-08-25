@@ -1,0 +1,82 @@
+name: Refactor painel import cleanup
+
+on:
+  push:
+    branches:
+      - refactor/painel-microdivisao-final
+
+permissions:
+  contents: write
+
+jobs:
+  cleanup:
+    if: ${{ !contains(github.event.head_commit.message, '[import-cleanup-done]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - name: Limpar imports sem uso
+        shell: bash
+        run: |
+          python - <<'PY'
+          import re
+          from pathlib import Path
+
+          files = [
+              Path('app/(painel)/perfil-salao/internal/PerfilSalaoWorkspaceCore.tsx'),
+              Path('app/(painel)/relatorio-financeiro/internal/RelatorioFinanceiroWorkspaceCore.tsx'),
+              Path('app/(painel)/agenda/internal/AgendaWorkspaceCore.tsx'),
+              Path('components/configuracoes/internal/ConfiguracoesWorkspaceCore.tsx'),
+              Path('app/(painel)/vendas/internal/VendasWorkspaceCore.tsx'),
+              Path('app/(painel)/comissoes/internal/ComissoesWorkspaceCore.tsx'),
+              Path('components/profissionais/internal/ProfissionalFormCoreImpl.tsx'),
+          ]
+
+          support_import = re.compile(
+              r'import(?P<type> type)? \{ (?P<names>[^}]+) \} from "(?P<module>\./[^\"]+support)";'
+          )
+
+          for path in files:
+              text = path.read_text(encoding='utf-8-sig')
+
+              def clean(match):
+                  names = [name.strip() for name in match.group('names').split(',') if name.strip()]
+                  kept = []
+                  for name in names:
+                      bare = name.split(' as ')[-1].strip()
+                      if len(re.findall(rf'\b{re.escape(bare)}\b', text)) > 1:
+                          kept.append(name)
+                  if not kept:
+                      return ''
+                  prefix = 'import type' if match.group('type') else 'import'
+                  return f'{prefix} {{ {", ".join(kept)} }} from "{match.group("module")}";'
+
+              text = support_import.sub(clean, text)
+
+              known = [
+                  ('normalizeTimeString', 'import { normalizeTimeString } from "@/lib/utils/agenda";\n'),
+                  ('parseComboDisplayMeta', 'import { groupComboTotals, parseComboDisplayMeta } from "@/lib/combo/display";'),
+              ]
+              for identifier, import_text in known:
+                  if len(re.findall(rf'\b{re.escape(identifier)}\b', text)) == 1:
+                      if identifier == 'parseComboDisplayMeta':
+                          text = text.replace(import_text, 'import { groupComboTotals } from "@/lib/combo/display";')
+                      else:
+                          text = text.replace(import_text, '')
+
+              text = re.sub(r'\n{3,}', '\n\n', text)
+              path.write_text(text, encoding='utf-8')
+          PY
+      - name: Remover workflow temporario
+        run: rm .github/workflows/refactor-panel-import-cleanup.yml
+      - name: Commitar limpeza
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add app components .github/workflows
+          git commit -m "refactor(painel): limpar imports da microdivisao [import-cleanup-done]"
+          git push origin HEAD:${GITHUB_REF_NAME}
