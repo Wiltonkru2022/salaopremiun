@@ -1,4 +1,4 @@
-import { AdminSectionView } from "@/components/admin-master/AdminMasterViews";
+import AdminMasterSectionSimple from "@/components/admin-master/AdminMasterSectionSimple";
 import { AdminMasterTrialCoherencePanel } from "@/components/admin-master/AdminMasterGovernanceEditor";
 import { AdminMasterResourceMatrixEditor } from "@/components/admin-master/AdminMasterPlanEditor";
 import { getAdminMasterSection } from "@/lib/admin-master/data";
@@ -17,12 +17,9 @@ export default async function AdminMasterRecursosPage() {
 
   return (
     <div className="space-y-6">
-      <AdminSectionView data={data} />
+      <AdminMasterSectionSimple data={{ ...data, description: "Recursos disponíveis por plano. Esta é uma subárea de Produto e planos." }} />
       <AdminMasterTrialCoherencePanel data={governanceData} />
-      <AdminMasterResourceMatrixEditor
-        data={editorData}
-        salvarRecurso={salvarRecursoPlanoAdminMaster}
-      />
+      <AdminMasterResourceMatrixEditor data={editorData} salvarRecurso={salvarRecursoPlanoAdminMaster} />
     </div>
   );
 }
