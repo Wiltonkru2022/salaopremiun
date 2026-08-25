@@ -1,0 +1,67 @@
+.admin-master-root {
+  --admin-primary: #6d28d9;
+  --admin-primary-hover: #5b21b6;
+  --admin-primary-soft: #f5f3ff;
+  --admin-border: #e4e4e7;
+}
+
+.admin-master-root table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.admin-master-root table thead {
+  background: #fafafa;
+}
+
+.admin-master-root table th {
+  color: #71717a;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+.admin-master-root table td {
+  border-color: #f4f4f5;
+  vertical-align: middle;
+}
+
+.admin-master-root table tbody tr {
+  transition: background-color 150ms ease;
+}
+
+.admin-master-root table tbody tr:hover {
+  background: #faf5ff;
+}
+
+/* O Admin Master usa violeta como ação/superfície forte. Evita ilhas pretas herdadas. */
+.admin-master-root .bg-zinc-950 {
+  background-color: var(--admin-primary) !important;
+}
+
+.admin-master-root :is(button, a, summary).bg-zinc-950 {
+  color: #fff !important;
+}
+
+.admin-master-root :is(button, a, summary).bg-zinc-950:hover,
+.admin-master-root .hover\:bg-zinc-800:hover {
+  background-color: var(--admin-primary-hover) !important;
+}
+
+.admin-master-root :is(button, a, summary).border-zinc-950:not(.bg-zinc-950) {
+  border-color: #c4b5fd !important;
+}
+
+.admin-master-root :is(button, a, summary):focus-visible {
+  outline: 3px solid rgba(139, 92, 246, 0.26);
+  outline-offset: 2px;
+}
+
+@media (max-width: 767px) {
+  .admin-master-root table th,
+  .admin-master-root table td {
+    padding-left: 0.75rem !important;
+    padding-right: 0.75rem !important;
+  }
+}
