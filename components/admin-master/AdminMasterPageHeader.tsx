@@ -41,7 +41,7 @@ export default function AdminMasterPageHeader({
         ))}
       </div>
 
-      <section className="rounded--xl border border-zinc-200 bg-white p-5 shadow-sm shadow-zinc-200/30 sm:p-6">
+      <section className="rounded-3xl border border-zinc-200 bg-white p-5 shadow-sm shadow-zinc-200/30 sm:p-6">
         <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
           <div className="max-w-3xl">
             <div className="text-xs font-bold uppercase tracking-[0.2em] text-violet-600">
@@ -55,7 +55,7 @@ export default function AdminMasterPageHeader({
               <Clock3 size={13} /> Atualizado {updatedAt}
             </div>
           </div>
-          {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+          {actions ? <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">{actions}</div> : null}
         </div>
       </section>
     </div>
