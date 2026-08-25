@@ -1,14 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { hasAdminMasterAccess } from "@/lib/proxy/admin-master-rules";
-import { getProxyResumoAssinatura } from "@/lib/proxy/assinatura-rules";
-import { createProxySupabaseClient, getProxySupabaseConfig } from "@/lib/proxy/auth-rules";
-import {
-  hasAdminMasterSessionCookie,
-  readAdminMasterSessionFromRequest,
-} from "@/lib/admin-master/auth/session";
+import { hasAdminMasterSessionCookie } from "@/lib/admin-master/auth/session";
 import { handleAppProfissionalHost } from "@/lib/proxy/app-profissional-rules";
 import {
-  ADMIN_MASTER_PREFIX,
   CADASTRO_PATH,
   DOMINIO_APP,
   DOMINIO_ASSINATURA,
@@ -58,7 +51,6 @@ function handleUnauthenticatedRoute(
     if (!ctx.isLoginHost) {
       return redirectToHost(request, DOMINIO_LOGIN, "/login");
     }
-
     return NextResponse.next();
   }
 
@@ -69,15 +61,12 @@ function handleUnauthenticatedRoute(
     );
   }
 
-  if (ctx.rotaAdminMasterLogin) {
-    return NextResponse.next();
-  }
+  if (ctx.rotaAdminMasterLogin) return NextResponse.next();
 
   if (ctx.rotaAssinatura) {
     if (!ctx.isAssinaturaHost) {
       return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
     }
-
     return NextResponse.next();
   }
 
@@ -85,7 +74,6 @@ function handleUnauthenticatedRoute(
     if (!ctx.isLoginHost) {
       return redirectToHost(request, DOMINIO_LOGIN, ctx.pathnameNormalizado);
     }
-
     return NextResponse.next();
   }
 
@@ -116,11 +104,7 @@ function handlePublicHostRouting(ctx: ReturnType<typeof buildProxyRouteContext>)
       );
     }
     if (ctx.rotaAppProfissional) {
-      return redirectToHost(
-        request,
-        DOMINIO_APP,
-        pathnameNormalizado
-      );
+      return redirectToHost(request, DOMINIO_APP, pathnameNormalizado);
     }
     if (ctx.rotaAppCliente) {
       return redirectToHost(
@@ -152,20 +136,9 @@ function handlePublicHostRouting(ctx: ReturnType<typeof buildProxyRouteContext>)
         return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
       }
       if (ctx.rotaCadastro) {
-        return redirectToHost(
-          request,
-          DOMINIO_CADASTRO,
-          getCadastroPath(pathnameNormalizado)
-        );
+        return redirectToHost(request, DOMINIO_CADASTRO, getCadastroPath(pathnameNormalizado));
       }
-      if (ctx.rotaAppProfissional) {
-        return redirectToHost(
-          request,
-          DOMINIO_APP,
-          pathnameNormalizado
-        );
-      }
-      if (ctx.rotaAppCliente) {
+      if (ctx.rotaAppProfissional || ctx.rotaAppCliente) {
         return redirectToHost(request, DOMINIO_APP, pathnameNormalizado);
       }
       return NextResponse.next();
@@ -192,14 +165,7 @@ function handlePublicHostRouting(ctx: ReturnType<typeof buildProxyRouteContext>)
       if (ctx.rotaAssinatura) {
         return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
       }
-      if (ctx.rotaAppProfissional) {
-        return redirectToHost(
-          request,
-          DOMINIO_APP,
-          pathnameNormalizado
-        );
-      }
-      if (ctx.rotaAppCliente) {
+      if (ctx.rotaAppProfissional || ctx.rotaAppCliente) {
         return redirectToHost(request, DOMINIO_APP, pathnameNormalizado);
       }
       return NextResponse.next();
@@ -227,20 +193,9 @@ function handlePublicHostRouting(ctx: ReturnType<typeof buildProxyRouteContext>)
         return redirectToHost(request, DOMINIO_LOGIN, pathnameNormalizado);
       }
       if (ctx.rotaCadastro) {
-        return redirectToHost(
-          request,
-          DOMINIO_CADASTRO,
-          getCadastroPath(pathnameNormalizado)
-        );
+        return redirectToHost(request, DOMINIO_CADASTRO, getCadastroPath(pathnameNormalizado));
       }
-      if (ctx.rotaAppProfissional) {
-        return redirectToHost(
-          request,
-          DOMINIO_APP,
-          pathnameNormalizado
-        );
-      }
-      if (ctx.rotaAppCliente) {
+      if (ctx.rotaAppProfissional || ctx.rotaAppCliente) {
         return redirectToHost(request, DOMINIO_APP, pathnameNormalizado);
       }
       return NextResponse.next();
@@ -264,20 +219,9 @@ function handlePublicHostRouting(ctx: ReturnType<typeof buildProxyRouteContext>)
       return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
     }
     if (ctx.rotaCadastro) {
-      return redirectToHost(
-        request,
-        DOMINIO_CADASTRO,
-        getCadastroPath(pathnameNormalizado)
-      );
+      return redirectToHost(request, DOMINIO_CADASTRO, getCadastroPath(pathnameNormalizado));
     }
-    if (ctx.rotaAppProfissional) {
-      return redirectToHost(
-        request,
-        DOMINIO_APP,
-        pathnameNormalizado
-      );
-    }
-    if (ctx.rotaAppCliente) {
+    if (ctx.rotaAppProfissional || ctx.rotaAppCliente) {
       return redirectToHost(request, DOMINIO_APP, pathnameNormalizado);
     }
   }
@@ -294,29 +238,18 @@ function rewriteToNovoAppProfissional(request: NextRequest) {
 export async function proxy(request: NextRequest) {
   const ctx = buildProxyRouteContext(request);
 
-  // APIs validate access in their own handlers. Redirecting them here turns
-  // JSON/POST calls into HTML page redirects and breaks subdomain flows.
-  if (isApiRoute(ctx.pathnameNormalizado)) {
-    return NextResponse.next();
-  }
-
-  if (isArquivoPublico(ctx.pathnameNormalizado)) {
+  // Regra de disponibilidade: middleware nunca consulta Supabase ou outros
+  // serviços remotos. APIs e layouts protegidos validam a sessão de verdade.
+  if (isApiRoute(ctx.pathnameNormalizado) || isArquivoPublico(ctx.pathnameNormalizado)) {
     return NextResponse.next();
   }
 
   if (!ctx.isBlogHost && isBlogRoute(ctx.pathnameNormalizado)) {
-    return redirectToHost(
-      request,
-      DOMINIO_BLOG,
-      removeBlogPrefix(ctx.pathnameNormalizado)
-    );
+    return redirectToHost(request, DOMINIO_BLOG, removeBlogPrefix(ctx.pathnameNormalizado));
   }
 
   if (ctx.isAppHost) {
-    if (ctx.rotaAppProfissional) {
-      return rewriteToNovoAppProfissional(request);
-    }
-
+    if (ctx.rotaAppProfissional) return rewriteToNovoAppProfissional(request);
     return handleAppProfissionalHost(ctx);
   }
 
@@ -329,176 +262,20 @@ export async function proxy(request: NextRequest) {
   const hostRoutingResponse = handlePublicHostRouting(ctx);
   if (hostRoutingResponse) return hostRoutingResponse;
 
-  if (ctx.rotaAdminMaster || ctx.rotaAdminMasterLogin) {
-    const adminSession = hasAdminMasterSessionCookie(request)
-      ? await readAdminMasterSessionFromRequest(request)
-      : null;
-    const adminMasterUser = adminSession
-      ? await hasAdminMasterAccess({
-          authUserId: adminSession.authUserId,
-          email: adminSession.email,
-        })
-      : false;
-
-    if (ctx.rotaAdminMasterLogin) {
-      if (adminMasterUser) {
-        const nextAdminPath =
-          getAdminMasterLoginNextPath(request.nextUrl.searchParams.get("next")) ||
-          ADMIN_MASTER_PREFIX;
-        return redirectToHost(request, DOMINIO_PAINEL, nextAdminPath, "");
-      }
-
-      return NextResponse.next();
-    }
-
-    if (ctx.rotaAdminMasterProtegida) {
-      if (adminMasterUser) {
-        return NextResponse.next();
-      }
-
-      return redirectToAdminMasterLogin(
-        request,
-        `${ctx.pathnameNormalizado}${request.nextUrl.search}`
-      );
-    }
-  }
-
-  if (!getProxySupabaseConfig()) {
-    return NextResponse.next();
-  }
-
-  const unauthenticatedResponse = !hasSupabaseAuthCookies(request)
-    ? handleUnauthenticatedRoute(request, ctx)
-    : null;
-
-  if (unauthenticatedResponse) {
-    return unauthenticatedResponse;
-  }
-
-  const response = NextResponse.next({ request });
-  const supabase = createProxySupabaseClient({
-    request,
-    response,
-    host: ctx.host,
-  });
-
-  if (!supabase) return response;
-
-  if (
-    !ctx.rotaPainel &&
-    !ctx.rotaLiberada &&
-    !ctx.rotaAutenticacao &&
-    !ctx.rotaAdminMaster
-  ) {
-    return response;
-  }
-
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (ctx.rotaPainel && !user) {
-    if (!ctx.isLoginHost) {
-      return redirectToHost(request, DOMINIO_LOGIN, "/login");
-    }
-    return response;
-  }
-
-  if (ctx.rotaAdminMasterProtegida && !user) {
+  if (ctx.rotaAdminMasterProtegida && !hasAdminMasterSessionCookie(request)) {
     return redirectToAdminMasterLogin(
       request,
       `${ctx.pathnameNormalizado}${request.nextUrl.search}`
     );
   }
 
-  if (ctx.rotaAdminMasterLogin && !user) return response;
-
-  if (ctx.rotaAssinatura && !user) {
-    if (!ctx.isAssinaturaHost) {
-      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
-    }
-    return response;
+  const hasAuthCookies = hasSupabaseAuthCookies(request);
+  if (!hasAuthCookies) {
+    const unauthenticatedResponse = handleUnauthenticatedRoute(request, ctx);
+    if (unauthenticatedResponse) return unauthenticatedResponse;
   }
 
-  if (ctx.rotaAutenticacao && !user) {
-    if (!ctx.isLoginHost) {
-      return redirectToHost(request, DOMINIO_LOGIN, ctx.pathnameNormalizado);
-    }
-    return response;
-  }
-
-  if (!user) return response;
-
-  const { data: usuario, error: usuarioError } = await supabase
-    .from("usuarios")
-    .select("id_salao")
-    .eq("auth_user_id", user.id)
-    .maybeSingle();
-
-  if (usuarioError) {
-    console.error("Erro proxy usuario:", usuarioError);
-    return response;
-  }
-
-  const idSalao = usuario?.id_salao;
-
-  if (!idSalao) {
-    if (ctx.rotaLogin || ctx.rotaCadastro) {
-      return response;
-    }
-
-    if (ctx.rotaPainel) {
-      return redirectToHost(
-        request,
-        DOMINIO_LOGIN,
-        "/login",
-        "?motivo=salao_excluido"
-      );
-    }
-    return response;
-  }
-
-  const { data: assinatura, error: assinaturaError } = await supabase
-    .from("assinaturas")
-    .select("status, vencimento_em, trial_fim_em")
-    .eq("id_salao", idSalao)
-    .maybeSingle();
-
-  if (assinaturaError) {
-    console.error("Erro proxy assinatura:", assinaturaError);
-    return response;
-  }
-
-  if (!assinatura) {
-    if (ctx.rotaPainel || ctx.rotaLogin) {
-      return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
-    }
-    return response;
-  }
-
-  const resumo = getProxyResumoAssinatura(assinatura);
-
-  if (ctx.rotaLogin) {
-    return redirectToHost(
-      request,
-      resumo.bloqueioTotal ? DOMINIO_ASSINATURA : DOMINIO_PAINEL,
-      resumo.bloqueioTotal ? "/assinatura" : "/dashboard"
-    );
-  }
-
-  if (ctx.rotaCadastro) {
-    return redirectToHost(
-      request,
-      resumo.bloqueioTotal ? DOMINIO_ASSINATURA : DOMINIO_PAINEL,
-      resumo.bloqueioTotal ? "/assinatura" : "/dashboard"
-    );
-  }
-
-  if (ctx.rotaPainel && resumo.bloqueioTotal) {
-    return redirectToHost(request, DOMINIO_ASSINATURA, "/assinatura");
-  }
-
-  return response;
+  return NextResponse.next({ request });
 }
 
 export const config = {
