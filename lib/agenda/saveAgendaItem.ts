@@ -157,6 +157,18 @@ export async function saveAgendaItem(params: {
       });
     }
 
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(
+        new CustomEvent("salaopremium:agenda:saved", {
+          detail: {
+            profissionalId: String(payload.profissionalId),
+            data: String(payload.data || ""),
+            idAgendamento,
+          },
+        })
+      );
+    }
+
     return;
   }
 
