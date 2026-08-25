@@ -12,6 +12,7 @@ import {
   ShieldCheck,
   Trash2,
 } from "lucide-react";
+import AdminMasterPageHeader from "@/components/admin-master/AdminMasterPageHeader";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Json } from "@/types/database.generated";
@@ -155,32 +156,13 @@ export default async function AdminMasterSalaoExcluidoDetailPage({
         </div>
       ) : null}
 
-      <section className="rounded-[30px] bg-zinc-950 p-5 text-white shadow-sm">
-        <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className={`inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs font-black uppercase tracking-[0.2em] ${status.className}`}>
-              <StatusIcon size={14} />
-              {status.label}
-            </div>
-            <h1 className="mt-4 font-display text-[2rem] font-black">
-              {row.nome_salao}
-            </h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-300">
-              {status.description}
-            </p>
-          </div>
-
-          {idSalaoRestaurado ? (
-            <Link
-              href={`/admin-master/saloes/${idSalaoRestaurado}`}
-              className="inline-flex h-11 items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/20"
-            >
-              Ver salão restaurado
-              <ExternalLink size={16} />
-            </Link>
-          ) : null}
-        </div>
-      </section>
+      <AdminMasterPageHeader
+        eyebrow={`Recuperação · ${status.label}`}
+        title={row.nome_salao}
+        description={status.description}
+        breadcrumb={[{ label: "Admin Master", href: "/admin-master" }, { label: "Salões excluídos", href: "/admin-master/saloes-excluidos" }, { label: row.nome_salao }]}
+        actions={idSalaoRestaurado ? <Link href={`/admin-master/saloes/${idSalaoRestaurado}`} className="inline-flex h-10 items-center gap-2 rounded-xl bg-violet-600 px-4 text-sm font-bold text-white transition hover:bg-violet-700">Ver salão restaurado <ExternalLink size={16} /></Link> : <span className={`inline-flex h-10 items-center gap-2 rounded-xl border px-3 text-xs font-black uppercase tracking-[0.14em] ${status.className}`}><StatusIcon size={14} />{status.label}</span>}
+      />
 
       <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
         <InfoCard label="Responsável" value={row.nome_responsavel || "-"} />

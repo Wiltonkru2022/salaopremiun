@@ -1,259 +1,141 @@
 import Link from "next/link";
-import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { listAdminTickets } from "@/lib/support/tickets";
+import { Filter, Plus, Search } from "lucide-react";
+import AdminMasterPageHeader, { AdminMasterMetricCard } from "@/components/admin-master/AdminMasterPageHeader";
+import AdminTicketQueueClient from "@/components/admin-master/tickets/AdminTicketQueueClient";
 import PaginationLinks from "@/components/ui/PaginationLinks";
+import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { listAdminTickets } from "@/lib/support/tickets";
 
 export const dynamic = "force-dynamic";
+const PAGE_SIZE = 15;
 
-function kpiToneClass(tone: "default" | "amber" | "blue" | "red") {
-  if (tone === "amber") return "border-amber-200 bg-amber-50 text-amber-950";
-  if (tone === "blue") return "border-blue-200 bg-blue-50 text-blue-950";
-  if (tone === "red") return "border-rose-200 bg-rose-50 text-rose-950";
-  return "border-zinc-200 bg-white text-zinc-950";
+type SearchParams = {
+  pagina?: string;
+  busca?: string;
+  status?: string;
+  prioridade?: string;
+  sla?: string;
+  responsavel?: string;
+  recovery?: string;
+  periodo?: string;
+  ordem?: string;
+};
+
+function int(value: string | undefined, fallback: number) {
+  const parsed = Number(value || fallback);
+  return Number.isFinite(parsed) ? parsed : fallback;
 }
 
-function formatRecoveryStage(item: {
-  recoveryFlow?: boolean;
-  recoveryStatus?: string | null;
-  recoveryReadyToComplete?: boolean;
-  recoveryReviewStatus?: string | null;
-}) {
-  if (!item.recoveryFlow) return null;
-  if (item.recoveryReadyToComplete) {
-    return {
-      label: "Pronto para concluir",
-      className: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    };
+function buildHref(params: SearchParams, page: number) {
+  const query = new URLSearchParams();
+  for (const [key, value] of Object.entries(params)) {
+    if (!value || key === "pagina") continue;
+    query.set(key, value);
   }
-  if (item.recoveryStatus === "cooldown") {
-    return {
-      label: "Em carencia",
-      className: "border-violet-200 bg-violet-50 text-violet-700",
-    };
-  }
-  if (item.recoveryReviewStatus === "illegible") {
-    return {
-      label: "Reenviar imagem",
-      className: "border-amber-200 bg-amber-50 text-amber-700",
-    };
-  }
-  if (item.recoveryReviewStatus === "divergent") {
-    return {
-      label: "Corrigir divergencia",
-      className: "border-rose-200 bg-rose-50 text-rose-700",
-    };
-  }
-  return {
-    label: "Aguardando revisao",
-    className: "border-blue-200 bg-blue-50 text-blue-700",
-  };
+  if (page > 0) query.set("pagina", String(page + 1));
+  const suffix = query.toString();
+  return `/admin-master/tickets${suffix ? `?${suffix}` : ""}`;
 }
 
-function isOpenStatus(status: string) {
-  return !["resolvido", "fechado"].includes(status.toLowerCase());
-}
-
-const ADMIN_TICKETS_PAGE_SIZE = 10;
-
-export default async function AdminMasterTicketsPage({
-  searchParams,
-}: {
-  searchParams?: Promise<{ pagina?: string }>;
-}) {
-  await requireAdminMasterUser("tickets_ver");
+export default async function AdminMasterTicketsPage({ searchParams }: { searchParams?: Promise<SearchParams> }) {
+  const admin = await requireAdminMasterUser("tickets_ver");
   const params = searchParams ? await searchParams : {};
-  const paginaAtual = Math.max(0, Number(params?.pagina || 1) - 1);
-  const { items, metrics, total } = await listAdminTickets({
-    limit: ADMIN_TICKETS_PAGE_SIZE,
-    page: paginaAtual,
-  });
+  const page = Math.max(0, int(params.pagina, 1) - 1);
+  const periodDays = params.periodo && params.periodo !== "todos" ? Math.max(1, int(params.periodo, 30)) : undefined;
+  const supabase = getSupabaseAdmin();
+
+  const [{ items, metrics, total }, { data: adminsData }] = await Promise.all([
+    listAdminTickets({
+      page,
+      limit: PAGE_SIZE,
+      search: params.busca,
+      status: params.status,
+      prioridade: params.prioridade,
+      sla: (["vencido", "proximo", "ok"].includes(params.sla || "") ? params.sla : "todos") as "todos" | "vencido" | "proximo" | "ok",
+      responsavelAdminId: params.responsavel,
+      recovery: (["sim", "nao"].includes(params.recovery || "") ? params.recovery : "todos") as "todos" | "sim" | "nao",
+      periodDays,
+      order: (["antigos", "sla"].includes(params.ordem || "") ? params.ordem : "recentes") as "recentes" | "antigos" | "sla",
+    }),
+    supabase.from("admin_master_usuarios").select("id, nome, email").eq("status", "ativo").order("nome", { ascending: true }).limit(40),
+  ]);
+
+  const admins = ((adminsData || []) as Array<{ id: string; nome?: string | null; email?: string | null }>).map((row) => ({
+    id: row.id,
+    nome: row.nome || row.email || "Admin Master",
+    email: row.email || "",
+  }));
   const now = Date.now();
-  const vencidosNaPagina = items.filter((item) => {
-    if (!item.slaLimiteEm || !isOpenStatus(String(item.status))) return false;
-    const sla = new Date(item.slaLimiteEm).getTime();
-    return Number.isFinite(sla) && sla < now;
+  const overdue = items.filter((item) => item.slaLimiteEm && !["resolvido", "fechado"].includes(String(item.status)) && new Date(item.slaLimiteEm).getTime() < now).length;
+  const nextSla = items.filter((item) => {
+    if (!item.slaLimiteEm || ["resolvido", "fechado"].includes(String(item.status))) return false;
+    const diff = new Date(item.slaLimiteEm).getTime() - now;
+    return diff >= 0 && diff <= 4 * 60 * 60 * 1000;
   }).length;
-  const aguardandoTecnico = items.filter(
-    (item) => String(item.status).toLowerCase() === "aguardando_tecnico"
-  ).length;
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-[34px] bg-zinc-950 p-7 text-white shadow-sm">
-        <div className="text-xs font-bold uppercase tracking-[0.35em] text-amber-200">
-          AdminMaster
-        </div>
-        <h2 className="mt-3 font-display text-4xl font-black">Tickets e suporte</h2>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
-            Painel operacional para acompanhar chamados do salão, SLA, prioridade,
-            última resposta e dono do atendimento.
-        </p>
-        <div className="mt-5 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
-          {[
-            ["Novo ticket interno", "/admin-master/tickets/novo"],
-            ["Investigar logs", "/admin-master/logs"],
-            ["Ver saude 24h", "/admin-master/saude"],
-            ["Alertas ativos", "/admin-master/alertas"],
-            ["Salões em risco", "/admin-master/saloes"],
-          ].map(([label, href]) => (
-            <Link
-              key={href}
-              href={href}
-              className="rounded-2xl border border-white/15 bg-white/10 px-4 py-3 text-sm font-black text-white transition hover:bg-white/20"
-            >
-              {label}
-            </Link>
-          ))}
-        </div>
+    <div className="space-y-5">
+      <AdminMasterPageHeader
+        title="Central de atendimento"
+        description="Fila única para pesquisar, priorizar, atribuir responsáveis, acompanhar SLA e resolver tickets sem perder contexto do salão."
+        eyebrow="Atendimento"
+        actions={
+          <Link href="/admin-master/tickets/novo" className="inline-flex h-10 items-center gap-2 rounded-xl bg-violet-700 px-4 text-sm font-bold text-white transition hover:bg-violet-800">
+            <Plus size={16} /> Novo ticket
+          </Link>
+        }
+      />
+
+      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <AdminMasterMetricCard label="Encontrados" value={total} hint="Com os filtros atuais" tone="violet" />
+        <AdminMasterMetricCard label="Em andamento" value={metrics.abertos} hint="Na página atual" tone={metrics.abertos ? "amber" : "green"} />
+        <AdminMasterMetricCard label="SLA vencido" value={overdue} hint="Exige ação imediata" tone={overdue ? "red" : "green"} />
+        <AdminMasterMetricCard label="SLA em até 4h" value={nextSla} hint="Prioridade preventiva" tone={nextSla ? "amber" : "default"} />
+        <AdminMasterMetricCard label="Recuperação MFA" value={metrics.recoveryPending + metrics.recoveryCooldown + metrics.recoveryReadyToComplete} hint="Fluxos de segurança" tone="blue" />
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        {[
-          { label: "Tickets", value: metrics.total, hint: "Histórico recente", tone: "default" as const },
-          { label: "Em andamento", value: metrics.abertos, hint: "Ainda não encerrados", tone: "amber" as const },
-          { label: "Aguardando cliente", value: metrics.aguardandoCliente, hint: "Pedir retorno do salão", tone: "blue" as const },
-          { label: "Críticos", value: metrics.criticos, hint: "Prioridade alta", tone: "red" as const },
-        ].map((item) => (
-          <div key={item.label} className={`rounded-[28px] border p-5 shadow-sm ${kpiToneClass(item.tone)}`}>
-            <div className="text-xs font-bold uppercase tracking-[0.24em] opacity-60">
-              {item.label}
-            </div>
-            <div className="mt-3 font-display text-3xl font-black">{item.value}</div>
-            <div className="mt-2 text-sm opacity-70">{item.hint}</div>
+      <section className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+        <form method="get" className="grid gap-3 lg:grid-cols-4 xl:grid-cols-8">
+          <label className="flex h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-zinc-50 px-3 lg:col-span-2">
+            <Search size={15} className="text-zinc-400" />
+            <input name="busca" defaultValue={params.busca || ""} placeholder="Ticket, salão, responsável ou solicitante" className="min-w-0 flex-1 bg-transparent text-sm font-medium text-zinc-900 outline-none placeholder:text-zinc-400" />
+          </label>
+          <select name="status" defaultValue={params.status || "todos"} className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700">
+            <option value="todos">Todos os status</option><option value="aberto">Aberto</option><option value="em_atendimento">Em atendimento</option><option value="aguardando_cliente">Aguardando cliente</option><option value="aguardando_tecnico">Aguardando técnico</option><option value="resolvido">Resolvido</option><option value="fechado">Fechado</option>
+          </select>
+          <select name="prioridade" defaultValue={params.prioridade || "todas"} className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700">
+            <option value="todas">Todas prioridades</option><option value="critica">Crítica</option><option value="alta">Alta</option><option value="media">Média</option><option value="baixa">Baixa</option>
+          </select>
+          <select name="sla" defaultValue={params.sla || "todos"} className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700">
+            <option value="todos">Qualquer SLA</option><option value="vencido">SLA vencido</option><option value="proximo">Vence em até 4h</option><option value="ok">Dentro do SLA</option>
+          </select>
+          <select name="responsavel" defaultValue={params.responsavel || "todos"} className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700">
+            <option value="todos">Todos responsáveis</option><option value="sem_responsavel">Sem responsável</option>{admins.map((option) => <option key={option.id} value={option.id}>{option.nome}</option>)}
+          </select>
+          <select name="recovery" defaultValue={params.recovery || "todos"} className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700">
+            <option value="todos">Todos os fluxos</option><option value="sim">Recuperação MFA</option><option value="nao">Sem recuperação MFA</option>
+          </select>
+          <select name="periodo" defaultValue={params.periodo || "30"} className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700">
+            <option value="7">7 dias</option><option value="30">30 dias</option><option value="90">90 dias</option><option value="todos">Todo período</option>
+          </select>
+          <select name="ordem" defaultValue={params.ordem || "recentes"} className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm font-semibold text-zinc-700">
+            <option value="recentes">Mais recentes</option><option value="sla">SLA primeiro</option><option value="antigos">Mais antigos</option>
+          </select>
+          <div className="flex gap-2 lg:col-span-2 xl:col-span-8 xl:justify-end">
+            <Link href="/admin-master/tickets" className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-600 hover:bg-zinc-50">Limpar</Link>
+            <button type="submit" className="inline-flex h-10 items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 text-sm font-bold text-white hover:bg-zinc-800"><Filter size={15} /> Aplicar filtros</button>
           </div>
-        ))}
+        </form>
       </section>
 
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        {[
-          {
-            label: "Recuperacoes pendentes",
-            value: metrics.recoveryPending,
-            hint: "Pedidos aguardando revisao ou reenvio",
-            tone: "blue" as const,
-          },
-          {
-            label: "Em carencia",
-            value: metrics.recoveryCooldown,
-            hint: "Aprovadas e aguardando o prazo",
-            tone: "amber" as const,
-          },
-          {
-            label: "Prontas para concluir",
-            value: metrics.recoveryReadyToComplete,
-            hint: "Ja podem remover o autenticador",
-            tone: "red" as const,
-          },
-          {
-            label: "SLA vencido",
-            value: vencidosNaPagina,
-            hint: "No recorte atual da pagina",
-            tone: vencidosNaPagina ? "red" as const : "default" as const,
-          },
-          {
-            label: "Aguardando tecnico",
-            value: aguardandoTecnico,
-            hint: "Precisa acao interna",
-            tone: aguardandoTecnico ? "amber" as const : "default" as const,
-          },
-        ].map((item) => (
-          <div
-            key={item.label}
-            className={`rounded-[24px] border p-4 shadow-sm ${kpiToneClass(item.tone)}`}
-          >
-            <div className="text-xs font-bold uppercase tracking-[0.22em] opacity-60">
-              {item.label}
-            </div>
-            <div className="mt-2 font-display text-2xl font-black">{item.value}</div>
-            <div className="mt-1 text-sm opacity-70">{item.hint}</div>
-          </div>
-        ))}
-      </section>
-
-      <section className="overflow-hidden rounded-[30px] border border-zinc-200 bg-white shadow-sm">
-        <div className="border-b border-zinc-100 px-5 py-4">
-          <div className="text-xs font-black uppercase tracking-[0.25em] text-zinc-400">
-            Fila de atendimento
-          </div>
-          <h3 className="mt-1 font-display text-2xl font-black text-zinc-950">
-            Resolver, responder ou encaminhar
-          </h3>
-          <p className="mt-1 text-sm leading-6 text-zinc-500">
-              Cada ticket deve terminar com uma resposta para o salão, uma alteração de status
-              ou um vínculo com logs e alertas.
-          </p>
-        </div>
-        <div className="scroll-premium overflow-x-auto">
-          <table className="min-w-full divide-y divide-zinc-100 text-sm">
-            <thead className="bg-zinc-50 text-left text-xs uppercase tracking-[0.2em] text-zinc-500">
-              <tr>
-                {["ticket", "salão", "solicitante", "prioridade", "status", "recuperação", "atualizado", "detalhe"].map((column) => (
-                  <th key={column} className="px-5 py-4 font-bold">
-                    {column}
-                  </th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-100">
-              {items.length ? (
-                items.map((item) => {
-                  const recoveryStage = formatRecoveryStage(item);
-
-                  return (
-                    <tr key={item.id} className="hover:bg-zinc-50/80">
-                      <td className="px-5 py-4">
-                        <div className="font-semibold text-zinc-950">#{item.numero}</div>
-                        <div className="max-w-[320px] truncate text-zinc-500">{item.assunto}</div>
-                      </td>
-                      <td className="px-5 py-4">{item.salaoNome || item.salaoId || "-"}</td>
-                      <td className="px-5 py-4">{item.solicitanteNome}</td>
-                      <td className="px-5 py-4">{item.prioridade}</td>
-                      <td className="px-5 py-4">{item.status}</td>
-                      <td className="px-5 py-4">
-                        {recoveryStage ? (
-                          <span
-                            className={`rounded-full border px-3 py-1 text-xs font-bold ${recoveryStage.className}`}
-                          >
-                            {recoveryStage.label}
-                          </span>
-                        ) : (
-                          <span className="text-zinc-400">-</span>
-                        )}
-                      </td>
-                      <td className="px-5 py-4">{item.ultimaInteracaoLabel}</td>
-                      <td className="px-5 py-4">
-                        <Link
-                          href={`/admin-master/tickets/${item.id}`}
-                          className="rounded-full border border-zinc-200 px-4 py-2 text-xs font-bold text-zinc-800 transition hover:border-zinc-950 hover:bg-zinc-950 hover:text-white"
-                        >
-                          Abrir
-                        </Link>
-                      </td>
-                    </tr>
-                  );
-                })
-              ) : (
-                <tr>
-                  <td colSpan={8} className="px-5 py-10 text-center">
-                    <div className="mx-auto max-w-md">
-                      <div className="font-black text-zinc-800">Nenhum ticket encontrado ainda.</div>
-                      <div className="mt-2 text-sm leading-6 text-zinc-500">
-                        Quando um salão abrir suporte ou um alerta gerar ticket, a fila aparece aqui com prioridade e SLA.
-                      </div>
-                    </div>
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <AdminTicketQueueClient items={items} admins={admins} currentAdminId={admin.usuario.id} canEdit={admin.permissions.tickets_editar} />
 
       <PaginationLinks
-        currentPage={paginaAtual}
-        pageSize={ADMIN_TICKETS_PAGE_SIZE}
+        currentPage={page}
+        pageSize={PAGE_SIZE}
         totalItems={total}
-        getHref={(page) => `/admin-master/tickets?pagina=${page + 1}`}
+        getHref={(nextPage) => buildHref(params, nextPage)}
       />
     </div>
   );

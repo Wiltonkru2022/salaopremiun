@@ -36,6 +36,12 @@ export async function salvarPlanoAdminMaster(formData: FormData) {
     throw new Error("Plano invalido para edicao.");
   }
 
+  const { data: before } = await supabase
+    .from("planos_saas")
+    .select("id, nome, subtitulo, valor_mensal, preco_anual, limite_usuarios, limite_profissionais, trial_dias, ideal_para, cta, destaque, ativo, ordem")
+    .eq("id", id)
+    .maybeSingle();
+
   const payload = {
     nome: textValue(formData, "nome"),
     subtitulo: nullableTextValue(formData, "subtitulo"),
@@ -64,11 +70,12 @@ export async function salvarPlanoAdminMaster(formData: FormData) {
     entidade: "planos_saas",
     entidadeId: id,
     descricao: `Plano ${payload.nome || id} editado pelo AdminMaster.`,
-    payload,
+    payload: { antes: before, depois: payload },
   });
 
   revalidatePath("/admin-master/planos");
   revalidatePath("/admin-master/recursos");
+  revalidatePath("/admin-master/atividades");
   revalidateTag("plano-access-snapshot", "max");
 }
 
@@ -81,6 +88,13 @@ export async function salvarRecursoPlanoAdminMaster(formData: FormData) {
   if (!idPlano || !recursoCodigo) {
     throw new Error("Recurso invalido para edicao.");
   }
+
+  const { data: beforeResource } = await supabase
+    .from("planos_recursos")
+    .select("id_plano, recurso_codigo, habilitado, limite_numero, observacao")
+    .eq("id_plano", idPlano)
+    .eq("recurso_codigo", recursoCodigo)
+    .maybeSingle();
 
   const payload = {
     id_plano: idPlano,
@@ -105,7 +119,7 @@ export async function salvarRecursoPlanoAdminMaster(formData: FormData) {
     entidade: "planos_recursos",
     entidadeId: `${idPlano}:${recursoCodigo}`,
     descricao: `Recurso ${recursoCodigo} atualizado na matriz de planos.`,
-    payload,
+    payload: { antes: beforeResource, depois: payload },
   });
 
   revalidatePath("/admin-master/planos");

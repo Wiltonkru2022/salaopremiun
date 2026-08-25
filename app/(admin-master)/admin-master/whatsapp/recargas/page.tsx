@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { AlertTriangle, CheckCircle2, Clock3, RefreshCw, WalletCards } from "lucide-react";
+import AdminMasterPageHeader from "@/components/admin-master/AdminMasterPageHeader";
 import {
   consultarRecargaWhatsappAsaasAdminMaster,
   reprocessarRecargaWhatsappAdminMaster,
@@ -75,20 +76,13 @@ export default async function AdminMasterWhatsappRecargasPage() {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[32px] bg-zinc-950 p-6 text-white shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="text-xs font-black uppercase tracking-[0.28em] text-emerald-300">WhatsApp</div>
-            <h1 className="mt-2 text-3xl font-black">Recargas e conciliacao PIX</h1>
-            <p className="mt-2 max-w-3xl text-sm leading-6 text-zinc-300">
-              Acompanhe quem pagou, quem ainda esta aguardando e recupere com seguranca um credito que nao entrou automaticamente.
-            </p>
-          </div>
-          <Link href="/admin-master/whatsapp" className="rounded-xl border border-white/15 bg-white/10 px-4 py-2 text-sm font-black hover:bg-white/15">
-            Voltar ao WhatsApp
-          </Link>
-        </div>
-      </section>
+      <AdminMasterPageHeader
+        eyebrow="WhatsApp"
+        title="Recargas e conciliação PIX"
+        description="Acompanhe quem pagou, quem ainda está aguardando e recupere com segurança um crédito que não entrou automaticamente."
+        breadcrumb={[{ label: "Admin Master", href: "/admin-master" }, { label: "WhatsApp", href: "/admin-master/whatsapp" }, { label: "Recargas" }]}
+        actions={<Link href="/admin-master/whatsapp" className="inline-flex h-10 items-center rounded-xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-700 transition hover:border-violet-200 hover:text-violet-700">Voltar ao WhatsApp</Link>}
+      />
 
       {falhasPagas.length ? (
         <section className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-900">
@@ -129,7 +123,48 @@ export default async function AdminMasterWhatsappRecargasPage() {
           </div>
           <p className="mt-1 text-xs text-zinc-500">PIX do SalaoPremium expira 24 horas apos ser gerado. Sao exibidas as 100 recargas mais recentes.</p>
         </div>
-        <div className="overflow-x-auto">
+        <div className="grid gap-3 p-4 md:hidden">
+          {rows.map((row) => {
+            const id = String(row.id);
+            const status = String(row.status || "pendente");
+            const idSalao = String(row.id_salao || "");
+            return (
+              <article key={id} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <div className="font-black text-zinc-950">{salaoMap.get(idSalao) || "Salão"}</div>
+                    <div className="mt-1 text-lg font-black text-zinc-950">{money(row.valor_centavos)}</div>
+                  </div>
+                  <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-black ${statusStyle(status)}`}>{status}</span>
+                </div>
+                <div className="mt-3 grid gap-1 text-xs leading-5 text-zinc-500">
+                  <span>Gerado: {dateTime(String(row.criado_em || ""))}</span>
+                  <span>Expira: {dateTime(String(row.expira_em || ""))}</span>
+                  <span>Pago: {dateTime(row.pago_em ? String(row.pago_em) : null)}</span>
+                  <span>Creditado: {dateTime(row.creditado_em ? String(row.creditado_em) : null)}</span>
+                </div>
+                {row.erro_texto ? <div className="mt-3 rounded-xl bg-rose-50 p-3 text-xs font-semibold text-rose-700">Falha registrada para suporte.</div> : null}
+                <details className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50">
+                  <summary className="cursor-pointer px-3 py-2 text-xs font-black text-zinc-700">Ações</summary>
+                  <div className="grid gap-2 border-t border-zinc-200 p-3">
+                    <form action={consultarRecargaWhatsappAsaasAdminMaster}>
+                      <input type="hidden" name="id" value={id} />
+                      <button className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl border border-zinc-200 bg-white px-3 text-xs font-black text-zinc-800"><RefreshCw size={14} />Consultar no Asaas</button>
+                    </form>
+                    {status === "falhou" && row.pago_em ? (
+                      <form action={reprocessarRecargaWhatsappAdminMaster}>
+                        <input type="hidden" name="id" value={id} />
+                        <button className="inline-flex h-10 w-full items-center justify-center rounded-xl bg-violet-600 px-3 text-xs font-black text-white hover:bg-violet-700">Reprocessar crédito</button>
+                      </form>
+                    ) : null}
+                  </div>
+                </details>
+              </article>
+            );
+          })}
+          {!rows.length ? <div className="rounded-2xl border border-dashed border-zinc-200 p-6 text-center text-sm text-zinc-500">Nenhuma recarga registrada.</div> : null}
+        </div>
+        <div className="hidden overflow-x-auto md:block">
           <table className="min-w-full text-left text-sm">
             <thead className="bg-zinc-50 text-[11px] font-black uppercase tracking-[0.12em] text-zinc-500">
               <tr>

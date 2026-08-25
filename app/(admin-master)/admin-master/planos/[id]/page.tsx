@@ -1,9 +1,9 @@
-import { AdminSectionView } from "@/components/admin-master/AdminMasterViews";
+import AdminMasterSectionSimple from "@/components/admin-master/AdminMasterSectionSimple";
 import { getAdminMasterSection } from "@/lib/admin-master/data";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminMasterPlanoDetailPage() {
   const data = await getAdminMasterSection("planos");
-  return <AdminSectionView data={{ ...data, title: "Detalhe do plano" }} />;
+  return <AdminMasterSectionSimple data={{ ...data, title: "Detalhe do plano" }} />;
 }

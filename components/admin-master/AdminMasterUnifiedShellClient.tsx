@@ -16,6 +16,7 @@ import {
   LogOut,
   Menu,
   MessageCircle,
+  Search,
   Settings,
   ShieldCheck,
   Sparkles,
@@ -81,6 +82,7 @@ const SYSTEM_ITEMS: NavItem[] = [
   { href: "/admin-master/saude", label: "Saúde do sistema", icon: Activity, permission: "operacao_ver", badge: "alertas" },
   { href: "/admin-master/whatsapp", label: "WhatsApp", icon: MessageCircle, permission: "whatsapp_ver" },
   { href: "/admin-master/configuracoes-globais", label: "Configurações", icon: Settings, permission: "produto_ver" },
+  { href: "/admin-master/atividades", label: "Atividades", icon: Activity, permission: "auditoria_ver" },
   { href: "/admin-master/logs", label: "Diagnóstico técnico", icon: Webhook, permission: "auditoria_ver" },
   { href: "/admin-master/usuarios-admin", label: "Equipe Admin", icon: Users, permission: "usuarios_admin_ver" },
   { href: "/admin-master/seguranca", label: "Segurança", icon: ShieldCheck, permission: "operacao_ver" },
@@ -158,6 +160,7 @@ const PAGE_META: Array<[string, string, string]> = [
   ["/admin-master/saloes-excluidos", "Salões excluídos", "Retenção, restauração e exclusões definitivas."],
   ["/admin-master/feature-flags", "Feature flags", "Liberação controlada de recursos por escopo."],
   ["/admin-master/usuarios-admin", "Equipe Admin", "Perfis, acessos e permissões internas."],
+  ["/admin-master/atividades", "Central de atividades", "Auditoria, alterações e ações administrativas em ordem cronológica."],
   ["/admin-master/notificacoes", "Notificações", "Envios, histórico e falhas de comunicação."],
   ["/admin-master/parcerias", "Parcerias", "Empresas, criativos e campanhas parceiras."],
   ["/admin-master/campanhas", "Campanhas", "Público, criativo, exibição e resultado."],
@@ -310,6 +313,15 @@ export default function AdminMasterUnifiedShellClient({
               <div className="hidden truncate text-xs text-zinc-500 sm:block">{meta.description}</div>
             </div>
             <div className="hidden min-w-[280px] max-w-[420px] flex-1 md:block"><AdminMasterGlobalSearch /></div>
+            <div className="hidden md:block" aria-hidden="true" />
+            <button
+              type="button"
+              onClick={() => window.dispatchEvent(new Event("admin-master-command-palette"))}
+              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 hover:border-violet-200 hover:text-violet-700 md:hidden"
+              aria-label="Buscar ou executar comando"
+            >
+              <Search size={18} />
+            </button>
             {shellData.alertasCriticos > 0 && permissions.operacao_ver ? (
               <Link href="/admin-master/alertas" className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 bg-white text-zinc-600 hover:text-rose-700" aria-label="Alertas críticos">
                 <Bell size={18} />

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowUpRight, BarChart3, CalendarDays, CircleDollarSign, Scissors, TrendingUp, AlertTriangle } from "lucide-react";
-import { AdminDataTable } from "@/components/admin-master/AdminMasterViews";
+import AdminMasterDataTableClient from "@/components/admin-master/AdminMasterDataTableClient";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
@@ -230,7 +230,7 @@ export default async function AdminMasterRelatoriosPage({
       <section className="grid gap-5 xl:grid-cols-[minmax(0,1.2fr)_minmax(320px,0.8fr)]">
         <div className="space-y-3">
           <div><h2 className="text-lg font-black text-zinc-950">Salões com maior receita operacional</h2><p className="mt-1 text-sm text-zinc-500">A tabela já permite busca, filtro por período e exportação.</p></div>
-          <AdminDataTable rows={topRows} columns={["salao", "local", "plano", "receita", "acao"]} />
+          <AdminMasterDataTableClient rows={topRows} columns={["salao", "local", "plano", "receita", "acao"]} emptyTitle="Nenhum salão no período" emptyDescription="Ajuste o período ou aguarde novas movimentações." />
         </div>
         <div className="rounded-2xl border border-rose-200 bg-rose-50 p-5 text-rose-950 shadow-sm">
           <div className="text-[11px] font-bold uppercase tracking-[0.16em] opacity-60">Risco operacional</div>

@@ -6,6 +6,7 @@ import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMast
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { renderContratoParceria } from "@/lib/parcerias/contrato";
+import { normalizeExternalDestination } from "@/lib/parcerias/urls";
 import { removeCampanhaImage, uploadCampanhaImage } from "@/services/campanhaMediaService";
 
 function text(formData: FormData, key: string) {
@@ -157,7 +158,7 @@ export async function criarCampanhaParceria(formData: FormData) {
       cidade: text(formData, "cidade") || null,
       uf: text(formData, "uf").toUpperCase().slice(0, 2) || null,
     },
-    destino_url: text(formData, "destino_url") || null,
+    destino_url: normalizeExternalDestination(text(formData, "destino_url")),
     cupom_codigo: text(formData, "cupom_codigo") || null,
     modelo_cobranca: origem === "parceiro" ? (text(formData, "modelo_cobranca") || "mensal") : "interno",
     valor_contratado: origem === "parceiro" ? money(text(formData, "valor_contratado")) : 0,
@@ -200,8 +201,15 @@ export async function atualizarCampanhaParceria(formData: FormData) {
   if (!allowed.includes(status)) throw new Error("Status de campanha inválido.");
   const categoria = text(formData, "categoria_interna") || null;
 
+  const publico = formData.getAll("publico").map(String).filter(Boolean);
+  const locaisExibicao = formData.getAll("locais_exibicao").map(String).filter(Boolean);
+  if (!publico.length) throw new Error("Escolha pelo menos um público para a campanha.");
+  if (!locaisExibicao.length) throw new Error("Escolha pelo menos um local de exibição.");
+
   const payload = {
     status,
+    publico,
+    locais_exibicao: locaisExibicao,
     categoria_interna: categoria && ["novidade", "beneficio", "comunicado", "critico"].includes(categoria) ? categoria : null,
     prioridade: categoria === "critico" ? 100 : Math.min(100, Math.max(0, intValue(formData, "prioridade", 0))),
     peso_rotacao: Math.min(100, Math.max(1, intValue(formData, "peso_rotacao", 1))),
@@ -280,7 +288,7 @@ export async function salvarCriativoParceria(formData: FormData) {
     imagem_url: imagemUrl,
     alt_text: text(formData, "alt_text") || titulo,
     cta_texto: text(formData, "cta_texto") || "Saiba mais",
-    destino_url: text(formData, "destino_url") || null,
+    destino_url: normalizeExternalDestination(text(formData, "destino_url")),
     formato,
     ordem: 0,
     ativo: true,
@@ -303,6 +311,73 @@ export async function salvarCriativoParceria(formData: FormData) {
     entidadeId: data?.id || null,
     descricao: `Criativo ${titulo} adicionado à campanha.`,
     payload: { ...payload, imagem_enviada: Boolean(uploadedUrl) },
+  });
+  revalidatePath("/admin-master/parcerias");
+}
+
+
+export async function atualizarCriativoParceria(formData: FormData) {
+  const access = await requireAdminMasterUser("campanhas_editar");
+  const supabase = getSupabaseAdmin() as any;
+  const id = text(formData, "id_criativo");
+  if (!id) throw new Error("Criativo não informado.");
+
+  const { data: atual, error: atualError } = await supabase
+    .from("parceria_criativos")
+    .select("id,id_campanha,titulo,subtitulo,imagem_url,cta_texto,destino_url,formato,ativo")
+    .eq("id", id)
+    .maybeSingle();
+  if (atualError || !atual) {
+    throw new Error(atualError?.message || "Criativo não encontrado.");
+  }
+
+  const idCampanha = text(formData, "id_campanha") || atual.id_campanha;
+  const titulo = text(formData, "titulo");
+  if (!idCampanha || !titulo) throw new Error("Informe a campanha e o título do anúncio.");
+
+  const formatoInformado = text(formData, "formato");
+  const formato = ["card", "banner", "poster"].includes(formatoInformado)
+    ? formatoInformado
+    : "card";
+  const arquivo = formData.get("imagem_arquivo");
+  const removerImagem = formData.get("remover_imagem") === "on";
+  let imagemUrl = removerImagem ? null : atual.imagem_url;
+  let uploadedUrl: string | null = null;
+
+  if (arquivo instanceof File && arquivo.size > 0) {
+    uploadedUrl = await uploadCampanhaImage({ idCampanha, file: arquivo });
+    imagemUrl = uploadedUrl;
+  }
+
+  const payload = {
+    id_campanha: idCampanha,
+    titulo,
+    subtitulo: text(formData, "subtitulo") || null,
+    imagem_url: imagemUrl,
+    alt_text: text(formData, "alt_text") || titulo,
+    cta_texto: text(formData, "cta_texto") || "Saiba mais",
+    destino_url: normalizeExternalDestination(text(formData, "destino_url")),
+    formato,
+    ativo: formData.get("ativo") === "on",
+  };
+
+  const { error } = await supabase.from("parceria_criativos").update(payload).eq("id", id);
+  if (error) {
+    if (uploadedUrl) await removeCampanhaImage(uploadedUrl);
+    throw new Error(error.message || "Não foi possível atualizar o criativo.");
+  }
+
+  if ((uploadedUrl || removerImagem) && atual.imagem_url && atual.imagem_url !== imagemUrl) {
+    await removeCampanhaImage(atual.imagem_url);
+  }
+
+  await registrarAdminMasterAuditoria({
+    idAdmin: access.usuario.id,
+    acao: "editar_criativo_parceria",
+    entidade: "parceria_criativos",
+    entidadeId: id,
+    descricao: `Criativo ${titulo} atualizado.`,
+    payload: { antes: atual, depois: { ...payload, imagem_enviada: Boolean(uploadedUrl) } },
   });
   revalidatePath("/admin-master/parcerias");
 }
@@ -402,4 +477,18 @@ export async function gerarContratoParceria(formData: FormData) {
     payload: { id_campanha: campanha.id, numero, hash_documento_sha256: hash },
   });
   revalidatePath("/admin-master/parcerias");
+}
+
+export async function carregarContratoParceriaPreview(idContrato: string) {
+  await requireAdminMasterUser("comunicacao_ver");
+  const id = String(idContrato || "").trim();
+  if (!id) throw new Error("Contrato não informado.");
+  const supabase = getSupabaseAdmin() as any;
+  const { data, error } = await supabase
+    .from("parceria_contratos")
+    .select("id,numero,conteudo_snapshot")
+    .eq("id", id)
+    .maybeSingle();
+  if (error || !data) throw new Error(error?.message || "Contrato não encontrado.");
+  return { numero: String(data.numero || ""), conteudo: String(data.conteudo_snapshot || "") };
 }

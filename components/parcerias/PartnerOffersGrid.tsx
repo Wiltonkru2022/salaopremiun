@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { AlertTriangle, ExternalLink, Gift, Megaphone, Search, Sparkles, Tag } from "lucide-react";
+import { normalizeExternalDestination } from "@/lib/parcerias/urls";
 
 type Campanha = {
   id: string;
@@ -50,7 +51,8 @@ export default function PartnerOffersGrid({ publico, idSalao }: { publico: "sala
 
   function trackAndOpen(row: Campanha) {
     void fetch("/api/parcerias/ativos", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ idCampanha: row.id, local: "parceiros", tipo: "clique" }), keepalive: true });
-    if (row.destinoUrl) window.open(row.destinoUrl, "_blank", "noopener,noreferrer");
+    const destination = normalizeExternalDestination(row.destinoUrl);
+    if (destination) window.open(destination, "_blank", "noopener,noreferrer");
   }
 
   return (

@@ -7,6 +7,7 @@ import {
   RotateCcw,
   Search,
 } from "lucide-react";
+import AdminMasterPageHeader from "@/components/admin-master/AdminMasterPageHeader";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import PaginationLinks from "@/components/ui/PaginationLinks";
@@ -126,31 +127,12 @@ export default async function AdminMasterSaloesExcluidosPage({
 
   return (
     <div className="space-y-5">
-      <section className="rounded-[28px] bg-zinc-950 p-5 text-white shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-          <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.24em] text-amber-100">
-              <RotateCcw size={14} />
-              Recuperação
-            </div>
-            <h1 className="mt-4 font-display text-[2rem] font-black">
-              Salões excluídos
-            </h1>
-            <p className="mt-2.5 max-w-3xl text-sm leading-6 text-zinc-300">
-              Acompanhe contas apagadas, registre a decisão do suporte e
-              restaure um cadastro básico quando houver solicitação legítima.
-            </p>
-          </div>
-
-          <Link
-            href="/admin-master/saloes"
-            className="inline-flex h-11 items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 text-sm font-bold text-white transition hover:bg-white/20"
-          >
-            Ver salões ativos
-            <ArrowUpRight size={16} />
-          </Link>
-        </div>
-      </section>
+      <AdminMasterPageHeader
+        eyebrow="Recuperação"
+        title="Salões excluídos"
+        description="Acompanhe contas apagadas, registre a decisão do suporte e restaure um cadastro básico quando houver solicitação legítima."
+        actions={<Link href="/admin-master/saloes" className="inline-flex h-10 items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-700 transition hover:border-violet-200 hover:text-violet-700">Ver salões ativos <ArrowUpRight size={16} /></Link>}
+      />
 
       {error ? (
         <div className="rounded-[24px] border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-900">

@@ -88,9 +88,12 @@ export async function salvarConfiguracaoGlobalAdminMaster(formData: FormData) {
     payload: {
       chave,
       descricao: payload.descricao,
+      antes: atual ? { chave: atual.chave, valor_json: atual.valor_json } : null,
+      depois: { chave, valor_json: valorJson, descricao: payload.descricao },
     },
   });
 
   revalidatePath("/admin-master/configuracoes-globais");
   revalidatePath("/admin-master/logs");
+  revalidatePath("/admin-master/atividades");
 }

@@ -321,7 +321,37 @@ export default function AdminMasterDataTableClient({
         </div>
       ) : null}
 
-      <div className="scroll-premium overflow-x-auto">
+      <div className="space-y-3 p-3 md:hidden">
+        {pagedRows.length ? pagedRows.map((row, index) => {
+          const visibleColumns = columns.filter((column) => !isActionColumn(column)).slice(0, 4);
+          const actionColumns = columns.filter(isActionColumn);
+          return (
+            <article key={`mobile-${currentPage}-${index}`} className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm">
+              <div className="space-y-3">
+                {visibleColumns.map((column, columnIndex) => (
+                  <div key={column} className={columnIndex === 0 ? "" : "grid grid-cols-[110px_1fr] gap-3 border-t border-zinc-100 pt-3"}>
+                    <div className={columnIndex === 0 ? "text-[11px] font-bold uppercase tracking-[0.14em] text-zinc-400" : "text-xs font-semibold text-zinc-400"}>{columnLabel(column)}</div>
+                    <div className={columnIndex === 0 ? "mt-1 break-words text-sm font-black text-zinc-950" : "min-w-0 break-words text-right text-sm font-semibold text-zinc-700"}>
+                      {shouldBadge(column) ? <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-bold ${badgeClass(row[column])}`}>{displayValue(row[column])}</span> : displayValue(row[column])}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              {actionColumns.length ? (
+                <div className="mt-4 flex flex-wrap gap-2 border-t border-zinc-100 pt-3">
+                  {actionColumns.map((column) => (
+                    <AdminMasterRowActionButton key={column} actionType={String(row[getActionField(column, "tipo")] || "")} actionId={String(row[getActionField(column, "id")] || "")} label={String(row[column] || "Abrir")} />
+                  ))}
+                </div>
+              ) : null}
+            </article>
+          );
+        }) : (
+          <div className="px-4 py-10 text-center"><div className="text-sm font-bold text-zinc-800">{emptyTitle}</div><div className="mt-1.5 text-sm leading-6 text-zinc-500">{emptyDescription}</div></div>
+        )}
+      </div>
+
+      <div className="scroll-premium hidden overflow-x-auto md:block">
         <table className="min-w-full text-sm">
           <thead className="border-b border-zinc-100 bg-zinc-50/80 text-left text-xs text-zinc-500">
             <tr>{columns.map((column) => <th key={column} className="whitespace-nowrap px-4 py-3 font-semibold">{columnLabel(column)}</th>)}</tr>

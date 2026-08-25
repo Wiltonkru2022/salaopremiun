@@ -1,7 +1,9 @@
 import Link from "next/link";
 import {
   AlertTriangle,
+  ArrowDownRight,
   ArrowRight,
+  ArrowUpRight,
   Building2,
   CheckCircle2,
   CreditCard,
@@ -13,7 +15,7 @@ import {
   Users,
   Wallet,
 } from "lucide-react";
-import type { AdminKpi, AdminTableRow } from "@/lib/admin-master/data";
+import type { AdminKpi, AdminMasterDashboardInsight, AdminTableRow } from "@/lib/admin-master/data";
 import type { AdminMasterOperationalSnapshot } from "@/lib/admin-master/operability";
 
 type Props = {
@@ -22,6 +24,8 @@ type Props = {
   planos: AdminTableRow[];
   operational: AdminMasterOperationalSnapshot;
   digitalizacao: AdminTableRow[];
+  insights: AdminMasterDashboardInsight[];
+  revenueTrend: number[];
 };
 
 function findKpi(kpis: AdminKpi[], label: string) {
@@ -75,6 +79,45 @@ function MetricCard({
         </div>
       </div>
       <p className="mt-2 line-clamp-2 text-xs leading-5 text-zinc-500">{hint}</p>
+    </div>
+  );
+}
+
+
+function InsightCard({ insight }: { insight: AdminMasterDashboardInsight }) {
+  const delta = insight.delta;
+  const positive = typeof delta === "number" && delta >= 0;
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm shadow-zinc-200/30">
+      <div className="text-xs font-semibold text-zinc-500">{insight.label}</div>
+      <div className="mt-2 flex items-end justify-between gap-3">
+        <div className="text-xl font-black tracking-tight text-zinc-950">{insight.value}</div>
+        {typeof delta === "number" ? (
+          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] font-black ${positive ? "bg-emerald-50 text-emerald-700" : "bg-rose-50 text-rose-700"}`}>
+            {positive ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+            {positive ? "+" : ""}{delta.toFixed(1).replace(".", ",")}%
+          </span>
+        ) : null}
+      </div>
+      <div className="mt-1 text-xs leading-5 text-zinc-500">{insight.hint}</div>
+    </div>
+  );
+}
+
+function RevenueTrend({ values }: { values: number[] }) {
+  const max = Math.max(...values, 1);
+  const last7 = values.slice(-7).reduce((sum, value) => sum + value, 0);
+  const last30 = values.reduce((sum, value) => sum + value, 0);
+  const money = (value: number) => value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
+  return (
+    <div className="rounded-2xl border border-zinc-200 bg-white p-4 shadow-sm shadow-zinc-200/30">
+      <div className="flex items-start justify-between gap-3">
+        <div><div className="text-xs font-semibold text-zinc-500">Tendência de receita</div><div className="mt-1 text-lg font-black text-zinc-950">{money(last30)}</div></div>
+        <div className="text-right text-[11px] text-zinc-500"><div>30 dias</div><div className="mt-1 font-bold text-violet-700">7d: {money(last7)}</div></div>
+      </div>
+      <div className="mt-4 flex h-16 items-end gap-1" aria-label="Receita diária dos últimos 30 dias">
+        {values.map((value, index) => <span key={index} title={money(value)} className="min-w-0 flex-1 rounded-t bg-violet-200 transition hover:bg-violet-500" style={{ height: `${Math.max(4, (value / max) * 100)}%` }} />)}
+      </div>
     </div>
   );
 }
@@ -151,6 +194,8 @@ export default function AdminMasterDashboardSimple({
   planos,
   operational,
   digitalizacao,
+  insights,
+  revenueTrend,
 }: Props) {
   const totalSaloes = findKpi(kpis, "Total de salões");
   const trials = findKpi(kpis, "Trials ativos");
@@ -163,6 +208,16 @@ export default function AdminMasterDashboardSimple({
   const primaryIncident = operational.incidents[0];
   const recentSalons = recentes.slice(0, 5);
   const incidentes = operational.incidents.slice(0, 4);
+  const alertCount = Number.parseInt(alertas?.value || "0", 10) || 0;
+  const ticketCount = Number.parseInt(tickets?.value || "0", 10) || 0;
+  const trialCount = Number.parseInt(trials?.value || "0", 10) || 0;
+  const nextAction = primaryIncident || alertCount > 0
+    ? { priority: "Crítico", title: primarySuggestion?.title || primaryIncident?.recommendedAction || "Resolver alertas críticos", detail: primarySuggestion?.detail || primaryIncident?.title || `${alertCount} alerta(s) exigem ação.`, href: "/admin-master/alertas", cta: "Resolver alerta", tone: "border-rose-200 bg-rose-50 text-rose-800" }
+    : ticketCount > 0
+      ? { priority: "Importante", title: "Responder fila de atendimento", detail: `${ticketCount} ticket(s) estão aguardando andamento.`, href: "/admin-master/tickets", cta: "Responder ticket", tone: "border-amber-200 bg-amber-50 text-amber-800" }
+      : trialCount > 0
+        ? { priority: "Oportunidade", title: "Acompanhar conversão de trials", detail: `${trialCount} trial(s) ativos podem virar receita recorrente.`, href: "/admin-master/assinaturas", cta: "Ver trials", tone: "border-blue-200 bg-blue-50 text-blue-800" }
+        : { priority: "Estável", title: "Operação sem pendência crítica", detail: "Acompanhe saúde, receita e crescimento da base.", href: "/admin-master/saude", cta: "Ver saúde", tone: "border-emerald-200 bg-emerald-50 text-emerald-800" };
 
   return (
     <div className="space-y-6">
@@ -218,6 +273,14 @@ export default function AdminMasterDashboardSimple({
         </div>
       </section>
 
+      <section>
+        <div className="mb-3 flex items-center justify-between gap-3"><div><h3 className="text-base font-black text-zinc-950">Movimento do negócio</h3><p className="mt-0.5 text-xs text-zinc-500">Comparativos, conversão, churn e eficiência financeira.</p></div><Link href="/admin-master/relatorios" className="text-xs font-bold text-violet-700">Análise completa</Link></div>
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          {insights.slice(0, 6).map((insight) => <InsightCard key={insight.label} insight={insight} />)}
+          <div className="sm:col-span-2"><RevenueTrend values={revenueTrend} /></div>
+        </div>
+      </section>
+
       <section className="grid gap-4 xl:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.6fr)]">
         <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm shadow-zinc-200/40">
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -229,10 +292,10 @@ export default function AdminMasterDashboardSimple({
               <p className="mt-1 text-xs text-zinc-500">Visão operacional sem abrir a área técnica.</p>
             </div>
             <Link
-              href="/admin-master/operacao"
+              href="/admin-master/saude"
               className="text-sm font-bold text-violet-700 hover:text-violet-900"
             >
-              Abrir operação
+              Abrir saúde
             </Link>
           </div>
 
@@ -262,26 +325,14 @@ export default function AdminMasterDashboardSimple({
           </div>
         </div>
 
-        <div className="rounded-2xl bg-zinc-950 p-5 text-white shadow-sm">
-          <div className="flex items-center gap-2 text-violet-200">
-            <Sparkles size={17} />
-            <span className="text-xs font-bold uppercase tracking-[0.16em]">Próxima ação</span>
+        <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm shadow-zinc-200/40">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 text-violet-700"><Sparkles size={17} /><span className="text-xs font-bold uppercase tracking-[0.16em]">Próxima ação</span></div>
+            <span className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.12em] ${nextAction.tone}`}>{nextAction.priority}</span>
           </div>
-          <h3 className="mt-3 text-xl font-black leading-tight">
-            {primarySuggestion?.title || primaryIncident?.recommendedAction || "Operação estável"}
-          </h3>
-          <p className="mt-2 text-sm leading-6 text-zinc-300">
-            {primarySuggestion?.detail ||
-              primaryIncident?.title ||
-              "Nenhum incidente crítico exige ação imediata. Continue acompanhando cobranças e suporte."}
-          </p>
-          <Link
-            href={primaryIncident ? "/admin-master/alertas" : "/admin-master/operacao"}
-            className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-3.5 py-2 text-sm font-black text-zinc-950 transition hover:bg-violet-100"
-          >
-            Ver detalhes
-            <ArrowRight size={16} />
-          </Link>
+          <h3 className="mt-3 text-xl font-black leading-tight text-zinc-950">{nextAction.title}</h3>
+          <p className="mt-2 text-sm leading-6 text-zinc-500">{nextAction.detail}</p>
+          <Link href={nextAction.href} className="mt-5 inline-flex items-center gap-2 rounded-xl bg-violet-700 px-3.5 py-2 text-sm font-black text-white transition hover:bg-violet-800">{nextAction.cta}<ArrowRight size={16} /></Link>
         </div>
       </section>
 
@@ -407,8 +458,8 @@ export default function AdminMasterDashboardSimple({
             icon={Headphones}
           />
           <QuickLink
-            href="/admin-master/operacao"
-            title="Operação"
+            href="/admin-master/saude"
+            title="Saúde"
             description={`${operational.health.openIncidents} incidente(s) aberto(s)`}
             icon={HeartPulse}
           />

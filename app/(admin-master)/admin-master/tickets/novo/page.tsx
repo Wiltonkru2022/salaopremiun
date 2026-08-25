@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import AdminMasterPageHeader from "@/components/admin-master/AdminMasterPageHeader";
 import { criarTicketInternoAdminMaster } from "@/app/(admin-master)/admin-master/tickets/novo/actions";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
@@ -82,23 +83,29 @@ export default async function AdminMasterNovoTicketPage({
 
   return (
     <div className="space-y-6">
-      <section className="rounded-[34px] bg-zinc-950 p-7 text-white shadow-sm">
-        <Link href="/admin-master/tickets" className="text-sm font-bold text-amber-200">
-          Voltar para tickets
-        </Link>
-        <h1 className="mt-4 font-display text-4xl font-black">
-          Novo ticket interno
-        </h1>
-        <p className="mt-3 max-w-3xl text-sm leading-6 text-zinc-300">
-          Abra um ticket para acompanhar problema de salão, cobrança, acesso,
-          agenda, caixa ou qualquer investigação que precisa de dono e histórico.
-        </p>
-      </section>
+      <AdminMasterPageHeader
+        eyebrow="Atendimento"
+        title="Novo ticket interno"
+        description="Abra um ticket para acompanhar problema de salão, cobrança, acesso, agenda, caixa ou qualquer investigação que precisa de dono e histórico."
+        breadcrumb={[
+          { label: "Admin Master", href: "/admin-master" },
+          { label: "Tickets", href: "/admin-master/tickets" },
+          { label: "Novo ticket" },
+        ]}
+        actions={
+          <Link
+            href="/admin-master/tickets"
+            className="inline-flex h-10 items-center justify-center rounded-xl border border-zinc-200 bg-white px-4 text-sm font-bold text-zinc-700 transition hover:border-violet-200 hover:text-violet-700"
+          >
+            Voltar para tickets
+          </Link>
+        }
+      />
 
       <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <form
           action={criarTicketInternoAdminMaster}
-          className="grid gap-5 rounded-[30px] border border-zinc-200 bg-white p-6 shadow-sm md:grid-cols-2"
+          className="grid gap-5 rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm md:grid-cols-2"
         >
           <Field label="Salão" span>
             <select
@@ -181,7 +188,7 @@ export default async function AdminMasterNovoTicketPage({
         </form>
 
         <aside className="space-y-4">
-          <div className="rounded-[28px] border border-blue-200 bg-blue-50 p-5 text-blue-950">
+          <div className="rounded-2xl border border-blue-200 bg-blue-50 p-5 text-blue-950">
             <div className="text-xs font-black uppercase tracking-[0.24em] text-blue-700">
               Como usar
             </div>
@@ -194,7 +201,7 @@ export default async function AdminMasterNovoTicketPage({
               ou ação manual do Admin Master.
             </p>
           </div>
-          <div className="rounded-[28px] border border-zinc-200 bg-white p-5 shadow-sm">
+          <div className="rounded-2xl border border-zinc-200 bg-white p-5 shadow-sm">
             <div className="text-xs font-black uppercase tracking-[0.24em] text-zinc-400">
               Dica
             </div>
