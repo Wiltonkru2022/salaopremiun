@@ -1,3 +1,4 @@
+import { recordNeonEvent } from "@/lib/neon/observability.server";
 import {
   formatObservabilityCleanupSummary,
   OBSERVABILITY_RETENTION_DEFAULTS,
@@ -11,48 +12,45 @@ const CRON_NAME = "limpar_observabilidade";
 const CRON_ROUTE = "/api/cron/limpar-observabilidade";
 const OPERATIONAL_PROBE_HISTORY_DAYS = 3;
 
-async function registrarInicioCron() {
-  const supabaseAdmin = getSupabaseAdmin();
-  const { data, error } = await supabaseAdmin
-    .from("eventos_cron")
-    .insert({
-      nome: CRON_NAME,
-      status: "executando",
-      resumo: "Iniciando limpeza de observabilidade.",
-      payload_json: {
-        route: CRON_ROUTE,
-        retention: OBSERVABILITY_RETENTION_DEFAULTS,
-      } as Json,
-    })
-    .select("id")
-    .single();
+async function recordCron(
+  status: string,
+  resumo: string,
+  payload: Record<string, unknown>,
+  erroTexto?: string | null
+) {
+  const storedInNeon = await recordNeonEvent({
+    componentKey: "cron.observability_cleanup",
+    eventType: `cron_${status}`,
+    level: status === "erro" ? "error" : "info",
+    message: resumo,
+    metadata: {
+      cronName: CRON_NAME,
+      route: CRON_ROUTE,
+      status,
+      payload,
+      erroTexto: erroTexto || null,
+    },
+  });
 
-  if (error) throw error;
-  return data.id as string;
-}
+  if (storedInNeon) return;
 
-async function atualizarCron(params: {
-  id: string;
-  status: string;
-  resumo: string;
-  payload?: Json;
-  erroTexto?: string | null;
-}) {
   const supabaseAdmin = getSupabaseAdmin();
-  await supabaseAdmin
-    .from("eventos_cron")
-    .update({
-      status: params.status,
-      resumo: params.resumo,
-      payload_json: params.payload || {},
-      erro_texto: params.erroTexto || null,
-      finalizado_em: new Date().toISOString(),
-    })
-    .eq("id", params.id);
+  await supabaseAdmin.from("eventos_cron").insert({
+    nome: CRON_NAME,
+    status,
+    resumo,
+    payload_json: payload as Json,
+    erro_texto: erroTexto || null,
+    finalizado_em: status === "executando" ? null : new Date().toISOString(),
+  });
 }
 
 export async function limparObservabilidade() {
-  const cronId = await registrarInicioCron();
+  await recordCron("executando", "Iniciando limpeza de observabilidade.", {
+    route: CRON_ROUTE,
+    retention: OBSERVABILITY_RETENTION_DEFAULTS,
+  });
+
   const supabaseAdmin = getSupabaseAdmin();
 
   const [{ data, error }, { data: operationalData, error: operationalError }] =
@@ -88,22 +86,19 @@ export async function limparObservabilidade() {
   const operationalRows = (operationalData || []) as ObservabilityCleanupRow[];
   const summary = formatObservabilityCleanupSummary([...rows, ...operationalRows]);
 
-  await atualizarCron({
-    id: cronId,
-    status: "sucesso",
-    resumo: summary.summary,
-    payload: {
-      route: CRON_ROUTE,
-      totalRemovido: summary.total,
-      tabelas: summary.detail,
-      retention: {
-        ...OBSERVABILITY_RETENTION_DEFAULTS,
-        operationalProbeHistoryDays: OPERATIONAL_PROBE_HISTORY_DAYS,
-        incidentUpdatesDays: 365,
-        statusDeliveriesDays: 180,
-      },
-    } as Json,
-  });
+  const payload = {
+    route: CRON_ROUTE,
+    totalRemovido: summary.total,
+    tabelas: summary.detail,
+    retention: {
+      ...OBSERVABILITY_RETENTION_DEFAULTS,
+      operationalProbeHistoryDays: OPERATIONAL_PROBE_HISTORY_DAYS,
+      incidentUpdatesDays: 365,
+      statusDeliveriesDays: 180,
+    },
+  };
+
+  await recordCron("sucesso", summary.summary, payload);
 
   return {
     route: CRON_ROUTE,
@@ -115,16 +110,22 @@ export async function limparObservabilidade() {
 }
 
 export async function registrarFalhaLimpezaObservabilidade(error: unknown) {
+  const message =
+    error instanceof Error ? error.message : "Erro ao limpar eventos antigos do sistema.";
+
+  try {
+    await recordCron("erro", "Cron de limpeza de observabilidade falhou.", {}, message);
+  } catch {
+    // Best effort: telemetria nunca deve derrubar o fluxo principal.
+  }
+
   try {
     await reportOperationalIncident({
       supabaseAdmin: getSupabaseAdmin(),
       key: "cron:limpar-observabilidade:erro",
       module: "cron_observabilidade",
       title: "Cron de limpeza de observabilidade falhou",
-      description:
-        error instanceof Error
-          ? error.message
-          : "Erro ao limpar eventos antigos do sistema.",
+      description: message,
       severity: "alta",
       details: { route: CRON_ROUTE },
     });
