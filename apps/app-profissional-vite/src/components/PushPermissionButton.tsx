@@ -1,6 +1,4 @@
 import { Capacitor } from "@capacitor/core";
-import { LocalNotifications } from "@capacitor/local-notifications";
-import { PushNotifications } from "@capacitor/push-notifications";
 import { Bell, BellRing } from "lucide-react";
 import { useEffect, useState } from "react";
 
@@ -38,6 +36,7 @@ async function showForegroundNativeNotification(notification: {
 }) {
   if (!isNativeLocalNotificationsAvailable()) return;
 
+  const { LocalNotifications } = await import("@capacitor/local-notifications");
   const title = String(notification.title || "SalaoPremiun").trim();
   const body = String(notification.body || "Voce tem uma nova notificacao.").trim();
   const url = getSafeInternalUrl(notification.data?.url);
@@ -139,6 +138,7 @@ async function resolveProfessionalNativePushState(
 ): Promise<ProfessionalPushState | null> {
   if (!isNativePushAvailable()) return null;
 
+  const { PushNotifications } = await import("@capacitor/push-notifications");
   let permissions = await PushNotifications.checkPermissions().catch(() => ({
     receive: "prompt" as const,
   }));
@@ -272,45 +272,54 @@ export function PushPermissionButton({ expanded = false }: { expanded?: boolean 
     let active = true;
     const handles: Array<{ remove: () => Promise<void> }> = [];
 
-    void PushNotifications.addListener(
-      "pushNotificationReceived",
-      (notification) => {
-        void showForegroundNativeNotification({
-          title: notification.title,
-          body: notification.body,
-          data: notification.data as Record<string, unknown> | undefined,
-        });
-      }
-    )
-      .then((handle) => {
-        if (active) handles.push(handle);
-        else void handle.remove().catch(() => undefined);
-      })
-      .catch(() => undefined);
+    void Promise.all([
+      import("@capacitor/push-notifications"),
+      import("@capacitor/local-notifications"),
+    ])
+      .then(([{ PushNotifications }, { LocalNotifications }]) => {
+        if (!active) return;
 
-    void PushNotifications.addListener(
-      "pushNotificationActionPerformed",
-      (event) => {
-        const url = getSafeInternalUrl(event.notification.data?.url);
-        if (url) window.location.assign(url);
-      }
-    )
-      .then((handle) => {
-        if (active) handles.push(handle);
-        else void handle.remove().catch(() => undefined);
-      })
-      .catch(() => undefined);
+        void PushNotifications.addListener(
+          "pushNotificationReceived",
+          (notification) => {
+            void showForegroundNativeNotification({
+              title: notification.title,
+              body: notification.body,
+              data: notification.data as Record<string, unknown> | undefined,
+            });
+          }
+        )
+          .then((handle) => {
+            if (active) handles.push(handle);
+            else void handle.remove().catch(() => undefined);
+          })
+          .catch(() => undefined);
 
-    void LocalNotifications.addListener(
-      "localNotificationActionPerformed",
-      (event) => {
-        const url = getSafeInternalUrl(event.notification.extra?.url);
-        if (url) window.location.assign(url);
-      }
-    )
-      .then((handle) => {
-        if (active) handles.push(handle);
-        else void handle.remove().catch(() => undefined);
+        void PushNotifications.addListener(
+          "pushNotificationActionPerformed",
+          (event) => {
+            const url = getSafeInternalUrl(event.notification.data?.url);
+            if (url) window.location.assign(url);
+          }
+        )
+          .then((handle) => {
+            if (active) handles.push(handle);
+            else void handle.remove().catch(() => undefined);
+          })
+          .catch(() => undefined);
+
+        void LocalNotifications.addListener(
+          "localNotificationActionPerformed",
+          (event) => {
+            const url = getSafeInternalUrl(event.notification.extra?.url);
+            if (url) window.location.assign(url);
+          }
+        )
+          .then((handle) => {
+            if (active) handles.push(handle);
+            else void handle.remove().catch(() => undefined);
+          })
+          .catch(() => undefined);
       })
       .catch(() => undefined);
 
