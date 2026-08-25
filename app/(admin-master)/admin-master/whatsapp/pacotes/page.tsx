@@ -1,4 +1,4 @@
-import { AdminSectionView } from "@/components/admin-master/AdminMasterViews";
+import AdminMasterSectionSimple from "@/components/admin-master/AdminMasterSectionSimple";
 import { AdminWhatsappPackagesEditor } from "@/components/admin-master/AdminMasterCommunicationEditor";
 import { salvarWhatsappPacoteAdminMaster } from "@/app/(admin-master)/admin-master/whatsapp/actions";
 import { getAdminWhatsappEditorData } from "@/lib/admin-master/communication-editor";
@@ -14,11 +14,14 @@ export default async function AdminMasterWhatsAppPacotesPage() {
 
   return (
     <div className="space-y-6">
-      <AdminSectionView data={{ ...data, title: "Pacotes de WhatsApp" }} />
-      <AdminWhatsappPackagesEditor
-        rows={editorData.packages}
-        salvarPacote={salvarWhatsappPacoteAdminMaster}
+      <AdminMasterSectionSimple
+        data={{
+          ...data,
+          title: "Pacotes de WhatsApp",
+          description: "Pacotes comercializados para os salões. Tarifas, templates e recargas ficam nas abas desta área.",
+        }}
       />
+      <AdminWhatsappPackagesEditor rows={editorData.packages} salvarPacote={salvarWhatsappPacoteAdminMaster} />
     </div>
   );
 }
