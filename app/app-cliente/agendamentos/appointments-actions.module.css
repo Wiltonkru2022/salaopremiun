@@ -1,0 +1,48 @@
+.actionsScope :global(article > div:last-child > div:first-child) {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.actionsScope :global(article > div:last-child > div:first-child > *) {
+  min-width: 0;
+  width: 100%;
+}
+
+.actionsScope :global(article > div:last-child > div:first-child > a),
+.actionsScope :global(article > div:last-child > div:first-child > button),
+.actionsScope :global(article > div:last-child > div:first-child > form > button),
+.actionsScope :global(article > div:last-child > div:first-child > div > button) {
+  width: 100%;
+  min-height: 3rem;
+  padding-inline: 0.75rem;
+  text-align: center;
+}
+
+.actionsScope :global(article > div:last-child > div:first-child > form),
+.actionsScope :global(article > div:last-child > div:first-child > div) {
+  min-width: 0;
+}
+
+.actionsScope :global(article > div:last-child > div:first-child > form > button),
+.actionsScope :global(article > div:last-child > div:first-child > div > button) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.actionsScope :global(article > div:last-child > div:first-child > :only-child),
+.actionsScope :global(article > div:last-child > div:first-child > :last-child:nth-child(odd)) {
+  grid-column: 1 / -1;
+}
+
+@media (max-width: 359px) {
+  .actionsScope :global(article > div:last-child > div:first-child) {
+    grid-template-columns: 1fr;
+  }
+
+  .actionsScope :global(article > div:last-child > div:first-child > *) {
+    grid-column: 1 / -1;
+  }
+}
