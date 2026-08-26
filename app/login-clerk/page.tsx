@@ -39,10 +39,13 @@ function PainelClerkLoginContent() {
         <div className="mb-6">
           <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500">SalãoPremium</p>
           <h1 className="mt-2 text-3xl font-black tracking-[-0.04em]">Entrar no painel</h1>
-          <p className="mt-2 text-sm font-medium text-zinc-500">Acesso administrativo protegido pelo Clerk e MFA.</p>
+          <p className="mt-2 text-sm font-medium text-zinc-500">
+            Acesso administrativo protegido pelo Clerk e MFA. Contas antigas são migradas automaticamente no primeiro acesso.
+          </p>
         </div>
         <ClerkAdminSignIn
           exchangeEndpoint="/api/auth/painel/clerk"
+          migrationEndpoint="/api/auth/painel/migrate-to-clerk"
           nextPath={next}
           onAuthenticated={onAuthenticated}
         />
