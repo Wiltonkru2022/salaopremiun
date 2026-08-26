@@ -42,6 +42,7 @@ function neonAdminReady() {
 }
 
 function getLegacyAdminAuthProvider() {
+  if (!rollbackMode() && clerkReady()) return "clerk" as const;
   return normalizeProvider<AdminAuthProvider>(
     process.env.ADMIN_AUTH_PROVIDER,
     ["supabase", "clerk"],
@@ -50,9 +51,8 @@ function getLegacyAdminAuthProvider() {
 }
 
 export function getAuthProviderForSurface(surface: AuthSurface) {
-  if (rollbackMode()) return "supabase" as const;
-
   if (surface === "admin-master") {
+    if (!rollbackMode() && clerkReady()) return "clerk" as const;
     return normalizeProvider<AdminAuthProvider>(
       process.env.ADMIN_MASTER_AUTH_PROVIDER,
       ["supabase", "clerk"],
@@ -61,6 +61,7 @@ export function getAuthProviderForSurface(surface: AuthSurface) {
   }
 
   if (surface === "painel") {
+    if (!rollbackMode() && clerkReady()) return "clerk" as const;
     return normalizeProvider<AdminAuthProvider>(
       process.env.PAINEL_AUTH_PROVIDER,
       ["supabase", "clerk"],
@@ -68,7 +69,7 @@ export function getAuthProviderForSurface(surface: AuthSurface) {
     );
   }
 
-  // Cliente e Profissional continuam usando os fluxos atuais de Supabase Auth.
+  // Cliente e Profissional continuam usando seus fluxos atuais de Supabase Auth.
   return "supabase" as const;
 }
 
@@ -85,21 +86,23 @@ export function getProviderConfig() {
   const clerk = clerkReady();
   const cloudinary = cloudinaryReady();
 
-  const database: DatabaseProvider = rollbackMode()
-    ? "supabase"
-    : normalizeProvider<DatabaseProvider>(
-        process.env.DATABASE_PROVIDER,
-        ["supabase", "neon"],
-        "supabase"
-      );
+  const database: DatabaseProvider =
+    !rollbackMode() && neonFull
+      ? "neon"
+      : normalizeProvider<DatabaseProvider>(
+          process.env.DATABASE_PROVIDER,
+          ["supabase", "neon"],
+          "supabase"
+        );
 
-  const media: MediaProvider = rollbackMode()
-    ? "supabase"
-    : normalizeProvider<MediaProvider>(
-        process.env.MEDIA_PROVIDER,
-        ["supabase", "cloudinary"],
-        "supabase"
-      );
+  const media: MediaProvider =
+    !rollbackMode() && cloudinary
+      ? "cloudinary"
+      : normalizeProvider<MediaProvider>(
+          process.env.MEDIA_PROVIDER,
+          ["supabase", "cloudinary"],
+          "supabase"
+        );
 
   return {
     database,
@@ -130,7 +133,7 @@ export function assertProviderReadiness() {
   const config = getProviderConfig();
   if (config.database === "neon" && !config.neonFullReady) {
     throw new Error(
-      "DATABASE_PROVIDER=neon exige NEON_DATABASE_URL e NEON_ADMIN_DATABASE_URL."
+      "Neon ativo exige NEON_DATABASE_URL e NEON_ADMIN_DATABASE_URL."
     );
   }
   if (
@@ -140,7 +143,7 @@ export function assertProviderReadiness() {
     throw new Error("Clerk ativo em área administrativa sem credenciais completas.");
   }
   if (config.media === "cloudinary" && !config.cloudinaryReady) {
-    throw new Error("MEDIA_PROVIDER=cloudinary sem credenciais completas.");
+    throw new Error("Cloudinary ativo sem credenciais completas.");
   }
   return config;
 }
