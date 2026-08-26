@@ -1,5 +1,5 @@
 export type DatabaseProvider = "neon";
-export type AdminAuthProvider = "clerk";
+export type AuthProvider = "clerk" | "internal";
 export type MediaProvider = "cloudinary";
 export type AuthSurface = "admin-master" | "painel" | "cliente" | "profissional";
 
@@ -25,21 +25,22 @@ function neonUserReady() {
 }
 
 function neonAdminReady() {
-  return Boolean(String(process.env.NEON_ADMIN_DATABASE_URL || "").trim());
+  return Boolean(
+    String(
+      process.env.NEON_ADMIN_DATABASE_URL || process.env.NEON_DATABASE_URL || ""
+    ).trim()
+  );
 }
 
-/**
- * Painel e Admin Master usam Clerk obrigatoriamente.
- * Cliente/profissional ainda possuem fluxos proprios e nao devem ser
- * confundidos com a autenticacao administrativa.
- */
-export function getAuthProviderForSurface(surface: AuthSurface) {
-  if (surface === "admin-master" || surface === "painel") return "clerk" as const;
-  return "supabase" as const;
+export function getAuthProviderForSurface(surface: AuthSurface): AuthProvider {
+  if (surface === "admin-master" || surface === "painel") return "clerk";
+  // Cliente e profissional usam sessoes internas do produto, com credenciais
+  // verificadas no servidor e dados persistidos exclusivamente no Neon.
+  return "internal";
 }
 
 export function isClerkEnabledForSurface(surface: AuthSurface) {
-  return surface === "admin-master" || surface === "painel";
+  return getAuthProviderForSurface(surface) === "clerk";
 }
 
 export function getProviderConfig() {
@@ -54,8 +55,8 @@ export function getProviderConfig() {
     adminAuth: "clerk" as const,
     adminMasterAuth: "clerk" as const,
     painelAuth: "clerk" as const,
-    clienteAuth: getAuthProviderForSurface("cliente"),
-    profissionalAuth: getAuthProviderForSurface("profissional"),
+    clienteAuth: "internal" as const,
+    profissionalAuth: "internal" as const,
     media: "cloudinary" as const,
     neonReady: neonUser,
     neonUserReady: neonUser,
