@@ -50,27 +50,50 @@ function getLegacyAdminAuthProvider() {
   );
 }
 
+function configuredSurfaceProvider(
+  envValue: string | undefined,
+  fallback: AdminAuthProvider
+) {
+  if (!rollbackMode() && clerkReady()) {
+    return normalizeProvider<AdminAuthProvider>(
+      envValue,
+      ["supabase", "clerk"],
+      "clerk"
+    );
+  }
+  return normalizeProvider<AdminAuthProvider>(
+    envValue,
+    ["supabase", "clerk"],
+    fallback
+  );
+}
+
 export function getAuthProviderForSurface(surface: AuthSurface) {
   if (surface === "admin-master") {
-    if (!rollbackMode() && clerkReady()) return "clerk" as const;
-    return normalizeProvider<AdminAuthProvider>(
+    return configuredSurfaceProvider(
       process.env.ADMIN_MASTER_AUTH_PROVIDER,
-      ["supabase", "clerk"],
       getLegacyAdminAuthProvider()
     );
   }
 
   if (surface === "painel") {
-    if (!rollbackMode() && clerkReady()) return "clerk" as const;
-    return normalizeProvider<AdminAuthProvider>(
+    return configuredSurfaceProvider(
       process.env.PAINEL_AUTH_PROVIDER,
-      ["supabase", "clerk"],
       getLegacyAdminAuthProvider()
     );
   }
 
-  // Cliente e Profissional continuam usando seus fluxos atuais de Supabase Auth.
-  return "supabase" as const;
+  if (surface === "cliente") {
+    return configuredSurfaceProvider(
+      process.env.CLIENTE_AUTH_PROVIDER,
+      "supabase"
+    );
+  }
+
+  return configuredSurfaceProvider(
+    process.env.PROFISSIONAL_AUTH_PROVIDER,
+    "supabase"
+  );
 }
 
 export function isClerkEnabledForSurface(surface: AuthSurface) {
@@ -80,6 +103,8 @@ export function isClerkEnabledForSurface(surface: AuthSurface) {
 export function getProviderConfig() {
   const adminMasterAuth = getAuthProviderForSurface("admin-master");
   const painelAuth = getAuthProviderForSurface("painel");
+  const clienteAuth = getAuthProviderForSurface("cliente");
+  const profissionalAuth = getAuthProviderForSurface("profissional");
   const neonUser = neonUserReady();
   const neonAdmin = neonAdminReady();
   const neonFull = neonUser && neonAdmin;
@@ -109,8 +134,8 @@ export function getProviderConfig() {
     adminAuth: getLegacyAdminAuthProvider(),
     adminMasterAuth,
     painelAuth,
-    clienteAuth: getAuthProviderForSurface("cliente"),
-    profissionalAuth: getAuthProviderForSurface("profissional"),
+    clienteAuth,
+    profissionalAuth,
     media,
     neonReady: neonUser,
     neonUserReady: neonUser,
@@ -137,10 +162,15 @@ export function assertProviderReadiness() {
     );
   }
   if (
-    (config.adminMasterAuth === "clerk" || config.painelAuth === "clerk") &&
+    [
+      config.adminMasterAuth,
+      config.painelAuth,
+      config.clienteAuth,
+      config.profissionalAuth,
+    ].includes("clerk") &&
     !config.clerkReady
   ) {
-    throw new Error("Clerk ativo em área administrativa sem credenciais completas.");
+    throw new Error("Clerk ativo em uma superficie sem credenciais completas.");
   }
   if (config.media === "cloudinary" && !config.cloudinaryReady) {
     throw new Error("Cloudinary ativo sem credenciais completas.");
