@@ -36,7 +36,92 @@ type RegistryShape = {
   components: OperationalComponentDefinition[];
 };
 
-const registry = registryJson as RegistryShape;
+const LEGACY_COMPONENT_KEYS: Record<string, string> = {
+  "supabase.database": "neon.database",
+  "supabase.data_api": "neon.data_api",
+  "supabase.auth": "clerk.auth",
+  "supabase.storage": "cloudinary.storage",
+  "supabase.realtime": "platform.realtime",
+};
+
+function normalizeComponentKey(value: string) {
+  return LEGACY_COMPONENT_KEYS[value] || value;
+}
+
+function normalizeProbeKey(value?: string) {
+  if (!value) return value;
+  return value
+    .replace(/^probe:supabase:database$/, "probe:neon:database")
+    .replace(/^probe:supabase:data-api$/, "probe:neon:data-api")
+    .replace(/^probe:supabase:auth$/, "probe:clerk:auth")
+    .replace(/^probe:supabase:storage$/, "probe:cloudinary:storage")
+    .replace(/^probe:supabase:realtime$/, "probe:platform:realtime");
+}
+
+function normalizeLegacyComponent(
+  component: OperationalComponentDefinition
+): OperationalComponentDefinition {
+  const key = normalizeComponentKey(component.componentKey);
+  const normalized: OperationalComponentDefinition = {
+    ...component,
+    componentKey: key,
+    probeKey: normalizeProbeKey(component.probeKey),
+    sourcePatterns: (component.sourcePatterns || []).map((pattern) =>
+      pattern
+        .replace("lib/supabase/**", "lib/neon/**")
+        .replace("supabase/migrations/**", "database/migrations/**")
+    ),
+    dependencies: (component.dependencies || []).map(normalizeComponentKey),
+  };
+
+  if (key === "neon.database") {
+    return {
+      ...normalized,
+      name: "Neon PostgreSQL",
+      description: "PostgreSQL principal do SalãoPremium hospedado no Neon.",
+      category: "Neon",
+    };
+  }
+  if (key === "neon.data_api") {
+    return {
+      ...normalized,
+      name: "Neon Data Access",
+      description: "Camada server-side de acesso ao PostgreSQL Neon.",
+      category: "Neon",
+    };
+  }
+  if (key === "clerk.auth") {
+    return {
+      ...normalized,
+      name: "Clerk Auth",
+      description: "Autenticação e validação de sessão do Painel e Admin Master via Clerk.",
+      category: "Clerk",
+    };
+  }
+  if (key === "cloudinary.storage") {
+    return {
+      ...normalized,
+      name: "Cloudinary Media",
+      description: "Armazenamento e entrega de imagens e mídia do sistema via Cloudinary.",
+      category: "Cloudinary",
+    };
+  }
+  if (key === "platform.realtime") {
+    return {
+      ...normalized,
+      name: "Atualização em tempo real",
+      description: "Atualizações reativas da aplicação sem dependência de Supabase Realtime.",
+      category: "Plataforma",
+    };
+  }
+  return normalized;
+}
+
+const rawRegistry = registryJson as RegistryShape;
+const registry: RegistryShape = {
+  version: `${rawRegistry.version}-neon`,
+  components: rawRegistry.components.map(normalizeLegacyComponent),
+};
 
 export const OPERATIONAL_REGISTRY_VERSION = registry.version;
 export const OPERATIONAL_COMPONENTS = Object.freeze(registry.components);
@@ -46,7 +131,8 @@ const componentMap = new Map(
 );
 
 export function getOperationalComponent(componentKey?: string | null) {
-  return componentMap.get(String(componentKey || "").trim()) || null;
+  const normalizedKey = normalizeComponentKey(String(componentKey || "").trim());
+  return componentMap.get(normalizedKey) || null;
 }
 
 export function listOperationalComponents() {
@@ -110,7 +196,7 @@ export function findOperationalComponentForContext(params: {
     return getOperationalComponent("cash.core");
   }
   if (module.includes("security") || module.includes("auth")) {
-    return getOperationalComponent("supabase.auth");
+    return getOperationalComponent("clerk.auth");
   }
 
   return null;
