@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 import { listProfissionalAppNotifications } from "@/lib/profissional-app-notifications";
 
 function isoDate(value: string) {
@@ -49,8 +49,8 @@ export async function GET(request: Request) {
         action: "app_profissional_pwa_dados",
         actorId: session.idProfissional,
         idSalao: session.idSalao,
-        run: async (supabase) => {
-          const profissionaisQuery = (supabase as any)
+        run: async (database) => {
+          const profissionaisQuery = database
             .from("profissionais")
             .select(
               "id, nome, nome_exibicao, dias_trabalho, ativo, tipo_profissional, sinal_confirmacao_responsavel"
@@ -85,7 +85,7 @@ export async function GET(request: Request) {
           const [agendamentosResult, bloqueiosResult, clientesResult, servicosResult] =
             await Promise.all([
               scopedAppointments(
-                (supabase as any)
+                database
                   .from("agendamentos")
                   .select(
                     "id, profissional_id, cliente_id, servico_id, data, hora_inicio, hora_fim, status, created_at, origem, cliente_confirmacao_status, cliente_confirmou_em, observacoes, id_comanda, sinal_status, sinal_valor, sinal_confirmacao_responsavel, sinal_comprovante_path, sinal_comprovante_nome, sinal_comprovante_tipo"
@@ -98,7 +98,7 @@ export async function GET(request: Request) {
                   .limit(1000)
               ),
               scopedAppointments(
-                (supabase as any)
+                database
                   .from("agenda_bloqueios")
                   .select("id, profissional_id, data, hora_inicio, hora_fim, motivo")
                   .eq("id_salao", session.idSalao)
@@ -108,7 +108,7 @@ export async function GET(request: Request) {
                   .order("hora_inicio")
                   .limit(1000)
               ),
-              (supabase as any)
+              database
                 .from("clientes")
                 .select("id, nome, telefone, whatsapp, observacoes, created_at")
                 .eq("id_salao", session.idSalao)
@@ -116,7 +116,7 @@ export async function GET(request: Request) {
                 .order("nome")
                 .limit(2000),
               scopedServices(
-                (supabase as any)
+                database
                   .from("profissional_servicos")
                   .select(
                     "id_profissional, id_servico, duracao_minutos, preco_personalizado, ativo, servicos(id, nome, descricao, preco, preco_padrao, duracao_minutos, duracao, ativo)"
@@ -155,7 +155,7 @@ export async function GET(request: Request) {
           const auditByAppointmentId = new Map<string, Record<string, any>>();
 
           if (appointmentClientIds.length) {
-            const auditResult = await (supabase as any)
+            const auditResult = await database
               .from("clientes_timeline")
               .select("id, id_cliente, metadata, created_at")
               .eq("id_salao", session.idSalao)
