@@ -112,9 +112,10 @@ function parseSelect(value?: string) {
   return { base, relations };
 }
 
-function renderBaseColumns(columns: string[], tableAlias = "src") {
-  if (columns.includes("*")) return `${tableAlias}.*`;
-  return columns.map((column) => `${tableAlias}.${quoteIdent(column)}`).join(", ");
+function renderBaseColumns(columns: string[], tableAlias = "") {
+  const prefix = tableAlias ? `${tableAlias}.` : "";
+  if (columns.includes("*")) return `${prefix}*`;
+  return columns.map((column) => `${prefix}${quoteIdent(column)}`).join(", ");
 }
 
 function parseOrValue(raw: string) {
@@ -270,7 +271,8 @@ export async function executePainelNeonQuery(
   const values: unknown[] = [];
   const table = `public.${quoteIdent(query.table)}`;
   const parsedSelect = parseSelect(query.select);
-  const where = buildWhere(filters, values, parsedSelect.relations.length ? "src." : "");
+  const hasRelations = parsedSelect.relations.length > 0;
+  const where = buildWhere(filters, values, hasRelations ? "src." : "");
 
   if (!query.mutation) {
     if (query.selectOptions?.head && query.selectOptions?.count === "exact") {
@@ -278,8 +280,8 @@ export async function executePainelNeonQuery(
       return { data: null, error: null, count: Number(result.rows[0]?.count || 0), status: 200, statusText: "OK" };
     }
 
-    let selectSql = renderBaseColumns(parsedSelect.base);
-    if (parsedSelect.relations.length) {
+    let selectSql = renderBaseColumns(parsedSelect.base, hasRelations ? "src" : "");
+    if (hasRelations) {
       const relationSelects: string[] = [];
       for (const relation of parsedSelect.relations) {
         const link = await findRelation(client, query.table, relation.table);
@@ -300,7 +302,7 @@ export async function executePainelNeonQuery(
       selectSql += `, ${relationSelects.join(", ")}`;
     }
 
-    let text = `SELECT ${selectSql} FROM ${table}${parsedSelect.relations.length ? " src" : ""}${where}`;
+    let text = `SELECT ${selectSql} FROM ${table}${hasRelations ? " src" : ""}${where}`;
     if (orders.length) {
       text +=
         " ORDER BY " +
@@ -313,7 +315,7 @@ export async function executePainelNeonQuery(
                 : order.nullsFirst
                   ? " NULLS FIRST"
                   : " NULLS LAST";
-            return `${parsedSelect.relations.length ? "src." : ""}${quoteIdent(order.column)} ${direction}${nulls}`;
+            return `${hasRelations ? "src." : ""}${quoteIdent(order.column)} ${direction}${nulls}`;
           })
           .join(", ");
     }
