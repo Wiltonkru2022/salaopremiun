@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
 import { Shell } from "./components/Shell";
 import { Button } from "./components/ui";
-import { supabase, supabaseConfigured } from "./lib/supabase";
+import { supabase, type PainelSession } from "./lib/supabase";
 import type { AppSession, ModuleKey, Salao, UsuarioPainel } from "./types";
 import { LoginPage } from "./pages/LoginPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -16,11 +15,11 @@ const PAGE_KEY = "sistema-salao-premiun.page";
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<AppSession | null>(null);
-  const [authSession, setAuthSession] = useState<Session | null>(null);
+  const [authSession, setAuthSession] = useState<PainelSession | null>(null);
   const [error, setError] = useState("");
   const [page, setPage] = useState<ModuleKey>(() => (localStorage.getItem(PAGE_KEY) as ModuleKey) || "dashboard");
 
-  const loadSession = useCallback(async (nextAuthSession?: Session | null) => {
+  const loadSession = useCallback(async (nextAuthSession?: PainelSession | null) => {
     setLoading(true);
     setError("");
     try {
@@ -37,14 +36,16 @@ export default function App() {
         .eq("auth_user_id", current.user.id)
         .maybeSingle();
 
-      if (usuarioError) throw usuarioError;
+      if (usuarioError) throw new Error(usuarioError.message || "Erro ao carregar usuário.");
       if (!usuario?.id_salao) throw new Error("Usuário não está vinculado a nenhum salão.");
 
-      const { data: salao } = await supabase
+      const { data: salao, error: salaoError } = await supabase
         .from("saloes")
         .select("id, nome, responsavel, logo_url, plano, status")
         .eq("id", usuario.id_salao)
         .maybeSingle();
+
+      if (salaoError) throw new Error(salaoError.message || "Erro ao carregar salão.");
 
       setSession({
         userId: current.user.id,
@@ -63,10 +64,6 @@ export default function App() {
 
   useEffect(() => {
     void loadSession();
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      void loadSession(nextSession);
-    });
-    return () => data.subscription.unsubscribe();
   }, [loadSession]);
 
   const content = useMemo(() => {
@@ -78,19 +75,6 @@ export default function App() {
     const config = resourceConfigs[page];
     return <ResourcePage session={session} config={config} />;
   }, [page, session]);
-
-  if (!supabaseConfigured) {
-    return (
-      <div className="grid min-h-screen place-items-center px-5">
-        <div className="max-w-lg rounded-[1.5rem] border border-amber-200 bg-amber-50 p-6 text-amber-900 shadow-soft">
-          <h1 className="text-2xl font-black">Configure o Supabase</h1>
-          <p className="mt-2 text-sm font-bold leading-6">
-            Crie um arquivo `.env` neste projeto com `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
-          </p>
-        </div>
-      </div>
-    );
-  }
 
   if (loading) {
     return (
@@ -104,16 +88,7 @@ export default function App() {
   }
 
   if (!session) {
-    return (
-      <LoginPage
-        error={error}
-        onLogin={async (email, password) => {
-          const { error: loginError, data } = await supabase.auth.signInWithPassword({ email, password });
-          if (loginError) throw loginError;
-          await loadSession(data.session);
-        }}
-      />
-    );
+    return <LoginPage error={error} />;
   }
 
   return (
@@ -128,6 +103,7 @@ export default function App() {
         await supabase.auth.signOut();
         setAuthSession(null);
         setSession(null);
+        window.location.assign("/login");
       }}
     >
       {error ? (
