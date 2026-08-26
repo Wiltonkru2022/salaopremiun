@@ -1,6 +1,5 @@
 ﻿import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCacheSavedAt, readCache, writeCache } from "../lib/cache";
-import { supabase } from "../lib/supabase";
 import {
   trackProfessionalDuration,
   trackProfessionalProductivity,
@@ -225,40 +224,13 @@ export function useProfissionalData(
   useEffect(() => {
     if (!profissionalId) return;
 
-    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
-    const scheduleAgendaRefresh = () => {
-      if (document.visibilityState === "hidden") return;
-      if (refreshTimer) clearTimeout(refreshTimer);
-      refreshTimer = setTimeout(() => void refresh(), 1800);
+    const syncAgenda = () => {
+      if (document.visibilityState === "hidden" || !navigator.onLine) return;
+      void refresh();
     };
-    const channel = supabase.channel(
-      `salaopremium-agenda-${profissionalId}-${podeVerAgendaTodos ? "todos" : "proprio"}`
-    );
 
-    if (podeVerAgendaTodos) {
-      channel.on(
-        "postgres_changes",
-        { event: "*", schema: "public", table: "agendamentos" },
-        scheduleAgendaRefresh
-      );
-    } else {
-      channel.on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "agendamentos",
-          filter: `profissional_id=eq.${profissionalId}`,
-        },
-        scheduleAgendaRefresh
-      );
-    }
-    channel.subscribe();
-
-    return () => {
-      if (refreshTimer) clearTimeout(refreshTimer);
-      void supabase.removeChannel(channel);
-    };
+    const intervalId = window.setInterval(syncAgenda, 15_000);
+    return () => window.clearInterval(intervalId);
   }, [profissionalId, podeVerAgendaTodos, refresh]);
 
   useEffect(() => {
