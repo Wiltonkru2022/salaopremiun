@@ -1,20 +1,7 @@
-export type DatabaseProvider = "supabase" | "neon";
-export type AdminAuthProvider = "supabase" | "clerk";
-export type MediaProvider = "supabase" | "cloudinary";
+export type DatabaseProvider = "neon";
+export type AdminAuthProvider = "clerk";
+export type MediaProvider = "cloudinary";
 export type AuthSurface = "admin-master" | "painel" | "cliente" | "profissional";
-
-function normalizeProvider<T extends string>(
-  value: string | undefined,
-  allowed: readonly T[],
-  fallback: T
-): T {
-  const normalized = String(value || "").trim().toLowerCase() as T;
-  return allowed.includes(normalized) ? normalized : fallback;
-}
-
-function rollbackMode() {
-  return String(process.env.PROVIDER_ROLLBACK_MODE || "").trim() === "1";
-}
 
 function clerkReady() {
   return Boolean(
@@ -41,77 +28,35 @@ function neonAdminReady() {
   return Boolean(String(process.env.NEON_ADMIN_DATABASE_URL || "").trim());
 }
 
-function getLegacyAdminAuthProvider() {
-  if (!rollbackMode() && clerkReady()) return "clerk" as const;
-  return normalizeProvider<AdminAuthProvider>(
-    process.env.ADMIN_AUTH_PROVIDER,
-    ["supabase", "clerk"],
-    "supabase"
-  );
-}
-
+/**
+ * Painel e Admin Master usam Clerk obrigatoriamente.
+ * Cliente/profissional ainda possuem fluxos proprios e nao devem ser
+ * confundidos com a autenticacao administrativa.
+ */
 export function getAuthProviderForSurface(surface: AuthSurface) {
-  if (surface === "admin-master") {
-    if (!rollbackMode() && clerkReady()) return "clerk" as const;
-    return normalizeProvider<AdminAuthProvider>(
-      process.env.ADMIN_MASTER_AUTH_PROVIDER,
-      ["supabase", "clerk"],
-      getLegacyAdminAuthProvider()
-    );
-  }
-
-  if (surface === "painel") {
-    if (!rollbackMode() && clerkReady()) return "clerk" as const;
-    return normalizeProvider<AdminAuthProvider>(
-      process.env.PAINEL_AUTH_PROVIDER,
-      ["supabase", "clerk"],
-      getLegacyAdminAuthProvider()
-    );
-  }
-
-  // Cliente e Profissional continuam usando seus fluxos atuais de Supabase Auth.
+  if (surface === "admin-master" || surface === "painel") return "clerk" as const;
   return "supabase" as const;
 }
 
 export function isClerkEnabledForSurface(surface: AuthSurface) {
-  return getAuthProviderForSurface(surface) === "clerk";
+  return surface === "admin-master" || surface === "painel";
 }
 
 export function getProviderConfig() {
-  const adminMasterAuth = getAuthProviderForSurface("admin-master");
-  const painelAuth = getAuthProviderForSurface("painel");
   const neonUser = neonUserReady();
   const neonAdmin = neonAdminReady();
   const neonFull = neonUser && neonAdmin;
   const clerk = clerkReady();
   const cloudinary = cloudinaryReady();
 
-  const database: DatabaseProvider =
-    !rollbackMode() && neonFull
-      ? "neon"
-      : normalizeProvider<DatabaseProvider>(
-          process.env.DATABASE_PROVIDER,
-          ["supabase", "neon"],
-          "supabase"
-        );
-
-  const media: MediaProvider =
-    !rollbackMode() && cloudinary
-      ? "cloudinary"
-      : normalizeProvider<MediaProvider>(
-          process.env.MEDIA_PROVIDER,
-          ["supabase", "cloudinary"],
-          "supabase"
-        );
-
   return {
-    database,
-    adminAuth: getLegacyAdminAuthProvider(),
-    adminMasterAuth,
-    painelAuth,
+    database: "neon" as const,
+    adminAuth: "clerk" as const,
+    adminMasterAuth: "clerk" as const,
+    painelAuth: "clerk" as const,
     clienteAuth: getAuthProviderForSurface("cliente"),
     profissionalAuth: getAuthProviderForSurface("profissional"),
-    media,
+    media: "cloudinary" as const,
     neonReady: neonUser,
     neonUserReady: neonUser,
     neonAdminReady: neonAdmin,
@@ -125,25 +70,26 @@ export function getProviderConfig() {
           (process.env.FIREBASE_PRIVATE_KEY ||
             process.env.FIREBASE_PRIVATE_KEY_BASE64))
     ),
-    rollbackMode: rollbackMode(),
+    rollbackMode: false,
   } as const;
 }
 
 export function assertProviderReadiness() {
   const config = getProviderConfig();
-  if (config.database === "neon" && !config.neonFullReady) {
+  if (!config.neonFullReady) {
     throw new Error(
-      "Neon ativo exige NEON_DATABASE_URL e NEON_ADMIN_DATABASE_URL."
+      "Neon e obrigatorio: configure NEON_DATABASE_URL e NEON_ADMIN_DATABASE_URL."
     );
   }
-  if (
-    (config.adminMasterAuth === "clerk" || config.painelAuth === "clerk") &&
-    !config.clerkReady
-  ) {
-    throw new Error("Clerk ativo em área administrativa sem credenciais completas.");
+  if (!config.clerkReady) {
+    throw new Error(
+      "Clerk e obrigatorio no Painel/Admin Master: configure as credenciais Clerk completas."
+    );
   }
-  if (config.media === "cloudinary" && !config.cloudinaryReady) {
-    throw new Error("Cloudinary ativo sem credenciais completas.");
+  if (!config.cloudinaryReady) {
+    throw new Error(
+      "Cloudinary e obrigatorio para midia: configure CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY e CLOUDINARY_API_SECRET."
+    );
   }
   return config;
 }
