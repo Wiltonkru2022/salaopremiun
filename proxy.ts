@@ -21,15 +21,8 @@ import {
   removeBlogPrefix,
 } from "@/lib/proxy/host-rules";
 
-function hasSupabaseAuthCookies(request: NextRequest) {
-  return request.cookies
-    .getAll()
-    .some(
-      (cookie) =>
-        cookie.name.includes("auth-token") ||
-        cookie.name.includes("access-token") ||
-        cookie.name.includes("refresh-token")
-    );
+function hasPainelAuthCookie(request: NextRequest) {
+  return Boolean(request.cookies.get("sp-painel-auth-token")?.value);
 }
 
 function isLocalDevHost(host: string) {
@@ -238,7 +231,7 @@ function rewriteToNovoAppProfissional(request: NextRequest) {
 export async function proxy(request: NextRequest) {
   const ctx = buildProxyRouteContext(request);
 
-  // Regra de disponibilidade: middleware nunca consulta Supabase ou outros
+  // Regra de disponibilidade: middleware nunca consulta banco ou outros
   // serviços remotos. APIs e layouts protegidos validam a sessão de verdade.
   if (isApiRoute(ctx.pathnameNormalizado) || isArquivoPublico(ctx.pathnameNormalizado)) {
     return NextResponse.next();
@@ -269,7 +262,7 @@ export async function proxy(request: NextRequest) {
     );
   }
 
-  const hasAuthCookies = hasSupabaseAuthCookies(request);
+  const hasAuthCookies = hasPainelAuthCookie(request);
   if (!hasAuthCookies) {
     const unauthenticatedResponse = handleUnauthenticatedRoute(request, ctx);
     if (unauthenticatedResponse) return unauthenticatedResponse;
