@@ -43,6 +43,14 @@ jobs:
             npm ci
           fi
 
+      - name: Upload migration lockfile
+        if: github.head_ref == 'config-integracoes-sem-deploy'
+        uses: actions/upload-artifact@v4
+        with:
+          name: migration-package-lock
+          path: package-lock.json
+          retention-days: 1
+
       - name: Install App Profissional PWA
         run: npm --prefix apps/app-profissional-vite ci
 
