@@ -1,5 +1,4 @@
-import { createClient } from "@/lib/db/server";
-import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
+import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getAdminMasterUserContextByAuthUserId } from "@/lib/admin-master/auth/get-admin-master-user-context.server";
 import { classifyOperationalError } from "@/lib/monitoring/error-catalog";
 import { observeOperationalFailure } from "@/lib/monitoring/operational-observer.server";
@@ -27,43 +26,19 @@ export function createMonitoringService() {
   return {
     async resolveMonitoringIdentity() {
       try {
-        const supabase = await createClient();
-        const {
-          data: { user },
-        } = await supabase.auth.getUser();
-
+        const { user, usuario } = await getPainelUserContext({ allowAdminAal1: true });
         if (!user) {
-          return {
-            idSalao: null,
-            idUsuario: null,
-            idAdminUsuario: null,
-          };
+          return { idSalao: null, idUsuario: null, idAdminUsuario: null };
         }
 
-        const usuario = await getPainelUserContextByAuthUserId(user.id);
-        const [adminResult, usuarioResult] = await Promise.all([
-          getAdminMasterUserContextByAuthUserId(user.id),
-          Promise.resolve(
-            usuario
-              ? {
-                  id: usuario.id,
-                  id_salao: usuario.id_salao,
-                }
-              : null
-          ),
-        ]);
-
+        const adminResult = await getAdminMasterUserContextByAuthUserId(user.id);
         return {
-          idSalao: usuarioResult?.id_salao || null,
-          idUsuario: usuarioResult?.id || null,
+          idSalao: usuario?.id_salao || null,
+          idUsuario: usuario?.id || null,
           idAdminUsuario: adminResult?.id || null,
         };
       } catch {
-        return {
-          idSalao: null,
-          idUsuario: null,
-          idAdminUsuario: null,
-        };
+        return { idSalao: null, idUsuario: null, idAdminUsuario: null };
       }
     },
 
