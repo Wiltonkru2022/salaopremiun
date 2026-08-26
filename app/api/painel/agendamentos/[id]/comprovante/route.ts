@@ -2,8 +2,6 @@ import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getDatabaseAdmin } from "@/lib/db/admin";
 
-const COMPROVANTES_BUCKET = "agendamento-comprovantes";
-
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -18,8 +16,8 @@ export async function GET(
     );
   }
 
-  const supabaseAdmin = getDatabaseAdmin();
-  const { data, error } = await (supabaseAdmin as any)
+  const database = getDatabaseAdmin();
+  const { data, error } = await database
     .from("agendamentos")
     .select("id, id_salao, sinal_comprovante_path")
     .eq("id", id)
@@ -33,16 +31,17 @@ export async function GET(
     );
   }
 
-  const { data: signed, error: signedError } = await (supabaseAdmin as any).storage
-    .from(COMPROVANTES_BUCKET)
-    .createSignedUrl(String(data.sinal_comprovante_path), 60 * 5);
-
-  if (signedError || !signed?.signedUrl) {
-    return NextResponse.json(
-      { message: "Nao foi possivel abrir o comprovante agora." },
-      { status: 500 }
-    );
+  const publicUrl = String(data.sinal_comprovante_path || "").trim();
+  if (/^https:\/\/res\.cloudinary\.com\//i.test(publicUrl)) {
+    return NextResponse.redirect(publicUrl);
   }
 
-  return NextResponse.redirect(signed.signedUrl);
+  return NextResponse.json(
+    {
+      message:
+        "Este comprovante foi salvo no storage legado e precisa ser migrado para o Cloudinary.",
+      legacyMedia: true,
+    },
+    { status: 410 }
+  );
 }
