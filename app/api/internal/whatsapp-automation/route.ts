@@ -1,5 +1,5 @@
+import { timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   processDueWhatsAppReminders,
   processPendingAutomaticWhatsAppEvents,
@@ -8,16 +8,27 @@ import {
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
+function safeEqual(left: string, right: string) {
+  const a = Buffer.from(left);
+  const b = Buffer.from(right);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 async function isAuthorized(request: Request) {
-  const secret = String(request.headers.get("x-whatsapp-automation-secret") || "").trim();
-  if (!secret || secret.length > 256) return false;
+  const provided = String(
+    request.headers.get("x-whatsapp-automation-secret") || ""
+  ).trim();
+  const expected = String(
+    process.env.WHATSAPP_AUTOMATION_WORKER_SECRET ||
+      process.env.WHATSAPP_AUTOMATION_SECRET ||
+      ""
+  ).trim();
 
-  const { data, error } = await (getSupabaseAdmin() as any).rpc(
-    "fn_whatsapp_automation_secret_valid",
-    { p_secret: secret }
-  );
+  if (!provided || !expected || provided.length > 256 || expected.length > 256) {
+    return false;
+  }
 
-  return !error && data === true;
+  return safeEqual(provided, expected);
 }
 
 export async function POST(request: Request) {
