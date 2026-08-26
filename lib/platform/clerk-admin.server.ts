@@ -9,6 +9,11 @@ export type ClerkUser = {
   public_metadata?: Record<string, unknown>;
   primary_email_address_id?: string | null;
   email_addresses?: Array<{ id?: string; email_address?: string }>;
+  external_accounts?: Array<{
+    id?: string;
+    provider?: string | null;
+    provider_user_id?: string | null;
+  }>;
 };
 
 function secretKey() {
