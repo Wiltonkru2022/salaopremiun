@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
 import { Shell } from "./components/Shell";
 import { Button } from "./components/ui";
-import { supabase, supabaseConfigured } from "./lib/supabase";
+import { supabase } from "./lib/supabase";
 import type { AppSession, ModuleKey, Salao, UsuarioPainel } from "./types";
 import { LoginPage } from "./pages/LoginPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -13,44 +12,43 @@ import { SettingsPage } from "./pages/SettingsPage";
 
 const PAGE_KEY = "sistema-salao-premiun.page";
 
+type InternalAuthSession = {
+  user: { id: string; email?: string | null };
+  usuario?: UsuarioPainel | null;
+};
+
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<AppSession | null>(null);
-  const [authSession, setAuthSession] = useState<Session | null>(null);
+  const [authSession, setAuthSession] = useState<InternalAuthSession | null>(null);
   const [error, setError] = useState("");
   const [page, setPage] = useState<ModuleKey>(() => (localStorage.getItem(PAGE_KEY) as ModuleKey) || "dashboard");
 
-  const loadSession = useCallback(async (nextAuthSession?: Session | null) => {
+  const loadSession = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
-      const current = nextAuthSession ?? (await supabase.auth.getSession()).data.session;
+      const current = (await supabase.auth.getSession()).data.session as InternalAuthSession | null;
       setAuthSession(current);
-      if (!current?.user) {
+      if (!current?.user || !current.usuario?.id_salao) {
         setSession(null);
         return;
       }
 
-      const { data: usuario, error: usuarioError } = await supabase
-        .from("usuarios")
-        .select("id, id_salao, nome, email, nivel, status")
-        .eq("auth_user_id", current.user.id)
-        .maybeSingle();
-
-      if (usuarioError) throw usuarioError;
-      if (!usuario?.id_salao) throw new Error("Usuário não está vinculado a nenhum salão.");
-
-      const { data: salao } = await supabase
+      const usuario = current.usuario;
+      const { data: salao, error: salaoError } = await supabase
         .from("saloes")
         .select("id, nome, responsavel, logo_url, plano, status")
         .eq("id", usuario.id_salao)
         .maybeSingle();
 
+      if (salaoError) throw new Error(salaoError.message || "Erro ao carregar salao.");
+
       setSession({
         userId: current.user.id,
-        email: current.user.email ?? null,
-        usuario: usuario as UsuarioPainel,
-        salao: (salao || null) as Salao | null
+        email: current.user.email ?? usuario.email ?? null,
+        usuario,
+        salao: (salao || null) as Salao | null,
       });
     } catch (err) {
       console.error(err);
@@ -63,10 +61,6 @@ export default function App() {
 
   useEffect(() => {
     void loadSession();
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      void loadSession(nextSession);
-    });
-    return () => data.subscription.unsubscribe();
   }, [loadSession]);
 
   const content = useMemo(() => {
@@ -79,41 +73,19 @@ export default function App() {
     return <ResourcePage session={session} config={config} />;
   }, [page, session]);
 
-  if (!supabaseConfigured) {
-    return (
-      <div className="grid min-h-screen place-items-center px-5">
-        <div className="max-w-lg rounded-[1.5rem] border border-amber-200 bg-amber-50 p-6 text-amber-900 shadow-soft">
-          <h1 className="text-2xl font-black">Configure o Supabase</h1>
-          <p className="mt-2 text-sm font-bold leading-6">
-            Crie um arquivo `.env` neste projeto com `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   if (loading) {
     return (
       <div className="grid min-h-screen place-items-center text-center">
         <div>
           <img src="/icons/icon-192.png" className="mx-auto h-16 w-16 rounded-2xl" alt="Salão Premiun" />
-          <div className="mt-4 text-lg font-black">Carregando painel Vite...</div>
+          <div className="mt-4 text-lg font-black">Carregando painel...</div>
         </div>
       </div>
     );
   }
 
   if (!session) {
-    return (
-      <LoginPage
-        error={error}
-        onLogin={async (email, password) => {
-          const { error: loginError, data } = await supabase.auth.signInWithPassword({ email, password });
-          if (loginError) throw loginError;
-          await loadSession(data.session);
-        }}
-      />
-    );
+    return <LoginPage error={error} />;
   }
 
   return (
@@ -128,12 +100,13 @@ export default function App() {
         await supabase.auth.signOut();
         setAuthSession(null);
         setSession(null);
+        window.location.assign("https://login.salaopremiun.com.br/login-clerk?returnTo=%2Fdashboard%3Fboot%3D1");
       }}
     >
       {error ? (
         <div className="mb-4 rounded-2xl border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
           {error}
-          {authSession ? <Button className="ml-3 h-8 px-3" variant="secondary" onClick={() => void loadSession(authSession)}>Tentar de novo</Button> : null}
+          {authSession ? <Button className="ml-3 h-8 px-3" variant="secondary" onClick={() => void loadSession()}>Tentar de novo</Button> : null}
         </div>
       ) : null}
       {content}
