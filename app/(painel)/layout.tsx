@@ -7,12 +7,28 @@ import PartnerAdSlot from "@/components/parcerias/PartnerAdSlot";
 import { loadPainelShellData } from "@/lib/painel/load-painel-shell-data";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { hasAal2 } from "@/lib/auth/mfa-assurance";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import {
+  getRawSupabaseAdminForRollback,
+  getSupabaseAdmin,
+} from "@/lib/supabase/admin";
 import "./painel-clean.css";
 
 export const metadata: Metadata = {
   robots: { index: false, follow: false },
 };
+
+type OnboardingState = {
+  onboarding_concluido?: boolean | null;
+  produtos_modulo_ativo?: boolean | null;
+};
+
+async function loadOnboardingState(client: any, idSalao: string) {
+  return client
+    .from("saloes")
+    .select("onboarding_concluido, produtos_modulo_ativo")
+    .eq("id", idSalao)
+    .maybeSingle();
+}
 
 async function requireOnboardingConcluido() {
   const { user, usuario } = await getPainelUserContext({ allowAdminAal1: true });
@@ -23,11 +39,19 @@ async function requireOnboardingConcluido() {
   }
 
   const admin = getSupabaseAdmin() as any;
-  const { data, error } = await admin
-    .from("saloes")
-    .select("onboarding_concluido, produtos_modulo_ativo")
-    .eq("id", usuario.id_salao)
-    .maybeSingle();
+  let result = await loadOnboardingState(admin, usuario.id_salao);
+
+  if (result.error || !result.data) {
+    console.error("[PAINEL_ONBOARDING_PRIMARY_READ_ERROR]", result.error);
+
+    // Durante a migração Neon, a cópia Supabase permanece como fonte de rollback.
+    // Só liberamos o painel se essa fonte também confirmar explicitamente o onboarding.
+    const rollbackAdmin = getRawSupabaseAdminForRollback() as any;
+    result = await loadOnboardingState(rollbackAdmin, usuario.id_salao);
+  }
+
+  const data = result.data as OnboardingState | null;
+  const error = result.error;
 
   if (error || !data) {
     throw new Error(error?.message || "Nao foi possivel validar a configuracao inicial do salao.");
