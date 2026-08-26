@@ -24,6 +24,11 @@ function isUuid(value: unknown) {
   );
 }
 
+function buildMfaEnrollmentUrl(nextPath: string) {
+  const backToLogin = `/admin-master/clerk-login?next=${encodeURIComponent(nextPath)}`;
+  return `/conta-clerk?next=${encodeURIComponent(backToLogin)}`;
+}
+
 export async function POST(request: Request) {
   if (getAuthProviderForSurface("admin-master") !== "clerk") {
     return NextResponse.json({ ok: false, message: "Clerk ainda não está ativo para o Admin Master." }, { status: 409, headers: { "Cache-Control": "no-store" } });
@@ -44,7 +49,17 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, message: "Sua conta Clerk não possui e-mail principal válido." }, { status: 403, headers: { "Cache-Control": "no-store" } });
     }
 
-    if (identity.mfaEnrolled && !identity.mfaVerified) {
+    const { data: clerkData, error: clerkError } = await clerkAdminApi.getUserById(identity.subject);
+    if (clerkError || !clerkData.user) {
+      return NextResponse.json(
+        { ok: false, message: clerkError?.message || "Não foi possível carregar sua conta Clerk." },
+        { status: 401, headers: { "Cache-Control": "no-store" } }
+      );
+    }
+
+    const accountMfaEnrolled = Boolean(clerkData.user.two_factor_enabled);
+    if (!accountMfaEnrolled || !identity.mfaVerified) {
+      const enrollmentRequired = !accountMfaEnrolled;
       void emitSecurityEvent({
         evento: "admin_master_mfa_requerido",
         tipoUsuario: "salao",
@@ -54,13 +69,27 @@ export async function POST(request: Request) {
         userAgent: request.headers.get("user-agent") || null,
         origem: "admin-master-clerk",
         route: "/admin-master/login",
-        detalhes: { email, provider: "clerk" },
+        detalhes: {
+          email,
+          provider: "clerk",
+          enrollment_required: enrollmentRequired,
+        },
       });
-      return NextResponse.json({ ok: false, mfaRequired: true, message: "Conclua a autenticação em dois fatores no Clerk para entrar no Admin Master." }, { status: 403, headers: { "Cache-Control": "no-store" } });
+      return NextResponse.json(
+        {
+          ok: false,
+          mfaRequired: true,
+          mfaEnrollmentRequired: enrollmentRequired,
+          redirectTo: enrollmentRequired ? buildMfaEnrollmentUrl(nextPath) : undefined,
+          message: enrollmentRequired
+            ? "Cadastre a autenticação em dois fatores no Clerk antes de entrar no Admin Master."
+            : "Conclua a autenticação em dois fatores no Clerk para entrar no Admin Master.",
+        },
+        { status: 403, headers: { "Cache-Control": "no-store" } }
+      );
     }
 
-    const { data: clerkData } = await clerkAdminApi.getUserById(identity.subject);
-    let stableAuthId = String(clerkData.user?.externalId || "").trim();
+    let stableAuthId = String(clerkData.user.externalId || "").trim();
 
     // Contas existentes podem ter o UUID histórico somente no Neon. No primeiro
     // login Clerk, espelhamos esse UUID em external_id e preservamos os vínculos.
@@ -102,7 +131,7 @@ export async function POST(request: Request) {
       authUserId: stableAuthId,
       email,
       host: getRequestHost(request),
-      mfaVerifiedAt: identity.mfaVerified ? Math.floor(Date.now() / 1000) : 0,
+      mfaVerifiedAt: Math.floor(Date.now() / 1000),
     });
 
     void emitSecurityEvent({
@@ -118,7 +147,7 @@ export async function POST(request: Request) {
         email,
         provider: "clerk",
         clerk_subject: identity.subject,
-        mfa: identity.mfaVerified ? "validado" : "nao_cadastrado",
+        mfa: "validado",
       },
     });
 
