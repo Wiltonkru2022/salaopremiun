@@ -1,6 +1,7 @@
 import { createClient } from "@supabase/supabase-js";
 import type { AnySupabaseDatabase } from "@/types/supabase";
 import { createNeonSupabaseCompat } from "@/lib/neon/supabase-compat.server";
+import { getProviderConfig } from "@/lib/platform/provider-config.server";
 
 type SupabaseAdminClient = ReturnType<typeof createClient<AnySupabaseDatabase>>;
 
@@ -54,12 +55,14 @@ export function getSupabaseAdmin(): SupabaseAdminClient {
   }
 
   const raw = getRawSupabaseAdmin();
-  if (String(process.env.DATABASE_PROVIDER || "supabase").trim().toLowerCase() !== "neon") {
+  if (getProviderConfig().database !== "neon") {
     return raw;
   }
 
   if (!globalStore.__salaopremiumSupabaseAdminCompat) {
-    globalStore.__salaopremiumSupabaseAdminCompat = createNeonSupabaseCompat(raw) as SupabaseAdminClient;
+    globalStore.__salaopremiumSupabaseAdminCompat = createNeonSupabaseCompat(
+      raw
+    ) as SupabaseAdminClient;
   }
   return globalStore.__salaopremiumSupabaseAdminCompat;
 }
