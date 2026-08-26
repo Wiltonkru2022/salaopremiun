@@ -1,27 +1,16 @@
-import { createClient } from "@supabase/supabase-js";
+import { neon } from "@neondatabase/serverless";
 import { loadLocalEnv, requireEnv } from "../lib/load-env.mjs";
 
 loadLocalEnv(process.cwd());
-requireEnv(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
+requireEnv(["NEON_ADMIN_DATABASE_URL"]);
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-    global: {
-      headers: {
-        "x-application-name": "salaopremium-maintenance",
-      },
-    },
-  }
-);
-
+const sql = neon(process.env.NEON_ADMIN_DATABASE_URL);
 const APPLY = process.argv.includes("--apply");
 const PAGE_SIZE = 500;
+
+async function query(text, params = []) {
+  return sql.query(text, params, { arrayMode: false, fullResults: false });
+}
 
 function toNumber(value) {
   const parsed = Number(value ?? 0);
@@ -37,168 +26,107 @@ function normalizeStatus(value) {
 }
 
 function pairKey(item) {
-  return [
-    item.id_salao || "",
-    item.id_profissional || "",
-    item.id_assistente || "",
-  ].join(":");
+  return [item.id_salao || "", item.id_profissional || "", item.id_assistente || ""].join(":");
 }
 
 async function fetchAllCandidateItems() {
   const rows = [];
-  let from = 0;
-
+  let offset = 0;
   while (true) {
-    const { data, error } = await supabase
-      .from("comanda_itens")
-      .select(
-        "id, id_salao, id_comanda, id_profissional, id_assistente, ativo, comissao_valor_aplicado, comissao_assistente_percentual_aplicada, comissao_assistente_valor_aplicado"
-      )
-      .eq("ativo", true)
-      .or(
-        "comissao_assistente_valor_aplicado.gt.0,comissao_assistente_percentual_aplicada.gt.0"
-      )
-      .order("id", { ascending: true })
-      .range(from, from + PAGE_SIZE - 1);
-
-    if (error) throw error;
-    if (!data?.length) break;
-
+    const data = await query(
+      `select id, id_salao, id_comanda, id_profissional, id_assistente, ativo,
+              comissao_valor_aplicado, comissao_assistente_percentual_aplicada,
+              comissao_assistente_valor_aplicado
+         from public.comanda_itens
+        where ativo = true
+          and (coalesce(comissao_assistente_valor_aplicado, 0) > 0
+            or coalesce(comissao_assistente_percentual_aplicada, 0) > 0)
+        order by id asc
+        limit $1 offset $2`,
+      [PAGE_SIZE, offset]
+    );
+    if (!data.length) break;
     rows.push(...data);
-
     if (data.length < PAGE_SIZE) break;
-    from += PAGE_SIZE;
+    offset += PAGE_SIZE;
   }
-
   return rows;
 }
 
 async function fetchActiveAssistantLinks(profissionalIds) {
-  const links = new Set();
-
-  for (let index = 0; index < profissionalIds.length; index += PAGE_SIZE) {
-    const batch = profissionalIds.slice(index, index + PAGE_SIZE);
-    if (batch.length === 0) continue;
-
-    const { data, error } = await supabase
-      .from("profissional_assistentes")
-      .select("id_salao, id_profissional, id_assistente")
-      .eq("ativo", true)
-      .in("id_profissional", batch);
-
-    if (error) throw error;
-
-    for (const item of data || []) {
-      links.add(pairKey(item));
-    }
-  }
-
-  return links;
+  if (!profissionalIds.length) return new Set();
+  const rows = await query(
+    `select id_salao, id_profissional, id_assistente
+       from public.profissional_assistentes
+      where ativo = true and id_profissional = any($1::uuid[])`,
+    [profissionalIds]
+  );
+  return new Set(rows.map(pairKey));
 }
 
 async function fetchComandaStatusMap(comandaIds) {
   const map = new Map();
-
-  for (let index = 0; index < comandaIds.length; index += PAGE_SIZE) {
-    const batch = comandaIds.slice(index, index + PAGE_SIZE);
-    if (batch.length === 0) continue;
-
-    const { data, error } = await supabase
-      .from("comandas")
-      .select("id, status")
-      .in("id", batch);
-
-    if (error) throw error;
-
-    for (const item of data || []) {
-      map.set(item.id, normalizeStatus(item.status));
-    }
-  }
-
+  if (!comandaIds.length) return map;
+  const rows = await query(
+    `select id, status from public.comandas where id = any($1::uuid[])`,
+    [comandaIds]
+  );
+  for (const item of rows) map.set(item.id, normalizeStatus(item.status));
   return map;
 }
 
 async function fetchCommissionRows(itemIds) {
-  const rows = [];
-
-  for (let index = 0; index < itemIds.length; index += PAGE_SIZE) {
-    const batch = itemIds.slice(index, index + PAGE_SIZE);
-    if (batch.length === 0) continue;
-
-    const { data, error } = await supabase
-      .from("comissoes_lancamentos")
-      .select(
-        "id, id_comanda_item, id_profissional, id_assistente, status, tipo_destinatario, tipo_profissional, valor_comissao, valor_comissao_assistente"
-      )
-      .in("id_comanda_item", batch);
-
-    if (error) throw error;
-    rows.push(...(data || []));
-  }
-
-  return rows;
+  if (!itemIds.length) return [];
+  return query(
+    `select id, id_comanda_item, id_profissional, id_assistente, status,
+            tipo_destinatario, tipo_profissional, valor_comissao, valor_comissao_assistente
+       from public.comissoes_lancamentos
+      where id_comanda_item = any($1::uuid[])`,
+    [itemIds]
+  );
 }
 
 async function fetchAssistantLedgerRows(itemIds) {
-  const rows = [];
-
-  for (let index = 0; index < itemIds.length; index += PAGE_SIZE) {
-    const batch = itemIds.slice(index, index + PAGE_SIZE);
-    if (batch.length === 0) continue;
-
-    const { data, error } = await supabase
-      .from("comissoes_assistentes")
-      .select("id, id_comanda_item, status")
-      .in("id_comanda_item", batch);
-
-    if (error) throw error;
-    rows.push(...(data || []));
-  }
-
-  return rows;
+  if (!itemIds.length) return [];
+  return query(
+    `select id, id_comanda_item, status
+       from public.comissoes_assistentes
+      where id_comanda_item = any($1::uuid[])`,
+    [itemIds]
+  );
 }
 
 async function updateItem(item) {
   const assistenteValor = roundMoney(item.comissao_assistente_valor_aplicado);
-  const novoValorProfissional = roundMoney(
-    toNumber(item.comissao_valor_aplicado) + assistenteValor
+  const novoValorProfissional = roundMoney(toNumber(item.comissao_valor_aplicado) + assistenteValor);
+  await query(
+    `update public.comanda_itens
+        set comissao_valor_aplicado = $1,
+            comissao_assistente_percentual_aplicada = 0,
+            comissao_assistente_valor_aplicado = 0,
+            updated_at = now()
+      where id = $2 and id_salao = $3`,
+    [novoValorProfissional, item.id, item.id_salao]
   );
-
-  const { error } = await supabase
-    .from("comanda_itens")
-    .update({
-      comissao_valor_aplicado: novoValorProfissional,
-      comissao_assistente_percentual_aplicada: 0,
-      comissao_assistente_valor_aplicado: 0,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", item.id)
-    .eq("id_salao", item.id_salao);
-
-  if (error) throw error;
 }
 
 async function updateProfessionalLaunch(row, item) {
   const assistenteValor = roundMoney(item.comissao_assistente_valor_aplicado);
   const novoValorComissao = roundMoney(toNumber(row.valor_comissao) + assistenteValor);
-
-  const { error } = await supabase
-    .from("comissoes_lancamentos")
-    .update({
-      id_assistente: null,
-      valor_comissao: novoValorComissao,
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", row.id);
-
-  if (error) throw error;
+  await query(
+    `update public.comissoes_lancamentos
+        set id_assistente = null, valor_comissao = $1, updated_at = now()
+      where id = $2`,
+    [novoValorComissao, row.id]
+  );
 }
 
 async function deleteRows(table, ids) {
   if (!ids.length) return;
-
-  const { error } = await supabase.from(table).delete().in("id", ids);
-  if (error) throw error;
+  if (!new Set(["comissoes_lancamentos", "comissoes_assistentes"]).has(table)) {
+    throw new Error(`Tabela de manutencao nao permitida: ${table}`);
+  }
+  await query(`delete from public.${table} where id = any($1::uuid[])`, [ids]);
 }
 
 async function main() {
@@ -209,25 +137,18 @@ async function main() {
   );
 
   const candidateItems = await fetchAllCandidateItems();
-  const profissionalIds = Array.from(
-    new Set(candidateItems.map((item) => item.id_profissional).filter(Boolean))
-  );
+  const profissionalIds = Array.from(new Set(candidateItems.map((item) => item.id_profissional).filter(Boolean)));
   const activeLinks = await fetchActiveAssistantLinks(profissionalIds);
-
   const invalidItems = candidateItems.filter((item) => {
     if (!item.id_profissional) return false;
     if (!item.id_assistente) return true;
     return !activeLinks.has(pairKey(item));
   });
-
   const comandaStatusMap = await fetchComandaStatusMap(
     Array.from(new Set(invalidItems.map((item) => item.id_comanda).filter(Boolean)))
   );
-
   const commissionRows = await fetchCommissionRows(invalidItems.map((item) => item.id));
-  const assistantLedgerRows = await fetchAssistantLedgerRows(
-    invalidItems.map((item) => item.id)
-  );
+  const assistantLedgerRows = await fetchAssistantLedgerRows(invalidItems.map((item) => item.id));
 
   const commissionMap = new Map();
   for (const row of commissionRows) {
@@ -235,7 +156,6 @@ async function main() {
     list.push(row);
     commissionMap.set(row.id_comanda_item, list);
   }
-
   const assistantLedgerMap = new Map();
   for (const row of assistantLedgerRows) {
     const list = assistantLedgerMap.get(row.id_comanda_item) || [];
@@ -260,7 +180,6 @@ async function main() {
 
   const safeItems = [];
   const skippedItems = [];
-
   for (const item of invalidItems) {
     const statusComanda = comandaStatusMap.get(item.id_comanda) || "desconhecido";
     if (statusComanda === "fechada") summary.closedItems += 1;
@@ -268,7 +187,6 @@ async function main() {
 
     const rows = commissionMap.get(item.id) || [];
     const ledgerRows = assistantLedgerMap.get(item.id) || [];
-
     const professionalPending = rows.filter((row) => {
       const tipo = normalizeStatus(row.tipo_destinatario || row.tipo_profissional);
       return normalizeStatus(row.status) === "pendente" && tipo !== "assistente";
@@ -277,12 +195,8 @@ async function main() {
       const tipo = normalizeStatus(row.tipo_destinatario || row.tipo_profissional);
       return normalizeStatus(row.status) === "pendente" && tipo === "assistente";
     });
-    const nonPending = rows.filter(
-      (row) => normalizeStatus(row.status) !== "pendente"
-    );
-    const ledgerPending = ledgerRows.filter(
-      (row) => normalizeStatus(row.status) === "pendente"
-    );
+    const nonPending = rows.filter((row) => normalizeStatus(row.status) !== "pendente");
+    const ledgerPending = ledgerRows.filter((row) => normalizeStatus(row.status) === "pendente");
 
     summary.pendingProfessionalLaunchesToAdjust += professionalPending.length;
     summary.pendingAssistantLaunchesToDelete += assistantPending.length;
@@ -291,66 +205,34 @@ async function main() {
 
     if (nonPending.length > 0) {
       summary.skippedWithNonPendingHistory += 1;
-      skippedItems.push({
-        id: item.id,
-        reason: "historico_nao_pendente",
-        statusComanda,
-      });
+      skippedItems.push({ id: item.id, reason: "historico_nao_pendente", statusComanda });
       continue;
     }
-
     if (professionalPending.length > 1) {
       summary.skippedWithMultipleProfessionalLaunches += 1;
-      skippedItems.push({
-        id: item.id,
-        reason: "multiplos_lancamentos_profissional",
-        statusComanda,
-      });
+      skippedItems.push({ id: item.id, reason: "multiplos_lancamentos_profissional", statusComanda });
       continue;
     }
 
     summary.safeToApply += 1;
-    safeItems.push({
-      item,
-      professionalPending,
-      assistantPending,
-      ledgerPending,
-      statusComanda,
-    });
+    safeItems.push({ item, professionalPending, assistantPending, ledgerPending, statusComanda });
   }
 
   console.log(JSON.stringify(summary, null, 2));
-
   if (skippedItems.length > 0) {
     console.log("\nItens pulados para revisao manual:");
     for (const item of skippedItems.slice(0, 20)) {
       console.log(`- ${item.id} | ${item.reason} | comanda=${item.statusComanda}`);
     }
-    if (skippedItems.length > 20) {
-      console.log(`... e mais ${skippedItems.length - 20} item(ns).`);
-    }
+    if (skippedItems.length > 20) console.log(`... e mais ${skippedItems.length - 20} item(ns).`);
   }
-
-  if (!APPLY) {
-    return;
-  }
+  if (!APPLY) return;
 
   for (const entry of safeItems) {
     await updateItem(entry.item);
-
-    if (entry.professionalPending[0]) {
-      await updateProfessionalLaunch(entry.professionalPending[0], entry.item);
-    }
-
-    await deleteRows(
-      "comissoes_lancamentos",
-      entry.assistantPending.map((row) => row.id)
-    );
-    await deleteRows(
-      "comissoes_assistentes",
-      entry.ledgerPending.map((row) => row.id)
-    );
-
+    if (entry.professionalPending[0]) await updateProfessionalLaunch(entry.professionalPending[0], entry.item);
+    await deleteRows("comissoes_lancamentos", entry.assistantPending.map((row) => row.id));
+    await deleteRows("comissoes_assistentes", entry.ledgerPending.map((row) => row.id));
     summary.appliedItems += 1;
   }
 
