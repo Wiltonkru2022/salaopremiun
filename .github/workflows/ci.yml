@@ -55,6 +55,22 @@ jobs:
       - name: Install App Profissional PWA
         run: npm --prefix apps/app-profissional-vite install --no-audit --no-fund
 
+      - name: Install legacy salon launcher
+        run: npm --prefix apps/sistema-salao-premiun-vite install --no-audit --no-fund
+
+      - name: Normalize lockfiles
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          if git diff --quiet -- package-lock.json apps/app-profissional-vite/package-lock.json apps/sistema-salao-premiun-vite/package-lock.json; then
+            echo "Lockfiles already normalized"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add package-lock.json apps/app-profissional-vite/package-lock.json apps/sistema-salao-premiun-vite/package-lock.json
+            git commit -m "chore: normalize lockfiles after Neon migration"
+            git push origin HEAD:main
+          fi
+
       - name: Guard public repository secrets
         run: node scripts/audit/public-secret-scan.mjs
 
