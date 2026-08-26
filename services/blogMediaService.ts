@@ -1,4 +1,9 @@
 import { getBlogSupabaseAdmin } from "@/lib/blog/supabase";
+import { getProviderConfig } from "@/lib/platform/provider-config.server";
+import {
+  removeCloudinaryAssetByUrl,
+  uploadBufferToCloudinary,
+} from "@/lib/platform/cloudinary.server";
 
 const BUCKET_ID = "blog-media";
 const MAX_IMAGE_SIZE = 6 * 1024 * 1024;
@@ -66,26 +71,7 @@ async function ensureBlogBucket() {
   }
 }
 
-export async function uploadBlogMedia(params: {
-  file: File;
-  placement: string;
-}) {
-  const isImage = ALLOWED_IMAGE_TYPES.has(params.file.type);
-  const isVideo = ALLOWED_VIDEO_TYPES.has(params.file.type);
-
-  if (!isImage && !isVideo) {
-    throw new Error("Envie JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV.");
-  }
-
-  const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
-  if (params.file.size > maxSize) {
-    throw new Error(
-      `${isVideo ? "Video" : "Imagem"} precisa ter ate ${Math.round(
-        maxSize / 1024 / 1024
-      )}MB.`
-    );
-  }
-
+async function uploadToSupabase(params: { file: File; placement: string; isVideo: boolean }) {
   await ensureBlogBucket();
 
   const supabaseAdmin = getBlogSupabaseAdmin();
@@ -112,12 +98,60 @@ export async function uploadBlogMedia(params: {
 
   return {
     publicUrl: data.publicUrl,
-    type: isVideo ? "video" : "image",
+    type: params.isVideo ? "video" : "image",
     name: params.file.name,
   };
 }
 
+export async function uploadBlogMedia(params: {
+  file: File;
+  placement: string;
+}) {
+  const isImage = ALLOWED_IMAGE_TYPES.has(params.file.type);
+  const isVideo = ALLOWED_VIDEO_TYPES.has(params.file.type);
+
+  if (!isImage && !isVideo) {
+    throw new Error("Envie JPG, PNG, WEBP, GIF, MP4, WEBM ou MOV.");
+  }
+
+  const maxSize = isVideo ? MAX_VIDEO_SIZE : MAX_IMAGE_SIZE;
+  if (params.file.size > maxSize) {
+    throw new Error(
+      `${isVideo ? "Video" : "Imagem"} precisa ter ate ${Math.round(
+        maxSize / 1024 / 1024
+      )}MB.`
+    );
+  }
+
+  if (getProviderConfig().media === "cloudinary") {
+    try {
+      const safePlacement = params.placement.replace(/[^a-z0-9-]/gi, "-").toLowerCase();
+      const uploaded = await uploadBufferToCloudinary({
+        buffer: Buffer.from(await params.file.arrayBuffer()),
+        mimeType: params.file.type,
+        folder: `salaopremiun/blog/${safePlacement}`,
+      });
+      if (!uploaded.secureUrl) throw new Error("Cloudinary não retornou URL segura.");
+      return {
+        publicUrl: uploaded.secureUrl,
+        type: isVideo ? "video" : "image",
+        name: params.file.name,
+      };
+    } catch (error) {
+      console.error("[blog-media] Cloudinary falhou; usando Supabase fallback", error);
+    }
+  }
+
+  return uploadToSupabase({ file: params.file, placement: params.placement, isVideo });
+}
+
 export async function removeBlogMedia(publicUrl: string) {
+  if (publicUrl.includes("res.cloudinary.com")) {
+    const removed = await removeCloudinaryAssetByUrl(publicUrl);
+    if (!removed) throw new Error("URL Cloudinary inválida para remoção.");
+    return;
+  }
+
   const path = getStoragePathFromPublicUrl(publicUrl);
 
   if (!path) {

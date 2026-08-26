@@ -1,0 +1,33 @@
+name: WhatsApp Automation Cron
+
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: whatsapp-automation-cron
+  cancel-in-progress: false
+
+jobs:
+  trigger:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Call WhatsApp automation endpoint
+        env:
+          WORKER_SECRET: ${{ secrets.WHATSAPP_AUTOMATION_WORKER_SECRET }}
+          WORKER_URL: https://app.salaopremiun.com.br/api/internal/whatsapp-automation
+        run: |
+          if [ -z "$WORKER_SECRET" ]; then
+            echo "WHATSAPP_AUTOMATION_WORKER_SECRET repository secret is not configured; skipping."
+            exit 0
+          fi
+
+          curl --fail --show-error --silent \
+            --request POST \
+            --header "x-whatsapp-automation-secret: ${WORKER_SECRET}" \
+            "$WORKER_URL"

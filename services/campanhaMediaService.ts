@@ -1,4 +1,9 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getProviderConfig } from "@/lib/platform/provider-config.server";
+import {
+  removeCloudinaryAssetByUrl,
+  uploadBufferToCloudinary,
+} from "@/lib/platform/cloudinary.server";
 
 const BUCKET_ID = "salao-publico";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -44,13 +49,8 @@ async function ensureBucket() {
   if (error && !/already exists/i.test(error.message || "")) throw error;
 }
 
-export async function uploadCampanhaImage(params: {
-  idCampanha: string;
-  file: File;
-}) {
-  validar(params.file);
+async function uploadToSupabase(params: { idCampanha: string; file: File }) {
   await ensureBucket();
-
   const supabase = getSupabaseAdmin();
   const path = `campanhas/${params.idCampanha}/${crypto.randomUUID()}.${extension(params.file)}`;
   const { error } = await supabase.storage.from(BUCKET_ID).upload(path, params.file, {
@@ -62,12 +62,44 @@ export async function uploadCampanhaImage(params: {
 
   const { data } = supabase.storage.from(BUCKET_ID).getPublicUrl(path);
   if (!data.publicUrl) throw new Error("Não foi possível obter a URL pública da imagem.");
-
   return data.publicUrl;
+}
+
+export async function uploadCampanhaImage(params: {
+  idCampanha: string;
+  file: File;
+}) {
+  validar(params.file);
+
+  if (getProviderConfig().media === "cloudinary") {
+    try {
+      const uploaded = await uploadBufferToCloudinary({
+        buffer: Buffer.from(await params.file.arrayBuffer()),
+        mimeType: params.file.type,
+        folder: `salaopremiun/campanhas/${params.idCampanha}`,
+      });
+      if (!uploaded.secureUrl) throw new Error("Cloudinary não retornou URL segura.");
+      return uploaded.secureUrl;
+    } catch (error) {
+      console.error("[campanha-media] Cloudinary falhou; usando Supabase fallback", error);
+    }
+  }
+
+  return uploadToSupabase(params);
 }
 
 export async function removeCampanhaImage(publicUrl: string | null | undefined) {
   if (!publicUrl) return;
+
+  if (publicUrl.includes("res.cloudinary.com")) {
+    try {
+      await removeCloudinaryAssetByUrl(publicUrl);
+      return;
+    } catch {
+      return;
+    }
+  }
+
   try {
     const url = new URL(publicUrl);
     const marker = `/storage/v1/object/public/${BUCKET_ID}/`;

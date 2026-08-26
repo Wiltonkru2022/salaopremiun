@@ -1,4 +1,6 @@
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getProviderConfig } from "@/lib/platform/provider-config.server";
+import { uploadBufferToCloudinary } from "@/lib/platform/cloudinary.server";
 
 const BUCKET_ID = "salao-publico";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
@@ -54,12 +56,11 @@ async function ensurePublicBucket() {
   }
 }
 
-export async function uploadSalaoPublicAsset(params: {
+async function uploadToSupabase(params: {
   idSalao: string;
   tipo: string;
   file: File;
 }) {
-  validarSalaoPublicAsset(params.file, params.tipo);
   await ensurePublicBucket();
 
   const supabaseAdmin = getSupabaseAdmin();
@@ -83,4 +84,28 @@ export async function uploadSalaoPublicAsset(params: {
   }
 
   return data.publicUrl;
+}
+
+export async function uploadSalaoPublicAsset(params: {
+  idSalao: string;
+  tipo: string;
+  file: File;
+}) {
+  validarSalaoPublicAsset(params.file, params.tipo);
+
+  if (getProviderConfig().media === "cloudinary") {
+    try {
+      const uploaded = await uploadBufferToCloudinary({
+        buffer: Buffer.from(await params.file.arrayBuffer()),
+        mimeType: params.file.type,
+        folder: `salaopremiun/saloes/${params.idSalao}/${params.tipo}`,
+      });
+      if (!uploaded.secureUrl) throw new Error("Cloudinary não retornou URL segura.");
+      return uploaded.secureUrl;
+    } catch (error) {
+      console.error("[salao-assets] Cloudinary falhou; usando Supabase fallback", error);
+    }
+  }
+
+  return uploadToSupabase(params);
 }
