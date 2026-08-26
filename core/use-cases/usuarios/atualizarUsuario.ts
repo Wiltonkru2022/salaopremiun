@@ -68,9 +68,9 @@ export async function atualizarUsuarioUseCase(params: {
     }
 
     if (input.senha) {
-      if (input.senha.length < 6) {
+      if (input.senha.length < 8) {
         throw new UsuarioUseCaseError(
-          "A nova senha deve ter pelo menos 6 caracteres.",
+          "A nova senha deve ter pelo menos 8 caracteres.",
           400
         );
       }
