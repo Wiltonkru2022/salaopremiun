@@ -4,21 +4,16 @@ import {
   getPublicRateLimitIdentity,
 } from "@/lib/security/public-rate-limit";
 import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getClerkUser } from "@/lib/platform/clerk-admin.server";
 
 export const dynamic = "force-dynamic";
-
-type AuthUserWithIdentities = {
-  identities?: Array<{ provider?: string | null }> | null;
-};
 
 function normalizeEmail(value: unknown) {
   return String(value || "").trim().toLowerCase();
 }
 
 export async function POST(request: NextRequest) {
-  const body = (await request.json().catch(() => ({}))) as {
-    email?: string;
-  };
+  const body = (await request.json().catch(() => ({}))) as { email?: string };
   const email = normalizeEmail(body.email);
 
   if (!email || !email.includes("@")) {
@@ -52,10 +47,10 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const supabase = getDatabaseAdmin();
-  const { data: usuario, error } = await supabase
+  const database = getDatabaseAdmin();
+  const { data: usuario, error } = await database
     .from("usuarios")
-    .select("id, email, auth_user_id, status")
+    .select("id, email, clerk_user_id, status")
     .eq("email", email)
     .eq("status", "ativo")
     .maybeSingle();
@@ -71,49 +66,48 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  if (!usuario?.auth_user_id) {
+  const clerkUserId = String(usuario?.clerk_user_id || "").trim();
+  if (!clerkUserId) {
     return NextResponse.json(
       {
         ok: false,
         allowed: false,
         error:
-          "Este e-mail ainda não tem Login com Google configurado. Entre com e-mail e senha e ative em Perfil do Salão > Login com Google.",
+          "Este e-mail ainda não está vinculado ao novo login. Entre pelo acesso principal e conclua a migração da conta.",
       },
       { status: 403 }
     );
   }
 
-  const { data: authUser, error: authError } =
-    await supabase.auth.admin.getUserById(usuario.auth_user_id);
+  try {
+    const clerkUser = await getClerkUser(clerkUserId);
+    const hasGoogleIdentity = Boolean(
+      clerkUser.external_accounts?.some((account) =>
+        String(account.provider || "").toLowerCase().includes("google")
+      )
+    );
 
-  if (authError || !authUser?.user) {
+    if (!hasGoogleIdentity) {
+      return NextResponse.json(
+        {
+          ok: false,
+          allowed: false,
+          error:
+            "Este e-mail ainda não tem Login com Google configurado no Clerk.",
+        },
+        { status: 403 }
+      );
+    }
+
+    return NextResponse.json({ ok: true, allowed: true, provider: "clerk" });
+  } catch {
     return NextResponse.json(
       {
         ok: false,
         allowed: false,
-        error:
-          "Não foi possível validar o vínculo Google desta conta. Entre com e-mail e senha.",
+        error: "Não foi possível validar o vínculo Google desta conta.",
       },
       { status: 403 }
     );
   }
-
-  const user = authUser.user as AuthUserWithIdentities;
-  const hasGoogleIdentity = Boolean(
-    user.identities?.some((identity) => identity.provider === "google")
-  );
-
-  if (!hasGoogleIdentity) {
-    return NextResponse.json(
-      {
-        ok: false,
-        allowed: false,
-        error:
-          "Este e-mail ainda não tem Login com Google configurado. Entre com e-mail e senha e ative em Perfil do Salão > Login com Google.",
-      },
-      { status: 403 }
-    );
-  }
-
-  return NextResponse.json({ ok: true, allowed: true });
 }
