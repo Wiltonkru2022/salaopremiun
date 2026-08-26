@@ -1,9 +1,4 @@
-import { createBrowserClient } from "@supabase/ssr";
-import type { SupabaseClient } from "@supabase/supabase-js";
-import type { AnySupabaseDatabase } from "@/types/supabase";
-import { getSupabaseCookieOptions } from "./cookie-options";
-
-type AppSupabaseClient = SupabaseClient<AnySupabaseDatabase>;
+type AppDatabaseClient = any;
 type RemoteFilter = { op: string; column?: string; value?: unknown };
 type RemoteOrder = { column: string; ascending?: boolean; nullsFirst?: boolean };
 type RemoteMutation =
@@ -34,21 +29,7 @@ type PainelSessionPayload = {
   } | null;
 };
 
-let rawBrowserClient: AppSupabaseClient | null = null;
-let painelBrowserClient: AppSupabaseClient | null = null;
-
-function isPainelHost() {
-  if (typeof window === "undefined") return false;
-  const hostname = window.location.hostname.toLowerCase();
-  const configured = String(
-    process.env.NEXT_PUBLIC_APP_PAINEL_HOST || "painel.salaopremiun.com.br"
-  )
-    .trim()
-    .toLowerCase()
-    .replace(/^https?:\/\//, "")
-    .replace(/\/.*$/, "");
-  return hostname === configured || hostname === "painel.salaopremiun.com.br";
-}
+let browserClient: AppDatabaseClient | null = null;
 
 async function remoteRequest(body: unknown) {
   try {
@@ -169,10 +150,7 @@ function createRemoteBuilder(table: string) {
       });
       return builder;
     },
-    order(
-      column: string,
-      options?: { ascending?: boolean; nullsFirst?: boolean }
-    ) {
+    order(column: string, options?: { ascending?: boolean; nullsFirst?: boolean }) {
       state.orders.push({
         column,
         ascending: options?.ascending,
@@ -220,9 +198,8 @@ function createRemoteBuilder(table: string) {
   return builder;
 }
 
-function createPainelAuthProxy() {
-  const target: Record<string, unknown> = {};
-  return new Proxy(target as any, {
+function createAuthProxy() {
+  return new Proxy({} as any, {
     get(_target, property) {
       if (property === "getUser") {
         return async () => {
@@ -233,63 +210,25 @@ function createPainelAuthProxy() {
               credentials: "same-origin",
             });
             const payload = (await response.json().catch(() => null)) as PainelSessionPayload | null;
-            if (response.ok && payload?.user?.id) {
-              return { data: { user: payload.user }, error: null };
-            }
-            return { data: { user: null }, error: null };
+            return response.ok && payload?.user?.id
+              ? { data: { user: payload.user }, error: null }
+              : { data: { user: null }, error: null };
           } catch (cause) {
             return {
               data: { user: null },
-              error: {
-                message:
-                  cause instanceof Error
-                    ? cause.message
-                    : "Falha ao validar sessao Clerk do painel.",
-              },
+              error: { message: cause instanceof Error ? cause.message : "Falha ao validar sessao." },
             };
           }
         };
       }
-
       if (property === "getSession") {
         return async () => {
-          try {
-            const response = await fetch("/api/painel/session", {
-              method: "GET",
-              cache: "no-store",
-              credentials: "same-origin",
-            });
-            const payload = (await response.json().catch(() => null)) as PainelSessionPayload | null;
-            if (response.ok && payload?.user?.id) {
-              return {
-                data: {
-                  session: {
-                    access_token: "painel-clerk-session",
-                    refresh_token: "",
-                    token_type: "bearer",
-                    expires_in: 0,
-                    expires_at: 0,
-                    user: payload.user,
-                  },
-                },
-                error: null,
-              };
-            }
-            return { data: { session: null }, error: null };
-          } catch (cause) {
-            return {
-              data: { session: null },
-              error: {
-                message:
-                  cause instanceof Error
-                    ? cause.message
-                    : "Falha ao validar sessao Clerk do painel.",
-              },
-            };
-          }
+          const result = await (createAuthProxy() as any).getUser();
+          return result.data.user
+            ? { data: { session: { access_token: "clerk-session", user: result.data.user } }, error: null }
+            : { data: { session: null }, error: result.error || null };
         };
       }
-
       if (property === "signOut") {
         return async () => {
           try {
@@ -298,40 +237,28 @@ function createPainelAuthProxy() {
               cache: "no-store",
               credentials: "same-origin",
             });
-            if (!response.ok) {
-              return { error: { message: "Nao foi possivel encerrar a sessao do painel." } };
-            }
-            return { error: null };
+            return response.ok
+              ? { error: null }
+              : { error: { message: "Nao foi possivel encerrar a sessao." } };
           } catch (cause) {
-            return {
-              error: {
-                message: cause instanceof Error ? cause.message : "Falha ao sair do painel.",
-              },
-            };
+            return { error: { message: cause instanceof Error ? cause.message : "Falha ao sair." } };
           }
         };
       }
-
       if (property === "onAuthStateChange") {
-        return () => ({
-          data: {
-            subscription: {
-              unsubscribe() {},
-            },
-          },
-        });
+        return () => ({ data: { subscription: { unsubscribe() {} } } });
       }
-
-      return undefined;
+      return () => Promise.resolve({
+        data: null,
+        error: { message: `Metodo de autenticacao legado '${String(property)}' foi removido. Use Clerk ou a API interna.` },
+      });
     },
   });
 }
 
 function createNoopRealtimeChannel() {
   const channel: any = {
-    on() {
-      return channel;
-    },
+    on() { return channel; },
     subscribe(callback?: (status: string) => void) {
       callback?.("SUBSCRIBED");
       return channel;
@@ -341,14 +268,11 @@ function createNoopRealtimeChannel() {
   return channel;
 }
 
-function createPainelClient(): AppSupabaseClient {
-  const auth = createPainelAuthProxy();
-  const target: Record<string, unknown> = {};
-  return new Proxy(target as any, {
+function createRemoteClient(): AppDatabaseClient {
+  const auth = createAuthProxy();
+  return new Proxy({} as any, {
     get(_target, property) {
-      if (property === "from") {
-        return (table: string) => createRemoteBuilder(table);
-      }
+      if (property === "from") return (table: string) => createRemoteBuilder(table);
       if (property === "rpc") {
         return async (fn: string, args?: Record<string, unknown>) =>
           remoteRequest({ kind: "rpc", fn, args: args || {} });
@@ -360,38 +284,14 @@ function createPainelClient(): AppSupabaseClient {
       if (property === "getChannels") return () => [];
       return undefined;
     },
-  }) as AppSupabaseClient;
+  });
 }
 
-function getRawBrowserClient(): AppSupabaseClient {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl) throw new Error("NEXT_PUBLIC_SUPABASE_URL nao configurada.");
-  if (!supabaseAnonKey) throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY nao configurada.");
-
-  if (!rawBrowserClient) {
-    rawBrowserClient = createBrowserClient<AnySupabaseDatabase>(
-      supabaseUrl,
-      supabaseAnonKey,
-      {
-        cookieOptions: getSupabaseCookieOptions(
-          typeof window === "undefined" ? undefined : window.location.hostname
-        ),
-        auth: {
-          flowType: "pkce",
-          detectSessionInUrl: true,
-        },
-      }
-    );
-  }
-  return rawBrowserClient;
-}
-
-export function createClient(): AppSupabaseClient {
-  if (isPainelHost()) {
-    if (!painelBrowserClient) painelBrowserClient = createPainelClient();
-    return painelBrowserClient;
-  }
-  return getRawBrowserClient();
+/**
+ * Nome exportado mantido temporariamente para compatibilidade com imports antigos.
+ * Nenhum cliente Supabase e criado: banco usa /api/painel/db -> Neon e auth usa Clerk.
+ */
+export function createClient(): AppDatabaseClient {
+  if (!browserClient) browserClient = createRemoteClient();
+  return browserClient;
 }
