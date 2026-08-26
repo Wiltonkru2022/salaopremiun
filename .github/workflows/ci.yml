@@ -6,116 +6,57 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout
         uses: actions/checkout@v5
-        with:
-          fetch-depth: 0
-
-      - name: Upload main source snapshot
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v4
-        with:
-          name: salaopremiun-main-${{ github.sha }}
-          path: |
-            .
-            !.git/**
-          include-hidden-files: true
-          retention-days: 1
-
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
-
-      - name: Normalize legacy database imports to Neon
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          node scripts/migrations/remove-supabase-imports.mjs
-          if git diff --quiet; then
-            echo "No Neon migration changes"
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add -A
-            git commit -m "chore: apply Neon migration"
-            git push origin HEAD:main
-          fi
-
       - name: Install
         run: npm install --no-audit --no-fund
-
       - name: Install App Profissional PWA
         run: npm --prefix apps/app-profissional-vite install --no-audit --no-fund
-
       - name: Install legacy salon launcher
         run: npm --prefix apps/sistema-salao-premiun-vite install --no-audit --no-fund
-
-      - name: Normalize lockfiles
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          if git diff --quiet -- package-lock.json apps/app-profissional-vite/package-lock.json apps/sistema-salao-premiun-vite/package-lock.json; then
-            echo "Lockfiles already normalized"
-          else
-            git config user.name "github-actions[bot]"
-            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-            git add package-lock.json apps/app-profissional-vite/package-lock.json apps/sistema-salao-premiun-vite/package-lock.json
-            git commit -m "chore: normalize lockfiles after Neon migration"
-            git push origin HEAD:main
-          fi
-
       - name: Guard public repository secrets
         run: node scripts/audit/public-secret-scan.mjs
-
       - name: Lint
         run: npm run lint
-
       - name: Typecheck
         run: npm run typecheck
-
       - name: Typecheck App Profissional PWA
         run: npm run typecheck:professional
-
       - name: Test global input masks
         run: npx vitest run lib/utils/input-masks.test.ts
-
       - name: Test App Cliente identity
         run: npx vitest run lib/client-app/identity.test.ts
-
       - name: Test App Cliente visual notices
         run: npx vitest run lib/client-app/visual-notifications.test.ts
-
       - name: Test App Cliente safe redirects
         run: npx vitest run lib/client-app/safe-next.test.ts
-
       - name: Test App Profissional RPC boundary
         run: npx vitest run lib/security/profissional-pwa-boundary.test.ts
-
       - name: Test Web Push delivery policies
         run: npx vitest run lib/push-delivery-utils.test.ts
-
       - name: Test operational health engine
         run: npm run test:operational
-
       - name: Audit operational coverage
         run: npm run audit:operational-coverage
-
       - name: Audit painel PT-BR
         run: node scripts/audit/painel-ui-text-audit.mjs --check
-
-      - name: Audit
+      - name: Audit no Supabase runtime
+        run: npm run audit:no-supabase-runtime
+      - name: Audit dependencies
         continue-on-error: true
         run: npm run audit
-
       - name: Build App Profissional PWA
         run: npm run build:professional
-
       - name: Build
         run: npm run build
