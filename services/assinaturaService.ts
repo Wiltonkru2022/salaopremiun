@@ -1,10 +1,8 @@
 import { addDays, format, isBefore } from "date-fns";
-import { createServerClient } from "@supabase/ssr";
-import { cookies, headers } from "next/headers";
-import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
+import { headers } from "next/headers";
+import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getRenovacaoAutomaticaInfo } from "@/lib/assinaturas/renovacao-automatica";
 import { buscarCobranca } from "@/lib/payments/pix-provider";
-import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 import { getDatabaseAdmin } from "@/lib/db/admin";
 import {
   createAsaasSubscription,
@@ -44,33 +42,6 @@ const PLANO_TRIAL_PADRAO: PlanoTrialRow = {
   ativo: true,
 };
 
-async function getSupabaseServer() {
-  const cookieStore = await cookies();
-  const headersList = await headers();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL nao configurada.");
-  }
-
-  if (!supabaseAnonKey) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY nao configurada.");
-  }
-
-  const cookieOptions = getSupabaseCookieOptions(headersList.get("host"));
-
-  return createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookieOptions,
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll() {},
-    },
-  });
-}
-
 async function getRemoteIp() {
   const requestHeaders = await headers();
   const forwardedFor = requestHeaders.get("x-forwarded-for");
@@ -102,26 +73,15 @@ function getRecurringNextDueDate(vencimentoEm?: string | null) {
 }
 
 export function createAssinaturaService() {
-  const supabaseAdmin = getDatabaseAdmin();
+  const databaseAdmin = getDatabaseAdmin();
 
   return {
     async validarSalaoAdmin(idSalao: string, adminOnlyMessage: string) {
-      const supabase = await getSupabaseServer();
-
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError) {
-        throw new AssinaturaServiceError("Erro ao validar usuario autenticado.", 401);
-      }
+      const { user, usuario } = await getPainelUserContext({ allowAdminAal1: true });
 
       if (!user) {
         throw new AssinaturaServiceError("Usuario nao autenticado.", 401);
       }
-
-      const usuario = await getPainelUserContextByAuthUserId(user.id);
 
       if (!usuario?.id_salao) {
         throw new AssinaturaServiceError("Usuario sem salao vinculado.", 403);
@@ -141,7 +101,7 @@ export function createAssinaturaService() {
     },
 
     async buscarAssinaturaSalao(idSalao: string) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("assinaturas")
         .select(
           "id, plano, valor, vencimento_em, renovacao_automatica, forma_pagamento_atual, asaas_customer_id, asaas_payment_id, asaas_credit_card_token, asaas_subscription_id, asaas_subscription_status, status, trial_ativo, trial_inicio_em, trial_fim_em"
@@ -181,8 +141,7 @@ export function createAssinaturaService() {
         };
       }
 
-      const supabaseAdmin = getDatabaseAdmin();
-      const { error } = await supabaseAdmin
+      const { error } = await databaseAdmin
         .from("assinaturas")
         .update({
           forma_pagamento_atual: "CREDIT_CARD",
@@ -213,7 +172,7 @@ export function createAssinaturaService() {
       idSalao: string;
       renovacaoAutomatica: boolean;
     }) {
-      const { error } = await supabaseAdmin
+      const { error } = await databaseAdmin
         .from("assinaturas")
         .update({ renovacao_automatica: params.renovacaoAutomatica })
         .eq("id", params.assinaturaId)
@@ -257,7 +216,7 @@ export function createAssinaturaService() {
         );
       }
 
-      const { error } = await supabaseAdmin
+      const { error } = await databaseAdmin
         .from("assinaturas")
         .update({
           asaas_subscription_id: subscriptionId,
@@ -288,7 +247,7 @@ export function createAssinaturaService() {
         }
       }
 
-      const { error } = await supabaseAdmin
+      const { error } = await databaseAdmin
         .from("assinaturas")
         .update({
           asaas_subscription_id: null,
@@ -310,7 +269,7 @@ export function createAssinaturaService() {
     },
 
     async buscarPlanoTeste() {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("planos_saas")
         .select(
           "id, codigo, nome, descricao, valor_mensal, limite_usuarios, limite_profissionais, ativo"
@@ -339,7 +298,7 @@ export function createAssinaturaService() {
     },
 
     async buscarSalaoBasico(idSalao: string) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("saloes")
         .select("id, plano, trial_ativo, trial_inicio_em, trial_fim_em")
         .eq("id", idSalao)
@@ -373,7 +332,7 @@ export function createAssinaturaService() {
       );
 
       if (params.assinaturaExistente?.id) {
-        const { error } = await supabaseAdmin
+        const { error } = await databaseAdmin
           .from("assinaturas")
           .update({
             plano: params.planoTeste.codigo,
@@ -404,7 +363,7 @@ export function createAssinaturaService() {
           );
         }
       } else {
-        const { error } = await supabaseAdmin.from("assinaturas").insert({
+        const { error } = await databaseAdmin.from("assinaturas").insert({
           id_salao: params.idSalao,
           asaas_customer_id: null,
           asaas_payment_id: null,
@@ -433,7 +392,7 @@ export function createAssinaturaService() {
         }
       }
 
-      const { error: salaoError } = await supabaseAdmin
+      const { error: salaoError } = await databaseAdmin
         .from("saloes")
         .update({
           status: "teste_gratis",
@@ -465,7 +424,7 @@ export function createAssinaturaService() {
     },
 
     async listarHistorico(idSalao: string) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("assinaturas_cobrancas")
         .select(
           "id, referencia, descricao, valor, status, forma_pagamento, data_expiracao, payment_date, confirmed_date, invoice_url, bank_slip_url, created_at, updated_at, asaas_payment_id, deleted, plano_origem, plano_destino, tipo_movimento, gerada_automaticamente"
