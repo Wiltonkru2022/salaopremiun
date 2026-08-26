@@ -8,9 +8,8 @@ import {
   type PainelDbQuery,
 } from "@/lib/neon/painel-query.server";
 import { resolveNeonRuntimeUrl } from "@/lib/neon/runtime-url.server";
-import { getProviderConfig } from "@/lib/platform/provider-config.server";
 
-type SupabaseLike = any;
+type DatabaseCompatClient = any;
 
 type State = PainelDbQuery & {
   filters: PainelDbFilter[];
@@ -21,8 +20,14 @@ let adminPool: Pool | null = null;
 let adminPoolUrl = "";
 
 function adminDatabaseUrl() {
-  const url = resolveNeonRuntimeUrl(process.env.NEON_ADMIN_DATABASE_URL);
-  if (!url) throw new Error("NEON_ADMIN_DATABASE_URL nao configurada.");
+  const url = resolveNeonRuntimeUrl(
+    process.env.NEON_ADMIN_DATABASE_URL || process.env.NEON_DATABASE_URL
+  );
+  if (!url) {
+    throw new Error(
+      "Neon nao configurado. Defina NEON_ADMIN_DATABASE_URL ou NEON_DATABASE_URL."
+    );
+  }
   return url;
 }
 
@@ -33,13 +38,6 @@ function getAdminPool() {
     adminPoolUrl = url;
   }
   return adminPool;
-}
-
-function neonEnabled() {
-  return (
-    getProviderConfig().database === "neon" &&
-    Boolean(resolveNeonRuntimeUrl(process.env.NEON_ADMIN_DATABASE_URL))
-  );
 }
 
 async function executeNeon(state: State) {
@@ -60,33 +58,7 @@ async function executeNeonRpc(fn: string, args?: Record<string, unknown>) {
   }
 }
 
-function applySupabase(supabase: SupabaseLike, state: State) {
-  let query: any = supabase.from(state.table);
-  const mutation = state.mutation as PainelDbMutation | undefined;
-  if (mutation?.kind === "insert") query = query.insert(mutation.payload);
-  else if (mutation?.kind === "update") query = query.update(mutation.payload);
-  else if (mutation?.kind === "delete") query = query.delete();
-  else if (mutation?.kind === "upsert") query = query.upsert(mutation.payload, mutation.options);
-
-  if (state.select) query = query.select(state.select, state.selectOptions);
-  for (const filter of state.filters) {
-    if (filter.op === "or") query = query.or(String(filter.value || ""));
-    else query = query[filter.op](filter.column, filter.value);
-  }
-  for (const order of state.orders) {
-    query = query.order(order.column, {
-      ascending: order.ascending !== false,
-      nullsFirst: order.nullsFirst,
-    });
-  }
-  if (state.range) query = query.range(state.range[0], state.range[1]);
-  else if (state.limit !== undefined) query = query.limit(state.limit);
-  if (state.single) query = query.single();
-  else if (state.maybeSingle) query = query.maybeSingle();
-  return query;
-}
-
-function createBuilder(supabase: SupabaseLike, table: string) {
+function createBuilder(table: string) {
   const state: State = {
     kind: "query",
     table,
@@ -113,7 +85,10 @@ function createBuilder(supabase: SupabaseLike, table: string) {
       state.mutation = { kind: "delete" };
       return builder;
     },
-    upsert(payload: unknown, options?: { onConflict?: string; ignoreDuplicates?: boolean }) {
+    upsert(
+      payload: unknown,
+      options?: { onConflict?: string; ignoreDuplicates?: boolean }
+    ) {
       state.mutation = { kind: "upsert", payload, options };
       return builder;
     },
@@ -204,12 +179,10 @@ function createBuilder(supabase: SupabaseLike, table: string) {
       reject?: (reason: unknown) => unknown
     ) {
       try {
-        const result = neonEnabled()
-          ? await executeNeon(state)
-          : await applySupabase(supabase, state);
+        const result = await executeNeon(state);
         if (throwOnError && result?.error) {
           throw Object.assign(
-            new Error(result.error.message || "Falha na operacao de banco."),
+            new Error(result.error.message || "Falha na operacao de banco Neon."),
             result.error
           );
         }
@@ -220,22 +193,30 @@ function createBuilder(supabase: SupabaseLike, table: string) {
       }
     },
   };
+
   return builder;
 }
 
-export function createNeonSupabaseCompat(supabase: SupabaseLike): SupabaseLike {
-  return new Proxy(supabase, {
-    get(target, property, receiver) {
+/**
+ * Adaptador temporario para preservar a API `.from()` / `.rpc()` em imports
+ * legados durante a migracao. Ele nao possui fallback, URL, chave, auth,
+ * storage ou realtime do Supabase: todas as operacoes suportadas usam Neon.
+ */
+export function createNeonSupabaseCompat(
+  _legacyTarget?: DatabaseCompatClient
+): DatabaseCompatClient {
+  return new Proxy({} as Record<string, unknown>, {
+    get(_target, property) {
       if (property === "from") {
-        return (table: string) => createBuilder(supabase, table);
+        return (table: string) => createBuilder(table);
       }
       if (property === "rpc") {
-        return async (fn: string, args?: Record<string, unknown>) => {
-          if (neonEnabled()) return executeNeonRpc(fn, args);
-          return supabase.rpc(fn, args);
-        };
+        return (fn: string, args?: Record<string, unknown>) => executeNeonRpc(fn, args);
       }
-      return Reflect.get(target, property, receiver);
+      if (property === "then") return undefined;
+      throw new Error(
+        `Operacao legada '${String(property)}' nao suportada. O backend de dados e Neon-only.`
+      );
     },
   });
 }
