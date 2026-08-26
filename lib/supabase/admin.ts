@@ -1,10 +1,12 @@
 import { createClient } from "@supabase/supabase-js";
 import type { AnySupabaseDatabase } from "@/types/supabase";
+import { createNeonSupabaseCompat } from "@/lib/neon/supabase-compat.server";
 
 type SupabaseAdminClient = ReturnType<typeof createClient<AnySupabaseDatabase>>;
 
 const globalStore = globalThis as typeof globalThis & {
-  __salaopremiumSupabaseAdmin?: SupabaseAdminClient;
+  __salaopremiumSupabaseAdminRaw?: SupabaseAdminClient;
+  __salaopremiumSupabaseAdminCompat?: SupabaseAdminClient;
 };
 
 function getSupabaseUrl() {
@@ -23,16 +25,12 @@ function getServiceRoleKey() {
   return value;
 }
 
-export function getSupabaseAdmin(): SupabaseAdminClient {
-  if (typeof window !== "undefined") {
-    throw new Error("getSupabaseAdmin() nao pode ser usado no client.");
+function getRawSupabaseAdmin(): SupabaseAdminClient {
+  if (globalStore.__salaopremiumSupabaseAdminRaw) {
+    return globalStore.__salaopremiumSupabaseAdminRaw;
   }
 
-  if (globalStore.__salaopremiumSupabaseAdmin) {
-    return globalStore.__salaopremiumSupabaseAdmin;
-  }
-
-  globalStore.__salaopremiumSupabaseAdmin = createClient<AnySupabaseDatabase>(
+  globalStore.__salaopremiumSupabaseAdminRaw = createClient<AnySupabaseDatabase>(
     getSupabaseUrl(),
     getServiceRoleKey(),
     {
@@ -47,8 +45,30 @@ export function getSupabaseAdmin(): SupabaseAdminClient {
       },
     }
   );
+  return globalStore.__salaopremiumSupabaseAdminRaw;
+}
 
-  return globalStore.__salaopremiumSupabaseAdmin;
+export function getSupabaseAdmin(): SupabaseAdminClient {
+  if (typeof window !== "undefined") {
+    throw new Error("getSupabaseAdmin() nao pode ser usado no client.");
+  }
+
+  const raw = getRawSupabaseAdmin();
+  if (String(process.env.DATABASE_PROVIDER || "supabase").trim().toLowerCase() !== "neon") {
+    return raw;
+  }
+
+  if (!globalStore.__salaopremiumSupabaseAdminCompat) {
+    globalStore.__salaopremiumSupabaseAdminCompat = createNeonSupabaseCompat(raw) as SupabaseAdminClient;
+  }
+  return globalStore.__salaopremiumSupabaseAdminCompat;
+}
+
+export function getRawSupabaseAdminForRollback(): SupabaseAdminClient {
+  if (typeof window !== "undefined") {
+    throw new Error("getRawSupabaseAdminForRollback() nao pode ser usado no client.");
+  }
+  return getRawSupabaseAdmin();
 }
 
 export type { SupabaseAdminClient };
