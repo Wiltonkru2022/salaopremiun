@@ -2,17 +2,15 @@ import { NextResponse } from "next/server";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { getDatabaseAdmin } from "@/lib/db/admin";
 
-const COMPROVANTES_BUCKET = "agendamento-comprovantes";
-
 export async function GET(
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
 ) {
   const { id } = await params;
   const session = await requireProfissionalAppContext();
-  const supabaseAdmin = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
 
-  let query = (supabaseAdmin as any)
+  let query = database
     .from("agendamentos")
     .select("id, id_salao, profissional_id, sinal_comprovante_path")
     .eq("id", id)
@@ -28,15 +26,15 @@ export async function GET(
     return htmlError("Comprovante não encontrado para este agendamento.", 404);
   }
 
-  const { data: signed, error: signedError } = await (supabaseAdmin as any).storage
-    .from(COMPROVANTES_BUCKET)
-    .createSignedUrl(String(data.sinal_comprovante_path), 60 * 5);
-
-  if (signedError || !signed?.signedUrl) {
-    return htmlError("Não foi possível abrir o comprovante agora.", 500);
+  const publicUrl = String(data.sinal_comprovante_path || "").trim();
+  if (/^https:\/\/res\.cloudinary\.com\//i.test(publicUrl)) {
+    return NextResponse.redirect(publicUrl);
   }
 
-  return NextResponse.redirect(signed.signedUrl);
+  return htmlError(
+    "Este comprovante está no storage legado e precisa ser migrado para o Cloudinary.",
+    410
+  );
 }
 
 function htmlError(message: string, status: number) {
