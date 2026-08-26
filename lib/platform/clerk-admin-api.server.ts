@@ -1,5 +1,7 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
+
 type ClerkErrorEnvelope = {
   message?: string;
   errors?: Array<{
@@ -22,6 +24,7 @@ type ClerkExternalAccount = {
 
 type ClerkRawUser = {
   id?: string;
+  external_id?: string | null;
   first_name?: string | null;
   last_name?: string | null;
   primary_email_address_id?: string | null;
@@ -36,11 +39,20 @@ type ClerkRawUser = {
 };
 
 type ClerkAdminUser = {
+  /** UUID interno usado pelos relacionamentos existentes no Neon. */
   id: string;
+  /** ID nativo do Clerk (user_...). */
+  clerkUserId: string;
+  /** Mesmo UUID interno salvo no external_id do Clerk, quando disponível. */
+  externalId: string | null;
   email: string | null;
   publicMetadata: Record<string, unknown>;
   privateMetadata: Record<string, unknown>;
-  identities: Array<{ id: string; provider: string; identity_data: { email: string | null } }>;
+  identities: Array<{
+    id: string;
+    provider: string;
+    identity_data: { email: string | null };
+  }>;
   totp_enabled: boolean;
   backup_code_enabled: boolean;
   two_factor_enabled: boolean;
@@ -102,17 +114,26 @@ function normalizeProvider(provider: unknown) {
     .replace(/^oauth_/, "");
 }
 
-function toClerkAdminUser(user: ClerkRawUser): ClerkAdminUser {
-  const id = String(user.id || "").trim();
-  if (!id) throw new Error("Clerk retornou usuario sem ID.");
+function rawUsers(payload: ClerkRawUser[] | { data?: ClerkRawUser[] } | null) {
+  if (Array.isArray(payload)) return payload;
+  return Array.isArray(payload?.data) ? payload.data : [];
+}
 
+function toClerkAdminUser(user: ClerkRawUser): ClerkAdminUser {
+  const clerkUserId = String(user.id || "").trim();
+  if (!clerkUserId) throw new Error("Clerk retornou usuario sem ID.");
+
+  const externalId = String(user.external_id || "").trim() || null;
+  const internalId = externalId || clerkUserId;
   const emails = Array.isArray(user.email_addresses) ? user.email_addresses : [];
   const primary =
     emails.find((item) => item.id === user.primary_email_address_id) || emails[0];
   const email = String(primary?.email_address || "").trim().toLowerCase() || null;
 
   return {
-    id,
+    id: internalId,
+    clerkUserId,
+    externalId,
     email,
     publicMetadata: {
       ...(user.public_metadata || {}),
@@ -124,26 +145,55 @@ function toClerkAdminUser(user: ClerkRawUser): ClerkAdminUser {
     privateMetadata: { ...(user.private_metadata || {}) },
     identities: (user.external_accounts || [])
       .map((account) => ({
-        id: String(account.id || ""),
+        id: String(account.id || "").trim(),
         provider: normalizeProvider(account.provider),
         identity_data: { email: account.email_address || null },
       }))
-      .filter((identity) => Boolean(identity.provider)),
+      .filter((identity) => Boolean(identity.id && identity.provider)),
     totp_enabled: Boolean(user.totp_enabled),
     backup_code_enabled: Boolean(user.backup_code_enabled),
     two_factor_enabled: Boolean(user.two_factor_enabled),
   };
 }
 
-async function fetchRawUser(userId: string) {
-  return clerkRequest<ClerkRawUser>(`/users/${encodeURIComponent(userId)}`);
+async function fetchRawUser(clerkUserId: string) {
+  return clerkRequest<ClerkRawUser>(
+    `/users/${encodeURIComponent(clerkUserId)}`
+  );
 }
 
-async function updatePrimaryEmailIfNeeded(userId: string, email: string) {
+async function findRawUserByExternalId(externalId: string) {
+  const query = new URLSearchParams({ limit: "2" });
+  query.append("external_id[]", externalId);
+  const payload = await clerkRequest<ClerkRawUser[] | { data?: ClerkRawUser[] }>(
+    `/users?${query.toString()}`
+  );
+  return rawUsers(payload).find((user) => user.external_id === externalId) || null;
+}
+
+async function resolveRawUser(userId: string) {
+  const normalized = String(userId || "").trim();
+  if (!normalized) throw new Error("ID de usuario ausente.");
+
+  if (normalized.startsWith("user_")) {
+    return fetchRawUser(normalized);
+  }
+
+  const byExternalId = await findRawUserByExternalId(normalized);
+  if (!byExternalId?.id) {
+    throw Object.assign(
+      new Error("Usuario Clerk correspondente ao ID interno nao encontrado."),
+      { status: 404 }
+    );
+  }
+  return byExternalId;
+}
+
+async function updatePrimaryEmailIfNeeded(clerkUserId: string, email: string) {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return;
 
-  const current = await fetchRawUser(userId);
+  const current = await fetchRawUser(clerkUserId);
   const emails = Array.isArray(current.email_addresses) ? current.email_addresses : [];
   const currentPrimary =
     emails.find((item) => item.id === current.primary_email_address_id) || emails[0];
@@ -167,7 +217,7 @@ async function updatePrimaryEmailIfNeeded(userId: string, email: string) {
   await clerkRequest("/email_addresses", {
     method: "POST",
     body: JSON.stringify({
-      user_id: userId,
+      user_id: clerkUserId,
       email_address: normalized,
       primary: true,
       verified: true,
@@ -189,13 +239,14 @@ export const clerkAdminApi = {
   async createUser(params: {
     email?: string;
     password?: string;
-    
+    externalId?: string;
     publicMetadata?: Record<string, unknown>;
     privateMetadata?: Record<string, unknown>;
   }) {
     try {
       const email = String(params.email || "").trim().toLowerCase();
       const password = String(params.password || "");
+      const externalId = String(params.externalId || "").trim() || randomUUID();
       if (!email) throw new Error("E-mail obrigatorio para criar usuario Clerk.");
       if (password.length < 8) {
         throw new Error("A senha deve ter pelo menos 8 caracteres para o Clerk.");
@@ -207,6 +258,7 @@ export const clerkAdminApi = {
         body: JSON.stringify({
           email_address: [email],
           password,
+          external_id: externalId,
           ...names,
           public_metadata: params.publicMetadata || {},
           private_metadata: params.privateMetadata || {},
@@ -221,7 +273,7 @@ export const clerkAdminApi = {
 
   async getUserById(userId: string) {
     try {
-      const raw = await fetchRawUser(userId);
+      const raw = await resolveRawUser(userId);
       return { data: { user: toClerkAdminUser(raw) }, error: null };
     } catch (error) {
       return { data: { user: null }, error: resultError(error) };
@@ -233,13 +285,18 @@ export const clerkAdminApi = {
     params: {
       email?: string;
       password?: string;
+      externalId?: string;
       publicMetadata?: Record<string, unknown>;
       privateMetadata?: Record<string, unknown>;
     }
   ) {
     try {
+      const current = await resolveRawUser(userId);
+      const clerkUserId = String(current.id || "").trim();
+      if (!clerkUserId) throw new Error("Usuario Clerk sem ID nativo.");
+
       if (params.email) {
-        await updatePrimaryEmailIfNeeded(userId, params.email);
+        await updatePrimaryEmailIfNeeded(clerkUserId, params.email);
       }
 
       const updatePayload: Record<string, unknown> = {};
@@ -249,20 +306,21 @@ export const clerkAdminApi = {
         }
         updatePayload.password = params.password;
       }
+      if (params.externalId) updatePayload.external_id = params.externalId;
 
       const names = splitName(params.publicMetadata?.nome);
       if (names.first_name) updatePayload.first_name = names.first_name;
       if (names.last_name) updatePayload.last_name = names.last_name;
 
       if (Object.keys(updatePayload).length > 0) {
-        await clerkRequest(`/users/${encodeURIComponent(userId)}`, {
+        await clerkRequest(`/users/${encodeURIComponent(clerkUserId)}`, {
           method: "PATCH",
           body: JSON.stringify(updatePayload),
         });
       }
 
       if (params.publicMetadata || params.privateMetadata) {
-        await clerkRequest(`/users/${encodeURIComponent(userId)}/metadata`, {
+        await clerkRequest(`/users/${encodeURIComponent(clerkUserId)}/metadata`, {
           method: "PATCH",
           body: JSON.stringify({
             ...(params.publicMetadata
@@ -275,7 +333,10 @@ export const clerkAdminApi = {
         });
       }
 
-      return { data: { user: toClerkAdminUser(await fetchRawUser(userId)) }, error: null };
+      return {
+        data: { user: toClerkAdminUser(await fetchRawUser(clerkUserId)) },
+        error: null,
+      };
     } catch (error) {
       return { data: { user: null }, error: resultError(error) };
     }
@@ -283,7 +344,10 @@ export const clerkAdminApi = {
 
   async deleteUser(userId: string) {
     try {
-      await clerkRequest(`/users/${encodeURIComponent(userId)}`, {
+      const raw = await resolveRawUser(userId);
+      const clerkUserId = String(raw.id || "").trim();
+      if (!clerkUserId) throw new Error("Usuario Clerk sem ID nativo.");
+      await clerkRequest(`/users/${encodeURIComponent(clerkUserId)}`, {
         method: "DELETE",
       });
       return { data: { user: null }, error: null };
@@ -303,7 +367,7 @@ export const clerkAdminApi = {
       const payload = await clerkRequest<ClerkRawUser[] | { data?: ClerkRawUser[] }>(
         `/users?${query.toString()}`
       );
-      const rows = Array.isArray(payload) ? payload : payload?.data || [];
+      const rows = rawUsers(payload);
       return {
         data: { users: rows.map(toClerkAdminUser) },
         error: null,
@@ -313,12 +377,31 @@ export const clerkAdminApi = {
     }
   },
 
-  async unlinkExternalAccount(userId: string, provider: string) {
+  async unlinkExternalAccount(userId: string, providerOrAccountId: string) {
     try {
-      const normalizedProvider = normalizeProvider(provider);
-      if (!normalizedProvider) throw new Error("Provedor externo invalido.");
+      const raw = await resolveRawUser(userId);
+      const clerkUserId = String(raw.id || "").trim();
+      if (!clerkUserId) throw new Error("Usuario Clerk sem ID nativo.");
+
+      const requested = String(providerOrAccountId || "").trim();
+      const normalizedProvider = normalizeProvider(requested);
+      const account = (raw.external_accounts || []).find((item) => {
+        const accountId = String(item.id || "").trim();
+        return (
+          accountId === requested ||
+          normalizeProvider(item.provider) === normalizedProvider
+        );
+      });
+
+      const externalAccountId = String(account?.id || "").trim();
+      if (!externalAccountId) {
+        throw Object.assign(new Error("Conta externa Clerk nao encontrada."), {
+          status: 404,
+        });
+      }
+
       await clerkRequest(
-        `/users/${encodeURIComponent(userId)}/external_accounts/${encodeURIComponent(normalizedProvider)}`,
+        `/users/${encodeURIComponent(clerkUserId)}/external_accounts/${encodeURIComponent(externalAccountId)}`,
         { method: "DELETE" }
       );
       return { data: null, error: null };
@@ -330,7 +413,7 @@ export const clerkAdminApi = {
   mfa: {
     async listFactors(params: { userId: string }) {
       try {
-        const user = await fetchRawUser(params.userId);
+        const user = await resolveRawUser(params.userId);
         const factors = user.totp_enabled
           ? [
               {
@@ -348,7 +431,10 @@ export const clerkAdminApi = {
 
     async deleteFactor(params: { userId: string; id?: string }) {
       try {
-        await clerkRequest(`/users/${encodeURIComponent(params.userId)}/totp`, {
+        const user = await resolveRawUser(params.userId);
+        const clerkUserId = String(user.id || "").trim();
+        if (!clerkUserId) throw new Error("Usuario Clerk sem ID nativo.");
+        await clerkRequest(`/users/${encodeURIComponent(clerkUserId)}/totp`, {
           method: "DELETE",
         });
         return { data: null, error: null };
