@@ -1,5 +1,7 @@
 import "server-only";
 
+import { randomUUID } from "node:crypto";
+
 type ClerkErrorEnvelope = {
   message?: string;
   errors?: Array<{
@@ -20,6 +22,7 @@ type ClerkExternalAccount = {
 
 type ClerkRawUser = {
   id?: string;
+  external_id?: string | null;
   first_name?: string | null;
   last_name?: string | null;
   primary_email_address_id?: string | null;
@@ -35,6 +38,7 @@ type ClerkRawUser = {
 
 type CompatUser = {
   id: string;
+  clerk_user_id: string;
   email: string | null;
   user_metadata: Record<string, unknown>;
   app_metadata: Record<string, unknown>;
@@ -100,24 +104,32 @@ function normalizeProvider(provider: unknown) {
     .replace(/^oauth_/, "");
 }
 
-function toCompatUser(user: ClerkRawUser): CompatUser {
-  const id = String(user.id || "").trim();
-  if (!id) throw new Error("Clerk retornou usuario sem ID.");
+function rawUsers(payload: ClerkRawUser[] | { data?: ClerkRawUser[] } | null) {
+  if (Array.isArray(payload)) return payload;
+  return Array.isArray(payload?.data) ? payload.data : [];
+}
 
+function toCompatUser(user: ClerkRawUser): CompatUser {
+  const clerkUserId = String(user.id || "").trim();
+  if (!clerkUserId) throw new Error("Clerk retornou usuario sem ID.");
+
+  const internalId = String(user.external_id || "").trim() || clerkUserId;
   const emails = Array.isArray(user.email_addresses) ? user.email_addresses : [];
   const primary =
     emails.find((item) => item.id === user.primary_email_address_id) || emails[0];
   const email = String(primary?.email_address || "").trim().toLowerCase() || null;
+  const publicMetadata = user.public_metadata || {};
+  const displayName =
+    String(publicMetadata.nome || "").trim() ||
+    [user.first_name, user.last_name].filter(Boolean).join(" ").trim();
 
   return {
-    id,
+    id: internalId,
+    clerk_user_id: clerkUserId,
     email,
     user_metadata: {
-      ...(user.public_metadata || {}),
-      nome:
-        (user.public_metadata || {}).nome ||
-        [user.first_name, user.last_name].filter(Boolean).join(" ").trim() ||
-        undefined,
+      ...publicMetadata,
+      ...(displayName ? { nome: displayName } : {}),
     },
     app_metadata: { ...(user.private_metadata || {}) },
     identities: (user.external_accounts || [])
@@ -130,15 +142,38 @@ function toCompatUser(user: ClerkRawUser): CompatUser {
   };
 }
 
-async function fetchRawUser(userId: string) {
-  return clerkRequest<ClerkRawUser>(`/users/${encodeURIComponent(userId)}`);
+async function findRawUserByExternalId(externalId: string) {
+  const query = new URLSearchParams({ limit: "2" });
+  query.append("external_id", externalId);
+  const payload = await clerkRequest<ClerkRawUser[] | { data?: ClerkRawUser[] }>(
+    `/users?${query.toString()}`
+  );
+  return rawUsers(payload).find((user) => user.external_id === externalId) || null;
 }
 
-async function updatePrimaryEmailIfNeeded(userId: string, email: string) {
+async function resolveRawUser(userId: string) {
+  const normalized = String(userId || "").trim();
+  if (!normalized) throw new Error("ID de usuario ausente.");
+  if (normalized.startsWith("user_")) {
+    return clerkRequest<ClerkRawUser>(`/users/${encodeURIComponent(normalized)}`);
+  }
+
+  const byExternalId = await findRawUserByExternalId(normalized);
+  if (!byExternalId?.id) {
+    throw Object.assign(new Error("Usuario Clerk correspondente nao encontrado."), {
+      status: 404,
+    });
+  }
+  return byExternalId;
+}
+
+async function updatePrimaryEmailIfNeeded(clerkUserId: string, email: string) {
   const normalized = email.trim().toLowerCase();
   if (!normalized) return;
 
-  const current = await fetchRawUser(userId);
+  const current = await clerkRequest<ClerkRawUser>(
+    `/users/${encodeURIComponent(clerkUserId)}`
+  );
   const emails = Array.isArray(current.email_addresses) ? current.email_addresses : [];
   const currentPrimary =
     emails.find((item) => item.id === current.primary_email_address_id) || emails[0];
@@ -162,7 +197,7 @@ async function updatePrimaryEmailIfNeeded(userId: string, email: string) {
   await clerkRequest("/email_addresses", {
     method: "POST",
     body: JSON.stringify({
-      user_id: userId,
+      user_id: clerkUserId,
       email_address: normalized,
       primary: true,
       verified: true,
@@ -187,10 +222,12 @@ export const clerkAdminCompat = {
     email_confirm?: boolean;
     user_metadata?: Record<string, unknown>;
     app_metadata?: Record<string, unknown>;
+    external_id?: string;
   }) {
     try {
       const email = String(params.email || "").trim().toLowerCase();
       const password = String(params.password || "");
+      const externalId = String(params.external_id || "").trim() || randomUUID();
       if (!email) throw new Error("E-mail obrigatorio para criar usuario Clerk.");
       if (password.length < 8) {
         throw new Error("A senha deve ter pelo menos 8 caracteres para o Clerk.");
@@ -202,6 +239,7 @@ export const clerkAdminCompat = {
         body: JSON.stringify({
           email_address: [email],
           password,
+          external_id: externalId,
           ...names,
           public_metadata: params.user_metadata || {},
           private_metadata: params.app_metadata || {},
@@ -216,7 +254,7 @@ export const clerkAdminCompat = {
 
   async getUserById(userId: string) {
     try {
-      const raw = await fetchRawUser(userId);
+      const raw = await resolveRawUser(userId);
       return { data: { user: toCompatUser(raw) }, error: null };
     } catch (error) {
       return { data: { user: null }, error: resultError(error) };
@@ -233,8 +271,12 @@ export const clerkAdminCompat = {
     }
   ) {
     try {
+      const raw = await resolveRawUser(userId);
+      const clerkUserId = String(raw.id || "");
+      if (!clerkUserId) throw new Error("Usuario Clerk sem ID.");
+
       if (params.email) {
-        await updatePrimaryEmailIfNeeded(userId, params.email);
+        await updatePrimaryEmailIfNeeded(clerkUserId, params.email);
       }
 
       const updatePayload: Record<string, unknown> = {};
@@ -250,14 +292,14 @@ export const clerkAdminCompat = {
       if (names.last_name) updatePayload.last_name = names.last_name;
 
       if (Object.keys(updatePayload).length > 0) {
-        await clerkRequest(`/users/${encodeURIComponent(userId)}`, {
+        await clerkRequest(`/users/${encodeURIComponent(clerkUserId)}`, {
           method: "PATCH",
           body: JSON.stringify(updatePayload),
         });
       }
 
       if (params.user_metadata || params.app_metadata) {
-        await clerkRequest(`/users/${encodeURIComponent(userId)}/metadata`, {
+        await clerkRequest(`/users/${encodeURIComponent(clerkUserId)}/metadata`, {
           method: "PATCH",
           body: JSON.stringify({
             ...(params.user_metadata
@@ -270,7 +312,10 @@ export const clerkAdminCompat = {
         });
       }
 
-      return { data: { user: toCompatUser(await fetchRawUser(userId)) }, error: null };
+      const updated = await clerkRequest<ClerkRawUser>(
+        `/users/${encodeURIComponent(clerkUserId)}`
+      );
+      return { data: { user: toCompatUser(updated) }, error: null };
     } catch (error) {
       return { data: { user: null }, error: resultError(error) };
     }
@@ -278,7 +323,10 @@ export const clerkAdminCompat = {
 
   async deleteUser(userId: string) {
     try {
-      await clerkRequest(`/users/${encodeURIComponent(userId)}`, {
+      const raw = await resolveRawUser(userId);
+      const clerkUserId = String(raw.id || "");
+      if (!clerkUserId) throw new Error("Usuario Clerk sem ID.");
+      await clerkRequest(`/users/${encodeURIComponent(clerkUserId)}`, {
         method: "DELETE",
       });
       return { data: { user: null }, error: null };
@@ -298,9 +346,8 @@ export const clerkAdminCompat = {
       const payload = await clerkRequest<ClerkRawUser[] | { data?: ClerkRawUser[] }>(
         `/users?${query.toString()}`
       );
-      const rows = Array.isArray(payload) ? payload : payload?.data || [];
       return {
-        data: { users: rows.map(toCompatUser) },
+        data: { users: rawUsers(payload).map(toCompatUser) },
         error: null,
       };
     } catch (error) {
@@ -311,7 +358,7 @@ export const clerkAdminCompat = {
   mfa: {
     async listFactors(params: { userId: string }) {
       try {
-        const user = await fetchRawUser(params.userId);
+        const user = await resolveRawUser(params.userId);
         const factors = user.totp_enabled
           ? [
               {
@@ -329,7 +376,10 @@ export const clerkAdminCompat = {
 
     async deleteFactor(params: { userId: string; id?: string }) {
       try {
-        await clerkRequest(`/users/${encodeURIComponent(params.userId)}/totp`, {
+        const user = await resolveRawUser(params.userId);
+        const clerkUserId = String(user.id || "");
+        if (!clerkUserId) throw new Error("Usuario Clerk sem ID.");
+        await clerkRequest(`/users/${encodeURIComponent(clerkUserId)}/totp`, {
           method: "DELETE",
         });
         return { data: null, error: null };
