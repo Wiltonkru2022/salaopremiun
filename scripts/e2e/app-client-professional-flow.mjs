@@ -1,10 +1,10 @@
 import { chromium } from "playwright";
-import { createClient } from "@supabase/supabase-js";
+import { Pool } from "@neondatabase/serverless";
 import fs from "node:fs";
 import { loadLocalEnv, requireEnv } from "../lib/load-env.mjs";
 
 loadLocalEnv();
-requireEnv(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
+requireEnv(["NEON_ADMIN_DATABASE_URL"]);
 
 const accountsPath =
   process.env.E2E_TEST_ACCOUNTS_FILE || ".codex-test-accounts.local.json";
@@ -16,11 +16,7 @@ if (!fs.existsSync(accountsPath)) {
 
 const accounts = JSON.parse(fs.readFileSync(accountsPath, "utf8"));
 const baseUrl = (process.env.E2E_BASE_URL || accounts.baseUrlHint || "http://localhost:3000").replace(/\/$/, "");
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { persistSession: false, autoRefreshToken: false } }
-);
+const pool = new Pool({ connectionString: process.env.NEON_ADMIN_DATABASE_URL });
 const report = {
   baseUrl,
   startedAt: new Date().toISOString(),
@@ -44,10 +40,29 @@ async function expectText(page, text, name) {
 }
 
 async function cleanupAppointments() {
-  await supabase
-    .from("agendamentos")
-    .delete()
-    .eq("id_salao", accounts.salons.premium.idSalao);
+  const client = await pool.connect();
+  try {
+    await client.query("delete from agendamentos where id_salao = $1", [accounts.salons.premium.idSalao]);
+  } finally {
+    client.release();
+  }
+}
+
+async function loadLatestAppointment() {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `select id, data, status, sinal_status, sinal_valor, sinal_confirmacao_responsavel, created_at
+         from agendamentos
+        where id_salao = $1
+        order by created_at desc
+        limit 1`,
+      [accounts.salons.premium.idSalao]
+    );
+    return result.rows?.[0] || null;
+  } finally {
+    client.release();
+  }
 }
 
 async function loginCliente(page) {
@@ -88,91 +103,74 @@ async function run() {
   });
   const page = await context.newPage();
 
-  await loginCliente(page);
-  await page.goto(`${baseUrl}/app-cliente/salao/${accounts.salons.premium.idSalao}/reserva`, {
-    waitUntil: "domcontentloaded",
-  });
-  await expectText(page, "Pro PREMIUM E2E", "cliente ve profissional vinculado");
-  await page.getByRole("button", { name: /Pro PREMIUM E2E/i }).click();
-  await expectText(page, "Corte PREMIUM E2E", "cliente ve servico vinculado");
-  await expectText(page, "2 horas", "cliente ve duracao em horas");
-  await page.getByRole("button", { name: /Corte PREMIUM E2E/i }).click();
-  await page.getByRole("button", { name: /^Continuar$/ }).click();
-  await expectText(page, "Escolha o horário", "cliente abre escolha de horario");
+  try {
+    await loginCliente(page);
+    await page.goto(`${baseUrl}/app-cliente/salao/${accounts.salons.premium.idSalao}/reserva`, {
+      waitUntil: "domcontentloaded",
+    });
+    await expectText(page, "Pro PREMIUM E2E", "cliente ve profissional vinculado");
+    await page.getByRole("button", { name: /Pro PREMIUM E2E/i }).click();
+    await expectText(page, "Corte PREMIUM E2E", "cliente ve servico vinculado");
+    await expectText(page, "2 horas", "cliente ve duracao em horas");
+    await page.getByRole("button", { name: /Corte PREMIUM E2E/i }).click();
+    await page.getByRole("button", { name: /^Continuar$/ }).click();
+    await expectText(page, "Escolha o horário", "cliente abre escolha de horario");
 
-  const dayButton = page
-    .locator("button:not([disabled])")
-    .filter({ hasText: /^\d{1,2}$/ })
-    .first();
-  await dayButton.click();
-  const timeButton = page
-    .locator("button")
-    .filter({ hasText: /^\d{2}:\d{2}$/ })
-    .first();
-  await timeButton.waitFor({ state: "visible", timeout: 20000 });
-  await timeButton.click();
-  await page.getByRole("button", { name: /^Continuar$/ }).click();
-  await expectText(page, "Resumo do agendamento", "cliente abre resumo");
-  await expectText(page, "2 horas", "resumo mostra duracao em horas");
-  await page.getByRole("button", { name: /Confirmar agendamento/i }).click();
-  await page.waitForURL(/\/app-cliente\/agendamentos\/.+\/sinal/, {
-    timeout: 30000,
-  });
-  await expectText(page, "Pagamento do sinal", "cliente cai na tela de sinal");
-  await expectText(page, "Pro PREMIUM E2E", "sinal usa recebedor do profissional");
+    const dayButton = page.locator("button:not([disabled])").filter({ hasText: /^\d{1,2}$/ }).first();
+    await dayButton.click();
+    const timeButton = page.locator("button").filter({ hasText: /^\d{2}:\d{2}$/ }).first();
+    await timeButton.waitFor({ state: "visible", timeout: 20000 });
+    await timeButton.click();
+    await page.getByRole("button", { name: /^Continuar$/ }).click();
+    await expectText(page, "Resumo do agendamento", "cliente abre resumo");
+    await expectText(page, "2 horas", "resumo mostra duracao em horas");
+    await page.getByRole("button", { name: /Confirmar agendamento/i }).click();
+    await page.waitForURL(/\/app-cliente\/agendamentos\/.+\/sinal/, { timeout: 30000 });
+    await expectText(page, "Pagamento do sinal", "cliente cai na tela de sinal");
+    await expectText(page, "Pro PREMIUM E2E", "sinal usa recebedor do profissional");
 
-  const { data: appointment, error: appointmentError } = await supabase
-    .from("agendamentos")
-    .select("id, data, status, sinal_status, sinal_valor, sinal_confirmacao_responsavel, created_at")
-    .eq("id_salao", accounts.salons.premium.idSalao)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (appointmentError) throw appointmentError;
-  addCheck(
-    "agendamento com sinal salvo",
-    appointment?.status === "reservado_aguardando_pagamento" &&
-      appointment?.sinal_status === "aguardando_pagamento" &&
-      Number(appointment?.sinal_valor || 0) > 0 &&
-      appointment?.sinal_confirmacao_responsavel === "profissional",
-    JSON.stringify(appointment)
-  );
+    const appointment = await loadLatestAppointment();
+    addCheck(
+      "agendamento com sinal salvo",
+      appointment?.status === "reservado_aguardando_pagamento" &&
+        appointment?.sinal_status === "aguardando_pagamento" &&
+        Number(appointment?.sinal_valor || 0) > 0 &&
+        appointment?.sinal_confirmacao_responsavel === "profissional",
+      JSON.stringify(appointment)
+    );
 
-  await loginProfissional(page);
-  await page.goto(`${baseUrl}/app-profissional/servicos`, {
-    waitUntil: "domcontentloaded",
-  });
-  await expectText(page, "Corte PREMIUM E2E", "profissional ve servico vinculado");
-  await expectText(page, "2 horas", "profissional ve duracao em horas");
+    await loginProfissional(page);
+    await page.goto(`${baseUrl}/app-profissional/servicos`, { waitUntil: "domcontentloaded" });
+    await expectText(page, "Corte PREMIUM E2E", "profissional ve servico vinculado");
+    await expectText(page, "2 horas", "profissional ve duracao em horas");
 
-  await page.goto(`${baseUrl}/app-profissional/perfil/configuracoes`, {
-    waitUntil: "domcontentloaded",
-  });
-  await expectText(page, "Pix do sinal", "profissional ve configuracao pix");
-  const pixTipo = await page.locator('[name="pix_tipo"]').inputValue();
-  const pixChave = await page.locator('[name="pix_chave"]').inputValue();
-  const recebedor = await page.locator('[name="sinal_pix_recebedor"]').inputValue();
-  addCheck(
-    "pix do sinal vem preenchido",
-    pixTipo === "CPF" &&
-      pixChave === accounts.salons.premium.professionalCpf &&
-      recebedor === "Pro PREMIUM E2E",
-    `${pixTipo} ${pixChave} ${recebedor}`
-  );
+    await page.goto(`${baseUrl}/app-profissional/perfil/configuracoes`, { waitUntil: "domcontentloaded" });
+    await expectText(page, "Pix do sinal", "profissional ve configuracao pix");
+    const pixTipo = await page.locator('[name="pix_tipo"]').inputValue();
+    const pixChave = await page.locator('[name="pix_chave"]').inputValue();
+    const recebedor = await page.locator('[name="sinal_pix_recebedor"]').inputValue();
+    addCheck(
+      "pix do sinal vem preenchido",
+      pixTipo === "CPF" &&
+        pixChave === accounts.salons.premium.professionalCpf &&
+        recebedor === "Pro PREMIUM E2E",
+      `${pixTipo} ${pixChave} ${recebedor}`
+    );
 
-  await page.goto(`${baseUrl}/app-profissional/agenda?data=${appointment.data}`, {
-    waitUntil: "domcontentloaded",
-  });
-  await expectText(page, "Cliente App E2E", "profissional ve agendamento do cliente");
-  await expectText(page, "Sinal", "agenda profissional mostra sinal");
+    await page.goto(`${baseUrl}/app-profissional/agenda?data=${appointment.data}`, { waitUntil: "domcontentloaded" });
+    await expectText(page, "Cliente App E2E", "profissional ve agendamento do cliente");
+    await expectText(page, "Sinal", "agenda profissional mostra sinal");
 
-  await browser.close();
-  report.finishedAt = new Date().toISOString();
-  report.ok = report.checks.every((item) => item.ok);
-  fs.writeFileSync(
-    ".codex-app-flow-report.local.json",
-    `${JSON.stringify(report, null, 2)}\n`
-  );
+    report.finishedAt = new Date().toISOString();
+    report.ok = report.checks.every((item) => item.ok);
+    fs.writeFileSync(
+      ".codex-app-flow-report.local.json",
+      `${JSON.stringify(report, null, 2)}\n`
+    );
+  } finally {
+    await browser.close();
+    await pool.end();
+  }
 }
 
 run().catch((error) => {
