@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { getClienteSessionFromCookie } from "@/lib/cliente-auth.server";
-import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
+import { asLooseDbClient } from "@/lib/db/loose-client";
 import { getClienteAppPublicEmail } from "@/app/services/cliente-app/linking";
 import {
   buildSecurityBlockPath,
@@ -24,8 +24,8 @@ function isUnauthorizedError(error: unknown) {
 }
 
 async function getClienteAppAccount(idConta: string) {
-  const supabaseAdmin = asLooseSupabaseClient(getSupabaseAdmin());
-  const { data: conta, error } = await supabaseAdmin
+  const database = asLooseDbClient(getDatabaseAdmin());
+  const { data: conta, error } = await database
     .from("clientes_app_auth")
     .select(
       "id, nome, email, telefone, whatsapp, cpf, data_nascimento, ativo, auth_version, migracao_identidade_concluida"
