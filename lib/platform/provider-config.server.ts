@@ -1,5 +1,6 @@
 export type DatabaseProvider = "neon";
 export type AdminAuthProvider = "clerk";
+export type AppAuthProvider = "session";
 export type MediaProvider = "cloudinary";
 export type AuthSurface = "admin-master" | "painel" | "cliente" | "profissional";
 
@@ -30,12 +31,12 @@ function neonAdminReady() {
 
 /**
  * Painel e Admin Master usam Clerk obrigatoriamente.
- * Cliente/profissional ainda possuem fluxos proprios e nao devem ser
- * confundidos com a autenticacao administrativa.
+ * Cliente e Profissional usam sessões próprias criptografadas e consultam
+ * contas/perfis no Neon. Nenhum dos dois depende de Supabase Auth.
  */
 export function getAuthProviderForSurface(surface: AuthSurface) {
   if (surface === "admin-master" || surface === "painel") return "clerk" as const;
-  return "supabase" as const;
+  return "session" as AppAuthProvider;
 }
 
 export function isClerkEnabledForSurface(surface: AuthSurface) {
