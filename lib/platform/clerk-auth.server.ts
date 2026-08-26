@@ -1,4 +1,9 @@
 import { createRemoteJWKSet, jwtVerify, type JWTPayload } from "jose";
+import {
+  withNeonRls,
+  type NeonResolvedIdentity,
+} from "@/lib/neon/database.server";
+import type { PoolClient } from "@neondatabase/serverless";
 
 let cachedJwks: ReturnType<typeof createRemoteJWKSet> | null = null;
 let cachedUrl = "";
@@ -123,4 +128,27 @@ export function readBearerToken(request: Request) {
   const header = request.headers.get("authorization") || "";
   const match = header.match(/^Bearer\s+(.+)$/i);
   return match?.[1]?.trim() || null;
+}
+
+export async function withClerkNeonRls<T>(
+  request: Request,
+  operation: (
+    client: PoolClient,
+    context: NeonResolvedIdentity,
+    clerk: ClerkAdminIdentity
+  ) => Promise<T>
+): Promise<T> {
+  const token = readBearerToken(request);
+  if (!token) throw new Error("Token Clerk ausente.");
+
+  const clerk = await verifyClerkBearerToken(token);
+  if (!clerk.email) throw new Error("Usuário Clerk sem e-mail válido.");
+
+  return withNeonRls(
+    {
+      email: clerk.email,
+      mfaVerified: clerk.mfaVerified,
+    },
+    (client, context) => operation(client, context, clerk)
+  );
 }
