@@ -8,6 +8,7 @@ import {
   type PainelDbQuery,
 } from "@/lib/neon/painel-query.server";
 import { resolveNeonRuntimeUrl } from "@/lib/neon/runtime-url.server";
+import { getProviderConfig } from "@/lib/platform/provider-config.server";
 
 type SupabaseLike = any;
 
@@ -36,7 +37,7 @@ function getAdminPool() {
 
 function neonEnabled() {
   return (
-    String(process.env.DATABASE_PROVIDER || "supabase").trim().toLowerCase() === "neon" &&
+    getProviderConfig().database === "neon" &&
     Boolean(resolveNeonRuntimeUrl(process.env.NEON_ADMIN_DATABASE_URL))
   );
 }
