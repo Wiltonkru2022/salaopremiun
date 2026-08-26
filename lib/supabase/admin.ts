@@ -1,48 +1,23 @@
-import type { AnySupabaseDatabase } from "@/types/supabase";
-import { createNeonSupabaseCompat } from "@/lib/neon/supabase-compat.server";
+import "server-only";
+import {
+  getDatabaseAdmin,
+  type DatabaseAdminClient,
+} from "@/lib/db/admin";
 
 /**
- * Nome mantido temporariamente por compatibilidade de imports antigos.
- * O objeto retornado NAO abre conexao com Supabase: todas as operacoes
- * de banco e RPC sao executadas pelo adaptador Neon.
+ * Compatibilidade temporaria para imports antigos.
+ * O retorno e o cliente administrativo Neon nativo.
  */
-type SupabaseAdminClient = any;
-
-const globalStore = globalThis as typeof globalThis & {
-  __salaopremiumNeonAdminCompat?: SupabaseAdminClient;
-};
-
-const disabledSupabaseTarget = new Proxy({} as Record<string, unknown>, {
-  get() {
-    return () => {
-      throw new Error(
-        "Supabase foi desativado. Configure NEON_DATABASE_URL e NEON_ADMIN_DATABASE_URL."
-      );
-    };
-  },
-});
+export type SupabaseAdminClient = DatabaseAdminClient;
 
 export function getSupabaseAdmin(): SupabaseAdminClient {
-  if (typeof window !== "undefined") {
-    throw new Error("O cliente administrativo de banco so pode ser usado no servidor.");
-  }
-
-  if (!globalStore.__salaopremiumNeonAdminCompat) {
-    globalStore.__salaopremiumNeonAdminCompat = createNeonSupabaseCompat(
-      disabledSupabaseTarget
-    );
-  }
-
-  return globalStore.__salaopremiumNeonAdminCompat;
+  return getDatabaseAdmin();
 }
 
 /**
- * Rollback para Supabase foi removido. Mantemos a exportacao apenas para
- * nao quebrar imports antigos; ela agora aponta para o mesmo backend Neon.
+ * Nome legado preservado apenas para nao quebrar imports existentes.
+ * Nao existe rollback para Supabase: o retorno continua sendo Neon.
  */
 export function getRawSupabaseAdminForRollback(): SupabaseAdminClient {
-  return getSupabaseAdmin();
+  return getDatabaseAdmin();
 }
-
-export type { SupabaseAdminClient };
-export type { AnySupabaseDatabase };
