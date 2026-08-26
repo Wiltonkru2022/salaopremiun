@@ -1,14 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { addDays, format } from "date-fns";
-import { createServerClient } from "@supabase/ssr";
-import { cookies, headers } from "next/headers";
 import {
   buscarQrCodePix,
   criarCobranca,
   criarOuBuscarCliente,
 } from "@/lib/payments/pix-provider";
-import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
-import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
+import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getDatabaseAdmin } from "@/lib/db/admin";
 
 type BillingType = "PIX" | "BOLETO";
@@ -54,32 +51,6 @@ export class WhatsappPacoteCheckoutServiceError extends Error {
   }
 }
 
-async function getSupabaseServer() {
-  const cookieStore = await cookies();
-  const headersList = await headers();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new WhatsappPacoteCheckoutServiceError(
-      "Configuracao do Supabase incompleta.",
-      500
-    );
-  }
-
-  const cookieOptions = getSupabaseCookieOptions(headersList.get("host"));
-
-  return createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookieOptions,
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll() {},
-    },
-  });
-}
-
 function onlyNumbers(value?: string | null) {
   return String(value || "").replace(/\D/g, "");
 }
@@ -90,28 +61,18 @@ function toMoney(value?: number | string | null) {
 }
 
 async function validarSalaoAdmin() {
-  const supabase = await getSupabaseServer();
+  const context = await getPainelUserContext();
+  const usuario = context.usuario;
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError) {
+  if (context.mfaRequired) {
     throw new WhatsappPacoteCheckoutServiceError(
-      "Erro ao validar usuário autenticado.",
-      401
+      "Confirme o MFA para comprar pacotes de WhatsApp.",
+      403
     );
   }
 
-  if (!user?.id) {
+  if (!context.user || !usuario?.id_salao) {
     throw new WhatsappPacoteCheckoutServiceError("Usuário não autenticado.", 401);
-  }
-
-  const usuario = await getPainelUserContextByAuthUserId(user.id);
-
-  if (!usuario?.id_salao) {
-    throw new WhatsappPacoteCheckoutServiceError("Usuário sem salão vinculado.", 403);
   }
 
   if (String(usuario.status || "").toLowerCase() !== "ativo") {
@@ -129,8 +90,8 @@ async function validarSalaoAdmin() {
 }
 
 async function carregarPacote(pacoteId: string) {
-  const supabaseAdmin = getDatabaseAdmin();
-  const { data, error } = await supabaseAdmin
+  const databaseAdmin = getDatabaseAdmin();
+  const { data, error } = await databaseAdmin
     .from("whatsapp_pacotes")
     .select("id, nome, quantidade_creditos, preco, ativo")
     .eq("id", pacoteId)
@@ -145,20 +106,18 @@ async function carregarPacote(pacoteId: string) {
   }
 
   const pacote = data as PacoteRow | null;
-
   if (!pacote?.id) {
     throw new WhatsappPacoteCheckoutServiceError(
       "Pacote de WhatsApp não encontrado.",
       404
     );
   }
-
   return pacote;
 }
 
 async function carregarSalao(idSalao: string) {
-  const supabaseAdmin = getDatabaseAdmin();
-  const { data, error } = await supabaseAdmin
+  const databaseAdmin = getDatabaseAdmin();
+  const { data, error } = await databaseAdmin
     .from("saloes")
     .select("id, nome, responsavel, email, telefone, whatsapp, cpf_cnpj")
     .eq("id", idSalao)
@@ -172,24 +131,21 @@ async function carregarSalao(idSalao: string) {
   }
 
   const salao = data as SalaoRow | null;
-
   if (!salao?.id) {
     throw new WhatsappPacoteCheckoutServiceError("Salão não encontrado.", 404);
   }
-
   if (!String(salao.email || "").trim()) {
     throw new WhatsappPacoteCheckoutServiceError(
       "O salão precisa ter e-mail cadastrado para comprar pacote.",
       400
     );
   }
-
   return salao;
 }
 
 async function buscarCompraPendente(idSalao: string, pacoteId: string) {
-  const supabaseAdmin = getDatabaseAdmin();
-  const { data, error } = await supabaseAdmin
+  const databaseAdmin = getDatabaseAdmin();
+  const { data, error } = await databaseAdmin
     .from("whatsapp_pacote_compras")
     .select(
       "id, status, billing_type, valor, quantidade_creditos, asaas_payment_id, invoice_url, bank_slip_url, pix_copia_cola, qr_code_base64"
@@ -207,7 +163,6 @@ async function buscarCompraPendente(idSalao: string, pacoteId: string) {
       500
     );
   }
-
   return (data as CompraExistenteRow | null) ?? null;
 }
 
@@ -257,14 +212,14 @@ export function createWhatsappPacoteCheckoutService() {
         telefone: onlyNumbers(salao.whatsapp || salao.telefone),
       });
 
-      const supabaseAdmin = getDatabaseAdmin();
+      const databaseAdmin = getDatabaseAdmin();
       const compraId = randomUUID();
       const externalReference = `whatsapp_package:${compraId}`;
       const idempotencyKey = String(
         params.idempotencyKey || `${idSalao}:${pacote.id}:${billingType}`
       ).trim();
 
-      const { error: insertError } = await supabaseAdmin
+      const { error: insertError } = await databaseAdmin
         .from("whatsapp_pacote_compras")
         .insert({
           id: compraId,
@@ -296,7 +251,6 @@ export function createWhatsappPacoteCheckoutService() {
       });
 
       const paymentId = String(cobranca.id || "").trim();
-
       if (!paymentId) {
         throw new WhatsappPacoteCheckoutServiceError(
           "O provedor não retornou um pagamento válido para o pacote.",
@@ -306,7 +260,6 @@ export function createWhatsappPacoteCheckoutService() {
 
       let qrCodeBase64: string | null = null;
       let pixCopiaCola: string | null = null;
-
       if (billingType === "PIX") {
         try {
           const pix = await buscarQrCodePix(paymentId);
@@ -314,16 +267,13 @@ export function createWhatsappPacoteCheckoutService() {
             String(pix.encodedImage || "").trim() ||
             String(pix.payload || "").trim() ||
             null;
-          pixCopiaCola =
-            String(pix.payload || "").trim() ||
-            pixCopiaCola ||
-            null;
+          pixCopiaCola = String(pix.payload || "").trim() || pixCopiaCola || null;
         } catch {
           qrCodeBase64 = null;
         }
       }
 
-      const { error: updateError } = await supabaseAdmin
+      const { error: updateError } = await databaseAdmin
         .from("whatsapp_pacote_compras")
         .update({
           asaas_payment_id: paymentId,
