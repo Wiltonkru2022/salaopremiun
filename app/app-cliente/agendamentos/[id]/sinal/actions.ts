@@ -5,27 +5,18 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { uploadBufferToCloudinary } from "@/lib/platform/cloudinary.server";
 
-const COMPROVANTES_BUCKET = "agendamento-comprovantes";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = new Set(["application/pdf"]);
-
-function getExtension(file: File) {
-  const name = file.name || "";
-  const byName = name.includes(".") ? name.split(".").pop() || "" : "";
-  if (byName) return byName.replace(/[^a-z0-9]/gi, "").toLowerCase() || "bin";
-  if (file.type === "application/pdf") return "pdf";
-  if (file.type.startsWith("image/")) return file.type.split("/")[1] || "jpg";
-  return "bin";
-}
 
 export async function enviarComprovanteSinalAction(formData: FormData) {
   const session = await requireClienteAppContext();
   const idAgendamento = String(formData.get("agendamento") || "").trim();
   const file = formData.get("comprovante");
-  const supabaseAdmin = getSupabaseAdmin();
+  const database = getSupabaseAdmin();
 
-  const { data: row } = await (supabaseAdmin as any)
+  const { data: row } = await (database as any)
     .from("agendamentos")
     .select("id, cliente_id, id_salao, sinal_confirmacao_responsavel")
     .eq("id", idAgendamento)
@@ -35,7 +26,7 @@ export async function enviarComprovanteSinalAction(formData: FormData) {
     redirect("/app-cliente/agendamentos?status=sinal_erro");
   }
 
-  const { data: vinculo } = await (supabaseAdmin as any)
+  const { data: vinculo } = await (database as any)
     .from("clientes_auth")
     .select("id_cliente")
     .eq("id_cliente", row.cliente_id)
@@ -59,21 +50,22 @@ export async function enviarComprovanteSinalAction(formData: FormData) {
     redirect(`/app-cliente/agendamentos/${idAgendamento}/sinal?erro=tipo`);
   }
 
-  const extension = getExtension(file);
-  const storagePath = `${row.id_salao}/${idAgendamento}/${Date.now()}-${randomUUID()}.${extension}`;
-  const { error: uploadError } = await (supabaseAdmin as any).storage
-    .from(COMPROVANTES_BUCKET)
-    .upload(storagePath, file, {
-      cacheControl: "3600",
-      contentType: type,
-      upsert: false,
+  let secureUrl = "";
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const uploaded = await uploadBufferToCloudinary({
+      buffer,
+      mimeType: type,
+      folder: `salaopremiun/agendamento-comprovantes/${row.id_salao}/${idAgendamento}`,
+      publicId: `${Date.now()}-${randomUUID()}`,
     });
-
-  if (uploadError) {
+    secureUrl = uploaded.secureUrl;
+  } catch (error) {
+    console.error("[COMPROVANTE_CLOUDINARY_UPLOAD]", error);
     redirect(`/app-cliente/agendamentos/${idAgendamento}/sinal?erro=upload`);
   }
 
-  await (supabaseAdmin as any)
+  await (database as any)
     .from("agendamentos")
     .update({
       status:
@@ -81,7 +73,7 @@ export async function enviarComprovanteSinalAction(formData: FormData) {
           ? "aguardando_confirmacao_profissional"
           : "aguardando_confirmacao_salao",
       sinal_status: "comprovante_enviado",
-      sinal_comprovante_path: storagePath,
+      sinal_comprovante_path: secureUrl,
       sinal_comprovante_nome: file.name || "comprovante",
       sinal_comprovante_tipo: type,
       sinal_comprovante_enviado_em: new Date().toISOString(),
