@@ -6,7 +6,7 @@ const routeRoot = path.join(cwd, "app", "api");
 
 const GUARDRULES = [
   ["admin_master", /requireAdminMasterUser|adminMasterUser|admin_master_usuarios|auth\/access/],
-  ["supabase_user", /auth\.getUser\(|getUser\(|getPainelUserContext|validarSalaoDoUsuario|getPainelTicketContext|requireSalao/],
+  ["painel_user", /getPainelUserContext|getPainelUserContextByClerkSubject|validarSalaoDoUsuario|getPainelTicketContext|requireSalao/],
   ["public_rate_limit", /assertPublicRateLimit|getPublicRateLimitIdentity/],
   ["salao_admin", /requireAdminSalao/],
   ["profissional_session", /getProfissionalSessionFromCookie|getProfissionalTicketContext|requireProfissionalSession|requireProfissionalAppContext|validateProfissionalAppSession/],
@@ -71,40 +71,38 @@ function hasPublicAbuseGuard(guards) {
 function isPublicRegistrationRoute(rel, source) {
   return (
     rel === "app/api/cadastro-salao/route.ts" &&
-    /auth\.admin\.createUser/.test(source) &&
-    ((/from\(["']saloes["']\)/.test(source) &&
-      /from\(["']usuarios["']\)/.test(source)) ||
-      /fn_cadastrar_salao_transacional/.test(source)) &&
-    /auth\.admin\.deleteUser/.test(source)
+    (/clerk/i.test(source) || /create.*user/i.test(source)) &&
+    ((/from\(["']saloes["']\)/.test(source) && /from\(["']usuarios["']\)/.test(source)) ||
+      /fn_cadastrar_salao_transacional/.test(source))
   );
 }
 
 const rows = walk(routeRoot).map((file) => {
   const source = fs.readFileSync(file, "utf8");
   const rel = toPosix(file);
-  const usesServiceRole =
-    /SUPABASE_SERVICE_ROLE_KEY|getDatabaseAdmin\(|createClient\(supabaseUrl,\s*serviceRoleKey/.test(source);
+  const usesPrivilegedDatabase =
+    /NEON_ADMIN_DATABASE_URL|getDatabaseAdmin\(|withNeonRls\(|createNeonAdmin/i.test(source);
   const guards = classify(source);
   const tenantGuard = hasTenantGuard(source);
   const publicRegistration = isPublicRegistrationRoute(rel, source);
   const critical = CRITICAL_PREFIXES.some((prefix) => rel.startsWith(prefix));
   const risk =
-    usesServiceRole && guards.length === 0 && !publicRegistration
+    usesPrivilegedDatabase && guards.length === 0 && !publicRegistration
       ? "high"
-      : usesServiceRole &&
+      : usesPrivilegedDatabase &&
           critical &&
           !tenantGuard &&
           !publicRegistration &&
           !hasPublicAbuseGuard(guards)
         ? "medium"
-        : usesServiceRole
+        : usesPrivilegedDatabase
           ? "review"
           : "low";
 
   return {
     route: routeFromFile(file),
     file: rel,
-    usesServiceRole,
+    usesPrivilegedDatabase,
     guards: guards.join(",") || "-",
     tenantGuard,
     publicRegistration,
@@ -118,11 +116,11 @@ const mediumRisk = rows.filter((row) => row.risk === "medium");
 
 console.table(
   rows
-    .filter((row) => row.usesServiceRole || row.critical)
+    .filter((row) => row.usesPrivilegedDatabase || row.critical)
     .map((row) => ({
       risk: row.risk,
       route: row.route,
-      service_role: row.usesServiceRole,
+      privileged_db: row.usesPrivilegedDatabase,
       guards: row.guards,
       tenant: row.tenantGuard,
     }))
@@ -136,7 +134,7 @@ if (highRisk.length || mediumRisk.length) {
         highRisk,
         mediumRisk,
         recommendation:
-          "Revise rotas service_role sem guard claro antes de liberar venda em escala.",
+          "Revise rotas com acesso privilegiado ao Neon sem guard claro antes de liberar venda em escala.",
       },
       null,
       2
