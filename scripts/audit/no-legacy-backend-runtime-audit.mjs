@@ -2,7 +2,17 @@ import fs from "node:fs";
 import path from "node:path";
 
 const root = process.cwd();
-const scanRoots = ["app", "components", "core", "lib", "services", "apps"];
+const scanRoots = [
+  "app",
+  "components",
+  "core",
+  "lib",
+  "services",
+  "apps",
+  // O App Profissional Vite e servido diretamente a partir de public/.
+  // Auditar o bundle gerado evita que um build antigo reintroduza o backend legado.
+  "public/app-profissional",
+];
 const skippedDirs = new Set(["node_modules", ".next", "dist", "build", ".git"]);
 const extensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
 const legacyProvider = ["supa", "base"].join("");
@@ -56,5 +66,5 @@ if (violations.length) {
 }
 
 console.log(
-  "OK: runtime sem SDK, env, host, Auth, Storage ou Realtime do backend legado."
+  "OK: runtime e bundles publicos sem SDK, env, host, Auth, Storage ou Realtime do backend legado."
 );
