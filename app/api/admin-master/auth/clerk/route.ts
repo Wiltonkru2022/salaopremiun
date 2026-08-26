@@ -3,7 +3,7 @@ import { sanitizeAdminMasterNextPath } from "@/lib/admin-master/auth/login-path"
 import { resolveAdminMasterAccessForIdentity } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { setAdminMasterSessionCookie } from "@/lib/admin-master/auth/session";
 import { emitSecurityEvent } from "@/lib/security/security-events";
-import { getAdminAuthProviderForSurface } from "@/lib/platform/provider-config.server";
+import { getAuthProviderForSurface } from "@/lib/platform/provider-config.server";
 import { readBearerToken, verifyClerkBearerToken } from "@/lib/platform/clerk-auth.server";
 
 type RequestBody = {
@@ -26,7 +26,7 @@ function getClientIp(request: Request) {
 }
 
 export async function POST(request: Request) {
-  if (getAdminAuthProviderForSurface("admin-master") !== "clerk") {
+  if (getAuthProviderForSurface("admin-master") !== "clerk") {
     return NextResponse.json(
       { ok: false, message: "Clerk ainda não está ativo para o Admin Master." },
       { status: 409, headers: { "Cache-Control": "no-store" } }
