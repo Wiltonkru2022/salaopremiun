@@ -1,7 +1,7 @@
 import type { PoolClient } from "@neondatabase/serverless";
 
 export type PainelDbFilter = {
-  op: "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "like" | "ilike" | "is" | "in" | "or";
+  op: "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "like" | "ilike" | "is" | "in" | "contains" | "or";
   column?: string;
   value?: unknown;
 };
@@ -160,6 +160,9 @@ function buildSimpleClause(
     case "ilike":
       values.push(value);
       return `${col} ILIKE $${values.length}`;
+    case "contains":
+      values.push(value);
+      return `${col} @> $${values.length}`;
     case "is":
       if (value === null) return `${col} IS NULL`;
       if (value === true) return `${col} IS TRUE`;
