@@ -1,10 +1,10 @@
 import { chromium } from "playwright";
-import { createClient } from "@supabase/supabase-js";
+import { neon } from "@neondatabase/serverless";
 import fs from "node:fs";
 import { loadLocalEnv, requireEnv } from "../lib/load-env.mjs";
 
 loadLocalEnv();
-requireEnv(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
+requireEnv(["NEON_ADMIN_DATABASE_URL"]);
 
 const accounts = JSON.parse(
   fs.readFileSync(
@@ -17,11 +17,7 @@ const baseUrl = (
   accounts.baseUrlHint ||
   "http://localhost:3000"
 ).replace(/\/$/, "");
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { persistSession: false, autoRefreshToken: false } }
-);
+const sql = neon(process.env.NEON_ADMIN_DATABASE_URL);
 const marker = `codex-resilience-${Date.now()}`;
 const premium = accounts.salons.premium;
 const report = { baseUrl, marker, checks: [], ok: false };
@@ -33,26 +29,24 @@ function check(name, ok, detail = "") {
 }
 
 async function getTestIds() {
-  const [{ data: client }, { data: professional }, { data: service }] =
-    await Promise.all([
-      supabase
-        .from("clientes")
-        .select("id")
-        .eq("id_salao", premium.idSalao)
-        .eq("email", accounts.client.email)
-        .maybeSingle(),
-      supabase
-        .from("profissionais")
-        .select("id")
-        .eq("id_salao", premium.idSalao)
-        .eq("cpf", premium.professionalCpf)
-        .maybeSingle(),
-      supabase
-        .from("servicos")
-        .select("id, duracao_minutos, preco")
-        .eq("id", premium.serviceIds[0])
-        .maybeSingle(),
-    ]);
+  const clients = await sql`
+    select id from public.clientes
+    where id_salao = ${premium.idSalao} and lower(email) = lower(${accounts.client.email})
+    limit 1
+  `;
+  const professionals = await sql`
+    select id from public.profissionais
+    where id_salao = ${premium.idSalao} and cpf = ${premium.professionalCpf}
+    limit 1
+  `;
+  const services = await sql`
+    select id, duracao_minutos, preco from public.servicos
+    where id = ${premium.serviceIds[0]}
+    limit 1
+  `;
+  const client = clients[0];
+  const professional = professionals[0];
+  const service = services[0];
   if (!client?.id || !professional?.id || !service?.id) {
     throw new Error("Dados E2E do cliente, profissional ou serviço não encontrados.");
   }
@@ -72,40 +66,39 @@ function tomorrow() {
 }
 
 async function cleanup() {
-  await supabase
-    .from("agendamentos")
-    .delete()
-    .eq("id_salao", premium.idSalao)
-    .like("observacoes", `%${marker}%`);
+  await sql`
+    delete from public.agendamentos
+    where id_salao = ${premium.idSalao}
+      and observacoes like ${`%${marker}%`}
+  `;
+}
+
+async function insertAppointment(ids, item) {
+  const rows = await sql`
+    insert into public.agendamentos (
+      id_salao, cliente_id, profissional_id, servico_id, data,
+      hora_inicio, hora_fim, duracao_minutos, status, origem,
+      observacoes, sinal_status, sinal_valor, sinal_confirmacao_responsavel
+    ) values (
+      ${premium.idSalao}, ${ids.idCliente}, ${ids.idProfissional}, ${ids.idServico}, ${item.data},
+      ${item.hora_inicio}, ${item.hora_fim}, ${ids.duracao}, ${item.status || "confirmado"},
+      'codex_e2e', ${marker}, 'nao_exigido', 0, 'salao'
+    )
+    returning id, hora_inicio
+  `;
+  return rows[0];
 }
 
 async function seedAppointments(ids) {
   const data = tomorrow();
-  const rows = [
-    { hora_inicio: "08:00", hora_fim: "10:00", status: "confirmado" },
-    { hora_inicio: "10:30", hora_fim: "12:30", status: "confirmado" },
-    { hora_inicio: "14:00", hora_fim: "16:00", status: "confirmado" },
-  ].map((item) => ({
-    id_salao: premium.idSalao,
-    cliente_id: ids.idCliente,
-    profissional_id: ids.idProfissional,
-    servico_id: ids.idServico,
-    data,
-    hora_inicio: item.hora_inicio,
-    hora_fim: item.hora_fim,
-    duracao_minutos: ids.duracao,
-    status: item.status,
-    origem: "codex_e2e",
-    observacoes: marker,
-    sinal_status: "nao_exigido",
-    sinal_valor: 0,
-    sinal_confirmacao_responsavel: "salao",
-  }));
-  const { data: inserted, error } = await supabase
-    .from("agendamentos")
-    .insert(rows)
-    .select("id, hora_inicio");
-  if (error || !inserted?.length) throw error || new Error("Não foi possível criar os agendamentos E2E.");
+  const inserted = [];
+  for (const item of [
+    { hora_inicio: "08:00", hora_fim: "10:00" },
+    { hora_inicio: "10:30", hora_fim: "12:30" },
+    { hora_inicio: "14:00", hora_fim: "16:00" },
+  ]) {
+    inserted.push(await insertAppointment(ids, { ...item, data }));
+  }
   return { data, inserted };
 }
 
@@ -151,42 +144,26 @@ async function run() {
 
     await page.goto(`${baseUrl}/app-cliente/agendamentos`, { waitUntil: "domcontentloaded" });
     const conflictCard = page.locator("article").filter({ hasText: "14:00" }).first();
-    const conflictId = await conflictCard
-      .locator("input[name='agendamento']")
-      .first()
-      .inputValue();
+    const conflictId = await conflictCard.locator("input[name='agendamento']").first().inputValue();
     await conflictCard.getByRole("button", { name: /^Reagendar$/ }).click();
     const conflictTarget = conflictCard.locator("button").filter({ hasText: /^\d{2}:\d{2}$/ }).first();
     await conflictTarget.waitFor({ state: "visible", timeout: 30000 });
     const conflictTime = (await conflictTarget.textContent()).trim();
     const conflictDate = (await conflictCard.locator("input[name='data']").inputValue()).trim();
     const conflictEnd = `${String(Number(conflictTime.slice(0, 2)) + 2).padStart(2, "0")}:${conflictTime.slice(3)}`;
-    const { error: raceInsertError } = await supabase.from("agendamentos").insert({
-      id_salao: premium.idSalao,
-      cliente_id: ids.idCliente,
-      profissional_id: ids.idProfissional,
-      servico_id: ids.idServico,
+    await insertAppointment(ids, {
       data: conflictDate,
       hora_inicio: conflictTime,
       hora_fim: conflictEnd,
-      duracao_minutos: ids.duracao,
       status: "confirmado",
-      origem: "codex_e2e",
-      observacoes: marker,
-      sinal_status: "nao_exigido",
-      sinal_valor: 0,
-      sinal_confirmacao_responsavel: "salao",
     });
-    if (raceInsertError) throw raceInsertError;
     await conflictTarget.click();
     await conflictCard.getByRole("button", { name: /^Confirmar$/ }).click();
     await page.waitForTimeout(500);
-    const { data: conflictAfter, error: conflictReadError } = await supabase
-      .from("agendamentos")
-      .select("data, hora_inicio")
-      .eq("id", conflictId)
-      .maybeSingle();
-    if (conflictReadError) throw conflictReadError;
+    const conflictRows = await sql`
+      select data, hora_inicio from public.agendamentos where id = ${conflictId} limit 1
+    `;
+    const conflictAfter = conflictRows[0] || null;
     const conflictMessageVisible = await page
       .getByText(/hor.*ocupado|disponibilidade|não foi possível reagendar/i)
       .first()
@@ -195,7 +172,7 @@ async function run() {
     check(
       "conflito de horário é recusado",
       conflictMessageVisible ||
-        (conflictAfter?.data === tomorrow() &&
+        (String(conflictAfter?.data || "").slice(0, 10) === tomorrow() &&
           String(conflictAfter?.hora_inicio || "").startsWith("14:00")),
       `${conflictAfter?.data || ""} ${conflictAfter?.hora_inicio || ""}`
     );
