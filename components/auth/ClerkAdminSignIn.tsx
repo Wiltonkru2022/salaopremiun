@@ -7,9 +7,20 @@ type ClerkSessionLike = {
   getToken: () => Promise<string | null>;
 };
 
+type ClerkSignInAttempt = {
+  status?: string;
+  createdSessionId?: string | null;
+};
+
 type ClerkLike = {
   load: (options?: Record<string, unknown>) => Promise<void>;
   session?: ClerkSessionLike | null;
+  client?: {
+    signIn?: {
+      create?: (params: Record<string, unknown>) => Promise<ClerkSignInAttempt>;
+    };
+  };
+  setActive?: (params: { session: string }) => Promise<void>;
   mountSignIn: (element: HTMLDivElement, options?: Record<string, unknown>) => void;
   unmountSignIn?: (element: HTMLDivElement) => void;
   addListener?: (listener: (resources: { session?: ClerkSessionLike | null }) => void) => () => void;
@@ -18,6 +29,7 @@ type ClerkLike = {
 declare global {
   interface Window {
     Clerk?: ClerkLike;
+    __internal_ClerkUICtor?: unknown;
   }
 }
 
@@ -33,11 +45,11 @@ function decodeClerkDomain(publishableKey: string) {
   return decoded;
 }
 
-function loadClerkScript(src: string, publishableKey: string) {
+function loadExternalScript(src: string, attrs?: Record<string, string>) {
   return new Promise<void>((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`);
     if (existing) {
-      if (window.Clerk) resolve();
+      if (existing.dataset.loaded === "1") resolve();
       else existing.addEventListener("load", () => resolve(), { once: true });
       return;
     }
@@ -46,13 +58,18 @@ function loadClerkScript(src: string, publishableKey: string) {
     script.src = src;
     script.async = true;
     script.crossOrigin = "anonymous";
-    script.setAttribute("data-clerk-publishable-key", publishableKey);
-    script.addEventListener("load", () => resolve(), { once: true });
+    Object.entries(attrs || {}).forEach(([key, value]) => script.setAttribute(key, value));
     script.addEventListener(
-      "error",
-      () => reject(new Error("Falha ao carregar autenticação Clerk.")),
+      "load",
+      () => {
+        script.dataset.loaded = "1";
+        resolve();
+      },
       { once: true }
     );
+    script.addEventListener("error", () => reject(new Error("Falha ao carregar autenticação Clerk.")), {
+      once: true,
+    });
     document.head.appendChild(script);
   });
 }
@@ -129,12 +146,22 @@ export function ClerkAdminSignIn({
       }
 
       const clerkDomain = decodeClerkDomain(publishableKey);
+      const uiSrc = `https://${clerkDomain}/npm/@clerk/ui@1/dist/ui.browser.js`;
       const clerkSrc = `https://${clerkDomain}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`;
 
-      await loadClerkScript(clerkSrc, publishableKey);
-      if (!window.Clerk) throw new Error("ClerkJS não inicializou.");
+      // Clerk v6 separa o SDK principal do bundle de componentes visuais.
+      // Sem o @clerk/ui, mountSignIn() existe mas gera “not loaded with UI components”.
+      await loadExternalScript(uiSrc);
+      await loadExternalScript(clerkSrc, { "data-clerk-publishable-key": publishableKey });
 
-      await window.Clerk.load();
+      if (!window.Clerk) throw new Error("ClerkJS não inicializou.");
+      if (!window.__internal_ClerkUICtor) {
+        throw new Error("Componentes visuais do Clerk não foram carregados.");
+      }
+
+      await window.Clerk.load({
+        ui: { ClerkUI: window.__internal_ClerkUICtor },
+      });
       if (cancelled || !host) return;
 
       window.Clerk.mountSignIn(host, {
