@@ -1,10 +1,17 @@
-import { createClient } from "../../lib/supabase/server";
+import { readPainelClerkSession } from "@/lib/platform/painel-clerk-session.server";
 
 export async function getUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
+  const session = await readPainelClerkSession();
+  if (!session) return null;
 
-  return user;
+  return {
+    id: session.clerkSubject,
+    email: session.email,
+    user_metadata: {
+      nome: session.nome,
+      id_salao: session.idSalao,
+      nivel: session.nivel,
+      status: session.status,
+    },
+  };
 }
