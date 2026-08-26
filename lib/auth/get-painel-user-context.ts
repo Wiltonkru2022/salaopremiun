@@ -64,7 +64,11 @@ async function getClerkPainelUserContext(options: GetPainelUserContextOptions) {
   }
 
   return {
-    user: { id: session.clerkSubject, email: session.email },
+    user: {
+      id: session.clerkSubject,
+      email: session.email,
+      user_metadata: { nome: session.nome },
+    },
     usuario,
     mfaRequired: false,
   };
