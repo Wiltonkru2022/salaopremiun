@@ -36,7 +36,83 @@ type RegistryShape = {
   components: OperationalComponentDefinition[];
 };
 
-const registry = registryJson as RegistryShape;
+const COMPONENT_RENAMES: Record<
+  string,
+  Pick<OperationalComponentDefinition, "componentKey" | "name" | "description" | "category" | "probeType"> & {
+    probeKey: string;
+  }
+> = {
+  "supabase.database": {
+    componentKey: "neon.database",
+    name: "Neon PostgreSQL",
+    description: "PostgreSQL principal do SalãoPremium hospedado no Neon.",
+    category: "Neon",
+    probeType: "database",
+    probeKey: "probe:neon:database",
+  },
+  "supabase.data_api": {
+    componentKey: "neon.gateway",
+    name: "Gateway de dados Neon",
+    description: "Camada server-side que atende painel, Admin Master e apps sobre o Neon.",
+    category: "Neon",
+    probeType: "database",
+    probeKey: "probe:neon:gateway",
+  },
+  "supabase.auth": {
+    componentKey: "clerk.auth",
+    name: "Clerk Auth",
+    description: "Autenticação e sessão do painel do salão via Clerk.",
+    category: "Autenticação",
+    probeType: "auth",
+    probeKey: "probe:clerk:auth",
+  },
+  "supabase.storage": {
+    componentKey: "cloudinary.storage",
+    name: "Cloudinary Storage",
+    description: "Armazenamento de mídia e arquivos públicos do sistema.",
+    category: "Armazenamento",
+    probeType: "storage",
+    probeKey: "probe:cloudinary:storage",
+  },
+  "supabase.realtime": {
+    componentKey: "neon.sync",
+    name: "Sincronização de dados",
+    description: "Sincronização dos apps por APIs internas e Neon, sem Realtime Supabase.",
+    category: "Neon",
+    probeType: "database",
+    probeKey: "probe:neon:sync",
+  },
+};
+
+function renamedKey(value: string) {
+  return COMPONENT_RENAMES[value]?.componentKey || value;
+}
+
+function normalizeComponent(component: OperationalComponentDefinition) {
+  const rename = COMPONENT_RENAMES[component.componentKey];
+  const normalized: OperationalComponentDefinition = rename
+    ? {
+        ...component,
+        ...rename,
+        sourcePatterns: component.sourcePatterns.map((pattern) =>
+          pattern
+            .replace(/lib\/supabase\/\*\*/g, "lib/neon/**")
+            .replace(/supabase\/migrations\/\*\*/g, "lib/neon/**")
+        ),
+        contentSignals:
+          component.componentKey === "supabase.realtime" ? ["/api/app-profissional/"] : component.contentSignals,
+      }
+    : { ...component };
+
+  normalized.dependencies = normalized.dependencies.map(renamedKey);
+  return normalized;
+}
+
+const sourceRegistry = registryJson as RegistryShape;
+const registry: RegistryShape = {
+  version: `${sourceRegistry.version}-neon`,
+  components: sourceRegistry.components.map(normalizeComponent),
+};
 
 export const OPERATIONAL_REGISTRY_VERSION = registry.version;
 export const OPERATIONAL_COMPONENTS = Object.freeze(registry.components);
@@ -46,7 +122,8 @@ const componentMap = new Map(
 );
 
 export function getOperationalComponent(componentKey?: string | null) {
-  return componentMap.get(String(componentKey || "").trim()) || null;
+  const normalized = renamedKey(String(componentKey || "").trim());
+  return componentMap.get(normalized) || null;
 }
 
 export function listOperationalComponents() {
@@ -78,12 +155,8 @@ export function findOperationalComponentForContext(params: {
         (component.routePrefixes || []).some((prefix) => route.startsWith(prefix))
       )
       .sort((a, b) => {
-        const aLength = Math.max(
-          ...(a.routePrefixes || [""]).map((value) => value.length)
-        );
-        const bLength = Math.max(
-          ...(b.routePrefixes || [""]).map((value) => value.length)
-        );
+        const aLength = Math.max(...(a.routePrefixes || [""]).map((value) => value.length));
+        const bLength = Math.max(...(b.routePrefixes || [""]).map((value) => value.length));
         return bLength - aLength;
       });
     if (candidates[0]) return candidates[0];
@@ -102,15 +175,11 @@ export function findOperationalComponentForContext(params: {
   if (module.includes("agenda") || action.includes("agendamento")) {
     return getOperationalComponent("agenda.core");
   }
-  if (
-    module.includes("caixa") ||
-    module.includes("comanda") ||
-    module.includes("venda")
-  ) {
+  if (module.includes("caixa") || module.includes("comanda") || module.includes("venda")) {
     return getOperationalComponent("cash.core");
   }
   if (module.includes("security") || module.includes("auth")) {
-    return getOperationalComponent("supabase.auth");
+    return getOperationalComponent("clerk.auth");
   }
 
   return null;
