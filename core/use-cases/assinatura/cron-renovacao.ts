@@ -18,16 +18,16 @@ export async function executarCronRenovacaoAssinaturasUseCase(params: {
   authorizationHeader: string | null;
   service: AssinaturaCronService;
 }) {
-  let supabaseAdmin: DatabaseClient | null = null;
+  let databaseAdmin: DatabaseClient | null = null;
 
   try {
     if (!params.service.validarCron(params.authorizationHeader)) {
       throw new AssinaturaCronUseCaseError("Nao autorizado.", 401);
     }
 
-    supabaseAdmin = params.service.criarSupabaseAdmin();
+    databaseAdmin = params.service.criarDatabaseAdmin();
     const { total, resultados } = await params.service.executarRenovacao(
-      supabaseAdmin
+      databaseAdmin
     );
 
     return {
@@ -40,7 +40,7 @@ export async function executarCronRenovacaoAssinaturasUseCase(params: {
     };
   } catch (error) {
     await params.service.reportarFalhaCron({
-      supabaseAdmin,
+      databaseAdmin,
       error,
     });
 

@@ -159,7 +159,7 @@ async function isNotificationTypeEnabled(params: {
 }
 
 export async function queueNotificationJob(params: QueueNotificationJobParams) {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const idempotencyKey = sanitizeText(params.idempotencyKey, "");
   if (!idempotencyKey) return { ok: false as const, error: "Chave da notificacao ausente." };
 
@@ -169,7 +169,7 @@ export async function queueNotificationJob(params: QueueNotificationJobParams) {
   });
   if (!enabled) return { ok: true as const, skipped: true as const };
 
-  const { error } = await (supabase as any)
+  const { error } = await (database as any)
     .from("notification_jobs")
     .upsert(
       {
@@ -200,8 +200,8 @@ export async function queueNotificationJob(params: QueueNotificationJobParams) {
 }
 
 async function findSubscriptionsForJob(job: NotificationJobRow) {
-  const supabase = getDatabaseAdmin();
-  let query = (supabase as any)
+  const database = getDatabaseAdmin();
+  let query = (database as any)
     .from("push_subscriptions")
     .select("id, endpoint, p256dh, auth")
     .eq("ativo", true)
@@ -303,9 +303,9 @@ async function markJob(
 }
 
 export async function processPendingNotificationJobs(limit = 80) {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const now = new Date().toISOString();
-  const { data, error } = await (supabase as any)
+  const { data, error } = await (database as any)
     .from("notification_jobs")
     .select(
       "id, id_salao, id_cliente, id_profissional, cliente_app_conta_id, canal, tipo, titulo, mensagem, url, tag, status, enviar_em, tentativas, idempotency_key"
@@ -333,7 +333,7 @@ export async function processPendingNotificationJobs(limit = 80) {
   let failed = 0;
 
   for (const job of ((data || []) as NotificationJobRow[])) {
-    const lock = await (supabase as any)
+    const lock = await (database as any)
       .from("notification_jobs")
       .update({
         status: "processando",
@@ -938,15 +938,15 @@ export async function notifyComandaFinalizada(params: {
   idComanda: string;
   idSalao: string;
 }) {
-  const supabase = getDatabaseAdmin();
-  const { data: comanda } = await (supabase as any)
+  const database = getDatabaseAdmin();
+  const { data: comanda } = await (database as any)
     .from("comandas")
     .select("id, id_salao, total")
     .eq("id", params.idComanda)
     .eq("id_salao", params.idSalao)
     .maybeSingle();
 
-  const { data: agendamentos } = await (supabase as any)
+  const { data: agendamentos } = await (database as any)
     .from("agendamentos")
     .select("id")
     .eq("id_salao", params.idSalao)

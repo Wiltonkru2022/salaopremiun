@@ -20,24 +20,24 @@ export function createAssinaturaCronService() {
       return verifyBearerSecret(authorizationHeader, process.env.CRON_SECRET);
     },
 
-    criarSupabaseAdmin() {
+    criarDatabaseAdmin() {
       return getDatabaseAdmin();
     },
 
-    async executarRenovacao(supabaseAdmin: DatabaseClient) {
-      return executarCronRenovacaoAssinaturas(supabaseAdmin);
+    async executarRenovacao(databaseAdmin: DatabaseClient) {
+      return executarCronRenovacaoAssinaturas(databaseAdmin);
     },
 
     async reportarFalhaCron(params: {
-      supabaseAdmin: DatabaseClient | null;
+      databaseAdmin: DatabaseClient | null;
       error: unknown;
     }) {
-      if (!params.supabaseAdmin) {
+      if (!params.databaseAdmin) {
         return;
       }
 
       await reportOperationalIncident({
-        supabaseAdmin: params.supabaseAdmin,
+        databaseAdmin: params.databaseAdmin,
         key: "cron:renovar-assinaturas:erro",
         module: "cron_renovacao_assinaturas",
         title: "Cron de renovacao de assinaturas falhou",

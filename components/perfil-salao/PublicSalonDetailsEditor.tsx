@@ -133,8 +133,8 @@ export default function PublicSalonDetailsEditor() {
         setLoading(true);
         setError("");
         setMessage("");
-        const supabase = createClient();
-        const { data, error: queryError } = await supabase
+        const database = createClient();
+        const { data, error: queryError } = await database
           .from("saloes")
           .select(
             "instagram_url, estacionamento, acessibilidade, wifi, cafe, ar_condicionado, formas_pagamento_publico"
@@ -184,7 +184,7 @@ export default function PublicSalonDetailsEditor() {
       setSaving(true);
       setError("");
       setMessage("");
-      const supabase = createClient();
+      const database = createClient();
       const payload = {
         instagram_url: normalizeInstagram(form.instagram_url),
         estacionamento: form.estacionamento,
@@ -198,7 +198,7 @@ export default function PublicSalonDetailsEditor() {
         updated_at: new Date().toISOString(),
       };
 
-      const { error: updateError } = await supabase
+      const { error: updateError } = await database
         .from("saloes")
         .update(payload)
         .eq("id", idSalao);
@@ -206,7 +206,7 @@ export default function PublicSalonDetailsEditor() {
       if (updateError) throw updateError;
 
       try {
-        await asLooseDbClient(supabase).rpc(
+        await asLooseDbClient(database).rpc(
           "refresh_client_app_marketplace_cache",
           { p_id_salao: idSalao }
         );

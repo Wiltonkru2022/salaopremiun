@@ -36,8 +36,8 @@ export async function POST(request: Request) {
       action: "app_profissional_auditar_criacao_agendamento",
       actorId: session.idProfissional,
       idSalao: session.idSalao,
-      run: async (supabase) => {
-        const { data: rows, error } = await (supabase as any)
+      run: async (database) => {
+        const { data: rows, error } = await (database as any)
           .from("agendamentos")
           .select("id, cliente_id, hora_inicio, created_at, origem")
           .eq("id_salao", session.idSalao)
@@ -59,7 +59,7 @@ export async function POST(request: Request) {
         }
 
         if (String(agendamento.origem || "").toLowerCase() !== "app_profissional") {
-          const { error: origemError } = await (supabase as any)
+          const { error: origemError } = await (database as any)
             .from("agendamentos")
             .update({ origem: "app_profissional" })
             .eq("id", agendamento.id)
@@ -71,7 +71,7 @@ export async function POST(request: Request) {
         }
 
         const auditado = await registrarCriacaoAgendamento({
-          supabase,
+          database,
           idSalao: session.idSalao,
           idAgendamento: String(agendamento.id),
           idCliente: clienteId,

@@ -76,11 +76,11 @@ export async function buscarResumoComissaoProfissional(
     action: "profissional_comissao_resumo",
     actorId: idProfissional,
     idSalao,
-    run: async (supabaseAdmin) => {
+    run: async (databaseAdmin) => {
       const select =
         "id, competencia_data, descricao, percentual_aplicado, valor_base, valor_comissao, valor_comissao_assistente, tipo_destinatario, status, pago_em";
 
-      let result = await supabaseAdmin
+      let result = await databaseAdmin
         .from("comissoes_lancamentos")
         .select(select)
         .eq("id_salao", idSalao)
@@ -99,7 +99,7 @@ export async function buscarResumoComissaoProfissional(
           message.includes("competencia_data") ||
           message.includes("does not exist")
         ) {
-          result = await supabaseAdmin
+          result = await databaseAdmin
             .from("comissoes_lancamentos")
             .select(select)
             .eq("id_salao", idSalao)

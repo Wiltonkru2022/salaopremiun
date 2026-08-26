@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
     acao = input.acao;
 
     // Guard: carregarContextoVenda() chama requireSalaoPermission antes de expor o client admin.
-    const { membership, supabaseAdmin } = await carregarContextoVenda({
+    const { membership, databaseAdmin } = await carregarContextoVenda({
       idSalao,
       acao: input.acao,
     });
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     const result = await processarVendaUseCase({
       input,
       actorUserId: membership.usuario.id,
-      service: createVendaService(supabaseAdmin),
+      service: createVendaService(databaseAdmin),
     });
 
     return NextResponse.json(result.body, { status: result.status });
@@ -78,9 +78,9 @@ export async function POST(req: NextRequest) {
         await runAdminOperation({
           action: "api_vendas_processar_report_incident",
           idSalao,
-          run: async (supabaseAdmin) => {
+          run: async (databaseAdmin) => {
             await reportOperationalIncident({
-              supabaseAdmin,
+              databaseAdmin,
               key: `vendas:processar:${acao || "desconhecida"}:${idSalao}`,
               module: "vendas",
               title: "Processamento de venda falhou",

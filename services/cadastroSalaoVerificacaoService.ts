@@ -17,7 +17,7 @@ export async function verificarCadastroSalaoDuplicado({
   whatsapp,
   cpfCnpj,
 }: CadastroSalaoVerificacaoPayload) {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const exists = {
     email: false,
     nomeSalao: false,
@@ -29,7 +29,7 @@ export async function verificarCadastroSalaoDuplicado({
 
   if (email) {
     checks.push(
-      supabase
+      database
         .from("saloes")
         .select("id")
         .eq("email", email)
@@ -43,7 +43,7 @@ export async function verificarCadastroSalaoDuplicado({
 
   if (nomeSalao) {
     checks.push(
-      supabase
+      database
         .from("saloes")
         .select("id")
         .ilike("nome", nomeSalao)
@@ -57,7 +57,7 @@ export async function verificarCadastroSalaoDuplicado({
 
   if (whatsapp) {
     checks.push(
-      supabase
+      database
         .from("saloes")
         .select("id")
         .or(`telefone.eq.${whatsapp},telefone.ilike.%${whatsapp}%`)
@@ -71,7 +71,7 @@ export async function verificarCadastroSalaoDuplicado({
 
   if (cpfCnpj) {
     checks.push(
-      supabase
+      database
         .from("saloes")
         .select("id")
         .or(`cpf_cnpj.eq.${cpfCnpj},cpf_cnpj.ilike.%${cpfCnpj}%`)

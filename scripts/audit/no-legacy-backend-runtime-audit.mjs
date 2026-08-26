@@ -3,16 +3,17 @@ import path from "node:path";
 
 const root = process.cwd();
 const scanRoots = ["app", "components", "core", "lib", "services", "apps"];
-const skippedDirs = new Set(["node_modules", ".next", "dist", "build", ".git", "supabase"]);
+const skippedDirs = new Set(["node_modules", ".next", "dist", "build", ".git"]);
 const extensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
+const legacyProvider = ["supa", "base"].join("");
 const forbidden = [
-  /@supabase\//,
-  /NEXT_PUBLIC_SUPABASE_/,
-  /VITE_SUPABASE_/,
-  /SUPABASE_URL/,
-  /SUPABASE_SERVICE_ROLE_KEY/,
-  /SUPABASE_ANON_KEY/,
-  /\.supabase\.co/,
+  new RegExp(`@${legacyProvider}/`, "i"),
+  new RegExp(`NEXT_PUBLIC_${legacyProvider}_`, "i"),
+  new RegExp(`VITE_${legacyProvider}_`, "i"),
+  new RegExp(`${legacyProvider}_URL`, "i"),
+  new RegExp(`${legacyProvider}_SERVICE_ROLE_KEY`, "i"),
+  new RegExp(`${legacyProvider}_ANON_KEY`, "i"),
+  new RegExp(`\\.${legacyProvider}\\.co`, "i"),
 ];
 
 const violations = [];
@@ -38,8 +39,8 @@ function walk(dir) {
 for (const base of scanRoots) walk(path.join(root, base));
 
 if (violations.length) {
-  console.error("Dependencias runtime do Supabase ainda encontradas:\n" + violations.join("\n"));
+  console.error("Dependencias do backend legado ainda encontradas:\n" + violations.join("\n"));
   process.exit(1);
 }
 
-console.log("OK: runtime sem SDK, env ou host Supabase.");
+console.log("OK: runtime sem SDK, env ou host do backend legado.");

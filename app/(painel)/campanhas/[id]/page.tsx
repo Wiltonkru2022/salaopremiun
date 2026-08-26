@@ -105,7 +105,7 @@ async function loadCampanhaDetalhe(
   clientesPageSize: number,
   buscaCliente: string
 ) {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const usosFrom = usosPage * usosPageSize;
   const usosTo = usosFrom + usosPageSize - 1;
   const clientesFrom = clientesPage * clientesPageSize;
@@ -113,7 +113,7 @@ async function loadCampanhaDetalhe(
   const buscaLimpa = buscaCliente.trim();
   const buscaSegura = buscaLimpa.replace(/[%_(),]/g, " ").replace(/\s+/g, " ").trim();
   const buscaNumeros = buscaSegura.replace(/\D/g, "");
-  const clientesDisponiveisQuery = (supabase as any)
+  const clientesDisponiveisQuery = (database as any)
     .from("clientes")
     .select("id, nome, telefone, email, whatsapp")
     .eq("id_salao", idSalao)
@@ -148,82 +148,82 @@ async function loadCampanhaDetalhe(
     clientesResult,
     servicosDisponiveisResult,
   ] = await Promise.all([
-    (supabase as any)
+    (database as any)
       .from("cupons_salao")
       .select("id, codigo, nome, descricao, descricao_interna, mensagem_cliente, tipo_campanha, publico_tipo, valor_desconto, tipo_desconto, valido_de, valido_ate, ativo, status_campanha, resgate_token, slug, limite_uso_total, limite_uso_cliente, limite_uso_dia, created_at")
       .eq("id_salao", idSalao)
       .eq("id", id)
       .or("automatico_recuperacao.is.null,automatico_recuperacao.eq.false")
       .maybeSingle(),
-    (supabase as any)
+    (database as any)
       .from("cupom_salao_servicos")
       .select("id_servico, tipo_beneficio, valor_beneficio, brinde_descricao, limite_uso_servico, servicos(nome, preco, preco_padrao)")
       .eq("id_salao", idSalao)
       .eq("id_cupom", id)
       .limit(120),
-    (supabase as any)
+    (database as any)
       .from("cupom_salao_usos")
       .select("id, id_cliente, id_agendamento, id_comanda, valor_desconto, status, created_at, metadata, clientes(nome, telefone, email), comandas(status)")
       .eq("id_salao", idSalao)
       .eq("id_cupom", id)
       .order("created_at", { ascending: false })
       .limit(5000),
-    (supabase as any)
+    (database as any)
       .from("campanha_eventos")
       .select("id, tipo, metadata, created_at, clientes(nome)")
       .eq("id_salao", idSalao)
       .eq("id_cupom", id)
       .order("created_at", { ascending: false })
       .limit(300),
-    (supabase as any)
+    (database as any)
       .from("campanha_eventos")
       .select("id", { count: "exact", head: true })
       .eq("id_salao", idSalao)
       .eq("id_cupom", id)
       .eq("tipo", "clique"),
-    (supabase as any)
+    (database as any)
       .from("campanha_eventos")
       .select("id", { count: "exact", head: true })
       .eq("id_salao", idSalao)
       .eq("id_cupom", id)
       .eq("tipo", "agendamento"),
-    (supabase as any)
+    (database as any)
       .from("cupom_salao_resgates")
       .select("id", { count: "exact", head: true })
       .eq("id_salao", idSalao)
       .eq("id_cupom", id),
-    (supabase as any)
+    (database as any)
       .from("agendamentos")
       .select("id, data, created_at, status, cliente_id, servico_id, desconto_cupom_valor, id_comanda, clientes(nome, created_at), servicos(nome, preco, preco_padrao), comandas(id, total, subtotal, status, fechada_em)")
       .eq("id_salao", idSalao)
       .eq("id_cupom_salao", id)
       .order("data", { ascending: false })
       .limit(1000),
-    (supabase as any)
+    (database as any)
       .from("agendamentos")
       .select("id", { count: "exact", head: true })
       .eq("id_salao", idSalao)
       .eq("id_cupom_salao", id),
-    (supabase as any)
+    (database as any)
       .from("agendamentos")
       .select("id", { count: "exact", head: true })
       .eq("id_salao", idSalao)
       .eq("id_cupom_salao", id)
       .in("status", ["cancelado", "cancelada"]),
-    (supabase as any)
+    (database as any)
       .from("cupom_salao_usos")
       .select("id, id_cliente, valor_desconto, status, metadata, id_agendamento, id_comanda")
       .eq("id_salao", idSalao)
       .eq("id_cupom", id)
       .limit(5000),
-    (supabase as any)
+    (database as any)
       .from("cupom_salao_clientes")
       .select("id_cliente, clientes(id, nome, telefone, email, whatsapp)", { count: "exact" })
       .eq("id_salao", idSalao)
       .eq("id_cupom", id)
       .range(clientesFrom, clientesTo),
     clientesDisponiveisResult,
-    (supabase as any)
+    (database as any)
       .from("servicos")
       .select("id, nome, preco, preco_padrao, ativo, app_cliente_visivel")
       .eq("id_salao", idSalao)
@@ -271,7 +271,7 @@ async function loadCampanhaDetalhe(
     new Set(agendamentos.map((agenda) => String(agenda.cliente_id || "")).filter(Boolean))
   ).slice(0, 500);
   const historicoClientesResult = clienteIdsCampanha.length
-    ? await (supabase as any)
+    ? await (database as any)
         .from("agendamentos")
         .select("id, cliente_id, data, created_at, status")
         .eq("id_salao", idSalao)
@@ -280,7 +280,7 @@ async function loadCampanhaDetalhe(
         .limit(5000)
     : { data: [] };
   const historicoComandasResult = clienteIdsCampanha.length
-    ? await (supabase as any)
+    ? await (database as any)
         .from("comandas")
         .select("id, id_cliente, status, created_at, fechada_em")
         .eq("id_salao", idSalao)

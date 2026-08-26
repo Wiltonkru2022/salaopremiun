@@ -9,7 +9,7 @@ App Cliente / App Profissional Vite
               ↓
        PushSubscription
               ↓
-           Supabase
+           Neon
               ↓
       notification_jobs
               ↓

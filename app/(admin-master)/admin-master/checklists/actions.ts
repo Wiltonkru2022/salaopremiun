@@ -32,7 +32,7 @@ function jsonValue(formData: FormData, key: string): Json {
 
 export async function salvarChecklistItemAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("planos_editar");
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const id = textValue(formData, "id");
   const codigo = textValue(formData, "codigo");
   const nome = textValue(formData, "nome");
@@ -54,13 +54,13 @@ export async function salvarChecklistItemAdminMaster(formData: FormData) {
   };
 
   const query = id
-    ? (supabase as any)
+    ? (database as any)
         .from("checklist_itens")
         .update(payload)
         .eq("id", id)
         .select("id")
         .single()
-    : (supabase as any)
+    : (database as any)
         .from("checklist_itens")
         .insert(payload)
         .select("id")
@@ -87,7 +87,7 @@ export async function salvarChecklistItemAdminMaster(formData: FormData) {
 
 export async function salvarRegraTrialAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("planos_editar");
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const id = textValue(formData, "id");
   const nome = textValue(formData, "nome");
 
@@ -103,13 +103,13 @@ export async function salvarRegraTrialAdminMaster(formData: FormData) {
   };
 
   const query = id
-    ? supabase
+    ? database
         .from("trial_extensoes_regras")
         .update(payload)
         .eq("id", id)
         .select("id")
         .single()
-    : supabase
+    : database
         .from("trial_extensoes_regras")
         .insert(payload)
         .select("id")
@@ -142,8 +142,8 @@ export async function recalcularScoreSalaoAdminMaster(formData: FormData) {
     throw new Error("Informe o salão para recalcular o score.");
   }
 
-  const supabase = getDatabaseAdmin();
-  const { data, error } = await supabase.rpc(
+  const database = getDatabaseAdmin();
+  const { data, error } = await database.rpc(
     "fn_admin_master_calcular_score_onboarding",
     { p_id_salao: idSalao }
   );
@@ -172,8 +172,8 @@ export async function avaliarTrialExtraSalaoAdminMaster(formData: FormData) {
     throw new Error("Informe o salão para avaliar o trial extra.");
   }
 
-  const supabase = getDatabaseAdmin();
-  const { data, error } = await supabase.rpc(
+  const database = getDatabaseAdmin();
+  const { data, error } = await database.rpc(
     "fn_admin_master_avaliar_extensao_trial",
     { p_id_salao: idSalao }
   );

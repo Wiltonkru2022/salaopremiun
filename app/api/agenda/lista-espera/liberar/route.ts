@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     ]);
 
     const resultado = await notifyWaitlistAboutReleasedSlot({
-      supabaseAdmin: getDatabaseAdmin(),
+      databaseAdmin: getDatabaseAdmin(),
       releasedSlot: {
         idSalao: body.idSalao,
         idServico: body.idServico,

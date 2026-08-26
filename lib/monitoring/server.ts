@@ -300,7 +300,7 @@ function mapAlertSeverity(severity: MonitoringSeverity) {
 }
 
 async function upsertIncident(params: CaptureSystemEventParams, severity: MonitoringSeverity) {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const chave = buildIncidentKey(params);
   const titulo = buildIncidentTitle(params);
   const descricao =
@@ -318,14 +318,14 @@ async function upsertIncident(params: CaptureSystemEventParams, severity: Monito
     latestDetails: sanitizeDetails(params.details),
   } as Json;
 
-  const { data: existing } = await supabase
+  const { data: existing } = await database
     .from("incidentes_sistema")
     .select("id, total_ocorrencias, impacto_saloes")
     .eq("chave", chave)
     .maybeSingle();
 
   if (existing?.id) {
-    await supabase
+    await database
       .from("incidentes_sistema")
       .update({
         titulo,
@@ -344,7 +344,7 @@ async function upsertIncident(params: CaptureSystemEventParams, severity: Monito
       })
       .eq("id", existing.id);
   } else {
-    await supabase.from("incidentes_sistema").insert({
+    await database.from("incidentes_sistema").insert({
       chave,
       titulo,
       modulo: normalizeText(params.module) || "sistema",
@@ -363,7 +363,7 @@ async function upsertIncident(params: CaptureSystemEventParams, severity: Monito
     });
   }
 
-  await supabase.from("alertas_sistema").upsert(
+  await database.from("alertas_sistema").upsert(
     {
       chave: `monitoring:${chave}`,
       tipo: "incidente_operacional",
@@ -391,14 +391,14 @@ export async function captureSystemEvent(params: CaptureSystemEventParams) {
       return;
     }
 
-    const supabase = getDatabaseAdmin();
+    const database = getDatabaseAdmin();
     const message = normalizeText(params.message) || "Evento operacional";
     const isUserError =
       typeof params.isUserError === "boolean"
         ? params.isUserError
         : inferUserError(message, params.errorCode);
 
-    await supabase.from("eventos_sistema").insert({
+    await database.from("eventos_sistema").insert({
       id_salao: params.idSalao || null,
       id_usuario: params.idUsuario || null,
       id_admin_usuario: params.idAdminUsuario || null,
@@ -513,8 +513,8 @@ export async function registrarAcaoAutomaticaSistema(
   params: RegisterAutomationActionParams
 ) {
   try {
-    const supabase = getDatabaseAdmin();
-    await supabase.from("acoes_automaticas_sistema").insert({
+    const database = getDatabaseAdmin();
+    await database.from("acoes_automaticas_sistema").insert({
       tipo: normalizeText(params.type) || "automacao",
       referencia: normalizeText(params.reference) || null,
       executada: params.executed,
@@ -537,8 +537,8 @@ export async function upsertSystemHealthCheck(params: {
   details?: Record<string, unknown>;
 }) {
   try {
-    const supabase = getDatabaseAdmin();
-    await supabase.from("health_checks_sistema").upsert(
+    const database = getDatabaseAdmin();
+    await database.from("health_checks_sistema").upsert(
       {
         chave: normalizeText(params.key),
         nome: normalizeText(params.name) || "Health check",

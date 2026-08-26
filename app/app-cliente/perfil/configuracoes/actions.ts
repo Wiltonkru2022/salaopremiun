@@ -13,9 +13,9 @@ export async function toggleClienteNotificationPreferenceAction(
   enabled: boolean
 ): Promise<ToggleClienteNotificationPreferenceResult> {
   const session = await requireClienteAppContext();
-  const supabaseAdmin = getDatabaseAdmin();
+  const databaseAdmin = getDatabaseAdmin();
 
-  const { error } = await (supabaseAdmin as any)
+  const { error } = await (databaseAdmin as any)
     .from("clientes_app_auth")
     .update({
       notificacoes_ativas: Boolean(enabled),

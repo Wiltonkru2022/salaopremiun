@@ -16,9 +16,9 @@ function formatDate(value?: string | null) {
 export default async function AdminMasterClienteDetalhePage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdminMasterUser("saloes_ver");
   const { id } = await params;
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
 
-  const { data: cliente, error } = await supabase
+  const { data: cliente, error } = await database
     .from("clientes")
     .select("id, id_salao, nome, cashback, whatsapp, telefone, email, bairro, profissao, status, ativo, created_at")
     .eq("id", id)
@@ -36,10 +36,10 @@ export default async function AdminMasterClienteDetalhePage({ params }: { params
 
   const [{ data: salao }, { data: auth }] = await Promise.all([
     cliente.id_salao
-      ? supabase.from("saloes").select("id, nome, responsavel, status").eq("id", cliente.id_salao).maybeSingle()
+      ? database.from("saloes").select("id, nome, responsavel, status").eq("id", cliente.id_salao).maybeSingle()
       : Promise.resolve({ data: null }),
     cliente.id_salao
-      ? supabase.from("clientes_auth").select("app_conta_id, app_ativo").eq("id_salao", cliente.id_salao).eq("id_cliente", cliente.id).maybeSingle()
+      ? database.from("clientes_auth").select("app_conta_id, app_ativo").eq("id_salao", cliente.id_salao).eq("id_cliente", cliente.id).maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
 

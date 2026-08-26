@@ -26,8 +26,8 @@ function partnerName(value: unknown) {
 }
 
 export async function getAdvertisingCampaignsSection(): Promise<AdminSectionData> {
-  const supabase = getDatabaseAdmin() as any;
-  const { data, error } = await supabase
+  const database = getDatabaseAdmin() as any;
+  const { data, error } = await database
     .from("parceria_campanhas")
     .select(
       "id,id_parceiro,nome,descricao,status,publico,locais_exibicao,destino_url,inicio_em,fim_em,origem,prioridade,criado_em,parceiros_comerciais(razao_social,nome_fantasia),parceria_criativos(id,ativo)"
@@ -109,7 +109,7 @@ export async function getAdvertisingCampaignsSection(): Promise<AdminSectionData
         tone: "blue",
       },
       {
-        label: "Carga no Supabase",
+        label: "Carga no Neon",
         value: "Baixa",
         detail: "Uma consulta limitada traz campanha, anunciante e contagem de criativos para esta visão administrativa.",
         tone: "green",

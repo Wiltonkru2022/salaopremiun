@@ -67,10 +67,10 @@ function buildSessionFromAccount(account: ClienteAppAccountRow): ClienteAppSessi
   };
 }
 
-async function findGlobalAccountByCpf(supabaseAdmin: any, cpfInput: string) {
+async function findGlobalAccountByCpf(databaseAdmin: any, cpfInput: string) {
   const cpf = normalizeCpf(cpfInput);
   if (!cpf) return null;
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await databaseAdmin
     .from("clientes_app_auth")
     .select(
       "id, nome, email, telefone, whatsapp, cpf, data_nascimento, senha_hash, auth_version, migracao_identidade_concluida, ativo"
@@ -82,10 +82,10 @@ async function findGlobalAccountByCpf(supabaseAdmin: any, cpfInput: string) {
   return data as ClienteAppAccountRow;
 }
 
-async function findGlobalAccountByEmail(supabaseAdmin: any, emailInput: string) {
+async function findGlobalAccountByEmail(databaseAdmin: any, emailInput: string) {
   const email = normalizeClienteAppEmail(emailInput);
   if (!email) return null;
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await databaseAdmin
     .from("clientes_app_auth")
     .select(
       "id, nome, email, telefone, whatsapp, cpf, data_nascimento, senha_hash, auth_version, migracao_identidade_concluida, ativo"
@@ -97,10 +97,10 @@ async function findGlobalAccountByEmail(supabaseAdmin: any, emailInput: string) 
   return data as ClienteAppAccountRow;
 }
 
-async function findGlobalAccountByPhone(supabaseAdmin: any, phoneInput: string) {
+async function findGlobalAccountByPhone(databaseAdmin: any, phoneInput: string) {
   const phone = normalizeClienteAppPhone(phoneInput);
   if (!phone) return null;
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await databaseAdmin
     .from("clientes_app_auth")
     .select(
       "id, nome, email, telefone, whatsapp, cpf, data_nascimento, senha_hash, auth_version, migracao_identidade_concluida, ativo"
@@ -171,20 +171,20 @@ export async function createClienteAppAccount(params: {
   return runAdminOperation({
     action: "cliente_app_signup_cpf",
     actorId: `cpf:${fingerprintIdentity(cpf)}`,
-    run: async (supabaseAdmin): Promise<ClienteLoginResult> => {
-      const existingCpf = await findGlobalAccountByCpf(supabaseAdmin, cpf);
+    run: async (databaseAdmin): Promise<ClienteLoginResult> => {
+      const existingCpf = await findGlobalAccountByCpf(databaseAdmin, cpf);
       if (existingCpf?.id) {
         return { ok: false, error: "Já existe uma conta com estes dados. Use Recuperar acesso." };
       }
 
       if (email) {
-        const existingEmail = await findGlobalAccountByEmail(supabaseAdmin, email);
+        const existingEmail = await findGlobalAccountByEmail(databaseAdmin, email);
         if (existingEmail?.id) {
           return { ok: false, error: "Este e-mail já está vinculado a uma conta. Use Recuperar acesso." };
         }
       }
 
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("clientes_app_auth")
         .insert({
           nome,
@@ -236,8 +236,8 @@ export async function loginClienteAppByCpfNascimento(params: {
     action: "cliente_app_login_cpf",
     actorId: `cpf:${fingerprintIdentity(cpf)}`,
     idSalao,
-    run: async (supabaseAdmin): Promise<ClienteLoginResult> => {
-      const account = await findGlobalAccountByCpf(supabaseAdmin, cpf);
+    run: async (databaseAdmin): Promise<ClienteLoginResult> => {
+      const account = await findGlobalAccountByCpf(databaseAdmin, cpf);
       if (!account?.id || account.ativo === false || String(account.data_nascimento || "") !== dataNascimento) {
         const failure = await recordCpfLoginFailure({
           cpf,
@@ -255,7 +255,7 @@ export async function loginClienteAppByCpfNascimento(params: {
       const securityAccess = await assertClienteSecurityAccess({ userId: account.id, idSalao });
       if (securityAccess) return { ok: false, error: securityAccess.error, redirectTo: securityAccess.redirectTo };
 
-      await supabaseAdmin
+      await databaseAdmin
         .from("clientes_app_auth")
         .update({
           ultimo_login_em: new Date().toISOString(),
@@ -281,14 +281,14 @@ export async function loginClienteAppByCpfNascimento(params: {
 }
 
 async function createGlobalAccountFromLegacy(params: {
-  supabaseAdmin: any;
+  databaseAdmin: any;
   email: string;
   legacyHash: string;
   nome?: string | null;
   telefone?: string | null;
 }) {
   const whatsapp = normalizeWhatsapp(params.telefone);
-  const { data, error } = await params.supabaseAdmin
+  const { data, error } = await params.databaseAdmin
     .from("clientes_app_auth")
     .insert({
       nome: String(params.nome || "").trim() || "Cliente SalãoPremium",
@@ -326,10 +326,10 @@ export async function loginClienteAppByEmailSenha(params: {
     action: "cliente_app_login_legado",
     actorId: email || `telefone:${fingerprintIdentity(phone)}`,
     idSalao,
-    run: async (supabaseAdmin): Promise<ClienteLoginResult> => {
+    run: async (databaseAdmin): Promise<ClienteLoginResult> => {
       const globalAccount = email
-        ? await findGlobalAccountByEmail(supabaseAdmin, email)
-        : await findGlobalAccountByPhone(supabaseAdmin, phone);
+        ? await findGlobalAccountByEmail(databaseAdmin, email)
+        : await findGlobalAccountByPhone(databaseAdmin, phone);
 
       if (globalAccount?.id && globalAccount.senha_hash) {
         const passwordOk = await verifyClientePassword(senha, globalAccount.senha_hash);
@@ -337,7 +337,7 @@ export async function loginClienteAppByEmailSenha(params: {
           const securityAccess = await assertClienteSecurityAccess({ userId: globalAccount.id, idSalao });
           if (securityAccess) return { ok: false, error: securityAccess.error, redirectTo: securityAccess.redirectTo };
 
-          await supabaseAdmin
+          await databaseAdmin
             .from("clientes_app_auth")
             .update({ ultimo_login_em: new Date().toISOString() })
             .eq("id", globalAccount.id);
@@ -352,7 +352,7 @@ export async function loginClienteAppByEmailSenha(params: {
 
       if (!email) return { ok: false, error: "Acesso antigo não reconhecido." };
 
-      let query = supabaseAdmin
+      let query = databaseAdmin
         .from("clientes_auth")
         .select("id, id_cliente, id_salao, email, senha_hash, app_ativo")
         .eq("email", email)
@@ -374,7 +374,7 @@ export async function loginClienteAppByEmailSenha(params: {
         return { ok: false, error: "Acesso antigo não reconhecido." };
       }
 
-      const { data: cliente } = await supabaseAdmin
+      const { data: cliente } = await databaseAdmin
         .from("clientes")
         .select("nome, email, telefone, whatsapp")
         .eq("id", acesso.id_cliente)
@@ -385,7 +385,7 @@ export async function loginClienteAppByEmailSenha(params: {
       const conta = globalAccount?.id
         ? globalAccount
         : await createGlobalAccountFromLegacy({
-            supabaseAdmin,
+            databaseAdmin,
             email,
             legacyHash: acesso.senha_hash,
             nome: cliente?.nome,
@@ -393,7 +393,7 @@ export async function loginClienteAppByEmailSenha(params: {
           });
       if (!conta?.id) return { ok: false, error: "Não foi possível atualizar seu acesso antigo agora." };
 
-      await supabaseAdmin
+      await databaseAdmin
         .from("clientes_auth")
         .update({ app_conta_id: conta.id, updated_at: new Date().toISOString() })
         .eq("id", acesso.id);
@@ -417,8 +417,8 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
     action: "cliente_app_ensure_salon_link",
     actorId: idConta,
     idSalao,
-    run: async (supabaseAdmin) => {
-      const { data: accountRow, error: accountError } = await supabaseAdmin
+    run: async (databaseAdmin) => {
+      const { data: accountRow, error: accountError } = await databaseAdmin
         .from("clientes_app_auth")
         .select(
           "id, nome, email, telefone, whatsapp, cpf, data_nascimento, senha_hash, auth_version, migracao_identidade_concluida, ativo"
@@ -431,7 +431,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
       }
       const account = accountRow as ClienteAppAccountRow;
 
-      const { data: linkedRows, error: linkedError } = await supabaseAdmin
+      const { data: linkedRows, error: linkedError } = await databaseAdmin
         .from("clientes_auth")
         .select("id, id_cliente")
         .eq("id_salao", idSalao)
@@ -444,7 +444,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
       let idCliente = "";
       const cpf = normalizeCpf(account.cpf);
       if (cpf) {
-        const byCpf = await findClienteRowsByCpf({ supabaseAdmin, cpf, idSalao, limit: 2 });
+        const byCpf = await findClienteRowsByCpf({ databaseAdmin, cpf, idSalao, limit: 2 });
         if (byCpf.error) return { ok: false as const, error: "Não foi possível validar sua identidade neste salão." };
         if (byCpf.data.length > 1) return { ok: false as const, error: "Encontramos cadastros duplicados com este CPF. O salão precisa revisar a ficha." };
         idCliente = String(byCpf.data[0]?.id || "");
@@ -453,14 +453,14 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
       if (!idCliente && !cpf) {
         const phone = normalizeClienteAppPhone(account.whatsapp || account.telefone);
         if (phone) {
-          const byPhone = await findClienteRowsByNormalizedPhone({ supabaseAdmin, telefone: phone, idSalao, limit: 3 });
+          const byPhone = await findClienteRowsByNormalizedPhone({ databaseAdmin, telefone: phone, idSalao, limit: 3 });
           if (!byPhone.error && byPhone.data.length === 1) idCliente = String(byPhone.data[0].id || "");
         }
       }
 
       const email = getClienteAppPublicEmail(account.email);
       if (!idCliente && !cpf && email) {
-        const { data: byEmail } = await supabaseAdmin
+        const { data: byEmail } = await databaseAdmin
           .from("clientes")
           .select("id")
           .eq("id_salao", idSalao)
@@ -472,7 +472,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
       const whatsapp = normalizeWhatsapp(account.whatsapp || account.telefone);
       let createdNew = false;
       if (!idCliente) {
-        const { data: created, error: createError } = await supabaseAdmin
+        const { data: created, error: createError } = await databaseAdmin
           .from("clientes")
           .insert({
             id_salao: idSalao,
@@ -491,7 +491,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
         idCliente = String(created.id);
         createdNew = true;
       } else {
-        const updateResult = await supabaseAdmin
+        const updateResult = await databaseAdmin
           .from("clientes")
           .update({
             nome: account.nome,
@@ -509,7 +509,7 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
         if (updateResult.error) return { ok: false as const, error: "Não foi possível atualizar seu cadastro neste salão." };
       }
 
-      const { data: authByClient } = await supabaseAdmin
+      const { data: authByClient } = await databaseAdmin
         .from("clientes_auth")
         .select("id")
         .eq("id_salao", idSalao)
@@ -526,11 +526,11 @@ export async function ensureClienteContaVinculadaAoSalao(params: {
       };
 
       const authResult = authByClient?.[0]?.id
-        ? await supabaseAdmin.from("clientes_auth").update(authPayload).eq("id", authByClient[0].id)
-        : await supabaseAdmin.from("clientes_auth").insert({ id_salao: idSalao, ...authPayload });
+        ? await databaseAdmin.from("clientes_auth").update(authPayload).eq("id", authByClient[0].id)
+        : await databaseAdmin.from("clientes_auth").insert({ id_salao: idSalao, ...authPayload });
 
       if (authResult.error) {
-        if (createdNew) await supabaseAdmin.from("clientes").delete().eq("id", idCliente).eq("id_salao", idSalao);
+        if (createdNew) await databaseAdmin.from("clientes").delete().eq("id", idCliente).eq("id_salao", idSalao);
         return { ok: false as const, error: "Não foi possível ativar seu acesso neste salão." };
       }
 

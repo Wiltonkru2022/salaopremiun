@@ -15,10 +15,10 @@ export async function detectExistingSalonClientForSignup(params: {
   const whatsapp = normalizeWhatsapp(params.whatsapp);
   if (!cpf && !whatsapp) return { found: false as const };
 
-  const supabaseAdmin = getDatabaseAdmin();
+  const databaseAdmin = getDatabaseAdmin();
 
   if (cpf) {
-    const byCpf = await findClienteRowsByCpf({ supabaseAdmin, cpf, limit: 20 });
+    const byCpf = await findClienteRowsByCpf({ databaseAdmin, cpf, limit: 20 });
     if (!byCpf.error && byCpf.data.length) {
       return {
         found: true as const,
@@ -30,7 +30,7 @@ export async function detectExistingSalonClientForSignup(params: {
 
   if (whatsapp) {
     const byPhone = await findClienteRowsByNormalizedPhone({
-      supabaseAdmin,
+      databaseAdmin,
       telefone: whatsapp,
       limit: 50,
     });

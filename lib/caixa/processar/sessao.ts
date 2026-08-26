@@ -6,7 +6,7 @@ export async function abrirCaixa(
   ctx: CaixaProcessarContext,
   body: CaixaProcessarBody
 ) {
-  const { error, data } = await ctx.supabaseAdmin.rpc("fn_caixa_abrir_sessao", {
+  const { error, data } = await ctx.databaseAdmin.rpc("fn_caixa_abrir_sessao", {
     p_id_salao: ctx.idSalao,
     p_id_usuario: ctx.idUsuario,
     p_valor_abertura: sanitizeMoney(body.sessao?.valorAbertura),
@@ -40,7 +40,7 @@ export async function fecharCaixa(
     throw new CaixaInputError("Sessao do caixa obrigatoria para fechamento.");
   }
 
-  const { error, data } = await ctx.supabaseAdmin.rpc("fn_caixa_fechar_sessao", {
+  const { error, data } = await ctx.databaseAdmin.rpc("fn_caixa_fechar_sessao", {
     p_id_salao: ctx.idSalao,
     p_id_sessao: idSessao,
     p_id_usuario: ctx.idUsuario,

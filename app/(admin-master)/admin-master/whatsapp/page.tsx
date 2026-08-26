@@ -8,8 +8,8 @@ export const dynamic = "force-dynamic";
 
 export default async function AdminMasterWhatsAppPage() {
   await requireAdminMasterUser("whatsapp_ver");
-  const supabase = getDatabaseAdmin() as any;
-  const { count: recargasComFalha } = await supabase
+  const database = getDatabaseAdmin() as any;
+  const { count: recargasComFalha } = await database
     .from("whatsapp_creditos_recargas")
     .select("id", { count: "exact", head: true })
     .eq("status", "falhou")

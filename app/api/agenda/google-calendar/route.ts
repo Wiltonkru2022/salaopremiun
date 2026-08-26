@@ -149,8 +149,8 @@ export async function POST(req: NextRequest) {
     }
 
     const period = getPeriod(body.viewMode, body.data);
-    const supabase = getDatabaseAdmin();
-    const { data, error } = await (supabase as any)
+    const database = getDatabaseAdmin();
+    const { data, error } = await (database as any)
       .from("agendamentos")
       .select(
         "id, data, hora_inicio, hora_fim, observacoes, status, google_calendar_event_id, clientes(nome, whatsapp), profissionais(nome, nome_exibicao), servicos(nome, preco)"
@@ -205,7 +205,7 @@ export async function POST(req: NextRequest) {
         event: buildGoogleEvent(row, timeZone),
       });
 
-      const { error: updateError } = await (supabase as any)
+      const { error: updateError } = await (database as any)
         .from("agendamentos")
         .update({
           google_calendar_event_id: eventId,

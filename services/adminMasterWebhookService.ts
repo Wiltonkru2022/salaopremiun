@@ -68,8 +68,8 @@ export function createAdminMasterWebhookService() {
     async carregarEventoAsaas(webhookId: string) {
       return runAdminOperation({
         action: "admin_master_webhook_carregar_evento_asaas",
-        run: async (supabase) => {
-          const { data, error } = await supabase
+        run: async (database) => {
+          const { data, error } = await database
             .from("asaas_webhook_eventos")
             .select("id, evento, payment_id, status_processamento, payload")
             .eq("id", webhookId)
@@ -97,8 +97,8 @@ export function createAdminMasterWebhookService() {
       return runAdminOperation({
         action: "admin_master_webhook_iniciar_reprocessamento",
         actorId: params.idAdmin,
-        run: async (supabase) => {
-          const { data } = await supabase
+        run: async (database) => {
+          const { data } = await database
             .from("reprocessamentos_sistema")
             .insert({
               tipo: "manual",
@@ -129,8 +129,8 @@ export function createAdminMasterWebhookService() {
     }) {
       await runAdminOperation({
         action: "admin_master_webhook_preparar_evento_replay",
-        run: async (supabase) => {
-          await supabase
+        run: async (database) => {
+          await database
             .from("asaas_webhook_eventos")
             .update({
               status_processamento: "erro",
@@ -141,7 +141,7 @@ export function createAdminMasterWebhookService() {
             })
             .eq("id", params.webhookId);
 
-          await supabase
+          await database
             .from("eventos_webhook")
             .update({
               status: "pendente",
@@ -215,8 +215,8 @@ export function createAdminMasterWebhookService() {
 
       await runAdminOperation({
         action: "admin_master_webhook_finalizar_reprocessamento",
-        run: async (supabase) => {
-          await supabase
+        run: async (database) => {
+          await database
             .from("reprocessamentos_sistema")
             .update({
               status: params.status,

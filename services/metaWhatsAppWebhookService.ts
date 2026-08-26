@@ -40,10 +40,10 @@ export async function processMetaWhatsAppWebhook(params: {
   events: WebhookEvent[];
 }) {
   const { body, events } = params;
-  const supabaseAdmin = getDatabaseAdmin();
+  const databaseAdmin = getDatabaseAdmin();
 
   if (events.length === 0) {
-    const { error } = await supabaseAdmin.from("whatsapp_filas").insert({
+    const { error } = await databaseAdmin.from("whatsapp_filas").insert({
       id_salao: null,
       payload_json: {
         provider: "meta_cloud",
@@ -68,7 +68,7 @@ export async function processMetaWhatsAppWebhook(params: {
     let envioId: string | null = null;
 
     if (event.providerMessageId) {
-      const envioLookup = await supabaseAdmin
+      const envioLookup = await databaseAdmin
         .from("whatsapp_envios")
         .select("id, id_salao")
         .eq("provider_message_id", event.providerMessageId)
@@ -84,7 +84,7 @@ export async function processMetaWhatsAppWebhook(params: {
             ? JSON.stringify(event.body).slice(0, 500)
             : null;
 
-        const envioUpdate = await supabaseAdmin
+        const envioUpdate = await databaseAdmin
           .from("whatsapp_envios")
           .update({
             status: mapMetaStatus(event.providerStatus),
@@ -99,7 +99,7 @@ export async function processMetaWhatsAppWebhook(params: {
       }
     }
 
-    const filaInsert = await supabaseAdmin.from("whatsapp_filas").insert({
+    const filaInsert = await databaseAdmin.from("whatsapp_filas").insert({
       id_salao: idSalao,
       payload_json: {
         provider: "meta_cloud",

@@ -25,11 +25,11 @@ type SalaoResumoRow = {
 };
 
 export function createProfissionalAcessoService(
-  supabaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
+  databaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
 ) {
   return {
     async buscarProfissional(idProfissional: string) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("profissionais")
         .select("id, id_salao, nome")
         .eq("id", idProfissional)
@@ -40,7 +40,7 @@ export function createProfissionalAcessoService(
     },
 
     async buscarSalao(idSalao: string) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("saloes")
         .select("id, nome, nome_fantasia")
         .eq("id", idSalao)
@@ -55,7 +55,7 @@ export function createProfissionalAcessoService(
       cpf: string;
       idProfissional: string;
     }) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("profissionais_acessos")
         .select("id, id_profissional")
         .eq("cpf", params.cpf)
@@ -72,7 +72,7 @@ export function createProfissionalAcessoService(
         .filter(Boolean);
 
       const { data: profissionais, error: profissionaisError } =
-        await supabaseAdmin
+        await databaseAdmin
           .from("profissionais")
           .select("id")
           .eq("id_salao", params.idSalao)
@@ -90,7 +90,7 @@ export function createProfissionalAcessoService(
       idSalao: string;
       idProfissional: string;
     }) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("profissionais_acessos")
         .select("id, senha_hash")
         .eq("id_profissional", params.idProfissional)
@@ -116,7 +116,7 @@ export function createProfissionalAcessoService(
       };
 
       if (params.idAcesso) {
-        const { error } = await supabaseAdmin
+        const { error } = await databaseAdmin
           .from("profissionais_acessos")
           .update(payload)
           .eq("id", params.idAcesso)
@@ -130,7 +130,7 @@ export function createProfissionalAcessoService(
         throw new Error("Senha obrigatoria para criar acesso profissional.");
       }
 
-      const { error } = await supabaseAdmin
+      const { error } = await databaseAdmin
         .from("profissionais_acessos")
         .insert({
           ...payload,
@@ -147,7 +147,7 @@ export function createProfissionalAcessoService(
       nomeProfissional: string;
       nomeSalao: string;
     }) {
-      const { data: ticket, error: ticketError } = await supabaseAdmin
+      const { data: ticket, error: ticketError } = await databaseAdmin
         .from("tickets")
         .select("id, origem, origem_contexto")
         .eq("id", params.idTicket)
@@ -175,7 +175,7 @@ export function createProfissionalAcessoService(
       const now = new Date().toISOString();
       const mensagem = `Senha do app redefinida pelo salao ${params.nomeSalao}. O profissional ja pode entrar com a nova senha.`;
 
-      await supabaseAdmin.from("ticket_mensagens").insert({
+      await databaseAdmin.from("ticket_mensagens").insert({
         id_ticket: params.idTicket,
         autor_tipo: "usuario",
         autor_nome: params.nomeSalao,
@@ -183,7 +183,7 @@ export function createProfissionalAcessoService(
         interna: false,
       });
 
-      const { data: eventoSenha } = await supabaseAdmin
+      const { data: eventoSenha } = await databaseAdmin
         .from("ticket_eventos")
         .insert({
           id_ticket: params.idTicket,
@@ -221,7 +221,7 @@ export function createProfissionalAcessoService(
 
       await processPendingNotificationJobs(10);
 
-      const { error: updateError } = await supabaseAdmin
+      const { error: updateError } = await databaseAdmin
         .from("tickets")
         .update({
           status: "resolvido",

@@ -28,7 +28,7 @@ import {
 import { createClient } from "@/lib/db/client";
 
 export function useCaixaPageState() {
-  const supabase = useMemo(() => createClient(), []);
+  const database = useMemo(() => createClient(), []);
   const searchParams = useSearchParams();
 
   const [loading, setLoading] = useState(true);
@@ -178,7 +178,7 @@ export function useCaixaPageState() {
   }, [busca, agendamentosFila]);
 
   return {
-    supabase,
+    database,
     requestedComandaId,
     requestedAgendamentoId,
     requestedReaberta,

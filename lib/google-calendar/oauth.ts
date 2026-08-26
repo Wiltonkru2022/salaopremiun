@@ -32,8 +32,8 @@ export function isGoogleCalendarConfigured() {
 }
 
 export async function getGoogleCalendarConnection(idSalao: string) {
-  const supabase = getDatabaseAdmin();
-  const { data, error } = await (supabase as any)
+  const database = getDatabaseAdmin();
+  const { data, error } = await (database as any)
     .from("saloes_google_calendar_connections")
     .select("id_salao, google_email, calendar_id, access_token, refresh_token, expires_at, ativo")
     .eq("id_salao", idSalao)

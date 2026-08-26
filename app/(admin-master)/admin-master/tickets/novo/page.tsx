@@ -55,8 +55,8 @@ export default async function AdminMasterNovoTicketPage({
 }) {
   await requireAdminMasterUser("tickets_editar");
   const params = searchParams ? await searchParams : {};
-  const supabase = getDatabaseAdmin();
-  const { data: saloes } = await supabase
+  const database = getDatabaseAdmin();
+  const { data: saloes } = await database
     .from("saloes")
     .select("id, nome, cidade, estado, plano, status")
     .order("nome", { ascending: true })

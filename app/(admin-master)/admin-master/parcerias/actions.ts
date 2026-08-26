@@ -30,8 +30,8 @@ function requireDeleteConfirmation(formData: FormData) {
 }
 
 async function cleanupCampanhaImages(idCampanha: string) {
-  const supabase = getDatabaseAdmin() as any;
-  const { data } = await supabase
+  const database = getDatabaseAdmin() as any;
+  const { data } = await database
     .from("parceria_criativos")
     .select("imagem_url")
     .eq("id_campanha", idCampanha);
@@ -42,7 +42,7 @@ async function cleanupCampanhaImages(idCampanha: string) {
 
 export async function criarParceiro(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const razaoSocial = text(formData, "razao_social");
   if (!razaoSocial) throw new Error("Informe a razão social do parceiro.");
 
@@ -59,7 +59,7 @@ export async function criarParceiro(formData: FormData) {
     criado_por: access.usuario.id,
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("parceiros_comerciais")
     .insert(payload)
     .select("id")
@@ -79,12 +79,12 @@ export async function criarParceiro(formData: FormData) {
 
 export async function excluirParceiro(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const id = text(formData, "id_parceiro");
   if (!id) throw new Error("Empresa não informada.");
   requireDeleteConfirmation(formData);
 
-  const { data: parceiro, error: parceiroError } = await supabase
+  const { data: parceiro, error: parceiroError } = await database
     .from("parceiros_comerciais")
     .select("id,razao_social,nome_fantasia")
     .eq("id", id)
@@ -93,7 +93,7 @@ export async function excluirParceiro(formData: FormData) {
     throw new Error(parceiroError?.message || "Empresa não encontrada.");
   }
 
-  const { count: contratos, error: contratosError } = await supabase
+  const { count: contratos, error: contratosError } = await database
     .from("parceria_contratos")
     .select("id", { count: "exact", head: true })
     .eq("id_parceiro", id);
@@ -102,7 +102,7 @@ export async function excluirParceiro(formData: FormData) {
     throw new Error("Esta empresa possui contrato registrado e não pode ser apagada. Encerre as campanhas e mantenha o histórico contratual.");
   }
 
-  const { data: campanhas } = await supabase
+  const { data: campanhas } = await database
     .from("parceria_campanhas")
     .select("id")
     .eq("id_parceiro", id);
@@ -110,7 +110,7 @@ export async function excluirParceiro(formData: FormData) {
     await cleanupCampanhaImages(campanha.id);
   }
 
-  const { error } = await supabase.from("parceiros_comerciais").delete().eq("id", id);
+  const { error } = await database.from("parceiros_comerciais").delete().eq("id", id);
   if (error) throw new Error(error.message || "Não foi possível excluir a empresa.");
 
   await registrarAdminMasterAuditoria({
@@ -126,7 +126,7 @@ export async function excluirParceiro(formData: FormData) {
 
 export async function criarCampanhaParceria(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const origem = text(formData, "origem") === "salao_premium" ? "salao_premium" : "parceiro";
   const idParceiro = text(formData, "id_parceiro");
   const nome = text(formData, "nome");
@@ -173,7 +173,7 @@ export async function criarCampanhaParceria(formData: FormData) {
     criado_por: access.usuario.id,
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("parceria_campanhas")
     .insert(payload)
     .select("id")
@@ -193,7 +193,7 @@ export async function criarCampanhaParceria(formData: FormData) {
 
 export async function atualizarCampanhaParceria(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const id = text(formData, "id_campanha");
   if (!id) throw new Error("Campanha não informada.");
   const status = text(formData, "status");
@@ -218,7 +218,7 @@ export async function atualizarCampanhaParceria(formData: FormData) {
     exclusiva: formData.get("exclusiva") === "on" || categoria === "critico",
   };
 
-  const { error } = await supabase.from("parceria_campanhas").update(payload).eq("id", id);
+  const { error } = await database.from("parceria_campanhas").update(payload).eq("id", id);
   if (error) throw new Error(error.message || "Não foi possível atualizar a campanha.");
 
   await registrarAdminMasterAuditoria({
@@ -234,12 +234,12 @@ export async function atualizarCampanhaParceria(formData: FormData) {
 
 export async function excluirCampanhaParceria(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const id = text(formData, "id_campanha");
   if (!id) throw new Error("Campanha não informada.");
   requireDeleteConfirmation(formData);
 
-  const { data: campanha, error: campanhaError } = await supabase
+  const { data: campanha, error: campanhaError } = await database
     .from("parceria_campanhas")
     .select("id,nome,origem,id_parceiro")
     .eq("id", id)
@@ -249,7 +249,7 @@ export async function excluirCampanhaParceria(formData: FormData) {
   }
 
   await cleanupCampanhaImages(id);
-  const { error } = await supabase.from("parceria_campanhas").delete().eq("id", id);
+  const { error } = await database.from("parceria_campanhas").delete().eq("id", id);
   if (error) throw new Error(error.message || "Não foi possível excluir a campanha.");
 
   await registrarAdminMasterAuditoria({
@@ -265,7 +265,7 @@ export async function excluirCampanhaParceria(formData: FormData) {
 
 export async function salvarCriativoParceria(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const idCampanha = text(formData, "id_campanha");
   const titulo = text(formData, "titulo");
   if (!idCampanha || !titulo) throw new Error("Informe a campanha e o título do anúncio.");
@@ -294,7 +294,7 @@ export async function salvarCriativoParceria(formData: FormData) {
     ativo: true,
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("parceria_criativos")
     .insert(payload)
     .select("id")
@@ -318,11 +318,11 @@ export async function salvarCriativoParceria(formData: FormData) {
 
 export async function atualizarCriativoParceria(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const id = text(formData, "id_criativo");
   if (!id) throw new Error("Criativo não informado.");
 
-  const { data: atual, error: atualError } = await supabase
+  const { data: atual, error: atualError } = await database
     .from("parceria_criativos")
     .select("id,id_campanha,titulo,subtitulo,imagem_url,cta_texto,destino_url,formato,ativo")
     .eq("id", id)
@@ -361,7 +361,7 @@ export async function atualizarCriativoParceria(formData: FormData) {
     ativo: formData.get("ativo") === "on",
   };
 
-  const { error } = await supabase.from("parceria_criativos").update(payload).eq("id", id);
+  const { error } = await database.from("parceria_criativos").update(payload).eq("id", id);
   if (error) {
     if (uploadedUrl) await removeCampanhaImage(uploadedUrl);
     throw new Error(error.message || "Não foi possível atualizar o criativo.");
@@ -384,12 +384,12 @@ export async function atualizarCriativoParceria(formData: FormData) {
 
 export async function excluirCriativoParceria(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const id = text(formData, "id_criativo");
   if (!id) throw new Error("Criativo não informado.");
   requireDeleteConfirmation(formData);
 
-  const { data: criativo, error: criativoError } = await supabase
+  const { data: criativo, error: criativoError } = await database
     .from("parceria_criativos")
     .select("id,id_campanha,titulo,imagem_url")
     .eq("id", id)
@@ -398,7 +398,7 @@ export async function excluirCriativoParceria(formData: FormData) {
     throw new Error(criativoError?.message || "Criativo não encontrado.");
   }
 
-  const { error } = await supabase.from("parceria_criativos").delete().eq("id", id);
+  const { error } = await database.from("parceria_criativos").delete().eq("id", id);
   if (error) throw new Error(error.message || "Não foi possível excluir o criativo.");
   await removeCampanhaImage(criativo.imagem_url);
 
@@ -415,11 +415,11 @@ export async function excluirCriativoParceria(formData: FormData) {
 
 export async function gerarContratoParceria(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const idCampanha = text(formData, "id_campanha");
   if (!idCampanha) throw new Error("Campanha não informada.");
 
-  const { data: campanha, error: campanhaError } = await supabase
+  const { data: campanha, error: campanhaError } = await database
     .from("parceria_campanhas")
     .select("id,nome,origem,valor_contratado,inicio_em,fim_em,id_parceiro,parceiros_comerciais(razao_social,nome_fantasia,cpf_cnpj,email)")
     .eq("id", idCampanha)
@@ -461,7 +461,7 @@ export async function gerarContratoParceria(formData: FormData) {
     criado_por: access.usuario.id,
   };
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("parceria_contratos")
     .upsert(payload, { onConflict: "numero" })
     .select("id")
@@ -483,8 +483,8 @@ export async function carregarContratoParceriaPreview(idContrato: string) {
   await requireAdminMasterUser("comunicacao_ver");
   const id = String(idContrato || "").trim();
   if (!id) throw new Error("Contrato não informado.");
-  const supabase = getDatabaseAdmin() as any;
-  const { data, error } = await supabase
+  const database = getDatabaseAdmin() as any;
+  const { data, error } = await database
     .from("parceria_contratos")
     .select("id,numero,conteudo_snapshot")
     .eq("id", id)

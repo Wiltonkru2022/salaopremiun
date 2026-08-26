@@ -16,8 +16,8 @@ export async function POST(request: Request) {
     }
 
     const context = validation.context;
-    const supabase = getDatabaseAdmin() as any;
-    const { data: notification, error: loadError } = await supabase
+    const database = getDatabaseAdmin() as any;
+    const { data: notification, error: loadError } = await database
       .from("notification_jobs")
       .select("id, metadata")
       .eq("id", id)
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     }
 
     const now = new Date().toISOString();
-    const { error: updateError } = await supabase
+    const { error: updateError } = await database
       .from("notification_jobs")
       .update({
         metadata: { ...(notification.metadata || {}), profissional_lida_em: now },

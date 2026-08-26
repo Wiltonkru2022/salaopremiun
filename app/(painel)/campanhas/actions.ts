@@ -131,8 +131,8 @@ export async function criarCampanhaCupomAction(formData: FormData) {
     redirect("/campanhas/nova?erro=Preencha%20titulo%20e%20desconto.");
   }
 
-  const supabase = getDatabaseAdmin();
-  const { data: cupom, error } = await (supabase as any).from("cupons_salao").insert({
+  const database = getDatabaseAdmin();
+  const { data: cupom, error } = await (database as any).from("cupons_salao").insert({
     id_salao: usuario.id_salao,
     codigo: `${codigo}${randomBytes(2).toString("hex").toUpperCase()}`,
     nome: titulo,
@@ -191,12 +191,12 @@ export async function criarCampanhaCupomAction(formData: FormData) {
       brinde_descricao: String(formData.get(`beneficio_brinde_${idServico}`) || "").trim() || null,
       limite_uso_servico: Number(formData.get(`limite_servico_${idServico}`) || 0) || null,
     }));
-    await (supabase as any).from("cupom_salao_servicos").insert(rows);
+    await (database as any).from("cupom_salao_servicos").insert(rows);
   }
 
   if (publicoAlvo === "aniversariantes_mes") {
     const mesAtual = String(new Date().getMonth() + 1).padStart(2, "0");
-    const { data: aniversariantes } = await (supabase as any)
+    const { data: aniversariantes } = await (database as any)
       .from("clientes")
       .select("id, data_nascimento")
       .eq("id_salao", usuario.id_salao)
@@ -214,7 +214,7 @@ export async function criarCampanhaCupomAction(formData: FormData) {
       .filter((row) => row.id_cliente);
 
     if (rowsClientes.length) {
-      await (supabase as any).from("cupom_salao_clientes").insert(rowsClientes);
+      await (database as any).from("cupom_salao_clientes").insert(rowsClientes);
     }
   }
 
@@ -336,8 +336,8 @@ export async function adicionarClienteCampanhaAction(formData: FormData) {
     redirect(`/campanhas/${idCampanha || ""}?erro=Selecione%20um%20cliente.`);
   }
 
-  const supabase = getDatabaseAdmin();
-  const { data: cliente } = await (supabase as any)
+  const database = getDatabaseAdmin();
+  const { data: cliente } = await (database as any)
     .from("clientes")
     .select("id")
     .eq("id_salao", usuario.id_salao)
@@ -350,7 +350,7 @@ export async function adicionarClienteCampanhaAction(formData: FormData) {
     redirect(`/campanhas/${idCampanha}?erro=Cliente%20ativo%20nao%20encontrado.`);
   }
 
-  const { data: existente } = await (supabase as any)
+  const { data: existente } = await (database as any)
     .from("cupom_salao_clientes")
     .select("id_cupom")
     .eq("id_salao", usuario.id_salao)
@@ -361,7 +361,7 @@ export async function adicionarClienteCampanhaAction(formData: FormData) {
 
   const { error } = existente?.id_cupom
     ? { error: null }
-    : await (supabase as any).from("cupom_salao_clientes").insert({
+    : await (database as any).from("cupom_salao_clientes").insert({
         id_salao: usuario.id_salao,
         id_cupom: idCampanha,
         id_cliente: idCliente,
@@ -402,8 +402,8 @@ export async function excluirCampanhaAction(formData: FormData) {
     redirect(`/campanhas/${idCampanha || ""}?erro=Digite%20EXCLUIR%20para%20confirmar.`);
   }
 
-  const supabase = getDatabaseAdmin();
-  const { data: campanha } = await (supabase as any)
+  const database = getDatabaseAdmin();
+  const { data: campanha } = await (database as any)
     .from("cupons_salao")
     .select("id, id_salao")
     .eq("id", idCampanha)
@@ -415,7 +415,7 @@ export async function excluirCampanhaAction(formData: FormData) {
     redirect("/campanhas?erro=Campanha%20nao%20encontrada.");
   }
 
-  const { error } = await (supabase as any)
+  const { error } = await (database as any)
     .from("cupons_salao")
     .delete()
     .eq("id", idCampanha)
@@ -432,9 +432,9 @@ export async function excluirCampanhaAction(formData: FormData) {
 
 export async function auditarCampanhasAction() {
   const { usuario } = await requireCampaignMutation();
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
 
-  const { data: cupons } = await (supabase as any)
+  const { data: cupons } = await (database as any)
     .from("cupons_salao")
     .select("id")
     .eq("id_salao", usuario.id_salao)
@@ -450,13 +450,13 @@ export async function auditarCampanhasAction() {
   }
 
   const [{ data: agendamentos }, { data: eventos }] = await Promise.all([
-    (supabase as any)
+    (database as any)
       .from("agendamentos")
       .select("id, id_cupom_salao, cliente_id, servico_id, status, created_at")
       .eq("id_salao", usuario.id_salao)
       .in("id_cupom_salao", cupomIds)
       .limit(5000),
-    (supabase as any)
+    (database as any)
       .from("campanha_eventos")
       .select("id_cupom, tipo, metadata")
       .eq("id_salao", usuario.id_salao)
@@ -497,7 +497,7 @@ export async function auditarCampanhasAction() {
     .filter(Boolean);
 
   if (novosEventos.length) {
-    const { error } = await (supabase as any)
+    const { error } = await (database as any)
       .from("campanha_eventos")
       .insert(novosEventos.slice(0, 2000));
 
@@ -520,8 +520,8 @@ export async function atualizarServicosCampanhaAction(formData: FormData) {
 
   if (!idCampanha) redirect("/campanhas?erro=Campanha%20invalida.");
 
-  const supabase = getDatabaseAdmin();
-  const { error: deleteError } = await (supabase as any)
+  const database = getDatabaseAdmin();
+  const { error: deleteError } = await (database as any)
     .from("cupom_salao_servicos")
     .delete()
     .eq("id_salao", usuario.id_salao)
@@ -542,7 +542,7 @@ export async function atualizarServicosCampanhaAction(formData: FormData) {
       limite_uso_servico: Number(formData.get(`limite_servico_${idServico}`) || 0) || null,
     }));
 
-    const { error: insertError } = await (supabase as any)
+    const { error: insertError } = await (database as any)
       .from("cupom_salao_servicos")
       .insert(rows);
 

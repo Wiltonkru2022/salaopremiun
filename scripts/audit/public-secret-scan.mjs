@@ -10,7 +10,7 @@ const binaryExtensions = new Set([
 ]);
 
 const secretPatterns = [
-  { name: "Supabase secret key", regex: /\bsb_secret_[A-Za-z0-9._-]{16,}/g },
+  { name: "Neon secret key", regex: /\bsb_secret_[A-Za-z0-9._-]{16,}/g },
   { name: "Brevo API key", regex: /\bxkeysib-[A-Za-z0-9_-]{20,}/g },
   { name: "OpenAI API key", regex: /\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}/g },
   { name: "GitHub token", regex: /\bgh(?:p|o|u|s|r)_[A-Za-z0-9]{20,}/g },
@@ -19,7 +19,10 @@ const secretPatterns = [
 ];
 
 const sensitiveAssignments = [
-  "SUPABASE_SERVICE_ROLE_KEY",
+  "NEON_DATABASE_URL",
+  "NEON_ADMIN_DATABASE_URL",
+  "CLERK_SECRET_KEY",
+  "CLOUDINARY_API_SECRET",
   "BREVO_API_KEY",
   "ASAAS_API_KEY",
   "OPENAI_API_KEY",

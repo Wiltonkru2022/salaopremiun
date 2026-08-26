@@ -177,16 +177,16 @@ function getFallbackPlanos(): PlanoCatalogoPublico[] {
 
 export async function getPlanosSaasCatalogo() {
   try {
-    const supabase = getDatabaseAdmin();
+    const database = getDatabaseAdmin();
     const [{ data: planos, error: planosError }, { data: recursos, error: recursosError }] =
       await Promise.all([
-        supabase
+        database
           .from("planos_saas")
           .select(
             "id, codigo, nome, subtitulo, descricao, valor_mensal, preco_anual, limite_usuarios, limite_profissionais, trial_dias, ideal_para, cta, destaque, ativo, ordem, metadata"
           )
           .order("ordem", { ascending: true }),
-        supabase
+        database
           .from("planos_recursos")
           .select("id_plano, recurso_codigo, habilitado, limite_numero, observacao"),
       ]);

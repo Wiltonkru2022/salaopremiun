@@ -32,7 +32,7 @@ import type { ComandaRow, PagamentoRow, ComissaoRow, ProfissionalRow, ComandaIte
 import { getJoinedName, formatCurrency, formatDateTime, formatDateInput, getDatePresetRange, escapeHtml, formatFormaPagamentoLabel, formatTipoItemLabel, csvCell, getStatusBadgeClass, KpiCard, ComboDescriptionCell } from "./relatorio-financeiro-support";
 
 export default function RelatorioFinanceiroPage() {
-  const supabase = createClient();
+  const database = createClient();
   const { snapshot: painelSession } = usePainelSession();
 
   const [loading, setLoading] = useState(true);
@@ -90,7 +90,7 @@ export default function RelatorioFinanceiroPage() {
           Boolean(painelSession?.planoRecursos?.relatorios_avancados)
         );
 
-        const { data: profissionaisData, error: profissionaisError } = await supabase
+        const { data: profissionaisData, error: profissionaisError } = await database
           .from("profissionais")
           .select("id, nome, tipo_profissional, status")
           .eq("id_salao", salaoId)
@@ -104,7 +104,7 @@ export default function RelatorioFinanceiroPage() {
 
         setProfissionais((profissionaisData as ProfissionalRow[]) || []);
 
-        let queryComandas = supabase
+        let queryComandas = database
           .from("comandas")
           .select(`
             id,
@@ -162,7 +162,7 @@ export default function RelatorioFinanceiroPage() {
         const listaComandas = (comandasData as ComandaRow[]) || [];
         setComandas(listaComandas);
 
-        const { data: caixaSessoesData, error: caixaSessoesError } = await supabase
+        const { data: caixaSessoesData, error: caixaSessoesError } = await database
           .from("caixa_sessoes")
           .select(`
             id,
@@ -204,7 +204,7 @@ export default function RelatorioFinanceiroPage() {
           { data: comissoesData, error: comissoesError },
           { data: itensData, error: itensError },
         ] = await Promise.all([
-          supabase
+          database
             .from("comanda_pagamentos")
             .select(`
               id,
@@ -222,7 +222,7 @@ export default function RelatorioFinanceiroPage() {
             `)
             .in("id_comanda", idsComandas),
 
-          supabase
+          database
             .from("comissoes_lancamentos")
             .select(`
               id,
@@ -239,7 +239,7 @@ export default function RelatorioFinanceiroPage() {
             `)
             .in("id_comanda", idsComandas),
 
-          supabase
+          database
             .from("comanda_itens")
             .select(`
               id,
@@ -291,7 +291,7 @@ export default function RelatorioFinanceiroPage() {
     },
     [
       dadosCarregados,
-      supabase,
+      database,
       idSalao,
       statusFiltro,
       dataInicio,

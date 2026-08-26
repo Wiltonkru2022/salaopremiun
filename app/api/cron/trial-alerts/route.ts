@@ -12,14 +12,14 @@ async function handleCron(req: Request) {
 
     return NextResponse.json({
       ok: result.ok,
-      provider: "vercel-supabase",
+      provider: "vercel-database",
       result,
     });
   } catch (error) {
     return NextResponse.json(
       {
         ok: false,
-        provider: "vercel-supabase",
+        provider: "vercel-database",
         error:
           error instanceof Error
             ? error.message

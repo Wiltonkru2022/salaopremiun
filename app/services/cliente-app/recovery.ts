@@ -120,7 +120,7 @@ async function sendCodeEmail(params: { to: string; code: string; title: string }
 }
 
 async function createOtp(params: {
-  supabaseAdmin: any;
+  databaseAdmin: any;
   accountId: string;
   purpose: RecoveryPurpose;
   email: string;
@@ -128,7 +128,7 @@ async function createOtp(params: {
   userAgent?: string | null;
 }) {
   const now = Date.now();
-  const { data: latest } = await params.supabaseAdmin
+  const { data: latest } = await params.databaseAdmin
     .from("cliente_app_email_verificacoes")
     .select("id, criado_em")
     .eq("conta_id", params.accountId)
@@ -146,7 +146,7 @@ async function createOtp(params: {
     }
   }
 
-  await params.supabaseAdmin
+  await params.databaseAdmin
     .from("cliente_app_email_verificacoes")
     .update({ consumido_em: new Date().toISOString() })
     .eq("conta_id", params.accountId)
@@ -154,7 +154,7 @@ async function createOtp(params: {
     .is("consumido_em", null);
 
   const code = generateCode();
-  const { data: created, error } = await params.supabaseAdmin
+  const { data: created, error } = await params.databaseAdmin
     .from("cliente_app_email_verificacoes")
     .insert({
       conta_id: params.accountId,
@@ -174,8 +174,8 @@ async function createOtp(params: {
   return { ok: true as const, code, id: String(created.id) };
 }
 
-async function invalidateOtpAfterEmailFailure(supabaseAdmin: any, otpId: string) {
-  const { error } = await supabaseAdmin
+async function invalidateOtpAfterEmailFailure(databaseAdmin: any, otpId: string) {
+  const { error } = await databaseAdmin
     .from("cliente_app_email_verificacoes")
     .update({ consumido_em: new Date().toISOString() })
     .eq("id", otpId)
@@ -190,7 +190,7 @@ async function invalidateOtpAfterEmailFailure(supabaseAdmin: any, otpId: string)
 }
 
 async function sendCreatedOtp(params: {
-  supabaseAdmin: any;
+  databaseAdmin: any;
   otpId: string;
   to: string;
   code: string;
@@ -203,19 +203,19 @@ async function sendCreatedOtp(params: {
       title: params.title,
     });
   } catch (error) {
-    await invalidateOtpAfterEmailFailure(params.supabaseAdmin, params.otpId);
+    await invalidateOtpAfterEmailFailure(params.databaseAdmin, params.otpId);
     throw error;
   }
 }
 
 async function consumeOtp(params: {
-  supabaseAdmin: any;
+  databaseAdmin: any;
   accountId: string;
   purpose: RecoveryPurpose;
   email: string;
   code: string;
 }) {
-  const { data: row, error } = await params.supabaseAdmin
+  const { data: row, error } = await params.databaseAdmin
     .from("cliente_app_email_verificacoes")
     .select("id, codigo_hash, expira_em, tentativas, consumido_em")
     .eq("conta_id", params.accountId)
@@ -237,14 +237,14 @@ async function consumeOtp(params: {
   const actual = String(row.codigo_hash || "");
   const matches = actual.length === expected.length && crypto.timingSafeEqual(Buffer.from(actual), Buffer.from(expected));
   if (!matches) {
-    await params.supabaseAdmin
+    await params.databaseAdmin
       .from("cliente_app_email_verificacoes")
       .update({ tentativas: Number(row.tentativas || 0) + 1 })
       .eq("id", row.id);
     return { ok: false as const, error: "Código inválido ou expirado." };
   }
 
-  const consumed = await params.supabaseAdmin
+  const consumed = await params.databaseAdmin
     .from("cliente_app_email_verificacoes")
     .update({ consumido_em: new Date().toISOString() })
     .eq("id", row.id)
@@ -253,8 +253,8 @@ async function consumeOtp(params: {
   return { ok: true as const };
 }
 
-async function loadAccountById(supabaseAdmin: any, accountId: string) {
-  const { data, error } = await supabaseAdmin
+async function loadAccountById(databaseAdmin: any, accountId: string) {
+  const { data, error } = await databaseAdmin
     .from("clientes_app_auth")
     .select("id, nome, email, telefone, whatsapp, cpf, data_nascimento, auth_version, ativo")
     .eq("id", accountId)
@@ -264,27 +264,27 @@ async function loadAccountById(supabaseAdmin: any, accountId: string) {
   return data as AccountRow;
 }
 
-async function bumpAuthVersion(supabaseAdmin: any, account: AccountRow) {
+async function bumpAuthVersion(databaseAdmin: any, account: AccountRow) {
   const next = Number(account.auth_version || 1) + 1;
-  const { error } = await supabaseAdmin
+  const { error } = await databaseAdmin
     .from("clientes_app_auth")
     .update({ auth_version: next, updated_at: new Date().toISOString() })
     .eq("id", account.id);
   return error ? null : next;
 }
 
-async function syncEmailAcrossLinks(supabaseAdmin: any, accountId: string, email: string) {
-  const { data: links } = await supabaseAdmin
+async function syncEmailAcrossLinks(databaseAdmin: any, accountId: string, email: string) {
+  const { data: links } = await databaseAdmin
     .from("clientes_auth")
     .select("id_cliente, id_salao")
     .eq("app_conta_id", accountId);
-  await supabaseAdmin
+  await databaseAdmin
     .from("clientes_auth")
     .update({ email, updated_at: new Date().toISOString() })
     .eq("app_conta_id", accountId);
   for (const link of links || []) {
     if (!link.id_cliente || !link.id_salao) continue;
-    await supabaseAdmin
+    await databaseAdmin
       .from("clientes")
       .update({ email, atualizado_em: new Date().toISOString() })
       .eq("id", link.id_cliente)
@@ -303,8 +303,8 @@ export async function requestClienteRecoveryCodeByEmail(params: {
   return runAdminOperation({
     action: "cliente_app_recovery_email_request",
     actorId: `email:${hmac(email)}`,
-    run: async (supabaseAdmin): Promise<BasicResult> => {
-      const { data: account } = await supabaseAdmin
+    run: async (databaseAdmin): Promise<BasicResult> => {
+      const { data: account } = await databaseAdmin
         .from("clientes_app_auth")
         .select("id, ativo")
         .eq("email", email)
@@ -313,7 +313,7 @@ export async function requestClienteRecoveryCodeByEmail(params: {
 
       if (account?.id && account.ativo !== false) {
         const otp = await createOtp({
-          supabaseAdmin,
+          databaseAdmin,
           accountId: account.id,
           purpose: "recuperar_acesso_email",
           email,
@@ -322,7 +322,7 @@ export async function requestClienteRecoveryCodeByEmail(params: {
         });
         if (otp.ok) {
           await sendCreatedOtp({
-            supabaseAdmin,
+            databaseAdmin,
             otpId: otp.id,
             to: email,
             code: otp.code,
@@ -353,8 +353,8 @@ export async function confirmClienteRecoveryCodeByEmail(params: {
   return runAdminOperation({
     action: "cliente_app_recovery_email_confirm",
     actorId: `email:${hmac(email)}`,
-    run: async (supabaseAdmin): Promise<SessionResult> => {
-      const { data: accountRow } = await supabaseAdmin
+    run: async (databaseAdmin): Promise<SessionResult> => {
+      const { data: accountRow } = await databaseAdmin
         .from("clientes_app_auth")
         .select("id, nome, email, telefone, whatsapp, cpf, data_nascimento, auth_version, ativo")
         .eq("email", email)
@@ -363,14 +363,14 @@ export async function confirmClienteRecoveryCodeByEmail(params: {
       if (!accountRow?.id || accountRow.ativo === false) return { ok: false, error: "Código inválido ou expirado." };
       const account = accountRow as AccountRow;
       const consumed = await consumeOtp({
-        supabaseAdmin,
+        databaseAdmin,
         accountId: account.id,
         purpose: "recuperar_acesso_email",
         email,
         code: params.code,
       });
       if (!consumed.ok) return consumed;
-      const next = await bumpAuthVersion(supabaseAdmin, account);
+      const next = await bumpAuthVersion(databaseAdmin, account);
       if (!next) return { ok: false, error: "Não foi possível recuperar o acesso agora." };
       return { ok: true, message: "Acesso recuperado com sucesso.", session: buildSession(account, next) };
     },
@@ -389,8 +389,8 @@ export async function startClienteRecoveryByIdentity(params: {
   return runAdminOperation({
     action: "cliente_app_recovery_identity_start",
     actorId: `cpf:${hmac(cpf)}`,
-    run: async (supabaseAdmin): Promise<IdentityStartResult> => {
-      const { data: account } = await supabaseAdmin
+    run: async (databaseAdmin): Promise<IdentityStartResult> => {
+      const { data: account } = await databaseAdmin
         .from("clientes_app_auth")
         .select("id, data_nascimento, ativo")
         .eq("cpf", cpf)
@@ -421,15 +421,15 @@ export async function requestClienteRecoveryCodeByIdentity(params: {
   return runAdminOperation({
     action: "cliente_app_recovery_identity_email_request",
     actorId: accountId,
-    run: async (supabaseAdmin): Promise<BasicResult> => {
-      const account = await loadAccountById(supabaseAdmin, accountId);
+    run: async (databaseAdmin): Promise<BasicResult> => {
+      const account = await loadAccountById(databaseAdmin, accountId);
       if (!account) return { ok: false, error: "Não foi possível continuar a recuperação." };
       const currentEmail = getClienteAppPublicEmail(account.email);
       if (currentEmail && currentEmail !== email) {
         return { ok: false, error: "Este não é o e-mail atual da conta. Se perdeu o e-mail, use Alterar meu e-mail." };
       }
       if (!currentEmail) {
-        const { data: duplicate } = await supabaseAdmin
+        const { data: duplicate } = await databaseAdmin
           .from("clientes_app_auth")
           .select("id")
           .eq("email", email)
@@ -439,7 +439,7 @@ export async function requestClienteRecoveryCodeByIdentity(params: {
       }
 
       const otp = await createOtp({
-        supabaseAdmin,
+        databaseAdmin,
         accountId,
         purpose: "recuperar_acesso_identidade",
         email,
@@ -448,7 +448,7 @@ export async function requestClienteRecoveryCodeByIdentity(params: {
       });
       if (!otp.ok) return otp;
       await sendCreatedOtp({
-        supabaseAdmin,
+        databaseAdmin,
         otpId: otp.id,
         to: email,
         code: otp.code,
@@ -471,11 +471,11 @@ export async function confirmClienteRecoveryCodeByIdentity(params: {
   return runAdminOperation({
     action: "cliente_app_recovery_identity_email_confirm",
     actorId: accountId,
-    run: async (supabaseAdmin): Promise<SessionResult> => {
-      const account = await loadAccountById(supabaseAdmin, accountId);
+    run: async (databaseAdmin): Promise<SessionResult> => {
+      const account = await loadAccountById(databaseAdmin, accountId);
       if (!account) return { ok: false, error: "Código inválido ou expirado." };
       const consumed = await consumeOtp({
-        supabaseAdmin,
+        databaseAdmin,
         accountId,
         purpose: "recuperar_acesso_identidade",
         email,
@@ -493,11 +493,11 @@ export async function confirmClienteRecoveryCodeByIdentity(params: {
         payload.email = email;
         payload.email_verificado_em = new Date().toISOString();
       }
-      const updated = await supabaseAdmin.from("clientes_app_auth").update(payload).eq("id", accountId);
+      const updated = await databaseAdmin.from("clientes_app_auth").update(payload).eq("id", accountId);
       if (updated.error) return { ok: false, error: "Não foi possível recuperar o acesso agora." };
       if (!currentEmail) {
         account.email = email;
-        await syncEmailAcrossLinks(supabaseAdmin, accountId, email);
+        await syncEmailAcrossLinks(databaseAdmin, accountId, email);
       }
       return { ok: true, message: "Acesso recuperado com sucesso.", session: buildSession(account, next) };
     },
@@ -517,10 +517,10 @@ export async function requestClienteEmailChangeCode(params: {
   return runAdminOperation({
     action: "cliente_app_email_change_request",
     actorId: accountId,
-    run: async (supabaseAdmin): Promise<BasicResult> => {
-      const account = await loadAccountById(supabaseAdmin, accountId);
+    run: async (databaseAdmin): Promise<BasicResult> => {
+      const account = await loadAccountById(databaseAdmin, accountId);
       if (!account) return { ok: false, error: "Não foi possível validar sua conta." };
-      const { data: duplicate } = await supabaseAdmin
+      const { data: duplicate } = await databaseAdmin
         .from("clientes_app_auth")
         .select("id")
         .eq("email", email)
@@ -529,7 +529,7 @@ export async function requestClienteEmailChangeCode(params: {
       if (duplicate?.length) return { ok: false, error: "Este e-mail já pertence a outra conta." };
 
       const otp = await createOtp({
-        supabaseAdmin,
+        databaseAdmin,
         accountId,
         purpose: "alterar_email",
         email,
@@ -538,7 +538,7 @@ export async function requestClienteEmailChangeCode(params: {
       });
       if (!otp.ok) return otp;
       await sendCreatedOtp({
-        supabaseAdmin,
+        databaseAdmin,
         otpId: otp.id,
         to: email,
         code: otp.code,
@@ -561,11 +561,11 @@ export async function confirmClienteEmailChange(params: {
   return runAdminOperation({
     action: "cliente_app_email_change_confirm",
     actorId: accountId,
-    run: async (supabaseAdmin): Promise<SessionResult> => {
-      const account = await loadAccountById(supabaseAdmin, accountId);
+    run: async (databaseAdmin): Promise<SessionResult> => {
+      const account = await loadAccountById(databaseAdmin, accountId);
       if (!account) return { ok: false, error: "Código inválido ou expirado." };
       const consumed = await consumeOtp({
-        supabaseAdmin,
+        databaseAdmin,
         accountId,
         purpose: "alterar_email",
         email,
@@ -574,7 +574,7 @@ export async function confirmClienteEmailChange(params: {
       if (!consumed.ok) return consumed;
 
       const next = Number(account.auth_version || 1) + 1;
-      const updated = await supabaseAdmin
+      const updated = await databaseAdmin
         .from("clientes_app_auth")
         .update({
           email,
@@ -586,8 +586,8 @@ export async function confirmClienteEmailChange(params: {
       if (updated.error) return { ok: false, error: "Não foi possível alterar o e-mail agora." };
 
       account.email = email;
-      await syncEmailAcrossLinks(supabaseAdmin, accountId, email);
-      await supabaseAdmin
+      await syncEmailAcrossLinks(databaseAdmin, accountId, email);
+      await databaseAdmin
         .from("cliente_app_email_verificacoes")
         .update({ consumido_em: new Date().toISOString() })
         .eq("conta_id", accountId)

@@ -71,20 +71,20 @@ export default async function AdminMasterSegurancaPage({ searchParams }: { searc
   const to = from + PAGE_SIZE - 1;
   const sinceIso = new Date(Date.now() - periodHours(params.periodo) * 60 * 60 * 1000).toISOString();
   const cleanSearch = String(params.busca || "").replace(/[,%()]/g, " ").trim().slice(0, 80);
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
 
-  let eventsQuery = supabase
+  let eventsQuery = database
     .from("eventos_sistema")
     .select("id, id_usuario, id_salao, tipo_evento, severidade, mensagem, detalhes_json, created_at", { count: "exact" })
     .eq("modulo", "security")
     .gte("created_at", sinceIso);
-  let highRiskQuery = supabase
+  let highRiskQuery = database
     .from("eventos_sistema")
     .select("id", { count: "exact", head: true })
     .eq("modulo", "security")
     .gte("created_at", sinceIso)
     .in("severidade", ["critical", "error", "critico", "crítico"]);
-  let loginFailuresQuery = supabase
+  let loginFailuresQuery = database
     .from("eventos_sistema")
     .select("id", { count: "exact", head: true })
     .eq("modulo", "security")
@@ -107,8 +107,8 @@ export default async function AdminMasterSegurancaPage({ searchParams }: { searc
     eventsQuery.order("created_at", { ascending: false }).range(from, to),
     highRiskQuery,
     loginFailuresQuery,
-    supabase.from("user_security_status").select("user_id, tipo_usuario, status, motivo, risco_atual, bloqueado_ate, verificacao_necessaria, atualizado_em").neq("status", "ativo").order("atualizado_em", { ascending: false }).limit(60),
-    supabase.from("saloes").select("id, nome, status_seguranca, motivo_seguranca, bloqueado_ate").neq("status_seguranca", "ativo").order("nome", { ascending: true }).limit(60),
+    database.from("user_security_status").select("user_id, tipo_usuario, status, motivo, risco_atual, bloqueado_ate, verificacao_necessaria, atualizado_em").neq("status", "ativo").order("atualizado_em", { ascending: false }).limit(60),
+    database.from("saloes").select("id, nome, status_seguranca, motivo_seguranca, bloqueado_ate").neq("status_seguranca", "ativo").order("nome", { ascending: true }).limit(60),
   ]);
 
   const events = ((eventsResult.data || []) as SecurityEventRow[]).filter((row) => row.id);

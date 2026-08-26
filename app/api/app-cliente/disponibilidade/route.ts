@@ -30,7 +30,7 @@ export async function GET(request: Request) {
   return NextResponse.json(result, {
     headers: {
       "Cache-Control": "private, max-age=20",
-      "X-SalaoPremium-Provider": "vercel-supabase",
+      "X-SalaoPremium-Provider": "vercel-database",
     },
   });
 }

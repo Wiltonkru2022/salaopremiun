@@ -36,26 +36,26 @@ export default async function AdminMasterNotificacaoDetailPage({
   await requireAdminMasterUser("comunicacao_ver");
   const { id } = await params;
   const query = searchParams ? await searchParams : {};
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
 
   const [
     { data: notificacao },
     { data: destinos },
     { data: clientStates },
   ] = await Promise.all([
-    supabase
+    database
       .from("notificacoes_globais")
       .select(
         "id, titulo, descricao, tipo, publico_tipo, filtros_json, status, agendada_em, enviada_em, criada_em, link_url, imagem_url"
       )
       .eq("id", id)
       .maybeSingle(),
-    supabase
+    database
       .from("notificacoes_destinos")
       .select("id, id_salao, status, entregue_em, lida_em, clicada_em")
       .eq("id_notificacao", id)
       .limit(500),
-    supabase
+    database
       .from("notificacoes_cliente_estado")
       .select(
         "id, cliente_app_conta_id, exibida_em, lida_em, dispensada_em, clicada_em, atualizado_em"

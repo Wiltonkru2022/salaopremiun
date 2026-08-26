@@ -72,7 +72,7 @@ async function bootstrapOwnerIfAllowed(params: {
   const ownerEmails = getOwnerEmails();
   if (!ownerEmails.includes(params.email.toLowerCase())) return null;
 
-  const supabaseAdmin = getDatabaseAdmin();
+  const databaseAdmin = getDatabaseAdmin();
   const payload: Record<string, unknown> = {
     email: params.email.toLowerCase(),
     nome: params.nome,
@@ -82,7 +82,7 @@ async function bootstrapOwnerIfAllowed(params: {
   };
   if (isLegacyUuid(params.authUserId)) payload.auth_user_id = params.authUserId;
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await databaseAdmin
     .from("admin_master_usuarios")
     .upsert(payload, { onConflict: "email" })
     .select("id, nome, email, perfil, status")
@@ -91,7 +91,7 @@ async function bootstrapOwnerIfAllowed(params: {
   if (error) throw new AdminMasterAuthError("Erro ao criar owner AdminMaster.", 500);
   const usuario = data as AdminMasterUsuarioRow;
 
-  await supabaseAdmin.from("admin_master_permissoes").upsert(
+  await databaseAdmin.from("admin_master_permissoes").upsert(
     {
       id_admin_master_usuario: usuario.id,
       dashboard_ver: true,
@@ -133,7 +133,7 @@ export async function resolveAdminMasterAccessForIdentity(
   identity: AdminMasterIdentity,
   permission: AdminMasterPermissionKey = "dashboard_ver"
 ): Promise<AdminMasterAccessResult> {
-  const supabaseAdmin = getDatabaseAdmin();
+  const databaseAdmin = getDatabaseAdmin();
   const email = String(identity.email || "").trim().toLowerCase();
   const nome = String(identity.nome || "").trim() || email.split("@")[0] || "Admin Master";
   const legacyUuid = isLegacyUuid(identity.id);
@@ -142,7 +142,7 @@ export async function resolveAdminMasterAccessForIdentity(
   let error: any = null;
 
   if (legacyUuid) {
-    const result = await supabaseAdmin
+    const result = await databaseAdmin
       .from("admin_master_usuarios")
       .select("id, nome, email, perfil, status")
       .eq("auth_user_id", identity.id)
@@ -152,7 +152,7 @@ export async function resolveAdminMasterAccessForIdentity(
   }
 
   if (!adminUser && email) {
-    const { data: adminByEmail, error: emailError } = await supabaseAdmin
+    const { data: adminByEmail, error: emailError } = await databaseAdmin
       .from("admin_master_usuarios")
       .select("id, nome, email, perfil, status")
       .eq("email", email)
@@ -164,7 +164,7 @@ export async function resolveAdminMasterAccessForIdentity(
       adminUser = adminByEmail;
       const update: Record<string, unknown> = { ultimo_acesso_em: new Date().toISOString() };
       if (legacyUuid) update.auth_user_id = identity.id;
-      await supabaseAdmin.from("admin_master_usuarios").update(update).eq("id", adminByEmail.id);
+      await databaseAdmin.from("admin_master_usuarios").update(update).eq("id", adminByEmail.id);
     }
   }
 
@@ -187,7 +187,7 @@ export async function resolveAdminMasterAccessForIdentity(
     return { ok: false, status: 403, message: "Usuario AdminMaster inativo." };
   }
 
-  const { data: permissoesDb, error: permissoesError } = await supabaseAdmin
+  const { data: permissoesDb, error: permissoesError } = await databaseAdmin
     .from("admin_master_permissoes")
     .select(
       "assinaturas_ajustar, assinaturas_ver, atualizado_em, auditoria_ver, campanhas_editar, cobrancas_reprocessar, cobrancas_ver, comunicacao_ver, criado_em, dashboard_ver, feature_flags_editar, financeiro_ver, id, id_admin_master_usuario, notificacoes_editar, operacao_reprocessar, operacao_ver, planos_editar, produto_ver, recursos_editar, relatorios_ver, saloes_editar, saloes_entrar_como, saloes_ver, suporte_ver, tickets_editar, tickets_ver, usuarios_admin_editar, usuarios_admin_ver, whatsapp_editar, whatsapp_ver"
@@ -205,7 +205,7 @@ export async function resolveAdminMasterAccessForIdentity(
     return { ok: false, status: 403, message: "Usuario sem permissao para esta area do AdminMaster." };
   }
 
-  await supabaseAdmin
+  await databaseAdmin
     .from("admin_master_usuarios")
     .update({ ultimo_acesso_em: new Date().toISOString() })
     .eq("id", usuario.id);

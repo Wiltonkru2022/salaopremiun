@@ -38,7 +38,7 @@ type Permissoes = Record<string, boolean>;
 const CLIENTES_PAGE_SIZE = 10;
 
 export default function ClientesPage() {
-  const supabase = useMemo(() => createClient(), []);
+  const database = useMemo(() => createClient(), []);
   const router = useRouter();
   const { snapshot: painelSession } = usePainelSession();
   const { planoAccess } = usePlanoAccessSnapshot(true);
@@ -116,7 +116,7 @@ export default function ClientesPage() {
       const from = page * CLIENTES_PAGE_SIZE;
       const to = from + CLIENTES_PAGE_SIZE - 1;
 
-      let query = supabase
+      let query = database
         .from("clientes")
         .select(
           "id, nome, cashback, whatsapp, telefone, email, bairro, profissao, status, ativo, created_at",
@@ -149,7 +149,7 @@ export default function ClientesPage() {
       const rows = ((data ?? []) as unknown as Cliente[]) || [];
       const ids = rows.map((item) => item.id).filter(Boolean);
       const { data: authRows } = ids.length
-        ? await supabase
+        ? await database
             .from("clientes_auth")
             .select("id_cliente, app_conta_id, app_ativo")
             .eq("id_salao", salaoId)
@@ -178,7 +178,7 @@ export default function ClientesPage() {
       setClientesTotal(count ?? (append ? from + rows.length : rows.length));
       setClientesHasMore((count ?? 0) > to + 1);
     },
-    [supabase, statusFiltro, buscaAplicada]
+    [database, statusFiltro, buscaAplicada]
   );
 
   const bootstrap = useCallback(async () => {

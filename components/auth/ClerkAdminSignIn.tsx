@@ -12,6 +12,8 @@ type ClerkLike = {
   setActive?: (params: { session: string }) => Promise<void>;
   mountSignIn: (element: HTMLDivElement, options?: Record<string, unknown>) => void;
   unmountSignIn?: (element: HTMLDivElement) => void;
+  mountUserProfile: (element: HTMLDivElement, options?: Record<string, unknown>) => void;
+  unmountUserProfile?: (element: HTMLDivElement) => void;
   addListener?: (listener: (resources: { session?: ClerkSessionLike | null }) => void) => () => void;
 };
 

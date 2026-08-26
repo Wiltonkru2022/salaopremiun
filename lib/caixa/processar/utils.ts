@@ -57,7 +57,7 @@ export function isMissingRpcFunction(error: unknown, functionName: string) {
 }
 
 export async function carregarComandaBase(params: {
-  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
+  databaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   idSalao: string;
   idComanda: string;
 }) {
@@ -65,10 +65,10 @@ export async function carregarComandaBase(params: {
 }
 
 export async function carregarSessaoAberta(
-  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>,
+  databaseAdmin: ReturnType<typeof getDatabaseAdmin>,
   idSalao: string
 ) {
-  const { data: sessao, error } = await supabaseAdmin
+  const { data: sessao, error } = await databaseAdmin
     .from("caixa_sessoes")
     .select("id, status")
     .eq("id_salao", idSalao)

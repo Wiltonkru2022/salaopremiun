@@ -298,7 +298,7 @@ function mapLiveSalonRow(row: Record<string, unknown>): ClientAppSalonListItem {
 }
 
 async function attachMarketplaceMetrics(
-  supabaseAdmin: any,
+  databaseAdmin: any,
   saloes: ClientAppSalonListItem[]
 ) {
   const ids = saloes.map((item) => item.id).filter(Boolean);
@@ -306,14 +306,14 @@ async function attachMarketplaceMetrics(
 
   const [servicosResult, profissionaisResult, avaliacoesResult] =
     await Promise.allSettled([
-      (supabaseAdmin as any)
+      (databaseAdmin as any)
         .from("servicos")
         .select("id_salao, nome, categoria, preco, preco_padrao, duracao_minutos, duracao")
         .in("id_salao", ids)
         .eq("ativo", true)
         .eq("app_cliente_visivel", true)
         .limit(800),
-      (supabaseAdmin as any)
+      (databaseAdmin as any)
         .from("profissionais")
         .select("id_salao, id")
         .in("id_salao", ids)
@@ -321,7 +321,7 @@ async function attachMarketplaceMetrics(
         .eq("app_cliente_visivel", true)
         .or("eh_assistente.is.null,eh_assistente.eq.false")
         .limit(400),
-      (supabaseAdmin as any)
+      (databaseAdmin as any)
         .from("clientes_avaliacoes")
         .select("id_salao, nota")
         .in("id_salao", ids)
@@ -434,9 +434,9 @@ async function filterClientAppPlanAllowed<T extends { id: string }>(items: T[]) 
 async function listVisibleClientAppSaloesLive(search: string, limit: number) {
     const term = normalizeSearch(search);
     const pageSize = Math.min(Math.max(limit, 1), 24);
-    const supabaseAdmin = getDatabaseAdmin();
+    const databaseAdmin = getDatabaseAdmin();
 
-    let query: any = supabaseAdmin
+    let query: any = databaseAdmin
       .from("saloes")
       .select(CLIENT_APP_SALON_SELECT)
       .eq("app_cliente_publicado", true)
@@ -467,7 +467,7 @@ async function listVisibleClientAppSaloesLive(search: string, limit: number) {
 
     const allowed = await filterClientAppPlanAllowed(saloes);
 
-    return attachMarketplaceMetrics(supabaseAdmin, allowed);
+    return attachMarketplaceMetrics(databaseAdmin, allowed);
 }
 
 async function logClientAppQueryError(
@@ -511,13 +511,13 @@ export async function listNearbyClientAppSaloes(params: {
     return [] as ClientAppNearbySalonListItem[];
   }
 
-  const supabaseAdmin = getDatabaseAdmin();
+  const databaseAdmin = getDatabaseAdmin();
   const limit = Math.min(Math.max(params.limit ?? 24, 1), 50);
   const radiusKm = Math.min(Math.max(params.radiusKm ?? 20, 1), 100);
   const search = normalizeSearch(params.search);
 
   try {
-    const { data: nearbyRows, error: nearbyError } = await (supabaseAdmin as any)
+    const { data: nearbyRows, error: nearbyError } = await (databaseAdmin as any)
       .rpc("buscar_saloes_proximos", {
         lat_cliente: latitude,
         lon_cliente: longitude,
@@ -542,7 +542,7 @@ export async function listNearbyClientAppSaloes(params: {
 
     if (!ids.length) return [] as ClientAppNearbySalonListItem[];
 
-    const { data, error } = await (supabaseAdmin as any)
+    const { data, error } = await (databaseAdmin as any)
       .from("saloes")
       .select(CLIENT_APP_SALON_SELECT)
       .in("id", ids)
@@ -559,7 +559,7 @@ export async function listNearbyClientAppSaloes(params: {
       .sort((left, right) => (order.get(left.id) ?? 0) - (order.get(right.id) ?? 0));
 
     const allowed = await filterClientAppPlanAllowed(saloes);
-    const enriched = await attachMarketplaceMetrics(supabaseAdmin, allowed);
+    const enriched = await attachMarketplaceMetrics(databaseAdmin, allowed);
 
     return enriched.map((salao) => ({
       ...salao,
@@ -577,7 +577,7 @@ export async function listNearbyClientAppSaloes(params: {
 async function getClientAppSalonDetailLive(idSalao: string) {
     const salao = await assertSalonCanAppearInClientApp(idSalao);
     const resolvedSalaoId = salao.id;
-    const supabaseAdmin = getDatabaseAdmin();
+    const databaseAdmin = getDatabaseAdmin();
 
     const [
       profissionaisResult,
@@ -588,7 +588,7 @@ async function getClientAppSalonDetailLive(idSalao: string) {
       configResult,
     ] =
       await Promise.allSettled([
-        (supabaseAdmin as any)
+        (databaseAdmin as any)
           .from("profissionais")
           .select("id, nome, nome_exibicao, especialidade_publica, bio_publica, foto_url")
           .eq("id_salao", resolvedSalaoId)
@@ -598,7 +598,7 @@ async function getClientAppSalonDetailLive(idSalao: string) {
           .order("ordem_agenda", { ascending: true })
           .order("nome", { ascending: true })
           .limit(200),
-        (supabaseAdmin as any)
+        (databaseAdmin as any)
           .from("servicos")
           .select("id, nome, descricao_publica, descricao, preco, preco_padrao, duracao, duracao_minutos, exige_avaliacao, eh_combo, combo_resumo, cobra_sinal_agendamento, sinal_percentual_personalizado, id_categoria, categoria")
           .eq("id_salao", resolvedSalaoId)
@@ -606,13 +606,13 @@ async function getClientAppSalonDetailLive(idSalao: string) {
           .eq("app_cliente_visivel", true)
           .order("nome", { ascending: true })
           .limit(200),
-        (supabaseAdmin as any)
+        (databaseAdmin as any)
           .from("clientes_avaliacoes")
           .select("id, nota, comentario, created_at, clientes(nome)")
           .eq("id_salao", resolvedSalaoId)
           .order("created_at", { ascending: false })
           .limit(12),
-        (supabaseAdmin as any)
+        (databaseAdmin as any)
           .from("salao_portfolio_fotos")
           .select("id, imagem_url, legenda")
           .eq("id_salao", resolvedSalaoId)
@@ -620,12 +620,12 @@ async function getClientAppSalonDetailLive(idSalao: string) {
           .order("ordem", { ascending: true })
           .order("created_at", { ascending: false })
           .limit(12),
-        supabaseAdmin
+        databaseAdmin
           .from("profissional_servicos")
           .select("id_profissional, id_servico, ativo")
           .eq("id_salao", resolvedSalaoId)
           .eq("ativo", true),
-        supabaseAdmin
+        databaseAdmin
           .from("configuracoes_salao")
           .select("intervalo_minutos, hora_abertura, hora_fechamento, dias_funcionamento")
           .eq("id_salao", resolvedSalaoId)
@@ -766,9 +766,9 @@ export async function listClienteAppAvailableCoupons(params: {
   if (!idConta || !idSalao) return [];
 
   try {
-    const supabaseAdmin = getDatabaseAdmin();
+    const databaseAdmin = getDatabaseAdmin();
 
-    const { data: vinculo } = await (supabaseAdmin as any)
+    const { data: vinculo } = await (databaseAdmin as any)
       .from("clientes_auth")
       .select("id_cliente, clientes(created_at)")
       .eq("id_salao", idSalao)
@@ -780,7 +780,7 @@ export async function listClienteAppAvailableCoupons(params: {
     const idCliente = String(vinculo?.id_cliente || "").trim();
     if (!idCliente) return [];
 
-    const { data: ultimoAgendamento } = await (supabaseAdmin as any)
+    const { data: ultimoAgendamento } = await (databaseAdmin as any)
       .from("agendamentos")
       .select("data")
       .eq("id_salao", idSalao)
@@ -794,7 +794,7 @@ export async function listClienteAppAvailableCoupons(params: {
       (vinculo.clientes as { created_at?: string | null } | null)?.created_at ||
         ""
     ).slice(0, 10);
-    const { data: conta } = await (supabaseAdmin as any)
+    const { data: conta } = await (databaseAdmin as any)
       .from("clientes_app_auth")
       .select("created_at")
       .eq("id", idConta)
@@ -809,7 +809,7 @@ export async function listClienteAppAvailableCoupons(params: {
       contaCreatedAt;
     const inactiveDays = Math.max(0, diffDaysFromDate(referenceDate));
 
-    const { data: cupons } = await (supabaseAdmin as any)
+    const { data: cupons } = await (databaseAdmin as any)
       .from("cupons_salao")
       .select(
         "id, codigo, nome, descricao, dias_cliente_inativo, tipo_desconto, valor_desconto, requer_resgate, valido_de, valido_ate"
@@ -825,7 +825,7 @@ export async function listClienteAppAvailableCoupons(params: {
       .map((cupom: Record<string, unknown>) => String(cupom.id || "").trim())
       .filter(Boolean);
     const { data: usos } = cupomIds.length
-      ? await (supabaseAdmin as any)
+      ? await (databaseAdmin as any)
           .from("cupom_salao_usos")
           .select("id_cupom")
           .eq("id_salao", idSalao)
@@ -839,7 +839,7 @@ export async function listClienteAppAvailableCoupons(params: {
       )
     );
     const { data: resgates } = cupomIds.length
-      ? await (supabaseAdmin as any)
+      ? await (databaseAdmin as any)
           .from("cupom_salao_resgates")
           .select("id_cupom")
           .eq("id_salao", idSalao)
@@ -853,7 +853,7 @@ export async function listClienteAppAvailableCoupons(params: {
       )
     );
     const { data: permitidos } = cupomIds.length
-      ? await (supabaseAdmin as any)
+      ? await (databaseAdmin as any)
           .from("cupom_salao_clientes")
           .select("id_cupom")
           .eq("id_salao", idSalao)
@@ -914,8 +914,8 @@ export async function listClienteAppCouponWallet(params: {
   if (!idConta) return [];
 
   try {
-    const supabaseAdmin = getDatabaseAdmin();
-    const { data: vinculos } = await (supabaseAdmin as any)
+    const databaseAdmin = getDatabaseAdmin();
+    const { data: vinculos } = await (databaseAdmin as any)
       .from("clientes_auth")
       .select("id_cliente, id_salao, app_ativo, saloes(id, nome, nome_fantasia)")
       .eq("app_conta_id", idConta)
@@ -941,7 +941,7 @@ export async function listClienteAppCouponWallet(params: {
       ])
     );
 
-    const { data: cupons } = await (supabaseAdmin as any)
+    const { data: cupons } = await (databaseAdmin as any)
       .from("cupons_salao")
       .select(
         "id, id_salao, codigo, nome, descricao, tipo_desconto, valor_desconto, dias_cliente_inativo, valido_de, valido_ate, requer_resgate, ativo, status_campanha"
@@ -957,19 +957,19 @@ export async function listClienteAppCouponWallet(params: {
     if (!cupomIds.length) return [];
 
     const [usosResult, resgatesResult, permitidosResult] = await Promise.all([
-      (supabaseAdmin as any)
+      (databaseAdmin as any)
         .from("cupom_salao_usos")
         .select("id_cupom, id_cliente, status, created_at")
         .in("id_cupom", cupomIds)
         .in("id_cliente", idClientes)
         .neq("status", "cancelado"),
-      (supabaseAdmin as any)
+      (databaseAdmin as any)
         .from("cupom_salao_resgates")
         .select("id_cupom, status, created_at")
         .eq("cliente_app_conta_id", idConta)
         .eq("status", "resgatado")
         .in("id_cupom", cupomIds),
-      (supabaseAdmin as any)
+      (databaseAdmin as any)
         .from("cupom_salao_clientes")
         .select("id_cupom, id_cliente")
         .in("id_cupom", cupomIds)
@@ -1038,12 +1038,12 @@ export async function listClienteAppAppointments(params: {
   limit?: number;
 }) {
   try {
-    const supabaseAdmin = getDatabaseAdmin();
+    const databaseAdmin = getDatabaseAdmin();
     const limit = params.limit ?? 10;
     const page = Math.max(0, params.page ?? 0);
     const from = page * limit;
     const to = from + limit - 1;
-    const { data: vinculos, error: vinculosError } = await supabaseAdmin
+    const { data: vinculos, error: vinculosError } = await databaseAdmin
       .from("clientes_auth")
       .select("id_cliente, id_salao, saloes(nome, nome_fantasia, whatsapp, telefone)")
       .eq("app_conta_id", params.idConta)
@@ -1093,7 +1093,7 @@ export async function listClienteAppAppointments(params: {
       });
     }
 
-    const { data, error } = await (supabaseAdmin as any)
+    const { data, error } = await (databaseAdmin as any)
       .from("agendamentos")
       .select(
         "id, cliente_id, id_salao, servico_id, profissional_id, data, hora_inicio, hora_fim, status, sinal_status, sinal_valor, reserva_expira_em, cliente_confirmacao_status, cliente_confirmou_em, observacoes, created_at, servicos(nome), profissionais(nome, nome_exibicao)"
@@ -1113,7 +1113,7 @@ export async function listClienteAppAppointments(params: {
       .filter(Boolean);
 
     const { data: reviewRows } = appointmentIds.length
-      ? await (supabaseAdmin as any)
+      ? await (databaseAdmin as any)
           .from("clientes_avaliacoes")
           .select("id_agendamento")
           .in("id_agendamento", appointmentIds)
@@ -1204,8 +1204,8 @@ export async function getClienteAppAppointmentForReview(params: {
 }
 
 async function listClienteAppLinkedClientIds(idConta: string) {
-  const supabaseAdmin = getDatabaseAdmin();
-  const { data, error } = await supabaseAdmin
+  const databaseAdmin = getDatabaseAdmin();
+  const { data, error } = await databaseAdmin
     .from("clientes_auth")
     .select("id_cliente, id_salao, saloes(nome, nome_fantasia)")
     .eq("app_conta_id", idConta)
@@ -1244,8 +1244,8 @@ export async function isClienteAppSalonFavorite(params: {
   idSalao: string;
 }) {
   try {
-    const supabaseAdmin = getDatabaseAdmin();
-    const { data, error } = await (supabaseAdmin as any)
+    const databaseAdmin = getDatabaseAdmin();
+    const { data, error } = await (databaseAdmin as any)
       .from("clientes_app_favoritos")
       .select("id")
       .eq("cliente_app_conta_id", params.idConta)
@@ -1269,12 +1269,12 @@ export async function listClienteAppFavoriteSaloes(params: {
   limit?: number;
 }) {
   try {
-    const supabaseAdmin = getDatabaseAdmin();
+    const databaseAdmin = getDatabaseAdmin();
     const limit = Math.min(Math.max(params.limit ?? 10, 1), 24);
     const page = Math.max(params.page ?? 0, 0);
     const from = page * limit;
     const to = from + limit - 1;
-    const { data, error } = await (supabaseAdmin as any)
+    const { data, error } = await (databaseAdmin as any)
       .from("clientes_app_favoritos")
       .select(
         [
@@ -1302,7 +1302,7 @@ export async function listClienteAppFavoriteSaloes(params: {
 
     const allowed = await filterClientAppPlanAllowed(rows);
 
-    return attachMarketplaceMetrics(supabaseAdmin, allowed);
+    return attachMarketplaceMetrics(databaseAdmin, allowed);
   } catch (error) {
     await logClientAppQueryError("cliente_app_favorite_saloes", error);
     return [] as ClientAppSalonListItem[];
@@ -1315,7 +1315,7 @@ export async function listClienteAppReceipts(params: {
   limit?: number;
 }) {
   try {
-    const supabaseAdmin = getDatabaseAdmin();
+    const databaseAdmin = getDatabaseAdmin();
     const { clientesIds, salaoByCliente } = await listClienteAppLinkedClientIds(
       params.idConta
     );
@@ -1332,7 +1332,7 @@ export async function listClienteAppReceipts(params: {
     const page = Math.max(params.page ?? 0, 0);
     const from = page * limit;
     const to = from + limit - 1;
-    const { data, error, count } = await (supabaseAdmin as any)
+    const { data, error, count } = await (databaseAdmin as any)
       .from("vw_vendas_busca")
       .select(
         "id, id_salao, numero, status, total, fechada_em, cancelada_em, formas_pagamento, itens_descricoes, id_cliente",
@@ -1395,12 +1395,12 @@ export async function listClienteAppWrittenReviews(params: {
       };
     }
 
-    const supabaseAdmin = getDatabaseAdmin();
+    const databaseAdmin = getDatabaseAdmin();
     const limit = Math.min(Math.max(params.limit ?? 10, 1), 20);
     const page = Math.max(params.page ?? 0, 0);
     const from = page * limit;
     const to = from + limit - 1;
-    const { data, error, count } = await (supabaseAdmin as any)
+    const { data, error, count } = await (databaseAdmin as any)
       .from("clientes_avaliacoes")
       .select(
         "id, id_cliente, id_salao, id_agendamento, nota, comentario, created_at",
@@ -1424,13 +1424,13 @@ export async function listClienteAppWrittenReviews(params: {
 
     const [saloesResult, agendamentosResult] = await Promise.allSettled([
       salaoIds.length
-        ? (supabaseAdmin as any)
+        ? (databaseAdmin as any)
             .from("saloes")
             .select("id, nome, nome_fantasia")
             .in("id", salaoIds)
         : Promise.resolve({ data: [] }),
       agendamentoIds.length
-        ? (supabaseAdmin as any)
+        ? (databaseAdmin as any)
             .from("agendamentos")
             .select("id, servicos(nome), profissionais(nome, nome_exibicao)")
             .in("id", agendamentoIds)
@@ -1544,13 +1544,13 @@ export async function listClienteAppSalonReviews(params: {
   }
 
   try {
-    const supabaseAdmin = getDatabaseAdmin();
+    const databaseAdmin = getDatabaseAdmin();
     const limit = Math.min(Math.max(params.limit ?? 10, 1), 20);
     const page = Math.max(params.page ?? 0, 0);
     const from = page * limit;
     const to = from + limit - 1;
 
-    const { data, error, count } = await (supabaseAdmin as any)
+    const { data, error, count } = await (databaseAdmin as any)
       .from("clientes_avaliacoes")
       .select("id, nota, comentario, created_at, clientes(nome)", {
         count: "exact",
@@ -1595,13 +1595,13 @@ export async function listClienteAppNotifications(params: {
   limit?: number;
 }) {
   try {
-    const supabaseAdmin = getDatabaseAdmin();
+    const databaseAdmin = getDatabaseAdmin();
     const limit = Math.min(Math.max(params.limit ?? 10, 1), 20);
     const page = Math.max(params.page ?? 0, 0);
     const from = page * limit;
     const to = from + limit - 1;
     const shouldRead = params.read === true;
-    let query = (supabaseAdmin as any)
+    let query = (databaseAdmin as any)
       .from("notification_jobs")
       .select("id, tipo, titulo, mensagem, status, url, enviar_em, created_at, metadata", {
         count: "exact",
@@ -1650,15 +1650,15 @@ export async function listClienteAppNotifications(params: {
 
 export async function getClienteAppProfileData(params: { idConta: string }) {
   try {
-    const supabaseAdmin = getDatabaseAdmin();
+    const databaseAdmin = getDatabaseAdmin();
     const [{ data: conta }, { data: vinculos }] = await Promise.all([
-      (supabaseAdmin as any)
+      (databaseAdmin as any)
         .from("clientes_app_auth")
         .select("nome, email, telefone, preferencias_gerais")
         .eq("id", params.idConta)
         .limit(1)
         .maybeSingle(),
-      (supabaseAdmin as any)
+      (databaseAdmin as any)
         .from("clientes_auth")
         .select("id_salao, id_cliente, saloes(nome, nome_fantasia), clientes(cashback)")
         .eq("app_conta_id", params.idConta)

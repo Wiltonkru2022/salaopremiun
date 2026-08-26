@@ -40,8 +40,8 @@ export async function GET() {
     );
   }
 
-  const supabaseAdmin = getDatabaseAdmin();
-  const { data, error } = await (supabaseAdmin as any)
+  const databaseAdmin = getDatabaseAdmin();
+  const { data, error } = await (databaseAdmin as any)
     .from("salao_portfolio_fotos")
     .select("id, imagem_url, legenda, ordem")
     .eq("id_salao", context.idSalao)
@@ -71,8 +71,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const supabaseAdmin = getDatabaseAdmin();
-  const { count, error: countError } = await (supabaseAdmin as any)
+  const databaseAdmin = getDatabaseAdmin();
+  const { count, error: countError } = await (databaseAdmin as any)
     .from("salao_portfolio_fotos")
     .select("id", { count: "exact", head: true })
     .eq("id_salao", context.idSalao)
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
       file,
     });
 
-    const { data, error } = await (supabaseAdmin as any)
+    const { data, error } = await (databaseAdmin as any)
       .from("salao_portfolio_fotos")
       .insert({
         id_salao: context.idSalao,
@@ -158,8 +158,8 @@ export async function DELETE(request: Request) {
     );
   }
 
-  const supabaseAdmin = getDatabaseAdmin();
-  const { error } = await (supabaseAdmin as any)
+  const databaseAdmin = getDatabaseAdmin();
+  const { error } = await (databaseAdmin as any)
     .from("salao_portfolio_fotos")
     .update({ ativo: false, updated_at: new Date().toISOString() })
     .eq("id", id)

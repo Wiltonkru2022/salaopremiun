@@ -36,9 +36,9 @@ export async function POST(req: NextRequest) {
         await runAdminOperation({
           action: "app_profissional_tickets_report_incident",
           idSalao,
-          run: async (supabaseAdmin) => {
+          run: async (databaseAdmin) => {
             await reportOperationalIncident({
-              supabaseAdmin,
+              databaseAdmin,
               key: `app-profissional:tickets:${idSalao}`,
               module: "app_profissional",
               title: "Abertura de ticket do app profissional falhou",

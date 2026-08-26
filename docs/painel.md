@@ -34,7 +34,7 @@ Toda feature multi-tenant deve responder:
 
 ## Autenticação
 
-O Painel utiliza Supabase Auth associado à tabela `usuarios`. Operações administrativas sensíveis ficam no servidor e podem usar Service Role somente depois de autenticação, autorização e escopo de salão.
+O Painel utiliza Neon Auth associado à tabela `usuarios`. Operações administrativas sensíveis ficam no servidor e podem usar Service Role somente depois de autenticação, autorização e escopo de salão.
 
 ## Fluxo operacional
 

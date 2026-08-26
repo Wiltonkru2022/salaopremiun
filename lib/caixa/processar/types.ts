@@ -42,7 +42,7 @@ export type CaixaProcessarBody = {
 };
 
 export type CaixaProcessarContext = {
-  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
+  databaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   idSalao: string;
   idUsuario: string;
 };

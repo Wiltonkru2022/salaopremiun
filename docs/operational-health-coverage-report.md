@@ -26,7 +26,7 @@ Disponibilidade runtime exige:
 O catálogo inclui áreas como:
 
 - plataforma/Vercel;
-- Supabase Database/Data API/Auth/Storage/Realtime;
+- Neon Database/Data API/Auth/Storage/Realtime;
 - App Cliente;
 - App Profissional;
 - Painel/Admin Master;

@@ -8,11 +8,11 @@ import {
 import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export async function syncOperationalComponentRegistry() {
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const components = listOperationalComponents();
   const keys = components.map((component) => component.componentKey);
 
-  const { count, error: countError } = await supabase
+  const { count, error: countError } = await database
     .from("operational_components")
     .select("component_key", { count: "exact", head: true })
     .eq("registry_version", OPERATIONAL_REGISTRY_VERSION)
@@ -60,7 +60,7 @@ export async function syncOperationalComponentRegistry() {
     };
   });
 
-  const { error } = await supabase
+  const { error } = await database
     .from("operational_components")
     .upsert(rows, { onConflict: "component_key" });
   if (error) throw error;
@@ -75,13 +75,13 @@ export async function syncOperationalComponentRegistry() {
   );
 
   if (keys.length) {
-    await supabase
+    await database
       .from("operational_component_dependencies")
       .delete()
       .in("component_key", keys);
   }
   if (dependencies.length) {
-    const { error: dependencyError } = await supabase
+    const { error: dependencyError } = await database
       .from("operational_component_dependencies")
       .insert(dependencies);
     if (dependencyError) throw dependencyError;

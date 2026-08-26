@@ -121,8 +121,8 @@ export function normalizeSalonNotificationSettings(
 }
 
 export async function loadSalonNotificationSettings(idSalao: string) {
-  const supabase = getDatabaseAdmin();
-  const { data, error } = await (supabase as any)
+  const database = getDatabaseAdmin();
+  const { data, error } = await (database as any)
     .from("configuracoes_notificacoes")
     .select(
       "cliente_agendamento_confirmado, cliente_lembrete_30min, cliente_atendimento_finalizado, cliente_avaliar_atendimento, cliente_reagendamento, cliente_cancelamento, profissional_lembrete_30min, profissional_atendimento_finalizado, profissional_reagendamento, profissional_cancelamento, salao_novo_agendamento_app, salao_cancelamento_cliente, salao_reagendamento_cliente, salao_avaliacoes, lembrete_minutos_antes"

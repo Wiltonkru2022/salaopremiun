@@ -58,13 +58,13 @@ public/app-profissional
                     ┌─────────────────┼─────────────────┐
                     ▼                 ▼                 ▼
               ┌───────────┐     ┌───────────┐     ┌─────────────┐
-              │ Supabase  │     │   Asaas   │     │ Brevo/Meta  │
+              │ Neon  │     │   Asaas   │     │ Brevo/Meta  │
               │ DB/Auth/  │     │ pagamentos│     │ e-mail/WA   │
               │ Storage   │     │ webhooks  │     │             │
               └───────────┘     └───────────┘     └─────────────┘
 ```
 
-Não existe dependência obrigatória de VPS auxiliar para manter o sistema funcionando. A arquitetura de produção usa Vercel, Supabase e os provedores integrados.
+Não existe dependência obrigatória de VPS auxiliar para manter o sistema funcionando. A arquitetura de produção usa Vercel, Neon e os provedores integrados.
 
 ## Stack principal
 
@@ -73,15 +73,15 @@ Não existe dependência obrigatória de VPS auxiliar para manter o sistema func
 | Web / backend | Next.js 16, React 19, TypeScript |
 | App Profissional | Vite, React 18, TypeScript, `vite-plugin-pwa` |
 | UI | Tailwind CSS, Lucide e componentes próprios |
-| Banco | Supabase PostgreSQL |
-| Auth do painel | Supabase Auth + sessão server-side |
+| Banco | Neon PostgreSQL |
+| Auth do painel | Neon Auth + sessão server-side |
 | Sessão profissional | API própria + cookie assinado com `PROFISSIONAL_SESSION_SECRET` |
-| Storage | Supabase Storage |
+| Storage | Neon Storage |
 | Pagamentos | Asaas |
 | E-mail | Brevo |
 | WhatsApp | Meta WhatsApp API, quando configurada |
 | Push | Web Push + VAPID + `web-push` + Firebase Cloud Messaging Android via Capacitor |
-| Jobs | Supabase Cron/pg_cron + rotas Vercel |
+| Jobs | Neon Cron/pg_cron + rotas Vercel |
 | Deploy | Vercel |
 | CI | GitHub Actions |
 | Testes | Vitest + Playwright + suítes E2E próprias |
@@ -136,7 +136,7 @@ A aplicação oficial fica em `apps/app-profissional-vite` e contém, entre outr
 - suporte e páginas auxiliares;
 - suporte a instalação PWA e cache/offline controlado.
 
-O frontend Vite conversa com APIs protegidas em `/api/app-profissional/*`. Credenciais administrativas do Supabase não entram no bundle público.
+O frontend Vite conversa com APIs protegidas em `/api/app-profissional/*`. Credenciais administrativas do Neon não entram no bundle público.
 
 ### Admin Master
 
@@ -171,8 +171,8 @@ core/                            # entidades, contratos e casos de uso
 lib/                             # infraestrutura e regras compartilhadas
 services/                        # serviços de negócio
 scripts/                         # build, auditorias, E2E e manutenção
-supabase/migrations/             # histórico imutável de migrations
-supabase-blog/                   # contratos do blog separado
+database/migrations/             # histórico imutável de migrations
+database-blog/                   # contratos do blog separado
 docs/                            # documentação canônica e histórica
 public/app-profissional/         # bundle gerado do Vite PWA
 ```
@@ -185,7 +185,7 @@ O antigo editor visual acessado por `/salaopremiuneditor`, seus assets e o endpo
 
 O sistema possui contextos distintos:
 
-- **Painel/Admin:** autenticação baseada em Supabase Auth e vínculo com `usuarios`/salão.
+- **Painel/Admin:** autenticação Clerk e vínculo com `usuarios`/salão no Neon.
 - **App Cliente:** identidade e sessão próprias do App Cliente; login atual por CPF + data de nascimento.
 - **App Profissional:** sessão própria validada por APIs `/api/app-profissional/auth/*` e escopo de profissional/salão.
 
@@ -193,36 +193,42 @@ Regras obrigatórias:
 
 1. toda operação pertencente a um salão deve respeitar `id_salao`;
 2. autorização do frontend é somente UX — a autorização real acontece no servidor/RPC/policy;
-3. `SUPABASE_SERVICE_ROLE_KEY` nunca pode chegar ao navegador;
-4. RLS deve ser mantida nas superfícies que acessam o Data API;
+3. `NEON_DATABASE_URL`, `CLERK_SECRET_KEY` e `CLOUDINARY_API_SECRET` nunca podem chegar ao navegador;
+4. toda consulta Neon feita pelo navegador passa pelo gateway autenticado do painel;
 5. operações financeiras e mutações sensíveis precisam de validação server-side e idempotência quando aplicável.
 
 ## Variáveis de ambiente
 
 A lista completa e atual fica em `.env.example`.
 
-### Supabase
+### Neon
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+NEON_DATABASE_URL=
+NEON_ADMIN_DATABASE_URL=
 ```
 
-A publishable key é pública por definição e pode ser usada nos clientes autorizados. A Service Role é exclusivamente server-side.
+As URLs de conexão são exclusivamente server-side.
+
+### Clerk e Cloudinary
+
+```env
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
+```
 
 ### App Profissional Vite
 
 O build aceita as variáveis públicas abaixo e também os aliases equivalentes definidos pelo script de build:
 
 ```env
-VITE_SUPABASE_URL=
-VITE_SUPABASE_PUBLISHABLE_KEY=
 VITE_NEXT_APP_ORIGIN=
 ```
 
-Em produção, `scripts/run-build.mjs` reaproveita `NEXT_PUBLIC_SUPABASE_URL` e `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` para montar o bundle profissional.
+O app profissional acessa apenas as APIs locais e URLs públicas de mídia.
 
 ### Pagamentos, e-mail e segurança
 
@@ -435,7 +441,7 @@ Integração do salão/painel, independente do App Profissional Vite. OAuth do p
 ### Web Push
 
 ```text
-PWA → PushSubscription → Supabase → jobs/cron → Vercel → VAPID → navegador
+PWA → PushSubscription → Neon → jobs/cron → Vercel → VAPID → navegador
 ```
 
 Cliente e profissional possuem subscriptions separadas por audiência/dispositivo.
@@ -451,7 +457,7 @@ Firebase Cloud Messaging token
         |
         | POST /api/push/native/register
         v
-Supabase native_push_devices
+Neon native_push_devices
         |
         | jobs/rotas Vercel + firebase-admin
         v
@@ -480,7 +486,7 @@ O proxy centraliza roteamento e garante que o host do App Profissional entregue 
 
 ## Banco e migrations
 
-- `supabase/migrations` é histórico versionado e não deve ser reescrito depois de aplicado.
+- `database/migrations` é histórico versionado e não deve ser reescrito depois de aplicado.
 - mudanças de schema devem entrar como nova migration;
 - tabelas multi-tenant devem ser auditadas por `id_salao` e RLS;
 - funções críticas são verificadas por `npm run audit:database-contract`;
@@ -488,7 +494,7 @@ O proxy centraliza roteamento e garante que o host do App Profissional entregue 
 
 ## Observabilidade
 
-A saúde operacional utiliza catálogo versionado, probes seguros, incidentes, alertas, eventos e checks persistidos no Supabase. Ausência de erro não é tratada automaticamente como prova de saúde.
+A saúde operacional utiliza catálogo versionado, probes seguros, incidentes, alertas, eventos e checks persistidos no Neon. Ausência de erro não é tratada automaticamente como prova de saúde.
 
 Principais comandos:
 

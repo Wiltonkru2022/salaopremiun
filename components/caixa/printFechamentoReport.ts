@@ -217,10 +217,10 @@ export async function imprimirRelatorioFechamentoCaixa(
 ) {
   if (typeof window === "undefined") return;
 
-  const supabase = createClient();
+  const database = createClient();
   const { idSalao, sessao, valorFechamento, observacoes } = params;
 
-  const { data: movimentos, error: movimentosError } = await supabase
+  const { data: movimentos, error: movimentosError } = await database
     .from("caixa_movimentacoes")
     .select("id, id_comanda, forma_pagamento, valor, created_at, tipo, descricao")
     .eq("id_salao", idSalao)
@@ -254,7 +254,7 @@ export async function imprimirRelatorioFechamentoCaixa(
 
   let comandas: ComandaResumo[] = [];
   if (comandasIds.length) {
-    const { data: comandasData, error: comandasError } = await supabase
+    const { data: comandasData, error: comandasError } = await database
       .from("comandas")
       .select("id, numero, total, fechada_em, clientes(nome)")
       .in("id", comandasIds);

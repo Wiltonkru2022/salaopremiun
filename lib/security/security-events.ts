@@ -52,5 +52,5 @@ export async function emitSecurityEvent(payload: SecurityEventPayload) {
     createIncident: severity === "critical",
   });
 
-  return { ok: true, provider: "supabase" as const };
+  return { ok: true, provider: "database" as const };
 }

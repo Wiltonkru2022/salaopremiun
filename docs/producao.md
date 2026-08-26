@@ -6,7 +6,9 @@ Este documento descreve o caminho oficial de produção do SalãoPremium.
 
 - Next.js e APIs: Vercel;
 - App Profissional: Vite PWA compilado durante o build principal;
-- banco/Auth/Storage: Supabase;
+- banco: Neon;
+- autenticação: Clerk;
+- mídia e anexos: Cloudinary;
 - pagamentos: Asaas;
 - e-mail: Brevo;
 - push: Web Push/VAPID;
@@ -24,13 +26,16 @@ Não criar novamente páginas em `app/app-profissional`.
 
 Consulte `.env.example` para a lista integral.
 
-### Supabase
+### Neon
 
 ```env
-NEXT_PUBLIC_SUPABASE_URL=
-NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=
-NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=
+NEON_DATABASE_URL=
+NEON_ADMIN_DATABASE_URL=
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+CLOUDINARY_CLOUD_NAME=
+CLOUDINARY_API_KEY=
+CLOUDINARY_API_SECRET=
 ```
 
 ### Segurança/sessões
@@ -100,9 +105,9 @@ npm run test:operational
 npm run build
 ```
 
-## Supabase
+## Neon
 
-- revisar `supabase/migrations`;
+- revisar `database/migrations`;
 - executar dry-run quando aplicável;
 - nunca apagar migration já aplicada para “remover” uma feature;
 - validar RLS e funções obrigatórias;

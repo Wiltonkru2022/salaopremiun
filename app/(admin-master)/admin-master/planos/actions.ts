@@ -29,14 +29,14 @@ function integerOrNull(formData: FormData, key: string) {
 
 export async function salvarPlanoAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("planos_editar");
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const id = textValue(formData, "id");
 
   if (!id) {
     throw new Error("Plano invalido para edicao.");
   }
 
-  const { data: before } = await supabase
+  const { data: before } = await database
     .from("planos_saas")
     .select("id, nome, subtitulo, valor_mensal, preco_anual, limite_usuarios, limite_profissionais, trial_dias, ideal_para, cta, destaque, ativo, ordem")
     .eq("id", id)
@@ -58,7 +58,7 @@ export async function salvarPlanoAdminMaster(formData: FormData) {
     updated_at: new Date().toISOString(),
   };
 
-  const { error } = await supabase.from("planos_saas").update(payload).eq("id", id);
+  const { error } = await database.from("planos_saas").update(payload).eq("id", id);
 
   if (error) {
     throw new Error(error.message || "Nao foi possivel salvar o plano.");
@@ -81,7 +81,7 @@ export async function salvarPlanoAdminMaster(formData: FormData) {
 
 export async function salvarRecursoPlanoAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("recursos_editar");
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const idPlano = textValue(formData, "id_plano");
   const recursoCodigo = textValue(formData, "recurso_codigo");
 
@@ -89,7 +89,7 @@ export async function salvarRecursoPlanoAdminMaster(formData: FormData) {
     throw new Error("Recurso invalido para edicao.");
   }
 
-  const { data: beforeResource } = await supabase
+  const { data: beforeResource } = await database
     .from("planos_recursos")
     .select("id_plano, recurso_codigo, habilitado, limite_numero, observacao")
     .eq("id_plano", idPlano)
@@ -105,7 +105,7 @@ export async function salvarRecursoPlanoAdminMaster(formData: FormData) {
     atualizado_em: new Date().toISOString(),
   };
 
-  const { error } = await supabase
+  const { error } = await database
     .from("planos_recursos")
     .upsert(payload, { onConflict: "id_plano,recurso_codigo" });
 

@@ -2,14 +2,14 @@ import type { DatabaseClient } from "@/lib/db/types";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 
 export async function registrarFalhaWebhookFallback(params: {
-  supabaseAdmin: DatabaseClient;
+  databaseAdmin: DatabaseClient;
   webhookPayload: Record<string, unknown>;
   event: string;
   paymentId: string;
   paymentStatus: string | null;
   errorMessage: string;
 }) {
-  const { data: cobranca } = await params.supabaseAdmin
+  const { data: cobranca } = await params.databaseAdmin
     .from("assinaturas_cobrancas")
     .select("id, id_salao, id_assinatura")
     .eq("asaas_payment_id", params.paymentId)
@@ -20,7 +20,7 @@ export async function registrarFalhaWebhookFallback(params: {
   const chaveEvento = `fallback:asaas:${eventId || params.paymentId}:${params.event}`;
 
   await reportOperationalIncident({
-    supabaseAdmin: params.supabaseAdmin,
+    databaseAdmin: params.databaseAdmin,
     key: chaveEvento,
     module: "webhook_asaas",
     title: "Webhook Asaas falhou antes do registro",

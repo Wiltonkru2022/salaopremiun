@@ -50,8 +50,8 @@ export async function requestStatusSubscription(rawEmail: unknown) {
   if (!email) return { ok: true, accepted: false };
   if (!subscriptionSecret()) return { ok: false, accepted: false, reason: "subscription_not_configured" };
 
-  const supabase = getDatabaseAdmin() as any;
-  const { data: existing } = await supabase
+  const database = getDatabaseAdmin() as any;
+  const { data: existing } = await database
     .from("status_subscriptions")
     .select("id, status, updated_at")
     .ilike("email", email)
@@ -67,7 +67,7 @@ export async function requestStatusSubscription(rawEmail: unknown) {
 
   if (id) {
     const unsubscribeToken = makeUnsubscribeToken(id);
-    await supabase
+    await database
       .from("status_subscriptions")
       .update({
         email,
@@ -80,7 +80,7 @@ export async function requestStatusSubscription(rawEmail: unknown) {
       .eq("id", id);
   } else {
     const temporaryUnsubscribeHash = sha256(randomBytes(32).toString("base64url"));
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from("status_subscriptions")
       .insert({
         email,
@@ -93,7 +93,7 @@ export async function requestStatusSubscription(rawEmail: unknown) {
     if (error) throw error;
     id = data.id;
     const unsubscribeToken = makeUnsubscribeToken(id!);
-    await supabase
+    await database
       .from("status_subscriptions")
       .update({ unsubscribe_token_hash: sha256(unsubscribeToken) })
       .eq("id", id);
@@ -114,8 +114,8 @@ export async function requestStatusSubscription(rawEmail: unknown) {
 
 export async function confirmStatusSubscription(token: string) {
   const hash = sha256(String(token || ""));
-  const supabase = getDatabaseAdmin() as any;
-  const { data, error } = await supabase
+  const database = getDatabaseAdmin() as any;
+  const { data, error } = await database
     .from("status_subscriptions")
     .select("id, status")
     .eq("confirm_token_hash", hash)
@@ -123,7 +123,7 @@ export async function confirmStatusSubscription(token: string) {
   if (error || !data?.id) return false;
 
   const unsubscribeToken = makeUnsubscribeToken(data.id);
-  const { error: updateError } = await supabase
+  const { error: updateError } = await database
     .from("status_subscriptions")
     .update({
       status: "active",
@@ -140,15 +140,15 @@ export async function confirmStatusSubscription(token: string) {
 export async function unsubscribeStatus(token: string) {
   const id = verifyUnsubscribeToken(token);
   if (!id) return false;
-  const supabase = getDatabaseAdmin() as any;
-  const { data, error } = await supabase
+  const database = getDatabaseAdmin() as any;
+  const { data, error } = await database
     .from("status_subscriptions")
     .select("unsubscribe_token_hash")
     .eq("id", id)
     .maybeSingle();
   if (error || !data?.unsubscribe_token_hash) return false;
   if (data.unsubscribe_token_hash !== sha256(token)) return false;
-  const { error: updateError } = await supabase
+  const { error: updateError } = await database
     .from("status_subscriptions")
     .update({ status: "unsubscribed", unsubscribed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq("id", id);
@@ -159,10 +159,10 @@ export async function sendPendingPublicStatusNotifications() {
   if (!subscriptionSecret() || !process.env.BREVO_API_KEY) {
     return { sent: 0, skipped: true };
   }
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
   const [{ data: updates }, { data: subscriptions }] = await Promise.all([
-    supabase
+    database
       .from("incident_updates")
       .select("id, incident_id, status_to, public_message, created_at, incidentes_sistema(titulo, mensagem_publica, operational_components(nome))")
       .eq("public_visible", true)
@@ -170,7 +170,7 @@ export async function sendPendingPublicStatusNotifications() {
       .gte("created_at", since)
       .order("created_at", { ascending: true })
       .limit(20),
-    supabase
+    database
       .from("status_subscriptions")
       .select("id, email")
       .eq("status", "active")
@@ -181,7 +181,7 @@ export async function sendPendingPublicStatusNotifications() {
   for (const update of updates || []) {
     for (const subscription of subscriptions || []) {
       if (sent >= 50) return { sent, capped: true };
-      const { data: delivery } = await supabase
+      const { data: delivery } = await database
         .from("status_notification_deliveries")
         .select("id, status")
         .eq("subscription_id", subscription.id)
@@ -201,7 +201,7 @@ export async function sendPendingPublicStatusNotifications() {
       const component = String(componentData?.nome || "SalãoPremium");
       const publicMessage = String(update.public_message || incidentData?.mensagem_publica || "Atualização de status disponível.");
 
-      const { data: deliveryRow, error: deliveryError } = await supabase
+      const { data: deliveryRow, error: deliveryError } = await database
         .from("status_notification_deliveries")
         .upsert(
           {
@@ -224,13 +224,13 @@ export async function sendPendingPublicStatusNotifications() {
           text: `${component}\n${title}\n${publicMessage}\n\nStatus: ${statusBaseUrl()}\nCancelar inscrição: ${unsubscribeUrl}`,
           html: `<div style="font-family:Arial,sans-serif;max-width:620px;margin:auto;color:#18181b"><div style="font-size:12px;font-weight:700;color:#6b7280">${htmlEscape(component)}</div><h1>${htmlEscape(title)}</h1><p>${htmlEscape(publicMessage)}</p><p><a href="${htmlEscape(statusBaseUrl())}">Ver status do SalãoPremium</a></p><hr style="border:0;border-top:1px solid #e5e7eb"><p style="font-size:12px;color:#71717a"><a href="${htmlEscape(unsubscribeUrl)}">Cancelar inscrição</a></p></div>`,
         });
-        await supabase
+        await database
           .from("status_notification_deliveries")
           .update({ status: "sent", provider_message_id: providerMessageId, sent_at: new Date().toISOString() })
           .eq("id", deliveryRow.id);
         sent += 1;
       } catch (error) {
-        await supabase
+        await database
           .from("status_notification_deliveries")
           .update({ status: "failed", erro_texto: error instanceof Error ? error.message.slice(0, 300) : "Falha no envio." })
           .eq("id", deliveryRow.id);

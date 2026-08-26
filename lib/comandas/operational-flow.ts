@@ -5,7 +5,7 @@ import type { getDatabaseAdmin } from "@/lib/db/admin";
 type AdminClient = ReturnType<typeof getDatabaseAdmin>;
 
 type EstoqueFlowParams = {
-  supabaseAdmin: AdminClient;
+  databaseAdmin: AdminClient;
   idSalao: string;
   idComanda: string;
   idUsuario?: string | null;
@@ -28,7 +28,7 @@ export async function aplicarBaixaEstoqueNoFluxoComanda(
   params: EstoqueFlowParams
 ) {
   try {
-    const result = await processarEstoqueComanda(params.supabaseAdmin, {
+    const result = await processarEstoqueComanda(params.databaseAdmin, {
       idSalao: params.idSalao,
       idComanda: params.idComanda,
       idUsuario: params.idUsuario || null,
@@ -48,7 +48,7 @@ export async function aplicarBaixaEstoqueNoFluxoComanda(
 
     try {
       await reportOperationalIncident({
-        supabaseAdmin: params.supabaseAdmin,
+        databaseAdmin: params.databaseAdmin,
         key: `fluxo:comanda:estoque_baixa:${params.idSalao}:${params.idComanda}:${params.sourceAction}`,
         module: "operacao_comanda",
         title: "Baixa de estoque falhou no fluxo da comanda",
@@ -79,7 +79,7 @@ export async function reverterEstoqueNoFluxoComanda(
   params: EstoqueFlowParams
 ) {
   try {
-    const result = await reverterEstoqueComanda(params.supabaseAdmin, {
+    const result = await reverterEstoqueComanda(params.databaseAdmin, {
       idSalao: params.idSalao,
       idComanda: params.idComanda,
       idUsuario: params.idUsuario || null,
@@ -99,7 +99,7 @@ export async function reverterEstoqueNoFluxoComanda(
 
     try {
       await reportOperationalIncident({
-        supabaseAdmin: params.supabaseAdmin,
+        databaseAdmin: params.databaseAdmin,
         key: `fluxo:comanda:estoque_reversao:${params.idSalao}:${params.idComanda}:${params.sourceAction}`,
         module: "operacao_comanda",
         title: "Reversao de estoque falhou no fluxo da comanda",

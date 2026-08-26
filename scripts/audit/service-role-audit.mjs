@@ -6,7 +6,7 @@ const routeRoot = path.join(cwd, "app", "api");
 
 const GUARDRULES = [
   ["admin_master", /requireAdminMasterUser|adminMasterUser|admin_master_usuarios|auth\/access/],
-  ["supabase_user", /auth\.getUser\(|getUser\(|getPainelUserContext|validarSalaoDoUsuario|getPainelTicketContext|requireSalao/],
+  ["database_user", /auth\.getUser\(|getUser\(|getPainelUserContext|validarSalaoDoUsuario|getPainelTicketContext|requireSalao/],
   ["public_rate_limit", /assertPublicRateLimit|getPublicRateLimitIdentity/],
   ["salao_admin", /requireAdminSalao/],
   ["profissional_session", /getProfissionalSessionFromCookie|getProfissionalTicketContext|requireProfissionalSession|requireProfissionalAppContext|validateProfissionalAppSession/],
@@ -83,7 +83,7 @@ const rows = walk(routeRoot).map((file) => {
   const source = fs.readFileSync(file, "utf8");
   const rel = toPosix(file);
   const usesServiceRole =
-    /SUPABASE_SERVICE_ROLE_KEY|getDatabaseAdmin\(|createClient\(supabaseUrl,\s*serviceRoleKey/.test(source);
+    /NEON_ADMIN_DATABASE_URL|getDatabaseAdmin\(|getNeonDatabaseClient\(/.test(source);
   const guards = classify(source);
   const tenantGuard = hasTenantGuard(source);
   const publicRegistration = isPublicRegistrationRoute(rel, source);

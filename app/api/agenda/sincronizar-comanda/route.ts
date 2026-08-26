@@ -28,9 +28,9 @@ export async function POST(req: NextRequest) {
       "comandas_criar",
     ]);
 
-    const supabaseAdmin = getDatabaseAdmin();
+    const databaseAdmin = getDatabaseAdmin();
     const resultado = await sincronizarAgendamentoComComandaNoCaixa({
-      supabase: supabaseAdmin,
+      database: databaseAdmin,
       idSalao: body.idSalao,
       idAgendamento: body.idAgendamento,
       idComandaNova: body.idComandaNova,

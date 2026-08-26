@@ -38,7 +38,7 @@ export type AsaasWebhookContextResolved = {
 
 export function createAsaasWebhookService() {
   return {
-    criarSupabaseAdmin() {
+    criarDatabaseAdmin() {
       return getDatabaseAdmin();
     },
 
@@ -58,7 +58,7 @@ export function createAsaasWebhookService() {
     },
 
     async registrarEvento(params: {
-      supabaseAdmin: DatabaseClient;
+      databaseAdmin: DatabaseClient;
       fingerprint: string;
       body: AsaasWebhookBody;
       event: string;
@@ -69,7 +69,7 @@ export function createAsaasWebhookService() {
     },
 
     async registrarFalhaFallback(params: {
-      supabaseAdmin: DatabaseClient;
+      databaseAdmin: DatabaseClient;
       webhookPayload: AsaasWebhookBody;
       event: string;
       paymentId: string;
@@ -80,13 +80,13 @@ export function createAsaasWebhookService() {
     },
 
     async atualizarStatusEvento(
-      supabaseAdmin: DatabaseClient,
+      databaseAdmin: DatabaseClient,
       webhookEventId: string | null,
       status: "erro" | "processado",
       message?: string
     ) {
       return atualizarStatusEventoWebhook(
-        supabaseAdmin,
+        databaseAdmin,
         webhookEventId,
         status,
         message
@@ -94,7 +94,7 @@ export function createAsaasWebhookService() {
     },
 
     async resolverContexto(params: {
-      supabaseAdmin: DatabaseClient;
+      databaseAdmin: DatabaseClient;
       paymentId: string;
       payment: Record<string, unknown>;
       body: AsaasWebhookBody;
@@ -107,7 +107,7 @@ export function createAsaasWebhookService() {
     },
 
     async processarResolvido(params: {
-      supabaseAdmin: DatabaseClient;
+      databaseAdmin: DatabaseClient;
       webhookEventId: string | null;
       webhookPayload: AsaasWebhookBody;
       event: string;
@@ -126,7 +126,7 @@ export function createAsaasWebhookService() {
     },
 
     async processarPacoteWhatsapp(params: {
-      supabaseAdmin: DatabaseClient;
+      databaseAdmin: DatabaseClient;
       paymentId: string;
       payment: Record<string, unknown>;
       paymentStatus: string | null;
@@ -138,7 +138,7 @@ export function createAsaasWebhookService() {
     },
 
     async processarRecargaWhatsapp(params: {
-      supabaseAdmin: DatabaseClient;
+      databaseAdmin: DatabaseClient;
       paymentId: string;
       payment: Record<string, unknown>;
       paymentStatus: string | null;

@@ -57,8 +57,8 @@ export async function loadPublicCampaign(slugOrCode: string) {
   const key = String(slugOrCode || "").trim();
   if (!key) return null;
 
-  const supabase = getDatabaseAdmin();
-  const { data: campanha } = await (supabase as any)
+  const database = getDatabaseAdmin();
+  const { data: campanha } = await (database as any)
     .from("cupons_salao")
     .select(
       "id, id_salao, codigo, nome, descricao, descricao_interna, mensagem_cliente, tipo_desconto, valor_desconto, valido_de, valido_ate, ativo, slug, status_campanha, publico_tipo, limite_uso_total, limite_uso_cliente, limite_uso_dia, resgate_token, saloes(id, nome, nome_fantasia, app_cliente_slug, logo_url, foto_capa_url)"
@@ -73,7 +73,7 @@ export async function loadPublicCampaign(slugOrCode: string) {
   const idCampanha = String(campanha.id);
   const [{ data: servicos }, { count: usos }, { count: cliques }, { count: agendamentos }] =
     await Promise.all([
-      (supabase as any)
+      (database as any)
         .from("cupom_salao_servicos")
         .select(
           "id_servico, tipo_beneficio, valor_beneficio, brinde_descricao, limite_uso_servico, servicos(id, nome, preco, preco_padrao, duracao_minutos, app_cliente_visivel, ativo)"
@@ -81,16 +81,16 @@ export async function loadPublicCampaign(slugOrCode: string) {
         .eq("id_cupom", idCampanha)
         .eq("id_salao", campanha.id_salao)
         .limit(80),
-      (supabase as any)
+      (database as any)
         .from("cupom_salao_usos")
         .select("id", { count: "exact", head: true })
         .eq("id_cupom", idCampanha),
-      (supabase as any)
+      (database as any)
         .from("campanha_eventos")
         .select("id", { count: "exact", head: true })
         .eq("id_cupom", idCampanha)
         .eq("tipo", "clique"),
-      (supabase as any)
+      (database as any)
         .from("campanha_eventos")
         .select("id", { count: "exact", head: true })
         .eq("id_cupom", idCampanha)

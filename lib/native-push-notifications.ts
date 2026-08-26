@@ -264,11 +264,11 @@ async function recordNativeDelivery(params: {
   deactivateDevice?: boolean;
 }) {
   try {
-    const supabase = getDatabaseAdmin() as any;
+    const database = getDatabaseAdmin() as any;
     const now = new Date().toISOString();
 
     if (params.status === "enviada") {
-      await supabase
+      await database
         .from("native_push_devices")
         .update({
           ativo: true,
@@ -290,10 +290,10 @@ async function recordNativeDelivery(params: {
       };
       if (params.deactivateDevice) update.ativo = false;
 
-      await supabase.from("native_push_devices").update(update).eq("id", params.row.id);
+      await database.from("native_push_devices").update(update).eq("id", params.row.id);
     }
 
-    await supabase.from("push_delivery_log").insert({
+    await database.from("push_delivery_log").insert({
       push_subscription_id: null,
       audience: params.row.audience,
       endpoint_host: "fcm.googleapis.com",

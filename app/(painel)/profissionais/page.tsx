@@ -49,7 +49,7 @@ type Permissoes = Record<string, boolean>;
 const PROFISSIONAIS_PAGE_SIZE = 10;
 
 export default function ProfissionaisListPage() {
-  const supabase = useMemo(() => createClient(), []);
+  const database = useMemo(() => createClient(), []);
   const router = useRouter();
   const { snapshot: painelSession } = usePainelSession();
 
@@ -128,7 +128,7 @@ export default function ProfissionaisListPage() {
       const from = page * PROFISSIONAIS_PAGE_SIZE;
       const to = from + PROFISSIONAIS_PAGE_SIZE - 1;
 
-      let query = supabase
+      let query = database
         .from("profissionais")
         .select(
           [
@@ -187,13 +187,13 @@ export default function ProfissionaisListPage() {
 
       const idsProfissionais = listaBase.map((item) => item.id);
 
-      const { data: assistentesRows, error: assistentesError } = await supabase
+      const { data: assistentesRows, error: assistentesError } = await database
         .from("profissional_assistentes")
         .select("id_profissional")
         .eq("id_salao", salaoId)
         .in("id_profissional", idsProfissionais);
 
-      const { data: acessosRows, error: acessosError } = await supabase
+      const { data: acessosRows, error: acessosError } = await database
         .from("profissionais_acessos")
         .select("id_profissional, ativo")
         .in("id_profissional", idsProfissionais);
@@ -228,7 +228,7 @@ export default function ProfissionaisListPage() {
       setProfissionaisTotal(count ?? listaBase.length);
       setProfissionaisHasMore((count ?? 0) > to + 1);
     },
-    [buscaAplicada, statusFiltro, supabase]
+    [buscaAplicada, statusFiltro, database]
   );
 
   const bootstrap = useCallback(async () => {

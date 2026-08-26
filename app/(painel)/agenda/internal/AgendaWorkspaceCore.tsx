@@ -115,7 +115,7 @@ export default function AgendaPage() {
   const [googleCalendarSyncing, setGoogleCalendarSyncing] = useState(false);
 
   const {
-    supabase,
+    database,
     loading,
     setLoading,
     erroTela,
@@ -228,7 +228,7 @@ export default function AgendaPage() {
 
   const { safeGetAuthUser, sincronizarAgendamento, loadAgenda, init } =
     useAgendaData({
-      supabase,
+      database,
       router,
       loadAgendaSeqRef,
       idSalao,
@@ -264,7 +264,7 @@ export default function AgendaPage() {
     handleMoveBlock,
     handleResizeBlock,
   } = useAgendaMutations({
-    supabase,
+    database,
     idSalao,
     config,
     modalMode,
@@ -410,7 +410,7 @@ export default function AgendaPage() {
     clienteId: string
   ): Promise<ComandaResumo[]> {
     return buscarComandasAbertasDoClienteAgenda({
-      supabase,
+      database,
       idSalao,
       clienteId,
     });
@@ -422,7 +422,7 @@ export default function AgendaPage() {
     }
 
     return criarNovaComandaAgenda({
-      supabase,
+      database,
       idSalao,
       clienteId,
     });
@@ -597,13 +597,13 @@ export default function AgendaPage() {
     try {
       const [{ data: clienteData, error: clienteError }, { data, error }] =
         await Promise.all([
-          supabase
+          database
             .from("clientes")
             .select("cashback")
             .eq("id_salao", idSalao)
             .eq("id", item.cliente_id)
             .maybeSingle(),
-          supabase
+          database
             .from("agendamentos")
             .select(
               "id, data, hora_inicio, hora_fim, status, observacoes, sinal_comprovante_path, servicos(nome)"
@@ -682,13 +682,13 @@ export default function AgendaPage() {
     try {
       const [{ data: clienteData, error: clienteError }, { data, error }] =
         await Promise.all([
-          supabase
+          database
             .from("clientes")
             .select("nome, whatsapp, cashback")
             .eq("id_salao", idSalao)
             .eq("id", clientId)
             .maybeSingle(),
-          supabase
+          database
             .from("agendamentos")
             .select(
               "id, data, hora_inicio, hora_fim, status, observacoes, sinal_comprovante_path, servicos(nome)"

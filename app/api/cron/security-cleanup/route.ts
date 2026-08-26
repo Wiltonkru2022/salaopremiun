@@ -20,7 +20,7 @@ async function handleCron(request: Request) {
   return NextResponse.json(
     {
       ok: !principal.error,
-      provider: "supabase",
+      provider: "database",
       principal: {
         cutoff: principal.cutoff,
         deleted: principal.deleted,

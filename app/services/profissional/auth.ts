@@ -49,12 +49,12 @@ function normalizeAuthVersion(value: unknown) {
 }
 
 async function findAcessoByProfissionalCpf(params: {
-  supabaseAdmin: DatabaseAdminClient;
+  databaseAdmin: DatabaseAdminClient;
   cpf: string;
   senha: string;
 }): Promise<ProfissionalAcessoLoginRow | null> {
   const { data: profissionais, error: profissionaisError } =
-    await params.supabaseAdmin
+    await params.databaseAdmin
       .from("profissionais")
       .select("id")
       .eq("cpf", params.cpf)
@@ -73,7 +73,7 @@ async function findAcessoByProfissionalCpf(params: {
     return null;
   }
 
-  const { data: acessos, error: acessosError } = await (params.supabaseAdmin as any)
+  const { data: acessos, error: acessosError } = await (params.databaseAdmin as any)
     .from("profissionais_acessos")
     .select("id, cpf, senha_hash, ativo, id_profissional, auth_version")
     .eq("ativo", true)
@@ -97,14 +97,14 @@ async function findAcessoByProfissionalCpf(params: {
 }
 
 async function buildProfissionalSession(params: {
-  supabaseAdmin: DatabaseAdminClient;
+  databaseAdmin: DatabaseAdminClient;
   idProfissional: string;
   cpf: string;
   authVersion: number;
   acessoId?: string | null;
 }): Promise<LoginResult> {
   const { data: profissional, error: profissionalError } =
-    await params.supabaseAdmin
+    await params.databaseAdmin
       .from("profissionais")
       .select(
         "id, nome, nome_exibicao, ativo, id_salao, tipo_profissional, nivel_acesso, pode_usar_sistema"
@@ -147,7 +147,7 @@ async function buildProfissionalSession(params: {
     return { ok: false, error: "Profissional sem salao vinculado." };
   }
 
-  const { data: salao, error: salaoError } = await params.supabaseAdmin
+  const { data: salao, error: salaoError } = await params.databaseAdmin
     .from("saloes")
     .select("id, nome, status")
     .eq("id", profissional.id_salao)
@@ -193,7 +193,7 @@ async function buildProfissionalSession(params: {
   }
 
   if (params.acessoId) {
-    await params.supabaseAdmin
+    await params.databaseAdmin
       .from("profissionais_acessos")
       .update({ ultimo_login_em: new Date().toISOString() })
       .eq("id", params.acessoId);
@@ -224,15 +224,15 @@ export async function loginProfissionalByCpfSenha(
   return runAdminOperation({
     action: "profissional_auth_login_por_cpf",
     actorId: cpfLimpo || null,
-    run: async (supabaseAdmin): Promise<LoginResult> => {
+    run: async (databaseAdmin): Promise<LoginResult> => {
       let acesso = await findAcessoByProfissionalCpf({
-        supabaseAdmin,
+        databaseAdmin,
         cpf: cpfLimpo,
         senha: senhaLimpa,
       });
 
       if (!acesso) {
-        const { data: acessoPorCpf, error: acessoError } = await (supabaseAdmin as any)
+        const { data: acessoPorCpf, error: acessoError } = await (databaseAdmin as any)
           .from("profissionais_acessos")
           .select("id, cpf, senha_hash, ativo, id_profissional, auth_version")
           .eq("cpf", cpfLimpo)
@@ -280,7 +280,7 @@ export async function loginProfissionalByCpfSenha(
       }
 
       const session = await buildProfissionalSession({
-        supabaseAdmin,
+        databaseAdmin,
         idProfissional: acesso.id_profissional,
         cpf: cpfLimpo,
         authVersion: normalizeAuthVersion(acesso.auth_version),

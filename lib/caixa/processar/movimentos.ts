@@ -36,7 +36,7 @@ export async function lancarMovimentacao(
     p_forma_pagamento: sanitizeText(body.movimento?.formaPagamento) || undefined,
   };
 
-  let { data, error } = await ctx.supabaseAdmin.rpc(
+  let { data, error } = await ctx.databaseAdmin.rpc(
     "fn_caixa_lancar_movimentacao_idempotente",
     {
       ...movimentoPayload,
@@ -48,7 +48,7 @@ export async function lancarMovimentacao(
     error &&
     isMissingRpcFunction(error, "fn_caixa_lancar_movimentacao_idempotente")
   ) {
-    const fallback = await ctx.supabaseAdmin.rpc(
+    const fallback = await ctx.databaseAdmin.rpc(
       "fn_caixa_lancar_movimentacao",
       movimentoPayload
     );

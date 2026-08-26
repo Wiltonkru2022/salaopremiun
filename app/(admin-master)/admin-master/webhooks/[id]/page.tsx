@@ -48,18 +48,18 @@ export default async function AdminMasterWebhookDetailPage({
     notFound();
   }
 
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const mirrorKey = buildWebhookMirrorKey(sourceId);
 
   const [{ data: webhook }, { data: espelho }] = await Promise.all([
-    supabase
+    database
       .from("asaas_webhook_eventos")
       .select(
         "id, evento, payment_id, payment_status, status_processamento, tentativas, erro_mensagem, payload, primeiro_recebido_em, ultimo_recebido_em, processado_em, id_salao, id_assinatura, id_cobranca, event_order, decisao"
       )
       .eq("id", sourceId)
       .maybeSingle(),
-    supabase
+    database
       .from("eventos_webhook")
       .select(
         "id, status, payload_json, resposta_json, erro_texto, tentativas, recebido_em, processado_em"

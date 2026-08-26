@@ -79,8 +79,8 @@ export async function observeOperationalFailure(params: {
     deploymentId: deploy.deploymentId,
     commitSha: deploy.commitSha,
   };
-  const supabase = getDatabaseAdmin() as any;
-  const { data, error } = await supabase.rpc("fn_operational_observe_incident", {
+  const database = getDatabaseAdmin() as any;
+  const { data, error } = await database.rpc("fn_operational_observe_incident", {
     p_fingerprint: fingerprint,
     p_chave: `operational:${fingerprint}`,
     p_titulo: rule.name,
@@ -104,7 +104,7 @@ export async function observeOperationalFailure(params: {
   if (error) throw error;
 
   const incident = Array.isArray(data) ? data[0] : data;
-  await supabase.from("alertas_sistema").upsert(
+  await database.from("alertas_sistema").upsert(
     {
       chave: `monitoring:${fingerprint}`,
       tipo: "incidente_operacional",

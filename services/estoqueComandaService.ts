@@ -36,7 +36,7 @@ export function createEstoqueComandaService() {
 
     async validarComanda(params: EstoqueComandaParams) {
       return validarComandaParaEstoque({
-        supabaseAdmin: getDatabaseAdmin(),
+        databaseAdmin: getDatabaseAdmin(),
         ...params,
       });
     },
@@ -115,7 +115,7 @@ export function createEstoqueComandaService() {
     }) {
       try {
         await reportOperationalIncident({
-          supabaseAdmin: getDatabaseAdmin(),
+          databaseAdmin: getDatabaseAdmin(),
           key: `estoque:processar_comanda:${params.idSalao}:${params.idComanda}`,
           module: "estoque",
           title: "Baixa de estoque da comanda falhou",
@@ -146,7 +146,7 @@ export function createEstoqueComandaService() {
     }) {
       try {
         await reportOperationalIncident({
-          supabaseAdmin: getDatabaseAdmin(),
+          databaseAdmin: getDatabaseAdmin(),
           key: `estoque:reverter_comanda:${params.idSalao}:${params.idComanda}`,
           module: "estoque",
           title: "Reversao de estoque da comanda falhou",

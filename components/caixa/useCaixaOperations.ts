@@ -142,7 +142,7 @@ export function useCaixaOperations({
   const exigirCaixaAberto = useCallback(() => {
     if (!caixaSchemaReady) {
       setErroTela(
-        "Aplique a migration de caixa operacional no Supabase antes de vender."
+        "Aplique a migration de caixa operacional no Neon antes de vender."
       );
       return false;
     }

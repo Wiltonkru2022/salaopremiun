@@ -31,7 +31,7 @@ const NON_PAID_STATUS_EVENTS = new Set([
 ]);
 
 type ProcessarWebhookAsaasParams = {
-  supabaseAdmin: DatabaseClient;
+  databaseAdmin: DatabaseClient;
   webhookEventId: string | null;
   webhookPayload: Record<string, unknown>;
   event: string;
@@ -133,7 +133,7 @@ function avaliarEventoCobranca({
 }
 
 async function atualizarCobrancaWebhook(params: {
-  supabaseAdmin: DatabaseClient;
+  databaseAdmin: DatabaseClient;
   cobrancaAtual: CobrancaWebhookResolvedRow;
   webhookPayload: Record<string, unknown>;
   event: string;
@@ -145,7 +145,7 @@ async function atualizarCobrancaWebhook(params: {
   avaliacao: AvaliacaoEventoCobranca;
 }) {
   const {
-    supabaseAdmin,
+    databaseAdmin,
     cobrancaAtual,
     webhookPayload,
     event,
@@ -157,7 +157,7 @@ async function atualizarCobrancaWebhook(params: {
     avaliacao,
   } = params;
 
-  const { error } = await supabaseAdmin
+  const { error } = await databaseAdmin
     .from("assinaturas_cobrancas")
     .update({
       status: avaliacao.statusCobrancaInterno,
@@ -189,7 +189,7 @@ export async function processarWebhookAsaasResolvido(
 
   if (avaliacao.ignored) {
     await atualizarStatusEventoWebhook(
-      params.supabaseAdmin,
+      params.databaseAdmin,
       params.webhookEventId,
       "processado",
       null,
@@ -212,7 +212,7 @@ export async function processarWebhookAsaasResolvido(
 
   try {
     await atualizarCobrancaWebhook({
-      supabaseAdmin: params.supabaseAdmin,
+      databaseAdmin: params.databaseAdmin,
       cobrancaAtual: params.cobrancaAtual,
       webhookPayload: params.webhookPayload,
       event: params.event,
@@ -225,7 +225,7 @@ export async function processarWebhookAsaasResolvido(
     });
   } catch (error) {
     await atualizarStatusEventoWebhook(
-      params.supabaseAdmin,
+      params.databaseAdmin,
       params.webhookEventId,
       "erro",
       error instanceof Error ? error.message : "Erro ao atualizar cobranca."
@@ -235,7 +235,7 @@ export async function processarWebhookAsaasResolvido(
 
   if (avaliacao.isEventoPago) {
     const result = await aplicarPagamentoConfirmado({
-      supabaseAdmin: params.supabaseAdmin,
+      databaseAdmin: params.databaseAdmin,
       webhookEventId: params.webhookEventId,
       cobrancaAtual: params.cobrancaAtual,
       assinatura: params.assinatura,
@@ -258,7 +258,7 @@ export async function processarWebhookAsaasResolvido(
     avaliacao.isEventoTerminal
   ) {
     const result = await aplicarStatusNaoPago({
-      supabaseAdmin: params.supabaseAdmin,
+      databaseAdmin: params.databaseAdmin,
       webhookEventId: params.webhookEventId,
       cobrancaAtual: params.cobrancaAtual,
       assinatura: params.assinatura,
@@ -272,7 +272,7 @@ export async function processarWebhookAsaasResolvido(
   }
 
   await atualizarStatusEventoWebhook(
-    params.supabaseAdmin,
+    params.databaseAdmin,
     params.webhookEventId,
     "processado",
     null,

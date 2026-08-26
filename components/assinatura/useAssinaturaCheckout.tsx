@@ -19,7 +19,7 @@ import {
 } from "./plan-utils";
 
 type UseAssinaturaCheckoutParams = {
-  supabase: ReturnType<typeof import("@/lib/db/client").createClient>;
+  database: ReturnType<typeof import("@/lib/db/client").createClient>;
   salao: SalaoRow | null;
   checkout: CheckoutResponse | null;
   planoSelecionado: string;
@@ -41,7 +41,7 @@ type UseAssinaturaCheckoutParams = {
 };
 
 export function useAssinaturaCheckout({
-  supabase,
+  database,
   salao,
   checkout,
   planoSelecionado,
@@ -87,7 +87,7 @@ export function useAssinaturaCheckout({
             errorMessage: "Falha ao verificar status do pagamento.",
           },
           async () =>
-            await supabase
+            await database
               .from("assinaturas")
               .select("asaas_credit_card_brand, asaas_credit_card_last4, asaas_credit_card_tokenized_at, asaas_customer_id, asaas_payment_id, asaas_subscription_id, asaas_subscription_status, created_at, forma_pagamento_atual, gateway, id, id_cobranca_atual, id_salao, limite_profissionais, limite_usuarios, pago_em, plano, referencia_atual, renovacao_automatica, status, trial_ativo, trial_fim_em, trial_inicio_em, updated_at, valor, vencimento_em")
               .eq("id_salao", salao.id)
@@ -144,7 +144,7 @@ export function useAssinaturaCheckout({
       setAssinatura,
       setCheckout,
       setErro,
-      supabase,
+      database,
     ]
   );
 

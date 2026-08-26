@@ -288,15 +288,15 @@ export function getPlanoRecursoLabel(recurso: string) {
 async function getPlanoAccessSnapshotUncached(
   idSalao: string
 ): Promise<PlanoAccessSnapshot> {
-  const supabaseAdmin = getDatabaseAdmin();
+  const databaseAdmin = getDatabaseAdmin();
 
   const [{ data: salao }, { data: assinatura }] = await Promise.all([
-    supabaseAdmin
+    databaseAdmin
       .from("saloes")
       .select("id, plano, status, limite_usuarios, limite_profissionais")
       .eq("id", idSalao)
       .maybeSingle(),
-    supabaseAdmin
+    databaseAdmin
       .from("assinaturas")
       .select(
         "plano, status, vencimento_em, trial_fim_em, limite_usuarios, limite_profissionais"
@@ -321,7 +321,7 @@ async function getPlanoAccessSnapshotUncached(
     resumo.emTesteGratis && resumo.ativa ? "premium" : planoCodigo;
   const planoCatalogo = getPlanoCatalogo(planoCodigoEfetivo);
 
-  const { data: plano } = await supabaseAdmin
+  const { data: plano } = await databaseAdmin
     .from("planos_saas")
     .select("id, codigo, nome, limite_usuarios, limite_profissionais")
     .eq("codigo", planoCodigoEfetivo)
@@ -341,38 +341,38 @@ async function getPlanoAccessSnapshotUncached(
   ] =
     await Promise.all([
       idPlano
-        ? supabaseAdmin
+        ? databaseAdmin
             .from("planos_recursos")
             .select("recurso_codigo, habilitado, limite_numero")
             .eq("id_plano", idPlano)
         : Promise.resolve({ data: [] }),
-      supabaseAdmin
+      databaseAdmin
         .from("saloes_recursos_extras")
         .select("recurso_codigo, habilitado, limite_numero")
         .eq("id_salao", idSalao)
         .eq("habilitado", true)
         .or(`expira_em.is.null,expira_em.gt.${new Date().toISOString()}`),
-      supabaseAdmin
+      databaseAdmin
         .from("usuarios")
         .select("id", { count: "exact", head: true })
         .eq("id_salao", idSalao)
         .eq("status", "ativo"),
-      supabaseAdmin
+      databaseAdmin
         .from("profissionais")
         .select("id", { count: "exact", head: true })
         .eq("id_salao", idSalao)
         .eq("ativo", true),
-      supabaseAdmin
+      databaseAdmin
         .from("clientes")
         .select("id", { count: "exact", head: true })
         .eq("id_salao", idSalao)
         .eq("ativo", "true"),
-      supabaseAdmin
+      databaseAdmin
         .from("servicos")
         .select("id", { count: "exact", head: true })
         .eq("id_salao", idSalao)
         .eq("ativo", true),
-      supabaseAdmin
+      databaseAdmin
         .from("agendamentos")
         .select("id", { count: "exact", head: true })
         .eq("id_salao", idSalao)

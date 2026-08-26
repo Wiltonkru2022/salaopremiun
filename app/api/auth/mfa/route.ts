@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDatabaseAdmin } from "@/lib/db/admin";
+import { clerkAdminCompat } from "@/lib/platform/clerk-admin.server";
 import { readPainelClerkSession } from "@/lib/platform/painel-clerk-session.server";
 import {
   buildBackupMetadata,
@@ -41,14 +42,14 @@ async function getAuthenticatedContext() {
 
   const admin = getDatabaseAdmin();
   const { data: authUserData, error: authUserError } =
-    await admin.auth.admin.getUserById(session.clerkSubject);
+    await clerkAdminCompat.getUserById(session.clerkSubject);
 
   if (authUserError || !authUserData?.user) {
     throw new Error("Nao foi possivel carregar a conta Clerk autenticada.");
   }
 
   const { data: factorsData, error: factorError } =
-    await admin.auth.admin.mfa.listFactors({
+    await clerkAdminCompat.mfa.listFactors({
       userId: session.clerkSubject,
     });
 
@@ -83,8 +84,7 @@ async function persistMfaMetadata(params: {
   authUserId: string;
   nextMetadata: SalaoPremiumMfaMetadata;
 }) {
-  const admin = getDatabaseAdmin();
-  const { data, error } = await admin.auth.admin.getUserById(params.authUserId);
+  const { data, error } = await clerkAdminCompat.getUserById(params.authUserId);
 
   if (error || !data?.user) {
     throw new Error("Nao foi possivel atualizar a conta do autenticador Clerk.");
@@ -93,7 +93,7 @@ async function persistMfaMetadata(params: {
   const currentAppMetadata = (data.user.app_metadata ||
     {}) as Record<string, unknown>;
 
-  const { error: updateError } = await admin.auth.admin.updateUserById(
+  const { error: updateError } = await clerkAdminCompat.updateUserById(
     params.authUserId,
     {
       app_metadata: {
@@ -300,7 +300,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const { error: deleteError } = await ctx.admin.auth.admin.mfa.deleteFactor({
+      const { error: deleteError } = await clerkAdminCompat.mfa.deleteFactor({
         id: ctx.totpFactor.id,
         userId: ctx.clerkSubject,
       });

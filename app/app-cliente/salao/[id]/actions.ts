@@ -140,10 +140,10 @@ export async function toggleClienteSalonFavoriteAction(formData: FormData) {
 
   if (!idSalao) return;
 
-  const supabaseAdmin = getDatabaseAdmin();
+  const databaseAdmin = getDatabaseAdmin();
 
   if (nextFavorite) {
-    await (supabaseAdmin as any).from("clientes_app_favoritos").upsert(
+    await (databaseAdmin as any).from("clientes_app_favoritos").upsert(
       {
         cliente_app_conta_id: session.idConta,
         id_salao: idSalao,
@@ -153,7 +153,7 @@ export async function toggleClienteSalonFavoriteAction(formData: FormData) {
       }
     );
   } else {
-    await (supabaseAdmin as any)
+    await (databaseAdmin as any)
       .from("clientes_app_favoritos")
       .delete()
       .eq("cliente_app_conta_id", session.idConta)

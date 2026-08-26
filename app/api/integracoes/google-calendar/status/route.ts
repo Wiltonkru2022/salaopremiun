@@ -18,8 +18,8 @@ export async function GET() {
   }
 
   const feature = await canUsePlanFeature(usuario.id_salao, "google_calendar");
-  const supabase = getDatabaseAdmin();
-  const { data, error } = await (supabase as any)
+  const database = getDatabaseAdmin();
+  const { data, error } = await (database as any)
     .from("saloes_google_calendar_connections")
     .select("google_email, calendar_id, connected_at, updated_at, ativo")
     .eq("id_salao", usuario.id_salao)
@@ -60,8 +60,8 @@ export async function DELETE() {
     );
   }
 
-  const supabase = getDatabaseAdmin();
-  const { error } = await (supabase as any)
+  const database = getDatabaseAdmin();
+  const { error } = await (database as any)
     .from("saloes_google_calendar_connections")
     .update({
       ativo: false,

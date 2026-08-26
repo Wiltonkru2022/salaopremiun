@@ -1,17 +1,17 @@
 import type { DatabaseClient } from "@/lib/db/types";
 
 type Params = {
-  supabase: DatabaseClient;
+  database: DatabaseClient;
   idSalao: string;
   idAgendamento: string;
 };
 
 async function recalcularTotaisComanda(
-  supabase: DatabaseClient,
+  database: DatabaseClient,
   idSalao: string,
   idComanda: string
 ) {
-  const { data: itens, error } = await supabase
+  const { data: itens, error } = await database
     .from("comanda_itens")
     .select("valor_total")
     .eq("id_salao", idSalao)
@@ -27,7 +27,7 @@ async function recalcularTotaisComanda(
     return acc + Number(item.valor_total || 0);
   }, 0);
 
-  const { data: comandaAtual, error: comandaError } = await supabase
+  const { data: comandaAtual, error: comandaError } = await database
     .from("comandas")
     .select("desconto, acrescimo")
     .eq("id", idComanda)
@@ -43,7 +43,7 @@ async function recalcularTotaisComanda(
   const acrescimo = Number(comandaAtual?.acrescimo || 0);
   const total = subtotal - desconto + acrescimo;
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await database
     .from("comandas")
     .update({
       subtotal,
@@ -60,11 +60,11 @@ async function recalcularTotaisComanda(
 }
 
 async function cancelarComandaSeVazia(
-  supabase: DatabaseClient,
+  database: DatabaseClient,
   idSalao: string,
   idComanda: string
 ) {
-  const { data: itens, error: itensError } = await supabase
+  const { data: itens, error: itensError } = await database
     .from("comanda_itens")
     .select("id")
     .eq("id_salao", idSalao)
@@ -79,7 +79,7 @@ async function cancelarComandaSeVazia(
 
   if (itens && itens.length > 0) return;
 
-  const { data: comanda, error: comandaError } = await supabase
+  const { data: comanda, error: comandaError } = await database
     .from("comandas")
     .select("id, status")
     .eq("id", idComanda)
@@ -96,7 +96,7 @@ async function cancelarComandaSeVazia(
   const statusAtual = String(comanda.status || "").toLowerCase();
   if (statusAtual === "cancelada" || statusAtual === "fechada") return;
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await database
     .from("comandas")
     .update({
       status: "cancelada",
@@ -113,11 +113,11 @@ async function cancelarComandaSeVazia(
 }
 
 export async function cancelarAgendamentoComComanda({
-  supabase,
+  database,
   idSalao,
   idAgendamento,
 }: Params) {
-  const { data: agendamento, error: agendamentoError } = await supabase
+  const { data: agendamento, error: agendamentoError } = await database
     .from("agendamentos")
     .select("id, id_comanda, status")
     .eq("id", idAgendamento)
@@ -133,7 +133,7 @@ export async function cancelarAgendamentoComComanda({
     throw new Error("Agendamento não encontrado.");
   }
 
-  const { error: cancelError } = await supabase
+  const { error: cancelError } = await database
     .from("agendamentos")
     .update({
       status: "cancelado",
@@ -147,7 +147,7 @@ export async function cancelarAgendamentoComComanda({
     throw new Error("Erro ao cancelar agendamento.");
   }
 
-  const { data: itens, error: itensError } = await supabase
+  const { data: itens, error: itensError } = await database
     .from("comanda_itens")
     .select("id, id_comanda")
     .eq("id_salao", idSalao)
@@ -165,7 +165,7 @@ export async function cancelarAgendamentoComComanda({
       comandasAfetadas.add(item.id_comanda);
     }
 
-    const { error: deleteError } = await supabase
+    const { error: deleteError } = await database
       .from("comanda_itens")
       .delete()
       .eq("id", item.id)
@@ -178,7 +178,7 @@ export async function cancelarAgendamentoComComanda({
   }
 
   for (const idComanda of Array.from(comandasAfetadas)) {
-    await recalcularTotaisComanda(supabase, idSalao, idComanda);
-    await cancelarComandaSeVazia(supabase, idSalao, idComanda);
+    await recalcularTotaisComanda(database, idSalao, idComanda);
+    await cancelarComandaSeVazia(database, idSalao, idComanda);
   }
 }

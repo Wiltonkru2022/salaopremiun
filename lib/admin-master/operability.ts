@@ -292,7 +292,7 @@ function inferHealthLabel(status: AdminHealthOverview["status"]) {
 export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOperationalSnapshot> {
   return runAdminOperation({
     action: "admin_master_operational_snapshot",
-    run: async (supabase) => {
+    run: async (database) => {
   const now = Date.now();
   const last24h = new Date(now - 24 * 60 * 60 * 1000).toISOString();
   const last12h = new Date(now - 12 * 60 * 60 * 1000).toISOString();
@@ -309,7 +309,7 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
     { data: trialAssinaturasData },
     { data: automaticActionsData },
   ] = await Promise.all([
-    supabase
+    database
       .from("eventos_sistema")
       .select(
         "id, id_salao, modulo, tipo_evento, severidade, mensagem, rota, acao, response_ms, sucesso, eh_erro_usuario, created_at"
@@ -317,7 +317,7 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
       .gte("created_at", last24h)
       .order("created_at", { ascending: false })
       .limit(300),
-    supabase
+    database
       .from("incidentes_sistema")
       .select(
         "id, titulo, modulo, severidade, status, impacto_saloes, total_ocorrencias, primeira_ocorrencia_em, ultima_ocorrencia_em, acao_sugerida, resolucao_automatica_disponivel"
@@ -325,40 +325,40 @@ export async function getAdminMasterOperationalSnapshot(): Promise<AdminMasterOp
       .neq("status", "resolvido")
       .order("ultima_ocorrencia_em", { ascending: false })
       .limit(20),
-    supabase
+    database
       .from("health_checks_sistema")
       .select("chave, nome, status, score, atualizado_em")
       .order("atualizado_em", { ascending: false })
       .limit(12),
-    supabase.from("saloes").select("id, nome, plano, status").limit(300),
-    supabase
+    database.from("saloes").select("id, nome, plano, status").limit(300),
+    database
       .from("score_saude_salao")
       .select(
         "id_salao, score_total, uso_recente, inadimplencia_risco, tickets_abertos, risco_cancelamento, atualizado_em"
       )
       .order("score_total", { ascending: true })
       .limit(30),
-    supabase
+    database
       .from("score_onboarding_salao")
       .select("id_salao, score_total, dias_com_acesso, modulos_usados, atualizado_em")
       .order("score_total", { ascending: false })
       .limit(30),
-    supabase
+    database
       .from("trial_extensoes_regras")
       .select("nome, score_minimo, dias_extra, ativo")
       .eq("ativo", true)
       .order("score_minimo", { ascending: false }),
-    supabase
+    database
       .from("trial_extensoes_automaticas")
       .select("id_salao, trial_novo_fim, score_atingido, criado_em")
       .order("criado_em", { ascending: false })
       .limit(20),
-    supabase
+    database
       .from("assinaturas")
       .select("id_salao, status, trial_fim_em")
       .in("status", ["teste_gratis", "trial"])
       .limit(120),
-    supabase
+    database
       .from("acoes_automaticas_sistema")
       .select("tipo, referencia, executada, sucesso, log, created_at")
       .order("created_at", { ascending: false })

@@ -110,11 +110,11 @@ export async function validarPermissaoRecalculoComissao(idSalao: string) {
 }
 
 export async function recalcularTaxaProfissional(params: {
-  supabaseAdmin: DatabaseClient;
+  databaseAdmin: DatabaseClient;
   idSalao: string;
   idComanda: string;
 }) {
-  const { supabaseAdmin, idSalao, idComanda } = params;
+  const { databaseAdmin, idSalao, idComanda } = params;
 
   const [
     { data: config, error: configError },
@@ -122,26 +122,26 @@ export async function recalcularTaxaProfissional(params: {
     { data: itens, error: itensError },
     { data: comissoes, error: comissoesError },
   ] = await Promise.all([
-    supabaseAdmin
+    databaseAdmin
       .from("configuracoes_salao")
       .select("repassa_taxa_cliente, desconta_taxa_profissional")
       .eq("id_salao", idSalao)
       .maybeSingle(),
 
-    supabaseAdmin
+    databaseAdmin
       .from("comanda_pagamentos")
       .select("taxa_maquininha_valor")
       .eq("id_salao", idSalao)
       .eq("id_comanda", idComanda),
 
-    supabaseAdmin
+    databaseAdmin
       .from("comanda_itens")
       .select("id, base_calculo_aplicada, desconta_taxa_maquininha_aplicada")
       .eq("id_salao", idSalao)
       .eq("id_comanda", idComanda)
       .eq("ativo", true),
 
-    supabaseAdmin
+    databaseAdmin
       .from("comissoes_lancamentos")
       .select("competencia, competencia_data, criado_em, descricao, id, id_agendamento, id_assistente, id_comanda, id_comanda_item, id_profissional, id_salao, observacoes, origem_percentual, pago_em, percentual, percentual_aplicado, status, tipo_destinatario, tipo_profissional, updated_at, valor_base, valor_comissao, valor_comissao_assistente")
       .eq("id_salao", idSalao)
@@ -241,7 +241,7 @@ export async function recalcularTaxaProfissional(params: {
         0
       );
 
-      const { error: updateError } = await supabaseAdmin
+      const { error: updateError } = await databaseAdmin
         .from("comissoes_lancamentos")
         .update({
           valor_comissao: valorFinalComissao,

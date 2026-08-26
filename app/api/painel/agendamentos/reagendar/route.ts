@@ -61,8 +61,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = getDatabaseAdmin();
-    const { data: current, error: loadError } = await (supabase as any)
+    const database = getDatabaseAdmin();
+    const { data: current, error: loadError } = await (database as any)
       .from("agendamentos")
       .select("id, data, hora_inicio, hora_fim, profissional_id, status")
       .eq("id", idAgendamento)
@@ -96,14 +96,14 @@ export async function POST(request: Request) {
     }
 
     const [agendamentosResult, bloqueiosResult] = await Promise.all([
-      (supabase as any)
+      (database as any)
         .from("agendamentos")
         .select("id, hora_inicio, hora_fim, status")
         .eq("id_salao", usuario.id_salao)
         .eq("profissional_id", idProfissional)
         .eq("data", data)
         .neq("id", idAgendamento),
-      (supabase as any)
+      (database as any)
         .from("agenda_bloqueios")
         .select("id, hora_inicio, hora_fim")
         .eq("id_salao", usuario.id_salao)
@@ -158,7 +158,7 @@ export async function POST(request: Request) {
       patch.cliente_cancelou_em = null;
     }
 
-    const { error: updateError } = await (supabase as any)
+    const { error: updateError } = await (database as any)
       .from("agendamentos")
       .update(patch)
       .eq("id", idAgendamento)

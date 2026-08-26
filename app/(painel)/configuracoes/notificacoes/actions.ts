@@ -68,8 +68,8 @@ export async function salvarConfiguracoesNotificacoesAction(formData: FormData) 
       action: "salvar_configuracoes_notificacoes",
       actorId: usuario.id,
       idSalao: usuario.id_salao,
-      run: async (supabase) => {
-        const db = asLooseDbClient(supabase);
+      run: async (database) => {
+        const db = asLooseDbClient(database);
         const { error } = await db
           .from("configuracoes_notificacoes")
           .upsert(

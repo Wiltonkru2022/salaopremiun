@@ -36,7 +36,7 @@ export default function CaixaPage() {
   const [pagamentosOpen, setPagamentosOpen] = useState(false);
   const [sessaoOpen, setSessaoOpen] = useState(false);
   const {
-    supabase,
+    database,
     requestedComandaId,
     requestedAgendamentoId,
     requestedReaberta,
@@ -137,7 +137,7 @@ export default function CaixaPage() {
     init,
     limparComandaSelecionada,
   } = useCaixaLoaders({
-    supabase,
+    database,
     router,
     idSalao,
     requestedComandaId,
@@ -341,7 +341,7 @@ export default function CaixaPage() {
       }
     };
 
-    const channel = supabase
+    const channel = database
       .channel(`caixa-comandas-${idSalao}`)
       .on(
         "postgres_changes",
@@ -356,7 +356,7 @@ export default function CaixaPage() {
       .subscribe();
 
     return () => {
-      void supabase.removeChannel(channel);
+      void database.removeChannel(channel);
     };
   }, [
     acessoCarregado,
@@ -364,7 +364,7 @@ export default function CaixaPage() {
     loading,
     saving,
     modalOperacionalAberto,
-    supabase,
+    database,
     carregarFilaOperacional,
     carregarSessaoOperacional,
     aplicarDetalheComandaEmSegundoPlano,

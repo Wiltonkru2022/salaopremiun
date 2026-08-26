@@ -31,7 +31,7 @@ type EstoqueProcessarErrorResponse = {
 };
 
 export default function MovimentacaoForm() {
-  const supabase = createClient();
+  const database = createClient();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -70,7 +70,7 @@ export default function MovimentacaoForm() {
 
       setIdSalao(usuarioLogado.idSalao);
 
-      const { data, error } = await supabase
+      const { data, error } = await database
         .from("produtos")
         .select("id, nome, unidade_medida, estoque_atual")
         .eq("id_salao", usuarioLogado.idSalao)

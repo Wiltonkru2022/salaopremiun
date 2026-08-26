@@ -103,8 +103,8 @@ export default async function AdminMasterSaloesExcluidosPage({
   const from = paginaAtual * SALOES_EXCLUIDOS_PAGE_SIZE;
   const to = from + SALOES_EXCLUIDOS_PAGE_SIZE - 1;
 
-  const supabase = getDatabaseAdmin();
-  let query = (supabase as any)
+  const database = getDatabaseAdmin();
+  let query = (database as any)
     .from("reativar_salao")
     .select(
       "id, id_salao_original, nome_salao, nome_responsavel, email, telefone, whatsapp, cpf_cnpj, endereco_completo, cidade, estado, bairro, cep, data_exclusao, motivo, origem, metadata",

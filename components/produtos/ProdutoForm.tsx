@@ -96,7 +96,7 @@ const initialState: ProdutoState = {
 };
 
 export default function ProdutoForm({ modo }: ProdutoFormProps) {
-  const supabase = createClient();
+  const database = createClient();
   const router = useRouter();
   const params = useParams();
 
@@ -157,7 +157,7 @@ async function bootstrap() {
 }
 
   async function carregarProduto(id: string, salaoId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from("produtos")
       .select("ativo, categoria, codigo_barras, comissao_revenda_percentual, created_at, custo_por_dose, custo_real, custos_extras, data_validade, destinacao, dose_padrao, estoque_atual, estoque_maximo, estoque_minimo, fornecedor_contato_nome, fornecedor_nome, fornecedor_telefone, fornecedor_whatsapp, foto_url, id, id_salao, linha, lote, marca, margem_lucro_percentual, nome, observacoes, prazo_medio_entrega_dias, preco_custo, preco_venda, quantidade_por_embalagem, sku, status, unidade_dose, unidade_medida, updated_at")
       .eq("id", id)

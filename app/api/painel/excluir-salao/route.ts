@@ -5,6 +5,7 @@ import {
 } from "@/lib/auth/require-salao-permission";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getDatabaseAdmin } from "@/lib/db/admin";
+import { clerkAdminCompat } from "@/lib/platform/clerk-admin.server";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ type ExcluirSalaoPayload = {
   motivo?: string;
 };
 
-type SupabaseRpcError = {
+type DatabaseRpcError = {
   code?: string;
   message?: string;
   details?: string | null;
@@ -52,9 +53,9 @@ export async function POST(request: Request) {
       { allowedNiveis: ["admin"] }
     );
 
-    const supabaseAdmin = getDatabaseAdmin();
+    const databaseAdmin = getDatabaseAdmin();
     const { data: painelAuthUsers, error: painelAuthUsersError } =
-      await supabaseAdmin
+      await databaseAdmin
         .from("usuarios")
         .select("auth_user_id, email")
         .eq("id_salao", membership.usuario.id_salao)
@@ -83,7 +84,7 @@ export async function POST(request: Request) {
       )
     );
 
-    const { data, error } = await (supabaseAdmin as any).rpc(
+    const { data, error } = await (databaseAdmin as any).rpc(
       "excluir_salao_definitivo",
       {
         p_id_salao: membership.usuario.id_salao,
@@ -94,7 +95,7 @@ export async function POST(request: Request) {
     );
 
     if (error) {
-      const rpcError = error as SupabaseRpcError;
+      const rpcError = error as DatabaseRpcError;
       const debugId = crypto.randomUUID();
       console.error("Erro ao excluir salao definitivamente:", {
         debugId,
@@ -114,7 +115,7 @@ export async function POST(request: Request) {
           debugId,
           debug: {
             code: rpcError.code || null,
-            message: rpcError.message || "Erro sem mensagem do Supabase.",
+            message: rpcError.message || "Erro sem mensagem do Neon.",
             details: rpcError.details || null,
             hint: rpcError.hint || null,
           },
@@ -125,7 +126,7 @@ export async function POST(request: Request) {
 
     const authDeleteResults = await Promise.all(
       authUsersToDelete.map(async (authUserId) => {
-        const result = await supabaseAdmin.auth.admin.deleteUser(authUserId);
+        const result = await clerkAdminCompat.deleteUser(authUserId);
         return {
           authUserId,
           ok: !result.error,

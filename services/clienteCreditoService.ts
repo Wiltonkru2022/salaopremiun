@@ -23,9 +23,9 @@ export async function registrarCreditoManualCliente(params: {
   valor: number;
   observacao: string;
 }) {
-  const supabaseAdmin = getDatabaseAdmin();
-  const supabaseRpc = asLooseDbClient(supabaseAdmin);
-  const { data: rpcData, error: rpcError } = await supabaseRpc.rpc<
+  const databaseAdmin = getDatabaseAdmin();
+  const databaseRpc = asLooseDbClient(databaseAdmin);
+  const { data: rpcData, error: rpcError } = await databaseRpc.rpc<
     CreditoRow | CreditoRow[] | null
   >(
     "fn_cliente_registrar_credito_manual",
@@ -51,7 +51,7 @@ export async function registrarCreditoManualCliente(params: {
     throw rpcError;
   }
 
-  const { data: cliente, error: clienteError } = await supabaseAdmin
+  const { data: cliente, error: clienteError } = await databaseAdmin
     .from("clientes")
     .select("id, cashback")
     .eq("id_salao", params.idSalao)
@@ -67,7 +67,7 @@ export async function registrarCreditoManualCliente(params: {
 
   const saldoAnterior = Number(cliente.cashback || 0);
   const saldoAtual = Math.round((saldoAnterior + params.valor) * 100) / 100;
-  const { error: updateError } = await supabaseAdmin
+  const { error: updateError } = await databaseAdmin
     .from("clientes")
     .update({
       cashback: saldoAtual,

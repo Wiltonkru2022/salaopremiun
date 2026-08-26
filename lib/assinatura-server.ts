@@ -63,9 +63,9 @@ export function getStatusAssinaturaServidor(
 }
 
 export async function validarAssinaturaSalao(idSalao: string) {
-  const supabaseAdmin = getDatabaseAdmin();
+  const databaseAdmin = getDatabaseAdmin();
 
-  const { data: assinatura, error } = await supabaseAdmin
+  const { data: assinatura, error } = await databaseAdmin
     .from("assinaturas")
     .select("status, vencimento_em")
     .eq("id_salao", idSalao)

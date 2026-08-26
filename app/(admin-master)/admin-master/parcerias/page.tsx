@@ -68,7 +68,7 @@ function statusClass(status: string) {
 
 export default async function AdminMasterParceriasPage() {
   await requireAdminMasterUser("comunicacao_ver");
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const autentiqueAtivo = autentiqueConfigurado();
 
   const [
@@ -78,11 +78,11 @@ export default async function AdminMasterParceriasPage() {
     { data: contratos },
     { data: metricas },
   ] = await Promise.all([
-    supabase.from("parceiros_comerciais").select("id,razao_social,nome_fantasia,segmento,cidade,uf,status,email,whatsapp").order("criado_em", { ascending: false }).limit(100),
-    supabase.from("parceria_campanhas").select("id,id_parceiro,nome,status,valor_contratado,inicio_em,fim_em,publico,locais_exibicao,prioridade,peso_rotacao,limite_frequencia_dia,limite_impressoes_dia,exclusiva,origem,categoria_interna,parceiros_comerciais(razao_social,nome_fantasia)").order("criado_em", { ascending: false }).limit(150),
-    supabase.from("parceria_criativos").select("id,id_campanha,titulo,subtitulo,imagem_url,cta_texto,destino_url,formato,ativo").order("criado_em", { ascending: false }).limit(300),
-    supabase.from("parceria_contratos").select("id,id_parceiro,id_campanha,numero,status,valor,assinado_em,signatario_email,envelope_externo_id,url_assinatura").order("criado_em", { ascending: false }).limit(150),
-    supabase.from("parceria_metricas_diarias").select("id_campanha,impressoes,cliques,conversoes,cupons_utilizados").order("data", { ascending: false }).limit(5000),
+    database.from("parceiros_comerciais").select("id,razao_social,nome_fantasia,segmento,cidade,uf,status,email,whatsapp").order("criado_em", { ascending: false }).limit(100),
+    database.from("parceria_campanhas").select("id,id_parceiro,nome,status,valor_contratado,inicio_em,fim_em,publico,locais_exibicao,prioridade,peso_rotacao,limite_frequencia_dia,limite_impressoes_dia,exclusiva,origem,categoria_interna,parceiros_comerciais(razao_social,nome_fantasia)").order("criado_em", { ascending: false }).limit(150),
+    database.from("parceria_criativos").select("id,id_campanha,titulo,subtitulo,imagem_url,cta_texto,destino_url,formato,ativo").order("criado_em", { ascending: false }).limit(300),
+    database.from("parceria_contratos").select("id,id_parceiro,id_campanha,numero,status,valor,assinado_em,signatario_email,envelope_externo_id,url_assinatura").order("criado_em", { ascending: false }).limit(150),
+    database.from("parceria_metricas_diarias").select("id_campanha,impressoes,cliques,conversoes,cupons_utilizados").order("data", { ascending: false }).limit(5000),
   ]);
 
   const parceirosRows = parceiros || [];

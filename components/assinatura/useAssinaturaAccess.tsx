@@ -11,18 +11,18 @@ import { readPainelSessionSnapshot } from "@/lib/painel/session-snapshot";
 import type {
   Permissoes,
   UsuarioSistemaRow,
-  UsuarioSupabase,
+  UsuarioDatabase,
 } from "./types";
 
 type UseAssinaturaAccessParams = {
-  supabase: ReturnType<typeof import("@/lib/db/client").createClient>;
+  database: ReturnType<typeof import("@/lib/db/client").createClient>;
 };
 
 export function useAssinaturaAccess({
-  supabase,
+  database,
 }: UseAssinaturaAccessParams) {
   const router = useRouter();
-  const [usuario, setUsuario] = useState<UsuarioSupabase | null>(null);
+  const [usuario, setUsuario] = useState<UsuarioDatabase | null>(null);
   const [permissoes, setPermissoes] = useState<Permissoes | null>(null);
   const [acessoCarregado, setAcessoCarregado] = useState(false);
   const [nivel, setNivel] = useState("");
@@ -58,12 +58,12 @@ export function useAssinaturaAccess({
 
   const safeGetAuthUser = useCallback(async () => {
     try {
-      const result = await withTimeout(supabase.auth.getUser(), 4000);
+      const result = await withTimeout(database.auth.getUser(), 4000);
 
       if (result.error && isAuthLockError(result.error)) {
         await wait(250);
 
-        const retry = await withTimeout(supabase.auth.getUser(), 4000).catch(
+        const retry = await withTimeout(database.auth.getUser(), 4000).catch(
           () => null
         );
 
@@ -71,7 +71,7 @@ export function useAssinaturaAccess({
           return retry.data.user;
         }
 
-        const sessionRes = await supabase.auth.getSession();
+        const sessionRes = await database.auth.getSession();
         return sessionRes.data.session?.user || null;
       }
 
@@ -83,7 +83,7 @@ export function useAssinaturaAccess({
     } catch (error: unknown) {
       if (error instanceof Error && error.message === "AUTH_TIMEOUT") {
         try {
-          const sessionRes = await supabase.auth.getSession();
+          const sessionRes = await database.auth.getSession();
           return sessionRes.data.session?.user || null;
         } catch {
           return null;
@@ -93,7 +93,7 @@ export function useAssinaturaAccess({
       if (isAuthLockError(error)) {
         try {
           await wait(250);
-          const sessionRes = await supabase.auth.getSession();
+          const sessionRes = await database.auth.getSession();
           return sessionRes.data.session?.user || null;
         } catch {
           return null;
@@ -102,7 +102,7 @@ export function useAssinaturaAccess({
 
       throw error;
     }
-  }, [isAuthLockError, supabase, wait, withTimeout]);
+  }, [isAuthLockError, database, wait, withTimeout]);
 
   const carregarAcesso = useCallback(async () => {
     try {
@@ -127,7 +127,7 @@ export function useAssinaturaAccess({
             Boolean(painelSession.permissoes.assinatura_ver),
         } as Permissoes;
 
-        setUsuario(user as UsuarioSupabase);
+        setUsuario(user as UsuarioDatabase);
         setPermissoes(permissoesSnapshot);
         setNivel(String(painelSession.nivel || "").toLowerCase());
         setAcessoCarregado(true);
@@ -138,7 +138,7 @@ export function useAssinaturaAccess({
         }
 
         return {
-          user: user as UsuarioSupabase,
+          user: user as UsuarioDatabase,
           usuarioDb: {
             id: painelSession.idUsuario,
             id_salao: painelSession.idSalao,
@@ -148,7 +148,7 @@ export function useAssinaturaAccess({
         };
       }
 
-      const { data: usuarioDb, error: usuarioError } = await supabase
+      const { data: usuarioDb, error: usuarioError } = await database
         .from("usuarios")
         .select("id, id_salao, nivel, status")
         .eq("auth_user_id", user.id)
@@ -162,7 +162,7 @@ export function useAssinaturaAccess({
         throw new Error("Usuário inativo.");
       }
 
-      const { data: permissoesDb } = await supabase
+      const { data: permissoesDb } = await database
         .from("usuarios_permissoes")
         .select(SELECT_USUARIOS_PERMISSOES)
         .eq("id_usuario", usuarioDb.id)
@@ -178,7 +178,7 @@ export function useAssinaturaAccess({
           Boolean(permissoesPadrao.assinatura_ver),
       } as Permissoes;
 
-      setUsuario(user as UsuarioSupabase);
+      setUsuario(user as UsuarioDatabase);
       setPermissoes(permissoesFinais);
       setNivel(String(usuarioDb.nivel || "").toLowerCase());
       setAcessoCarregado(true);
@@ -189,14 +189,14 @@ export function useAssinaturaAccess({
       }
 
       return {
-        user: user as UsuarioSupabase,
+        user: user as UsuarioDatabase,
         usuarioDb,
       };
     } catch (error) {
       setAcessoCarregado(true);
       throw error;
     }
-  }, [router, safeGetAuthUser, supabase]);
+  }, [router, safeGetAuthUser, database]);
 
   return {
     usuario,

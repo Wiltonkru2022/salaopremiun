@@ -122,9 +122,9 @@ export default async function AdminMasterSalaoExcluidoDetailPage({
   await requireAdminMasterUser("saloes_ver");
   const { id } = await params;
   const queryParams = searchParams ? await searchParams : {};
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
 
-  const { data, error } = await (supabase as any)
+  const { data, error } = await (database as any)
     .from("reativar_salao")
     .select(DELETED_SALON_DETAIL_COLUMNS)
     .eq("id", id)

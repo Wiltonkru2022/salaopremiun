@@ -142,7 +142,7 @@ function isPlanoPremium(planoCodigo?: string | null, planoNome?: string | null) 
 }
 
 export default function ServicoForm({ modo }: ServicoFormProps) {
-  const supabase = createClient();
+  const database = createClient();
   const router = useRouter();
   const params = useParams();
   const { planoAccess, upgradeTarget } = usePlanoAccessSnapshot(true);
@@ -220,7 +220,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
       setIdSalao(usuarioLogado.idSalao);
       setServico((prev) => ({ ...prev, id_salao: usuarioLogado.idSalao }));
 
-      const { data: profissionaisRows, error: profError } = await supabase
+      const { data: profissionaisRows, error: profError } = await database
         .from("profissionais")
         .select("id, nome")
         .eq("id_salao", usuarioLogado.idSalao)
@@ -230,7 +230,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
 
       if (profError) throw profError;
 
-      const { data: produtosRows, error: prodError } = await supabase
+      const { data: produtosRows, error: prodError } = await database
         .from("produtos")
         .select("id, nome, unidade_medida")
         .eq("id_salao", usuarioLogado.idSalao)
@@ -239,7 +239,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
 
       if (prodError) throw prodError;
 
-      const { data: categoriasRows, error: categoriasError } = await supabase
+      const { data: categoriasRows, error: categoriasError } = await database
         .from("servicos_categorias")
         .select("id, nome")
         .eq("id_salao", usuarioLogado.idSalao)
@@ -291,7 +291,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
     salaoId: string,
     listaProfissionais: ProfissionalServico[]
   ) {
-    const { data: row, error } = await (supabase as any)
+    const { data: row, error } = await (database as any)
       .from("servicos")
       .select("app_cliente_visivel, ativo, atualizado_em, base_calculo, categoria, cobra_sinal_agendamento, comissao_assistente_percentual, comissao_percentual, comissao_percentual_padrao, created_at, criado_em, custo_produto, desconta_taxa_maquininha, descricao, duracao, duracao_minutos, exige_avaliacao, gatilho_retorno_dias, id, id_categoria, id_salao, nome, pausa_minutos, preco, preco_minimo, preco_padrao, preco_variavel, recurso_nome, sinal_percentual_personalizado, status, updated_at")
       .eq("id", id)
@@ -345,7 +345,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
       ativo: row.ativo ?? true,
     });
 
-    const { data: vinculosRows, error: vinculosError } = await supabase
+    const { data: vinculosRows, error: vinculosError } = await database
       .from("profissional_servicos")
       .select("ativo, base_calculo, comissao_assistente_percentual, comissao_percentual, created_at, desconta_taxa_maquininha, duracao_minutos, id, id_profissional, id_salao, id_servico, ordem, preco_personalizado, updated_at")
       .eq("id_servico", id);
@@ -383,7 +383,7 @@ export default function ServicoForm({ modo }: ServicoFormProps) {
       })
     );
 
-    const { data: consumoRows, error: consumoError } = await supabase
+    const { data: consumoRows, error: consumoError } = await database
       .from("produto_servico_consumo")
       .select("ativo, created_at, custo_estimado, id, id_produto, id_salao, id_servico, quantidade_consumo, unidade_medida, updated_at")
       .eq("id_servico", id);

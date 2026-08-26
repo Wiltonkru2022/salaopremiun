@@ -36,11 +36,11 @@ function buildWebhookIdempotencyKey(
 }
 
 async function buscarEventoWebhookExistente(
-  supabaseAdmin: DatabaseClient,
+  databaseAdmin: DatabaseClient,
   fingerprint: string,
   idempotenciaKey: string
 ) {
-  const { data: porFingerprint, error: fingerprintError } = await supabaseAdmin
+  const { data: porFingerprint, error: fingerprintError } = await databaseAdmin
     .from("asaas_webhook_eventos")
     .select(
       "id, status_processamento, tentativas, erro_mensagem, processado_em"
@@ -52,7 +52,7 @@ async function buscarEventoWebhookExistente(
   if (porFingerprint?.id) return porFingerprint;
 
   const { data: porIdempotencia, error: idempotenciaError } =
-    await supabaseAdmin
+    await databaseAdmin
       .from("asaas_webhook_eventos")
       .select(
         "id, status_processamento, tentativas, erro_mensagem, processado_em"
@@ -66,7 +66,7 @@ async function buscarEventoWebhookExistente(
 }
 
 export async function registrarEventoWebhookAsaas(params: {
-  supabaseAdmin: DatabaseClient;
+  databaseAdmin: DatabaseClient;
   fingerprint: string;
   body: Record<string, unknown>;
   event: string;
@@ -82,7 +82,7 @@ export async function registrarEventoWebhookAsaas(params: {
   );
   const eventOrder = getWebhookEventOrder(params.event, params.paymentStatus);
 
-  const { data: inserted, error: insertError } = await params.supabaseAdmin
+  const { data: inserted, error: insertError } = await params.databaseAdmin
     .from("asaas_webhook_eventos")
     .insert({
       fingerprint: params.fingerprint,
@@ -115,7 +115,7 @@ export async function registrarEventoWebhookAsaas(params: {
   if (insertError?.code !== "23505") throw insertError;
 
   const existente = await buscarEventoWebhookExistente(
-    params.supabaseAdmin,
+    params.databaseAdmin,
     params.fingerprint,
     idempotenciaKey
   );
@@ -125,7 +125,7 @@ export async function registrarEventoWebhookAsaas(params: {
   const statusAnterior = String(existente.status_processamento || "processando");
   const tentativasAtualizadas = Number(existente.tentativas || 0) + 1;
 
-  const { data: updated, error: updateError } = await params.supabaseAdmin
+  const { data: updated, error: updateError } = await params.databaseAdmin
     .from("asaas_webhook_eventos")
     .update({
       fingerprint: params.fingerprint,
@@ -163,7 +163,7 @@ export async function registrarEventoWebhookAsaas(params: {
 }
 
 export async function atualizarStatusEventoWebhook(
-  supabaseAdmin: DatabaseClient,
+  databaseAdmin: DatabaseClient,
   webhookEventId: string | null,
   statusProcessamento: "processado" | "erro",
   errorMessage?: string | null,
@@ -184,7 +184,7 @@ export async function atualizarStatusEventoWebhook(
 
   Object.assign(payload, extra || {});
 
-  const { error } = await supabaseAdmin
+  const { error } = await databaseAdmin
     .from("asaas_webhook_eventos")
     .update(payload)
     .eq("id", webhookEventId);

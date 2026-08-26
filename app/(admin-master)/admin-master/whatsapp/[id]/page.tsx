@@ -39,7 +39,7 @@ export default async function AdminMasterWhatsappDetailPage({
   const [kind, rawId] = decodeURIComponent(id).split(":");
   if (!kind || !rawId) notFound();
 
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const table =
     kind === "envio"
       ? "whatsapp_envios"
@@ -50,7 +50,7 @@ export default async function AdminMasterWhatsappDetailPage({
           : null;
   if (!table) notFound();
 
-  const { data } = await (supabase as any)
+  const { data } = await (database as any)
     .from(table)
     .select(WHATSAPP_DETAIL_COLUMNS[table])
     .eq("id", rawId)
@@ -60,7 +60,7 @@ export default async function AdminMasterWhatsappDetailPage({
   const row = data as Record<string, unknown>;
   const idSalao = String(row.id_salao || "");
   const { data: salao } = idSalao
-    ? await supabase.from("saloes").select("id, nome").eq("id", idSalao).maybeSingle()
+    ? await database.from("saloes").select("id, nome").eq("id", idSalao).maybeSingle()
     : { data: null };
 
   return (

@@ -19,13 +19,13 @@ type AppIdentityCandidate = {
 };
 
 export function createClienteService(
-  supabaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
+  databaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
 ) {
   async function loadLinkedGlobalAccount(params: {
     idSalao: string;
     idCliente: string;
   }) {
-    const { data: auth, error: authError } = await supabaseAdmin
+    const { data: auth, error: authError } = await databaseAdmin
       .from("clientes_auth")
       .select("app_conta_id")
       .eq("id_salao", params.idSalao)
@@ -35,7 +35,7 @@ export function createClienteService(
     if (authError) throw authError;
     if (!auth?.app_conta_id) return null;
 
-    const { data: account, error: accountError } = await supabaseAdmin
+    const { data: account, error: accountError } = await databaseAdmin
       .from("clientes_app_auth")
       .select("id, cpf, data_nascimento, whatsapp, telefone, auth_version, ativo")
       .eq("id", auth.app_conta_id)
@@ -90,7 +90,7 @@ export function createClienteService(
     }
 
     if (normalized.cpf) {
-      const { data: duplicate, error } = await supabaseAdmin
+      const { data: duplicate, error } = await databaseAdmin
         .from("clientes_app_auth")
         .select("id")
         .eq("cpf", normalized.cpf)
@@ -148,7 +148,7 @@ export function createClienteService(
       update.auth_version = Number(account.auth_version || 1) + 1;
     }
 
-    const { error } = await supabaseAdmin
+    const { error } = await databaseAdmin
       .from("clientes_app_auth")
       .update(update)
       .eq("id", account.id);
@@ -177,7 +177,7 @@ export function createClienteService(
       }
 
       if (email) {
-        const { data, error } = await supabaseAdmin
+        const { data, error } = await databaseAdmin
           .from("clientes")
           .select("id, nome, email")
           .eq("id_salao", params.idSalao)
@@ -194,7 +194,7 @@ export function createClienteService(
       }
 
       if (!whatsapp && !telefone && !cpf) return;
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("clientes")
         .select("id, nome, whatsapp, telefone, cpf")
         .eq("id_salao", params.idSalao);
@@ -224,7 +224,7 @@ export function createClienteService(
       payload: Record<string, unknown>;
     }) {
       if (params.idCliente) {
-        const { data, error } = await supabaseAdmin
+        const { data, error } = await databaseAdmin
           .from("clientes")
           .update(params.payload)
           .eq("id", params.idCliente)
@@ -236,7 +236,7 @@ export function createClienteService(
         return { idCliente: String(data.id) };
       }
 
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("clientes")
         .insert(params.payload)
         .select("id")
@@ -251,7 +251,7 @@ export function createClienteService(
       idCliente: string;
       ativo: boolean;
     }) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("clientes")
         .update({
           ativo: params.ativo ? "ativo" : "inativo",
@@ -278,12 +278,12 @@ export function createClienteService(
         { count: agendamentosCount, error: agendamentosError },
         { count: comandasCount, error: comandasError },
       ] = await Promise.all([
-        supabaseAdmin
+        databaseAdmin
           .from("agendamentos")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", params.idSalao)
           .eq("cliente_id", params.idCliente),
-        supabaseAdmin
+        databaseAdmin
           .from("comandas")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", params.idSalao)
@@ -307,7 +307,7 @@ export function createClienteService(
       idSalao: string;
       idCliente: string;
     }) {
-      const complementoClient = supabaseAdmin as unknown as {
+      const complementoClient = databaseAdmin as unknown as {
         from(table: string): {
           select(columns: string): {
             eq(column: string, value: string): {
@@ -358,15 +358,15 @@ export function createClienteService(
 
     async excluir(params: { idSalao: string; idCliente: string }) {
       const deletionResults = await Promise.all([
-        supabaseAdmin.from("clientes_ficha_tecnica").delete().eq("id_salao", params.idSalao).eq("id_cliente", params.idCliente),
-        supabaseAdmin.from("clientes_preferencias").delete().eq("id_salao", params.idSalao).eq("id_cliente", params.idCliente),
-        supabaseAdmin.from("clientes_autorizacoes").delete().eq("id_salao", params.idSalao).eq("id_cliente", params.idCliente),
-        supabaseAdmin.from("clientes_auth").delete().eq("id_salao", params.idSalao).eq("id_cliente", params.idCliente),
-        supabaseAdmin.from("clientes_historico").delete().eq("id_salao", params.idSalao).eq("id_cliente", params.idCliente),
+        databaseAdmin.from("clientes_ficha_tecnica").delete().eq("id_salao", params.idSalao).eq("id_cliente", params.idCliente),
+        databaseAdmin.from("clientes_preferencias").delete().eq("id_salao", params.idSalao).eq("id_cliente", params.idCliente),
+        databaseAdmin.from("clientes_autorizacoes").delete().eq("id_salao", params.idSalao).eq("id_cliente", params.idCliente),
+        databaseAdmin.from("clientes_auth").delete().eq("id_salao", params.idSalao).eq("id_cliente", params.idCliente),
+        databaseAdmin.from("clientes_historico").delete().eq("id_salao", params.idSalao).eq("id_cliente", params.idCliente),
       ]);
       for (const result of deletionResults) if (result.error) throw result.error;
 
-      const { error } = await supabaseAdmin
+      const { error } = await databaseAdmin
         .from("clientes")
         .delete()
         .eq("id", params.idCliente)

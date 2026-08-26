@@ -10,7 +10,7 @@ const AGENDA_VIEW_LIMIT = 320;
 export function invalidarCacheAgenda(_idSalao?: string) {}
 
 export async function loadAgendaData(params: {
-  supabase: DatabaseClient;
+  database: DatabaseClient;
   idSalao: string;
   selectedProfissionalId: string;
   viewMode: ViewMode;
@@ -19,7 +19,7 @@ export async function loadAgendaData(params: {
   servicos: Servico[];
 }) {
   const {
-    supabase,
+    database,
     idSalao,
     selectedProfissionalId,
     viewMode,
@@ -43,7 +43,7 @@ export async function loadAgendaData(params: {
       : formatFullDate(addDays(new Date(`${startDate}T12:00:00`), 6));
 
   const [agRes, blRes] = await Promise.all([
-    supabase
+    database
       .from("agendamentos")
       .select(
         "id,id_salao,cliente_id,pessoa_atendida_cliente_id,agendado_por_app_conta_id,pessoa_agendada_tipo,pessoa_agendada_nome,pessoa_agendada_whatsapp,profissional_id,servico_id,id_comanda,data,hora_inicio,hora_fim,duracao_minutos,observacoes,status,reserva_expira_em,sinal_valor,sinal_status,sinal_comprovante_path,sinal_confirmacao_responsavel,sinal_confirmado_por_tipo,sinal_confirmado_por_id,sinal_confirmado_por_nome,sinal_confirmado_em,origem,created_at,updated_at"
@@ -55,7 +55,7 @@ export async function loadAgendaData(params: {
       .order("data")
       .order("hora_inicio")
       .limit(AGENDA_VIEW_LIMIT),
-    supabase
+    database
       .from("agenda_bloqueios")
       .select(
         "created_at,data,hora_fim,hora_inicio,id,id_salao,motivo,profissional_id"

@@ -15,13 +15,13 @@ export type ReleasedAppointmentSlot = {
 };
 
 export async function notifyWaitlistAboutReleasedSlot(params: {
-  supabaseAdmin: any;
+  databaseAdmin: any;
   releasedSlot: ReleasedAppointmentSlot;
 }) {
   const slot = params.releasedSlot;
   if (!slot.idServico || !slot.idProfissional || !slot.data) return { notified: 0 };
 
-  const { data } = await (params.supabaseAdmin as any)
+  const { data } = await (params.databaseAdmin as any)
     .from("lista_espera_agendamentos")
     .select(
       "id, cliente_app_conta_id, id_cliente, id_servico, id_profissional, data_preferida"
@@ -48,7 +48,7 @@ export async function notifyWaitlistAboutReleasedSlot(params: {
   if (!candidates.length) return { notified: 0 };
 
   const now = new Date().toISOString();
-  await (params.supabaseAdmin as any)
+  await (params.databaseAdmin as any)
     .from("lista_espera_agendamentos")
     .update({
       status: "avisado",

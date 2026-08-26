@@ -1,4 +1,5 @@
 import { getDatabaseAdmin } from "@/lib/db/admin";
+import { clerkAdminCompat } from "@/lib/platform/clerk-admin.server";
 import type { Database } from "@/types/database.generated";
 
 type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
@@ -18,11 +19,11 @@ type UsuarioRow = {
 };
 
 export function createUsuarioService(
-  supabaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
+  databaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
 ) {
   return {
     async buscarPorEmail(params: { idSalao: string; email: string }) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("usuarios")
         .select("id")
         .eq("id_salao", params.idSalao)
@@ -39,7 +40,7 @@ export function createUsuarioService(
       email: string;
       idUsuario: string;
     }) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("usuarios")
         .select("id")
         .eq("id_salao", params.idSalao)
@@ -57,7 +58,7 @@ export function createUsuarioService(
       senhaHashReuso: string;
       idUsuarioExcluido?: string;
     }) {
-      let query = supabaseAdmin
+      let query = databaseAdmin
         .from("usuarios_senhas_reuso")
         .select("id")
         .eq("id_salao", params.idSalao)
@@ -80,7 +81,7 @@ export function createUsuarioService(
       idSalao: string;
       nivel: UsuarioNivel;
     }) {
-      const { data, error } = await supabaseAdmin.auth.admin.createUser({
+      const { data, error } = await clerkAdminCompat.createUser({
         email: params.email,
         password: params.senha,
         email_confirm: true,
@@ -109,7 +110,7 @@ export function createUsuarioService(
       status: UsuarioStatus;
       senha?: string;
     }) {
-      const { error } = await supabaseAdmin.auth.admin.updateUserById(
+      const { error } = await clerkAdminCompat.updateUserById(
         params.authUserId,
         {
           email: params.email,
@@ -127,7 +128,7 @@ export function createUsuarioService(
     },
 
     deleteAuthUser(authUserId: string) {
-      return supabaseAdmin.auth.admin.deleteUser(authUserId);
+      return clerkAdminCompat.deleteUser(authUserId);
     },
 
     async inserirUsuario(params: {
@@ -138,7 +139,7 @@ export function createUsuarioService(
       status: UsuarioStatus;
       authUserId: string;
     }) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("usuarios")
         .insert({
           id_salao: params.idSalao,
@@ -166,7 +167,7 @@ export function createUsuarioService(
       nivel: UsuarioNivel;
       status: UsuarioStatus;
     }) {
-      const { error } = await supabaseAdmin
+      const { error } = await databaseAdmin
         .from("usuarios")
         .update({
           nome: params.nome,
@@ -181,7 +182,7 @@ export function createUsuarioService(
     },
 
     async buscarUsuario(params: { idUsuario: string; idSalao: string }) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("usuarios")
         .select("id, auth_user_id, email, nivel, status, nome")
         .eq("id", params.idUsuario)
@@ -210,7 +211,7 @@ export function createUsuarioService(
         payload.auth_user_id = params.authUserId;
       }
 
-      const { error } = await supabaseAdmin
+      const { error } = await databaseAdmin
         .from("usuarios_senhas_reuso")
         .upsert(payload, { onConflict: "id_usuario" });
 
@@ -218,7 +219,7 @@ export function createUsuarioService(
     },
 
     async contarAdminsAtivos(idSalao: string) {
-      const { count, error } = await supabaseAdmin
+      const { count, error } = await databaseAdmin
         .from("usuarios")
         .select("id", { count: "exact", head: true })
         .eq("id_salao", idSalao)
@@ -230,7 +231,7 @@ export function createUsuarioService(
     },
 
     async excluirPermissoes(params: { idUsuario: string; idSalao: string }) {
-      const { error } = await supabaseAdmin
+      const { error } = await databaseAdmin
         .from("usuarios_permissoes")
         .delete()
         .eq("id_usuario", params.idUsuario)
@@ -240,7 +241,7 @@ export function createUsuarioService(
     },
 
     async excluirUsuario(params: { idUsuario: string; idSalao: string }) {
-      const { error } = await supabaseAdmin
+      const { error } = await databaseAdmin
         .from("usuarios")
         .delete()
         .eq("id", params.idUsuario)

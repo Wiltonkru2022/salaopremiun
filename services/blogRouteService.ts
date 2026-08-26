@@ -42,8 +42,8 @@ function isUnsafeCategory(category?: BlogCategory | null) {
 }
 
 async function getDefaultCategoryId() {
-  const supabase = asLooseDbClient(getBlogDatabase());
-  const { data: existing, error: existingError } = await supabase
+  const database = asLooseDbClient(getBlogDatabase());
+  const { data: existing, error: existingError } = await database
     .from("blog_categorias")
     .select("id")
     .eq("slug", "agenda-online")
@@ -52,7 +52,7 @@ async function getDefaultCategoryId() {
   if (existingError) throw existingError;
   if (existing?.id) return String(existing.id);
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("blog_categorias")
     .upsert(
       {
@@ -72,11 +72,11 @@ async function getDefaultCategoryId() {
 }
 
 async function resolveCategoryId(value: string) {
-  const supabase = asLooseDbClient(getBlogDatabase());
+  const database = asLooseDbClient(getBlogDatabase());
   const cleanValue = value.trim();
 
   if (isUuid(cleanValue)) {
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from("blog_categorias")
       .select("id, slug, nome")
       .eq("id", cleanValue)
@@ -93,7 +93,7 @@ async function resolveCategoryId(value: string) {
   }
 
   const slug = slugifyBlogValue(cleanValue || "agenda-online");
-  const { data: existing, error } = await supabase
+  const { data: existing, error } = await database
     .from("blog_categorias")
     .select("id, slug, nome")
     .eq("slug", slug)
@@ -106,7 +106,7 @@ async function resolveCategoryId(value: string) {
 }
 
 export async function publicarPreviewBlogPost(body: Record<string, unknown>) {
-  const supabase = asLooseDbClient(getBlogDatabase());
+  const database = asLooseDbClient(getBlogDatabase());
   const title = String(body.title || "").trim();
   const slug = slugifyBlogValue(String(body.slug || title));
   const categoryId = String(body.categoryId || "").trim();
@@ -119,7 +119,7 @@ export async function publicarPreviewBlogPost(body: Record<string, unknown>) {
 
   const now = new Date().toISOString();
   const resolvedCategoryId = await resolveCategoryId(categoryId);
-  const { error } = await supabase.from("blog_posts").upsert(
+  const { error } = await database.from("blog_posts").upsert(
     {
       categoria_id: resolvedCategoryId,
       titulo: title,
@@ -150,9 +150,9 @@ export async function cadastrarNewsletterBlog(params: {
   email: string;
   postSlug?: string | null;
 }) {
-  const supabase = getBlogDatabase();
-  const blogSupabase = asLooseDbClient(supabase);
-  const { error } = await blogSupabase.from("newsletter_subscribers").upsert(
+  const database = getBlogDatabase();
+  const blogDatabase = asLooseDbClient(database);
+  const { error } = await blogDatabase.from("newsletter_subscribers").upsert(
     {
       email: params.email,
       origem: "blog",
@@ -169,15 +169,15 @@ export async function registrarVisualizacaoBlog(params: {
   sessionId?: string | null;
   userAgent?: string | null;
 }) {
-  const supabase = asLooseDbClient(getBlogDatabase());
+  const database = asLooseDbClient(getBlogDatabase());
 
-  await supabase.from("blog_views").insert({
+  await database.from("blog_views").insert({
     post_id: params.postId,
     session_id: params.sessionId || null,
     user_agent: params.userAgent || null,
   });
 
-  const { data, error } = await supabase.rpc("increment_blog_post_views", {
+  const { data, error } = await database.rpc("increment_blog_post_views", {
     p_post_id: params.postId,
   });
 
@@ -186,8 +186,8 @@ export async function registrarVisualizacaoBlog(params: {
 }
 
 export async function listarAssinantesNewsletterBlog() {
-  const supabase = asLooseDbClient(getBlogDatabase());
-  const { data, error } = await supabase
+  const database = asLooseDbClient(getBlogDatabase());
+  const { data, error } = await database
     .from("newsletter_subscribers")
     .select("email")
     .eq("origem", "blog")

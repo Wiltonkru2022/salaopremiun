@@ -11,7 +11,7 @@ Este diretório é a referência técnica do projeto. A documentação foi reorg
 | **App Profissional** | **Vite PWA em `apps/app-profissional-vite`** |
 | Admin Master | Next.js em `app/(admin-master)` |
 | APIs | `app/api` |
-| Banco | `supabase/migrations` |
+| Banco | `database/migrations` |
 
 O antigo `app/app-profissional` foi removido. Qualquer documentação que ainda mencione essa implementação deve ser considerada histórica e corrigida antes de uso.
 

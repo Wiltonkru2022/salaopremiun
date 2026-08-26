@@ -14,14 +14,14 @@ import {
 } from "./plan-utils";
 
 type UseAssinaturaStatusParams = {
-  supabase: ReturnType<typeof import("@/lib/db/client").createClient>;
+  database: ReturnType<typeof import("@/lib/db/client").createClient>;
   planoEscolhidoManualmenteRef: React.MutableRefObject<boolean>;
   planoSelecionadoRef: React.MutableRefObject<PlanoCobravel>;
   setPlanoSelecionado: (value: PlanoCobravel) => void;
 };
 
 export function useAssinaturaStatus({
-  supabase,
+  database,
   planoEscolhidoManualmenteRef,
   planoSelecionadoRef,
   setPlanoSelecionado,
@@ -33,7 +33,7 @@ export function useAssinaturaStatus({
 
   const carregarCheckoutAtual = useCallback(
     async (idSalao: string, assinaturaAtual?: AssinaturaRow | null) => {
-      const { data, error } = await supabase
+      const { data, error } = await database
         .from("assinaturas_cobrancas")
         .select(`
           id,
@@ -84,12 +84,12 @@ export function useAssinaturaStatus({
         return nextCheckout;
       });
     },
-    [supabase]
+    [database]
   );
 
   const carregarStatusAssinatura = useCallback(
     async (idSalaoAtual: string) => {
-      const { data: salaoData, error: salaoError } = await supabase
+      const { data: salaoData, error: salaoError } = await database
         .from("saloes")
         .select("bairro, cep, cidade, complemento, cpf_cnpj, created_at, email, endereco, estado, id, inscricao_estadual, limite_profissionais, limite_usuarios, logo_url, nome, nome_fantasia, numero, plano, razao_social, renovacao_automatica, responsavel, status, telefone, tipo_pessoa, trial_ativo, trial_fim_em, trial_inicio_em, updated_at, whatsapp")
         .eq("id", idSalaoAtual)
@@ -99,7 +99,7 @@ export function useAssinaturaStatus({
         throw salaoError;
       }
 
-      const { data: assinaturaData, error: assinaturaError } = await supabase
+      const { data: assinaturaData, error: assinaturaError } = await database
         .from("assinaturas")
         .select("asaas_credit_card_brand, asaas_credit_card_last4, asaas_credit_card_tokenized_at, asaas_customer_id, asaas_payment_id, asaas_subscription_id, asaas_subscription_status, created_at, forma_pagamento_atual, gateway, id, id_cobranca_atual, id_salao, limite_profissionais, limite_usuarios, pago_em, plano, referencia_atual, renovacao_automatica, status, trial_ativo, trial_fim_em, trial_inicio_em, updated_at, valor, vencimento_em")
         .eq("id_salao", idSalaoAtual)
@@ -152,7 +152,7 @@ export function useAssinaturaStatus({
       planoEscolhidoManualmenteRef,
       planoSelecionadoRef,
       setPlanoSelecionado,
-      supabase,
+      database,
     ]
   );
 

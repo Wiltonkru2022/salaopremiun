@@ -6,7 +6,7 @@ type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
 export type ProcessarComissoesAcao = "marcar_pago" | "cancelar";
 
 export function createComissaoService(
-  supabaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
+  databaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
 ) {
   return {
     processarLancamentos(params: {
@@ -15,7 +15,7 @@ export function createComissaoService(
       acao: ProcessarComissoesAcao;
     }) {
       return processarLancamentosComissao({
-        supabaseAdmin,
+        databaseAdmin,
         idSalao: params.idSalao,
         ids: params.ids,
         acao: params.acao,

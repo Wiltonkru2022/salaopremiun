@@ -46,7 +46,7 @@ export async function removeCampanhaImage(publicUrl: string | null | undefined) 
   if (!publicUrl) return;
 
   // URLs antigas do Storage podem continuar registradas ate a migracao de midia.
-  // Nao tentamos mais acessar Supabase para remove-las.
+  // Nao tentamos mais acessar Neon para remove-las.
   if (!publicUrl.includes("res.cloudinary.com")) return;
 
   await removeCloudinaryAssetByUrl(publicUrl).catch(() => undefined);

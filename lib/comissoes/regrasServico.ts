@@ -76,12 +76,12 @@ function pickFirstText(...values: unknown[]) {
 }
 
 export async function buscarVinculoProfissionalServico(params: {
-  supabase: DatabaseClient;
+  database: DatabaseClient;
   idSalao: string;
   idProfissional: string;
   idServico: string;
 }) {
-  const { data, error } = await params.supabase
+  const { data, error } = await params.database
     .from("profissional_servicos")
     .select(
       `

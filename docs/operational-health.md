@@ -14,7 +14,7 @@ As superfícies oficiais são:
 - App Cliente Next.js;
 - App Profissional **Vite PWA**;
 - APIs Next.js;
-- Supabase;
+- Neon;
 - integrações externas.
 
 A implementação Next antiga do App Profissional foi removida; monitoramento da superfície profissional deve apontar para `apps/app-profissional-vite`, `public/app-profissional` e `/api/app-profissional/*`.
@@ -74,7 +74,7 @@ Monitorar:
 - cache preso em versão antiga;
 - falha real de asset separada de erro de aplicação.
 
-## Supabase Advisors
+## Neon Advisors
 
 Advisor é evidência/recomendação, não autorização para alteração automática. Nunca:
 
@@ -93,7 +93,7 @@ Se evidência/freshness falhar, exibir estado desconhecido em vez de afirmar dis
 
 ## Runbooks resumidos
 
-### Supabase Database
+### Neon Database
 
 Verificar probe, latência, erros Postgres/Data API/RLS e mudanças recentes. Recuperação precisa de leituras saudáveis consecutivas.
 

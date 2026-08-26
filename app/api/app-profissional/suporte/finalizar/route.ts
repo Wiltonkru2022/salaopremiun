@@ -43,9 +43,9 @@ export async function POST(req: Request) {
         await runAdminOperation({
           action: "app_profissional_suporte_finalizar_report_incident",
           idSalao,
-          run: async (supabaseAdmin) => {
+          run: async (databaseAdmin) => {
             await reportOperationalIncident({
-              supabaseAdmin,
+              databaseAdmin,
               key: `app-profissional:suporte-finalizar:${idSalao}`,
               module: "app_profissional",
               title: "Finalizacao do chat do app profissional falhou",

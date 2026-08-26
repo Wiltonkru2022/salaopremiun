@@ -9,18 +9,18 @@ import { getDatabaseAdmin } from "@/lib/db/admin";
 type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
 
 export function createVendaService(
-  supabaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
+  databaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
 ) {
   return {
     validarComanda: (params: { idSalao: string; idComanda: string }) =>
       validarComandaVenda({
-        supabaseAdmin,
+        databaseAdmin,
         ...params,
       }),
 
     obterDetalhes: (params: { idComanda: string }) =>
       obterDetalhesVenda({
-        supabaseAdmin,
+        databaseAdmin,
         ...params,
       }),
 
@@ -31,7 +31,7 @@ export function createVendaService(
       idUsuario: string;
     }) =>
       reabrirVenda({
-        supabaseAdmin,
+        databaseAdmin,
         ...params,
       }),
 
@@ -42,7 +42,7 @@ export function createVendaService(
       idUsuario: string;
     }) =>
       excluirVenda({
-        supabaseAdmin,
+        databaseAdmin,
         ...params,
       }),
   };

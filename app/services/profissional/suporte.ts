@@ -29,8 +29,8 @@ export async function buscarOuCriarConversaSuporte(
     action: "profissional_suporte_buscar_ou_criar_conversa",
     actorId: ctx.idProfissional,
     idSalao: ctx.idSalao,
-    run: async (supabase) => {
-      let query = supabase
+    run: async (database) => {
+      let query = database
         .from("suporte_conversas")
         .select(SUPORTE_CONVERSA_SELECT)
         .eq("id_salao", ctx.idSalao)
@@ -74,7 +74,7 @@ export async function buscarOuCriarConversaSuporte(
         return existente;
       }
 
-      const { data: criada, error: criaError } = await supabase
+      const { data: criada, error: criaError } = await database
         .from("suporte_conversas")
         .insert({
           id_salao: ctx.idSalao,
@@ -112,8 +112,8 @@ export async function listarMensagensConversa(
     action: "profissional_suporte_listar_mensagens",
     actorId: params.idProfissional,
     idSalao: params.idSalao,
-    run: async (supabase) => {
-      const { data: conversa, error: conversaError } = await supabase
+    run: async (database) => {
+      const { data: conversa, error: conversaError } = await database
         .from("suporte_conversas")
         .select("id")
         .eq("id", params.idConversa)
@@ -127,7 +127,7 @@ export async function listarMensagensConversa(
         );
       }
 
-      const { data, error } = await supabase
+      const { data, error } = await database
         .from("suporte_mensagens")
         .select("id, papel, conteudo, metadados, criado_em")
         .eq("id_conversa", params.idConversa)
@@ -155,8 +155,8 @@ export async function salvarMensagemConversa(params: {
     action: "profissional_suporte_salvar_mensagem",
     actorId: params.idProfissional,
     idSalao: params.idSalao,
-    run: async (supabase) => {
-      const { data: conversa, error: conversaError } = await supabase
+    run: async (database) => {
+      const { data: conversa, error: conversaError } = await database
         .from("suporte_conversas")
         .select("id")
         .eq("id", params.idConversa)
@@ -170,7 +170,7 @@ export async function salvarMensagemConversa(params: {
         );
       }
 
-      const { error } = await supabase.from("suporte_mensagens").insert({
+      const { error } = await database.from("suporte_mensagens").insert({
         id_conversa: params.idConversa,
         papel: params.papel,
         conteudo: params.conteudo,
@@ -181,7 +181,7 @@ export async function salvarMensagemConversa(params: {
         throw new Error(error.message || "Erro ao salvar mensagem.");
       }
 
-      await supabase
+      await database
         .from("suporte_conversas")
         .update({
           atualizado_em: new Date().toISOString(),
@@ -202,8 +202,8 @@ export async function excluirConversaSuporte(params: {
     action: "profissional_suporte_excluir_conversa",
     actorId: params.idProfissional,
     idSalao: params.idSalao,
-    run: async (supabase) => {
-      const { error } = await supabase
+    run: async (database) => {
+      const { error } = await database
         .from("suporte_conversas")
         .delete()
         .eq("id", params.idConversa)

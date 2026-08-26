@@ -34,10 +34,10 @@ type CobrancaExistenteRow = {
 export type ResultadoRenovacaoAssinatura = Record<string, unknown>;
 
 async function carregarPlanoAtivo(
-  supabaseAdmin: DatabaseClient,
+  databaseAdmin: DatabaseClient,
   planoCodigo: string
 ) {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await databaseAdmin
     .from("planos_saas")
     .select(
       `
@@ -60,11 +60,11 @@ async function carregarPlanoAtivo(
 }
 
 async function carregarCobrancaPendente(
-  supabaseAdmin: DatabaseClient,
+  databaseAdmin: DatabaseClient,
   idAssinatura: string,
   hoje: Date
 ) {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await databaseAdmin
     .from("assinaturas_cobrancas")
     .select("id, status, asaas_payment_id, data_expiracao")
     .eq("id_assinatura", idAssinatura)
@@ -79,13 +79,13 @@ async function carregarCobrancaPendente(
 }
 
 async function registrarCobrancaAutomatica(params: {
-  supabaseAdmin: DatabaseClient;
+  databaseAdmin: DatabaseClient;
   assinatura: AssinaturaCronRow;
   plano: PlanoSaasRow;
   formaPagamento: "PIX" | "BOLETO";
   hoje: Date;
 }) {
-  const { supabaseAdmin, assinatura, plano, formaPagamento, hoje } = params;
+  const { databaseAdmin, assinatura, plano, formaPagamento, hoje } = params;
   const valorPlano = Number(plano.valor_mensal || 0);
 
   if (valorPlano <= 0) {
@@ -120,7 +120,7 @@ async function registrarCobrancaAutomatica(params: {
     statusAsaas
   );
 
-  const { data: cobrancaInserida, error: historicoError } = await supabaseAdmin
+  const { data: cobrancaInserida, error: historicoError } = await databaseAdmin
     .from("assinaturas_cobrancas")
     .insert({
       id_salao: assinatura.id_salao,
@@ -180,7 +180,7 @@ async function registrarCobrancaAutomatica(params: {
     } satisfies ResultadoRenovacaoAssinatura;
   }
 
-  const { error: updateAssinaturaError } = await supabaseAdmin
+  const { error: updateAssinaturaError } = await databaseAdmin
     .from("assinaturas")
     .update({
       asaas_payment_id: cobranca.id,
@@ -210,11 +210,11 @@ async function registrarCobrancaAutomatica(params: {
 }
 
 async function processarRenovacaoAssinatura(params: {
-  supabaseAdmin: DatabaseClient;
+  databaseAdmin: DatabaseClient;
   assinatura: AssinaturaCronRow;
   hoje: Date;
 }) {
-  const { supabaseAdmin, assinatura, hoje } = params;
+  const { databaseAdmin, assinatura, hoje } = params;
   const planoCodigo = String(assinatura.plano || "").toLowerCase();
 
   if (!planoCodigo) {
@@ -228,7 +228,7 @@ async function processarRenovacaoAssinatura(params: {
   let plano: PlanoSaasRow | null = null;
 
   try {
-    plano = await carregarPlanoAtivo(supabaseAdmin, planoCodigo);
+    plano = await carregarPlanoAtivo(databaseAdmin, planoCodigo);
   } catch (error) {
     return {
       id_salao: assinatura.id_salao,
@@ -316,7 +316,7 @@ async function processarRenovacaoAssinatura(params: {
 
   try {
     cobrancaPendente = await carregarCobrancaPendente(
-      supabaseAdmin,
+      databaseAdmin,
       assinatura.id,
       hoje
     );
@@ -342,7 +342,7 @@ async function processarRenovacaoAssinatura(params: {
   }
 
   return registrarCobrancaAutomatica({
-    supabaseAdmin,
+    databaseAdmin,
     assinatura,
     plano,
     formaPagamento,
@@ -351,12 +351,12 @@ async function processarRenovacaoAssinatura(params: {
 }
 
 export async function executarCronRenovacaoAssinaturas(
-  supabaseAdmin: DatabaseClient,
+  databaseAdmin: DatabaseClient,
   hoje = new Date()
 ) {
   const dataLimite = format(addDays(hoje, 3), "yyyy-MM-dd");
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await databaseAdmin
     .from("assinaturas")
     .select(
       `
@@ -384,7 +384,7 @@ export async function executarCronRenovacaoAssinaturas(
   for (const assinatura of assinaturas) {
     resultados.push(
       await processarRenovacaoAssinatura({
-        supabaseAdmin,
+        databaseAdmin,
         assinatura,
         hoje,
       })

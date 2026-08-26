@@ -62,7 +62,7 @@ function requestShellNotificationsRefresh() {
 }
 
 type UseAgendaMutationsParams = {
-  supabase: ReturnType<typeof import("@/lib/db/client").createClient>;
+  database: ReturnType<typeof import("@/lib/db/client").createClient>;
   idSalao: string;
   config: ConfigSalao | null;
   modalMode: "agendamento" | "bloqueio";
@@ -107,7 +107,7 @@ type UseAgendaMutationsParams = {
 };
 
 export function useAgendaMutations({
-  supabase,
+  database,
   idSalao,
   config,
   modalMode,
@@ -154,7 +154,7 @@ export function useAgendaMutations({
           },
           () =>
             saveAgendaItem({
-              supabase,
+              database,
               payload,
               idSalao,
               config,
@@ -226,7 +226,7 @@ export function useAgendaMutations({
       setEditingItem,
       setModalOpen,
       sincronizarAgendamento,
-      supabase,
+      database,
       abrirAviso,
     ]
   );
@@ -732,7 +732,7 @@ export function useAgendaMutations({
         onConfirm: async (motivoExclusao: string) => {
           const user = await safeGetAuthUser();
 
-          const { error: logError } = await supabase
+          const { error: logError } = await database
             .from("agenda_bloqueios_logs")
             .insert({
               bloqueio_id: block.id,
@@ -751,7 +751,7 @@ export function useAgendaMutations({
             throw new Error("Erro ao salvar log da exclusão do bloqueio.");
           }
 
-          const { error } = await supabase
+          const { error } = await database
             .from("agenda_bloqueios")
             .delete()
             .eq("id", block.id);
@@ -770,7 +770,7 @@ export function useAgendaMutations({
       idSalao,
       loadAgenda,
       safeGetAuthUser,
-      supabase,
+      database,
       abrirMotivoExclusao,
     ]
   );
@@ -842,7 +842,7 @@ export function useAgendaMutations({
         return;
       }
 
-      const { error } = await supabase
+      const { error } = await database
         .from("agenda_bloqueios")
         .update({
           data: targetDate,
@@ -867,7 +867,7 @@ export function useAgendaMutations({
       idSalao,
       loadAgenda,
       profissionais,
-      supabase,
+      database,
       abrirAviso,
     ]
   );
@@ -926,7 +926,7 @@ export function useAgendaMutations({
         return;
       }
 
-      const { error } = await supabase
+      const { error } = await database
         .from("agenda_bloqueios")
         .update({
           hora_fim: horaFim,
@@ -949,7 +949,7 @@ export function useAgendaMutations({
       idSalao,
       loadAgenda,
       profissionais,
-      supabase,
+      database,
       abrirAviso,
     ]
   );

@@ -99,9 +99,9 @@ export async function POST(req: NextRequest) {
         await runAdminOperation({
           action: "api_comandas_processar_report_incident",
           idSalao,
-          run: async (supabaseAdmin) => {
+          run: async (databaseAdmin) => {
             await reportOperationalIncident({
-              supabaseAdmin,
+              databaseAdmin,
               key: `comandas:processar:${acao || "desconhecida"}:${idSalao}`,
               module: "comandas",
               title: "Processamento de comanda falhou",

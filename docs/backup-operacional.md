@@ -20,7 +20,7 @@ npm run backup:db:schema
 
 Requisitos usuais:
 
-- Supabase CLI autenticada/linkada;
+- Neon CLI autenticada/linkada;
 - ambiente necessário para o dump;
 - acesso ao projeto correto.
 
@@ -56,7 +56,7 @@ Cria backup do código e tenta gerar o dump do schema sem exportar dados pessoai
 - criar backup de código;
 - criar backup de schema;
 - se houver risco de perda de dados, criar backup de dados com autorização;
-- verificar ambiente/projeto Supabase;
+- verificar ambiente/projeto Neon;
 - documentar rollback/correção;
 - nunca apagar migration histórica já aplicada.
 

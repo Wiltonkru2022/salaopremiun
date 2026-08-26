@@ -16,7 +16,7 @@ import type {
 } from "@/types/agenda";
 
 export function useAgendaPageState() {
-  const supabase = useMemo(() => createClient(), []);
+  const database = useMemo(() => createClient(), []);
 
   const [loading, setLoading] = useState(true);
   const [erroTela, setErroTela] = useState("");
@@ -84,7 +84,7 @@ export function useAgendaPageState() {
   );
 
   return {
-    supabase,
+    database,
     loading,
     setLoading,
     erroTela,

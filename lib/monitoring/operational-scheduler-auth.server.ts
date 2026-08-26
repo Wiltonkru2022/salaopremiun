@@ -30,8 +30,8 @@ export async function verifyOperationalHealthSchedulerRequest(req: Request) {
   if (!token || token.length < 32) return false;
 
   try {
-    const supabase = getDatabaseAdmin() as any;
-    const { data, error } = await supabase
+    const database = getDatabaseAdmin() as any;
+    const { data, error } = await database
       .from("operational_scheduler_auth")
       .select("token_hash")
       .eq("scheduler_key", "operational-health")

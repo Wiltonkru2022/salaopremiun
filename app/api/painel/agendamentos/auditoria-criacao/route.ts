@@ -26,8 +26,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = getDatabaseAdmin();
-    const { data: agendamento, error } = await (supabase as any)
+    const database = getDatabaseAdmin();
+    const { data: agendamento, error } = await (database as any)
       .from("agendamentos")
       .select("id, cliente_id, created_at, origem")
       .eq("id", idAgendamento)
@@ -43,7 +43,7 @@ export async function POST(request: Request) {
     }
 
     if (!agendamento.origem || String(agendamento.origem).toLowerCase() === "manual") {
-      const { error: origemError } = await (supabase as any)
+      const { error: origemError } = await (database as any)
         .from("agendamentos")
         .update({ origem: "painel" })
         .eq("id", idAgendamento)
@@ -55,7 +55,7 @@ export async function POST(request: Request) {
     }
 
     const auditado = await registrarCriacaoAgendamento({
-      supabase,
+      database,
       idSalao: usuario.id_salao,
       idAgendamento,
       idCliente: String(agendamento.cliente_id),

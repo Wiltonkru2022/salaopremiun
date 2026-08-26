@@ -20,8 +20,8 @@ export async function GET() {
       action: "app_profissional_listar_cupons",
       actorId: context.idProfissional,
       idSalao: context.idSalao,
-      run: async (supabase) => {
-        const { data: cupons, error } = await (supabase as any)
+      run: async (database) => {
+        const { data: cupons, error } = await (database as any)
           .from("cupons_salao")
           .select("id,codigo,nome,descricao,tipo_desconto,valor_desconto,valido_de,valido_ate,limite_uso_total,limite_uso_cliente,ativo,status_campanha,origem,created_at")
           .eq("id_salao", context.idSalao)
@@ -31,8 +31,8 @@ export async function GET() {
         const ids = (cupons || []).map((item: any) => item.id);
         if (!ids.length) return { cupons: [] };
         const [{ data: convites }, { data: usos }] = await Promise.all([
-          (supabase as any).from("cupom_salao_resgates").select("id_cupom,status").in("id_cupom", ids),
-          (supabase as any).from("cupom_salao_usos").select("id_cupom,status").in("id_cupom", ids),
+          (database as any).from("cupom_salao_resgates").select("id_cupom,status").in("id_cupom", ids),
+          (database as any).from("cupom_salao_usos").select("id_cupom,status").in("id_cupom", ids),
         ]);
         const stats = new Map<string, { enviados: number; resgatados: number; usados: number }>();
         for (const id of ids) stats.set(id, { enviados: 0, resgatados: 0, usados: 0 });
@@ -74,8 +74,8 @@ export async function POST(request: Request) {
       action: "app_profissional_criar_cupom_privado",
       actorId: context.idProfissional,
       idSalao: context.idSalao,
-      run: async (supabase) => {
-        const { data: clientes, error: clientesError } = await (supabase as any)
+      run: async (database) => {
+        const { data: clientes, error: clientesError } = await (database as any)
           .from("clientes")
           .select("id,nome,telefone,whatsapp")
           .eq("id_salao", context.idSalao)
@@ -86,7 +86,7 @@ export async function POST(request: Request) {
         if (!validas.length) throw new Error("Nenhuma cliente selecionada possui WhatsApp válido.");
 
         const codigo = `SP${Date.now().toString(36).toUpperCase()}`;
-        const { data: cupom, error: cupomError } = await (supabase as any)
+        const { data: cupom, error: cupomError } = await (database as any)
           .from("cupons_salao")
           .insert({
             id_salao: context.idSalao,
@@ -120,7 +120,7 @@ export async function POST(request: Request) {
           status: "enviado",
           metadata: { origem: "app_profissional_whatsapp", profissional_id: context.idProfissional },
         }));
-        const { data: convitesCriados, error: conviteError } = await (supabase as any)
+        const { data: convitesCriados, error: conviteError } = await (database as any)
           .from("cupom_salao_resgates")
           .insert(convites)
           .select("id_cliente,token,status");
@@ -156,8 +156,8 @@ export async function PATCH(request: Request) {
       action: ativo ? "app_profissional_ativar_cupom" : "app_profissional_desativar_cupom",
       actorId: context.idProfissional,
       idSalao: context.idSalao,
-      run: async (supabase) => {
-        const { data, error } = await (supabase as any)
+      run: async (database) => {
+        const { data, error } = await (database as any)
           .from("cupons_salao")
           .update({ ativo, status_campanha: ativo ? "ativa" : "pausada", updated_at: new Date().toISOString() })
           .eq("id", id)
@@ -187,8 +187,8 @@ export async function DELETE(request: Request) {
       action: "app_profissional_excluir_cupom",
       actorId: context.idProfissional,
       idSalao: context.idSalao,
-      run: async (supabase) => {
-        const { data, error } = await (supabase as any)
+      run: async (database) => {
+        const { data, error } = await (database as any)
           .from("cupons_salao")
           .delete()
           .eq("id", id)

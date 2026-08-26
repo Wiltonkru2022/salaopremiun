@@ -7,8 +7,8 @@ function normalizeToken(value: string) { return String(value || "").trim(); }
 function todayIso() { return new Date().toISOString().slice(0, 10); }
 
 async function resolveCouponToken(token: string) {
-  const supabase = getDatabaseAdmin() as any;
-  const { data: invite } = await supabase
+  const database = getDatabaseAdmin() as any;
+  const { data: invite } = await database
     .from("cupom_salao_resgates")
     .select("id,id_cupom,id_salao,id_cliente,cliente_app_conta_id,token,status")
     .eq("token", token)
@@ -16,7 +16,7 @@ async function resolveCouponToken(token: string) {
     .maybeSingle();
 
   if (invite?.id_cupom) {
-    const { data: cupom } = await supabase
+    const { data: cupom } = await database
       .from("cupons_salao")
       .select("id,id_salao,codigo,nome,descricao,tipo_desconto,valor_desconto,titulo_push,mensagem_push,valido_de,valido_ate,ativo,resgate_token,push_delay_minutos,limite_uso_total,limite_uso_cliente,requer_resgate,publico_tipo,saloes(id,nome,nome_fantasia,app_cliente_slug)")
       .eq("id", invite.id_cupom)
@@ -27,7 +27,7 @@ async function resolveCouponToken(token: string) {
     return cupom?.id ? { cupom, invite, privateInvite: true as const } : null;
   }
 
-  const { data: cupom } = await supabase
+  const { data: cupom } = await database
     .from("cupons_salao")
     .select("id,id_salao,codigo,nome,descricao,tipo_desconto,valor_desconto,titulo_push,mensagem_push,valido_de,valido_ate,ativo,resgate_token,push_delay_minutos,limite_uso_total,limite_uso_cliente,requer_resgate,publico_tipo,saloes(id,nome,nome_fantasia,app_cliente_slug)")
     .eq("resgate_token", token)
@@ -42,7 +42,7 @@ export async function redeemClienteCoupon(params: { token: string; idConta: stri
   const idConta = String(params.idConta || "").trim();
   if (!token || !idConta) return { ok: false as const, error: "Não foi possível identificar o cupom." };
 
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const resolved = await resolveCouponToken(token);
   if (!resolved?.cupom?.id) return { ok: false as const, error: "Cupom não encontrado ou inativo." };
   const { cupom, invite, privateInvite } = resolved;
@@ -67,9 +67,9 @@ export async function redeemClienteCoupon(params: { token: string; idConta: stri
   }
 
   const [{ count: usosCliente }, { count: usosTotal }, { data: resgateConta }] = await Promise.all([
-    supabase.from("cupom_salao_usos").select("id", { count: "exact", head: true }).eq("id_cupom", cupom.id).eq("cliente_app_conta_id", idConta),
-    supabase.from("cupom_salao_usos").select("id", { count: "exact", head: true }).eq("id_cupom", cupom.id),
-    supabase.from("cupom_salao_resgates").select("id,status").eq("id_cupom", cupom.id).eq("cliente_app_conta_id", idConta).limit(1).maybeSingle(),
+    database.from("cupom_salao_usos").select("id", { count: "exact", head: true }).eq("id_cupom", cupom.id).eq("cliente_app_conta_id", idConta),
+    database.from("cupom_salao_usos").select("id", { count: "exact", head: true }).eq("id_cupom", cupom.id),
+    database.from("cupom_salao_resgates").select("id,status").eq("id_cupom", cupom.id).eq("cliente_app_conta_id", idConta).limit(1).maybeSingle(),
   ]);
 
   const limiteCliente = Number(cupom.limite_uso_cliente || 1);
@@ -92,18 +92,18 @@ export async function redeemClienteCoupon(params: { token: string; idConta: stri
 
   let resgateError = null;
   if (privateInvite && invite?.id) {
-    const result = await supabase.from("cupom_salao_resgates").update(resgatePayload).eq("id", invite.id).eq("id_cliente", vinculo.idCliente);
+    const result = await database.from("cupom_salao_resgates").update(resgatePayload).eq("id", invite.id).eq("id_cliente", vinculo.idCliente);
     resgateError = result.error;
   } else if (resgateConta?.id) {
-    const result = await supabase.from("cupom_salao_resgates").update(resgatePayload).eq("id", resgateConta.id);
+    const result = await database.from("cupom_salao_resgates").update(resgatePayload).eq("id", resgateConta.id);
     resgateError = result.error;
   } else {
-    const result = await supabase.from("cupom_salao_resgates").insert(resgatePayload);
+    const result = await database.from("cupom_salao_resgates").insert(resgatePayload);
     resgateError = result.error;
   }
   if (resgateError) return { ok: false as const, error: "Não foi possível resgatar o cupom agora." };
 
-  const { error: walletError } = await supabase
+  const { error: walletError } = await database
     .from("cupom_salao_clientes")
     .upsert({ id_salao: idSalao, id_cupom: cupom.id, id_cliente: vinculo.idCliente }, { onConflict: "id_cupom,id_cliente" });
   if (walletError) {
@@ -114,7 +114,7 @@ export async function redeemClienteCoupon(params: { token: string; idConta: stri
   const salaoSlug = String(salaoRel?.app_cliente_slug || idSalao).trim();
   const codigoCupom = String(cupom.codigo || "").trim();
   try {
-    await supabase.from("campanha_eventos").insert({ id_salao: idSalao, id_cupom: cupom.id, cliente_app_conta_id: idConta, id_cliente: vinculo.idCliente, tipo: "resgate", metadata: { origem: privateInvite ? "link_whatsapp_privado" : "link_whatsapp_manual", codigo: codigoCupom } });
+    await database.from("campanha_eventos").insert({ id_salao: idSalao, id_cupom: cupom.id, cliente_app_conta_id: idConta, id_cliente: vinculo.idCliente, tipo: "resgate", metadata: { origem: privateInvite ? "link_whatsapp_privado" : "link_whatsapp_manual", codigo: codigoCupom } });
   } catch {}
 
   return { ok: true as const, cupom: { codigo: codigoCupom, nome: String(cupom.nome || "").trim(), idSalao, salaoSlug } };
@@ -131,10 +131,10 @@ export async function loadCouponRedemptionForAccount(params: { idCupom?: string 
   const idCupom = String(params.idCupom || "").trim();
   const idConta = String(params.idConta || "").trim();
   if (!idCupom || !idConta) return null;
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const [{ data: resgate }, { count: usosCliente }] = await Promise.all([
-    supabase.from("cupom_salao_resgates").select("id,status").eq("id_cupom", idCupom).eq("cliente_app_conta_id", idConta).in("status", ["resgatado", "usado"]).limit(1).maybeSingle(),
-    supabase.from("cupom_salao_usos").select("id", { count: "exact", head: true }).eq("id_cupom", idCupom).eq("cliente_app_conta_id", idConta),
+    database.from("cupom_salao_resgates").select("id,status").eq("id_cupom", idCupom).eq("cliente_app_conta_id", idConta).in("status", ["resgatado", "usado"]).limit(1).maybeSingle(),
+    database.from("cupom_salao_usos").select("id", { count: "exact", head: true }).eq("id_cupom", idCupom).eq("cliente_app_conta_id", idConta),
   ]);
   if (!resgate?.id && Number(usosCliente || 0) <= 0) return null;
   return { status: String(resgate?.status || "").trim() || "resgatado", jaUsou: Number(usosCliente || 0) > 0 };

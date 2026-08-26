@@ -23,7 +23,7 @@ type LogEstoqueParams = {
 };
 
 export function createEstoqueService(
-  supabaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
+  databaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
 ) {
   return {
     async registrarMovimentacaoManual({
@@ -48,7 +48,7 @@ export function createEstoqueService(
         throw new Error("Origem obrigatoria para movimentacao de estoque.");
       }
 
-      const { data, error } = await supabaseAdmin.rpc(
+      const { data, error } = await databaseAdmin.rpc(
         "fn_registrar_movimentacao_estoque_manual",
         {
           p_id_salao: idSalao,

@@ -65,7 +65,7 @@ export function createSalaoMutacaoRouteService(config: SalaoMutacaoConfig) {
     }) {
       try {
         await reportOperationalIncident({
-          supabaseAdmin: getDatabaseAdmin(),
+          databaseAdmin: getDatabaseAdmin(),
           key: `${config.incidentKeyPrefix}:${params.acaoRaw || "desconhecida"}:${params.idSalao}`,
           module: config.module,
           title: config.title,

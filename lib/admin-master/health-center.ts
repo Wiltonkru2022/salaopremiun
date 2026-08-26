@@ -196,7 +196,7 @@ function statusFromOperationalHealth(health: AdminHealthOverview): Pick<
 export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCenter> {
   return runAdminOperation({
     action: "admin_master_health_center",
-    run: async (supabase) => {
+    run: async (database) => {
       const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
 
       const [
@@ -214,57 +214,57 @@ export async function getAdminMasterHealthCenter(): Promise<AdminMasterHealthCen
     recentAlerts,
       ] = await Promise.all([
     getAdminMasterOperationalSnapshot(),
-    supabase
+    database
       .from("asaas_webhook_eventos")
       .select("id", { count: "exact", head: true })
       .eq("status_processamento", "erro")
       .gte("updated_at", last24h),
-    supabase
+    database
       .from("asaas_webhook_eventos")
       .select("id", { count: "exact", head: true })
       .eq("status_processamento", "processando"),
-    supabase
+    database
       .from("assinatura_checkout_locks")
       .select("id", { count: "exact", head: true })
       .in("status", ["erro", "expirado"])
       .gte("updated_at", last24h),
-    supabase
+    database
       .from("assinatura_checkout_locks")
       .select("id", { count: "exact", head: true })
       .eq("status", "processando"),
-    supabase
+    database
       .from("saloes")
       .select("id", { count: "exact", head: true })
       .eq("status", "bloqueado"),
-    supabase
+    database
       .from("alertas_sistema")
       .select("id", { count: "exact", head: true })
       .eq("resolvido", false)
       .in("gravidade", ["alta", "critica"])
       .gte("atualizado_em", last24h),
-    supabase
+    database
       .from("eventos_cron")
       .select("id", { count: "exact", head: true })
       .eq("status", "erro")
       .gte("iniciado_em", last24h),
-    supabase
+    database
       .from("asaas_webhook_eventos")
       .select(
         "id, evento, payment_id, payment_status, status_processamento, erro_mensagem, ultimo_recebido_em, updated_at"
       )
       .order("updated_at", { ascending: false })
       .limit(8),
-    supabase
+    database
       .from("assinatura_checkout_locks")
       .select("id, id_salao, plano_codigo, billing_type, status, erro_texto, updated_at")
       .order("updated_at", { ascending: false })
       .limit(8),
-    supabase
+    database
       .from("eventos_cron")
       .select("id, nome, status, resumo, erro_texto, iniciado_em, finalizado_em")
       .order("iniciado_em", { ascending: false })
       .limit(8),
-    supabase
+    database
       .from("alertas_sistema")
       .select("id, tipo, gravidade, titulo, descricao, origem_modulo, criado_em, payload_json")
       .eq("resolvido", false)

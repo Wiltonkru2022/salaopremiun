@@ -31,8 +31,8 @@ async function recordCron(
 
   if (storedInNeon) return;
 
-  const supabase = getDatabaseAdmin() as any;
-  await supabase.from("eventos_cron").insert({
+  const database = getDatabaseAdmin() as any;
+  await database.from("eventos_cron").insert({
     nome: CRON_NAME,
     status,
     resumo,

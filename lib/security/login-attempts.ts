@@ -63,7 +63,7 @@ function isFuture(value: string | null | undefined) {
 }
 
 async function resolveSecurityRecipientEmail(params: {
-  supabase: DatabaseAdminClient;
+  database: DatabaseAdminClient;
   tipoUsuario: SecurityTipoUsuario;
   userId?: string | null;
   identidade?: string | null;
@@ -72,7 +72,7 @@ async function resolveSecurityRecipientEmail(params: {
   if (!params.userId) return null;
 
   if (params.tipoUsuario === "salao") {
-    const { data } = await params.supabase
+    const { data } = await params.database
       .from("usuarios")
       .select("email")
       .eq("id", params.userId)
@@ -82,7 +82,7 @@ async function resolveSecurityRecipientEmail(params: {
   }
 
   if (params.tipoUsuario === "cliente") {
-    const { data } = await params.supabase
+    const { data } = await params.database
       .from("clientes_app_auth")
       .select("email")
       .eq("id", params.userId)
@@ -92,7 +92,7 @@ async function resolveSecurityRecipientEmail(params: {
   }
 
   if (params.tipoUsuario === "profissional") {
-    const { data } = await params.supabase
+    const { data } = await params.database
       .from("profissionais")
       .select("email")
       .eq("id", params.userId)
@@ -105,7 +105,7 @@ async function resolveSecurityRecipientEmail(params: {
 }
 
 async function sendTemporaryBlockEmail(params: {
-  supabase: DatabaseAdminClient;
+  database: DatabaseAdminClient;
   tipoUsuario: SecurityTipoUsuario;
   userId: string;
   idSalao?: string | null;
@@ -120,7 +120,7 @@ async function sendTemporaryBlockEmail(params: {
 }) {
   try {
     const to = await resolveSecurityRecipientEmail({
-      supabase: params.supabase,
+      database: params.database,
       tipoUsuario: params.tipoUsuario,
       userId: params.userId,
       identidade: params.identidade,
@@ -212,7 +212,7 @@ async function sendTemporaryBlockEmail(params: {
 }
 
 function buildAttemptQuery(
-  supabase: DatabaseAdminClient,
+  database: DatabaseAdminClient,
   params: {
     tipoUsuario: SecurityTipoUsuario;
     userId?: string | null;
@@ -220,7 +220,7 @@ function buildAttemptQuery(
     since: string;
   }
 ) {
-  let query = supabase
+  let query = database
     .from("security_login_attempts")
     .select("id", { count: "exact", head: true })
     .eq("tipo_usuario", params.tipoUsuario)
@@ -240,11 +240,11 @@ function buildAttemptQuery(
 export async function recordSecurityLoginFailure(
   params: RecordLoginFailureParams
 ): Promise<RecordLoginFailureResult> {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const identidade = normalizeIdentity(params.identidade);
   const now = new Date().toISOString();
 
-  await supabase.from("security_login_attempts").insert({
+  await database.from("security_login_attempts").insert({
     tipo_usuario: params.tipoUsuario,
     user_id: params.userId || null,
     id_salao: params.idSalao || null,
@@ -256,13 +256,13 @@ export async function recordSecurityLoginFailure(
   });
 
   const [{ count: attempts10m }, { count: attempts1h }] = await Promise.all([
-    buildAttemptQuery(supabase, {
+    buildAttemptQuery(database, {
       tipoUsuario: params.tipoUsuario,
       userId: params.userId,
       identidade,
       since: getWindowStart(10),
     }),
-    buildAttemptQuery(supabase, {
+    buildAttemptQuery(database, {
       tipoUsuario: params.tipoUsuario,
       userId: params.userId,
       identidade,
@@ -307,7 +307,7 @@ export async function recordSecurityLoginFailure(
   const motivo = shouldVerify
     ? "Detectamos muitas tentativas de acesso. Confirme sua identidade para continuar."
     : "Bloqueio temporario por muitas tentativas de login.";
-  const { data: previousStatus } = await supabase
+  const { data: previousStatus } = await database
     .from("user_security_status")
     .select("status, bloqueado_ate")
     .eq("user_id", params.userId)
@@ -319,7 +319,7 @@ export async function recordSecurityLoginFailure(
     ) &&
     isFuture(previousStatus.bloqueado_ate);
 
-  await supabase
+  await database
     .from("user_security_status")
     .upsert(
       {
@@ -336,7 +336,7 @@ export async function recordSecurityLoginFailure(
     );
 
   if (params.tipoUsuario === "salao" && params.idSalao) {
-    await supabase
+    await database
       .from("saloes")
       .update({
         status_seguranca: status,
@@ -367,7 +367,7 @@ export async function recordSecurityLoginFailure(
 
   if (!wasAlreadyBlocked) {
     void sendTemporaryBlockEmail({
-      supabase,
+      database,
       tipoUsuario: params.tipoUsuario,
       userId: params.userId,
       idSalao: params.idSalao || null,

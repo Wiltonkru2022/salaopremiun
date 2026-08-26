@@ -61,7 +61,7 @@ export async function criarContextoCaixa(params: {
 
   return {
     ctx: {
-      supabaseAdmin: getDatabaseAdmin(),
+      databaseAdmin: getDatabaseAdmin(),
       idSalao,
       idUsuario: permissionMembership.usuario.id,
     } satisfies CaixaProcessarContext,
@@ -94,7 +94,7 @@ export async function processarAcaoCaixa(params: {
   }
 
   await carregarComandaBase({
-    supabaseAdmin: ctx.supabaseAdmin,
+    databaseAdmin: ctx.databaseAdmin,
     idSalao: ctx.idSalao,
     idComanda,
   });

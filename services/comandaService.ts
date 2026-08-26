@@ -21,7 +21,7 @@ type LogComandaParams = {
 };
 
 export function createComandaService(
-  supabaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
+  databaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
 ) {
   return {
     criarPorAgendamento: (params: {
@@ -29,7 +29,7 @@ export function createComandaService(
       idAgendamento: string;
     }) =>
       processarCriacaoPorAgendamento({
-        supabaseAdmin,
+        databaseAdmin,
         ...params,
       }),
 
@@ -38,7 +38,7 @@ export function createComandaService(
       comanda: ComandaPayload;
     }) =>
       salvarBaseComanda({
-        supabaseAdmin,
+        databaseAdmin,
         ...params,
       }),
 
@@ -49,7 +49,7 @@ export function createComandaService(
       idempotencyKey?: string | null;
     }) =>
       adicionarItemComanda({
-        supabaseAdmin,
+        databaseAdmin,
         ...params,
       }),
 
@@ -59,7 +59,7 @@ export function createComandaService(
       item: ItemPayload;
     }) =>
       editarItemComanda({
-        supabaseAdmin,
+        databaseAdmin,
         ...params,
       }),
 
@@ -69,7 +69,7 @@ export function createComandaService(
       item: ItemPayload;
     }) =>
       removerItemComanda({
-        supabaseAdmin,
+        databaseAdmin,
         ...params,
       }),
 
@@ -78,7 +78,7 @@ export function createComandaService(
       comanda: ComandaPayload;
     }) =>
       enviarComandaParaPagamento({
-        supabaseAdmin,
+        databaseAdmin,
         ...params,
       }),
 

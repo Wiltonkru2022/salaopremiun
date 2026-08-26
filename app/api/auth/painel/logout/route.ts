@@ -8,10 +8,10 @@ export async function POST() {
   await clearPainelClerkSession().catch(() => undefined);
 
   try {
-    const supabase = await createClient();
-    await supabase.auth.signOut().catch(() => undefined);
+    const database = await createClient();
+    await database.auth.signOut().catch(() => undefined);
   } catch {
-    // Clerk pode estar ativo sem uma sessao Supabase no navegador.
+    // Clerk pode estar ativo sem uma sessao Neon no navegador.
   }
 
   return NextResponse.json({ ok: true });

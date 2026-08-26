@@ -73,7 +73,7 @@ function getPagamentoConfirmadoEm(payment: Record<string, unknown>, agoraIso: st
 }
 
 export async function processarWebhookPacoteWhatsapp(params: {
-  supabaseAdmin: DatabaseClient;
+  databaseAdmin: DatabaseClient;
   paymentId: string;
   payment: Record<string, unknown>;
   paymentStatus: string | null;
@@ -91,7 +91,7 @@ export async function processarWebhookPacoteWhatsapp(params: {
     };
   }
 
-  const { data: compra, error: compraError } = await params.supabaseAdmin
+  const { data: compra, error: compraError } = await params.databaseAdmin
     .from("whatsapp_pacote_compras")
     .select("id, id_salao, id_pacote, status, valor, quantidade_creditos")
     .eq("id", compraId)
@@ -121,7 +121,7 @@ export async function processarWebhookPacoteWhatsapp(params: {
     ? getPagamentoConfirmadoEm(params.payment, params.agoraIso)
     : null;
 
-  const { error: updateError } = await params.supabaseAdmin
+  const { error: updateError } = await params.databaseAdmin
     .from("whatsapp_pacote_compras")
     .update({
       status: proximoStatus,
@@ -148,7 +148,7 @@ export async function processarWebhookPacoteWhatsapp(params: {
 
   const creditos = Math.max(Number(compraRow.quantidade_creditos || 0), 0);
 
-  const { error: insertCreditosError } = await params.supabaseAdmin
+  const { error: insertCreditosError } = await params.databaseAdmin
     .from("whatsapp_pacote_saloes")
     .insert({
       id_salao: compraRow.id_salao,
@@ -170,7 +170,7 @@ export async function processarWebhookPacoteWhatsapp(params: {
   );
 
   if (valorCentavos > 0) {
-    const recargaResult = await params.supabaseAdmin.rpc(
+    const recargaResult = await params.databaseAdmin.rpc(
       "fn_whatsapp_creditos_registrar_recarga",
       {
         p_id_salao: compraRow.id_salao,
@@ -185,7 +185,7 @@ export async function processarWebhookPacoteWhatsapp(params: {
     }
   }
 
-  const { error: extraError } = await params.supabaseAdmin
+  const { error: extraError } = await params.databaseAdmin
     .from("saloes_recursos_extras")
     .upsert(
       {

@@ -496,4 +496,4 @@ type DatabaseWithAppExtensions = Omit<Database, "public"> & {
   public: ExtendedPublicSchema;
 };
 
-export type AnySupabaseDatabase = DatabaseWithAppExtensions;
+export type AnyApplicationDatabase = DatabaseWithAppExtensions;

@@ -26,7 +26,7 @@ export default function ProfissionalForm({
 }: {
   modo: "novo" | "editar";
 }) {
-  const supabase = createClient();
+  const database = createClient();
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
@@ -108,7 +108,7 @@ export default function ProfissionalForm({
       setIdSalao(usuarioLogado.idSalao);
       setForm((prev) => ({ ...prev, id_salao: usuarioLogado.idSalao }));
 
-      const { data: listaServicos, error: servicosError } = await supabase
+      const { data: listaServicos, error: servicosError } = await database
         .from("servicos")
         .select("id, nome, duracao_minutos, preco")
         .eq("id_salao", usuarioLogado.idSalao)
@@ -118,7 +118,7 @@ export default function ProfissionalForm({
 
       setServicos((listaServicos as Servico[]) || []);
 
-      const { data: listaAssistentes, error: assistentesDisponiveisError } = await supabase
+      const { data: listaAssistentes, error: assistentesDisponiveisError } = await database
         .from("profissionais")
         .select("id, nome, nome_social, categoria, cargo, foto_url, status, ativo, tipo_profissional")
         .eq("id_salao", usuarioLogado.idSalao)
@@ -140,7 +140,7 @@ export default function ProfissionalForm({
   }
 
   async function carregarProfissional(id: string, salaoId: string) {
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from("profissionais")
       .select("ativo, bairro, bio, cargo, categoria, cep, cidade, comissao_percentual, comissao_produto_percentual, cor_agenda, cpf, data_admissao, data_nascimento, dias_trabalho, eh_assistente, email, endereco, especialidades, estado, foto, foto_url, id, id_profissional_principal, id_salao, intervalo_agenda_minutos, nivel_acesso, nome, nome_exibicao, nome_social, numero, ordem_agenda, pausas, percentual_comissao_assistente, permite_comissao, pix_chave, pix_tipo, pode_usar_sistema, recebe_comissao, rg, sinal_confirmacao_responsavel, sinal_pix_proprio, sinal_pix_recebedor, sinal_whatsapp, status, telefone, tipo_profissional, tipo_vinculo, whatsapp")
       .eq("id", id)
@@ -204,7 +204,7 @@ export default function ProfissionalForm({
 
     setEspecialidadesInput((profissional.especialidades || []).join(", "));
 
-    const { data: vinculos, error: vinculosError } = await supabase
+    const { data: vinculos, error: vinculosError } = await database
       .from("profissional_servicos")
       .select("id_servico, duracao_minutos, ativo")
       .eq("id_profissional", id);
@@ -219,7 +219,7 @@ export default function ProfissionalForm({
       }))
     );
 
-    const { data: assistentesVinculados, error: assistentesVinculadosError } = await supabase
+    const { data: assistentesVinculados, error: assistentesVinculadosError } = await database
       .from("profissional_assistentes")
       .select("id_assistente")
       .eq("id_salao", salaoId)
@@ -233,7 +233,7 @@ export default function ProfissionalForm({
       )
     );
 
-    const { data: acessoRow, error: acessoError } = await supabase
+    const { data: acessoRow, error: acessoError } = await database
       .from("profissionais_acessos")
       .select("cpf, ativo")
       .eq("id_profissional", id)

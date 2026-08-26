@@ -24,7 +24,7 @@ export async function getUsuarioLogado() {
               status: "ativo",
               auth_user_id: null,
             },
-            supabase: createClient(),
+            database: createClient(),
             idSalao: snapshot.idSalao,
           };
         }
@@ -34,12 +34,12 @@ export async function getUsuarioLogado() {
     }
   }
 
-  const supabase = createClient();
+  const database = createClient();
 
   const {
     data: { user },
     error: authError,
-  } = await supabase.auth.getUser();
+  } = await database.auth.getUser();
 
   if (authError) {
     return { ok: false, error: "Erro ao validar autenticação." };
@@ -49,7 +49,7 @@ export async function getUsuarioLogado() {
     return { ok: false, error: "Usuário não autenticado." };
   }
 
-  const { data: perfilRows, error: perfilError } = await supabase
+  const { data: perfilRows, error: perfilError } = await database
     .from("usuarios")
     .select("id, id_salao, nome, email, nivel, status, auth_user_id")
     .eq("auth_user_id", user.id)
@@ -80,7 +80,7 @@ export async function getUsuarioLogado() {
     ok: true,
     user,
     perfil,
-    supabase,
+    database,
     idSalao: perfil.id_salao,
   };
 }

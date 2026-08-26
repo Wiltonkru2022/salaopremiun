@@ -174,15 +174,15 @@ function buildTrialEmailHtml(params: {
 }
 
 async function loadTrialContext(idSalao: string) {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const [{ data: salao, error: salaoError }, { data: assinatura, error: assinaturaError }] =
     await Promise.all([
-      (supabase as any)
+      (database as any)
         .from("saloes")
         .select("id, nome, nome_fantasia, responsavel, email, trial_fim_em")
         .eq("id", idSalao)
         .maybeSingle(),
-      (supabase as any)
+      (database as any)
         .from("assinaturas")
         .select(
           "id_salao, trial_fim_em, email_trial_3d_sent_at, email_trial_1d_sent_at, email_trial_today_sent_at, email_trial_expired_sent_at"
@@ -318,7 +318,7 @@ export async function processTrialAlerts(limit = 80) {
 
   return {
     ok: errors.length === 0,
-    provider: "vercel-supabase" as const,
+    provider: "vercel-database" as const,
     scanned: rows.length,
     sent,
     skipped,
@@ -334,11 +334,11 @@ export async function extendTrial(params: ExtendTrialParams) {
   const base = Math.max(Date.now(), currentEnd.getTime());
   const newEnd = new Date(base + days * DAY_MS).toISOString();
   const now = new Date().toISOString();
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
 
   const [{ error: assinaturaError }, { error: salaoError }, { error: assinaturaSalaoError }] =
     await Promise.all([
-      (supabase as any)
+      (database as any)
         .from("assinaturas")
         .update({
           trial_ativo: "true",
@@ -350,7 +350,7 @@ export async function extendTrial(params: ExtendTrialParams) {
           updated_at: now,
         })
         .eq("id_salao", params.idSalao),
-      (supabase as any)
+      (database as any)
         .from("saloes")
         .update({
           trial_ativo: true,
@@ -358,7 +358,7 @@ export async function extendTrial(params: ExtendTrialParams) {
           updated_at: now,
         })
         .eq("id", params.idSalao),
-      (supabase as any)
+      (database as any)
         .from("assinaturas_saloes")
         .update({
           trial_ativo: true,
@@ -376,7 +376,7 @@ export async function extendTrial(params: ExtendTrialParams) {
     String(params.reason || "").trim() ||
     `Trial prorrogado manualmente por ${days} dia(s).`;
 
-  const { error: historyError } = await (supabase as any)
+  const { error: historyError } = await (database as any)
     .from("trial_extensoes_automaticas")
     .insert({
       id_salao: params.idSalao,
@@ -394,7 +394,7 @@ export async function extendTrial(params: ExtendTrialParams) {
 
   return {
     ok: true,
-    provider: "supabase" as const,
+    provider: "database" as const,
     days,
     previousTrialEndsAt: context.trialFimEm,
     trialEndsAt: newEnd,

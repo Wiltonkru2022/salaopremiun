@@ -12,19 +12,19 @@ type EstoqueMode = "apply" | "revert";
 type LogSeverity = "info" | "warning" | "error";
 
 export async function carregarComandaDoSalao(params: {
-  supabaseAdmin: AdminClient;
+  databaseAdmin: AdminClient;
   idSalao: string;
   idComanda: string;
   notFoundMessage?: string;
 }) {
   const {
-    supabaseAdmin,
+    databaseAdmin,
     idSalao,
     idComanda,
     notFoundMessage = "Comanda nao encontrada para este salao.",
   } = params;
 
-  const { data: comanda, error } = await supabaseAdmin
+  const { data: comanda, error } = await databaseAdmin
     .from("comandas")
     .select("id, id_salao, id_cliente, numero, status")
     .eq("id", idComanda)
@@ -41,7 +41,7 @@ export async function carregarComandaDoSalao(params: {
 }
 
 export async function executarMutacaoComandaComEstoque(params: {
-  supabaseAdmin: AdminClient;
+  databaseAdmin: AdminClient;
   idSalao: string;
   idComanda: string;
   idUsuario: string;
@@ -58,7 +58,7 @@ export async function executarMutacaoComandaComEstoque(params: {
   successSeverity?: LogSeverity;
 }) {
   const {
-    supabaseAdmin,
+    databaseAdmin,
     idSalao,
     idComanda,
     idUsuario,
@@ -80,7 +80,7 @@ export async function executarMutacaoComandaComEstoque(params: {
   const estoqueFlow =
     stockMode === "apply"
       ? await aplicarBaixaEstoqueNoFluxoComanda({
-          supabaseAdmin,
+          databaseAdmin,
           idSalao,
           idComanda,
           idUsuario,
@@ -88,7 +88,7 @@ export async function executarMutacaoComandaComEstoque(params: {
           sourceAction,
         })
       : await reverterEstoqueNoFluxoComanda({
-          supabaseAdmin,
+          databaseAdmin,
           idSalao,
           idComanda,
           idUsuario,

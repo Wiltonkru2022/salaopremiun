@@ -38,12 +38,12 @@ export function resolveComissoesHttpStatus(error: unknown) {
 }
 
 export async function processarLancamentosComissao(params: {
-  supabaseAdmin: DatabaseClient;
+  databaseAdmin: DatabaseClient;
   idSalao: string;
   ids: string[];
   acao: ProcessarComissoesAcao;
 }) {
-  const { data, error } = await params.supabaseAdmin.rpc(
+  const { data, error } = await params.databaseAdmin.rpc(
     "fn_processar_comissoes_lancamentos",
     {
       p_id_salao: params.idSalao,

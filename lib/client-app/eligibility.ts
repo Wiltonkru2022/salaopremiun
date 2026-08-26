@@ -139,8 +139,8 @@ function mapSalonRow(row: EligibleSalonRow): ClientAppEligibleSalon {
 }
 
 function buildBaseSalonQuery() {
-  const supabaseAdmin = getDatabaseAdmin();
-  return supabaseAdmin
+  const databaseAdmin = getDatabaseAdmin();
+  return databaseAdmin
     .from("saloes")
     .select(
       [
@@ -253,8 +253,8 @@ export async function listEligibleSalonIdsByEmail(email: string) {
   const normalized = String(email || "").trim().toLowerCase();
   if (!normalized) return [];
 
-  const supabaseAdmin = getDatabaseAdmin();
-  const { data, error } = await supabaseAdmin
+  const databaseAdmin = getDatabaseAdmin();
+  const { data, error } = await databaseAdmin
     .from("clientes_auth")
     .select("id_salao, email, app_ativo")
     .eq("app_ativo", true)

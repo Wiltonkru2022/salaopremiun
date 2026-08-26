@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Button, Card, EmptyState, Field, Input, Modal, SearchBox, StatusPill, Textarea } from "../components/ui";
 import { duration, money, shortDate, time } from "../lib/format";
-import { supabase } from "../lib/supabase";
+import { database } from "../lib/database";
 import type { AppSession, AnyRow } from "../types";
 
 type Aba = "fila" | "agenda" | "fechadas" | "canceladas";
@@ -60,13 +60,13 @@ export function CaixaPage({ session }: { session: AppSession }) {
     setMsg("");
     try {
       const [comandasRes, agendaRes, clientesRes, servicosRes, produtosRes, profissionaisRes, sessaoRes] = await Promise.all([
-        supabase
+        database
           .from("comandas")
           .select("id, numero, status, id_cliente, subtotal, desconto, acrescimo, total, observacoes, aberta_em, created_at, fechada_em, cancelada_em, clientes(nome, cashback, whatsapp)")
           .eq("id_salao", idSalao)
           .order("created_at", { ascending: false })
           .limit(160),
-        supabase
+        database
           .from("agendamentos")
           .select("id, data, hora_inicio, hora_fim, status, cliente_id, profissional_id, servico_id, id_comanda, clientes(nome, cashback), profissionais(nome), servicos(nome, preco, duracao_minutos)")
           .eq("id_salao", idSalao)
@@ -74,11 +74,11 @@ export function CaixaPage({ session }: { session: AppSession }) {
           .order("data")
           .order("hora_inicio")
           .limit(80),
-        supabase.from("clientes").select("id, nome, whatsapp, telefone, cashback").eq("id_salao", idSalao).order("nome").limit(1000),
-        supabase.from("servicos").select("id, nome, preco, duracao_minutos, ativo").eq("id_salao", idSalao).order("nome").limit(1000),
-        supabase.from("produtos").select("id, nome, preco_venda, preco, valor, estoque_atual, ativo").eq("id_salao", idSalao).order("nome").limit(1000),
-        supabase.from("profissionais").select("id, nome, nome_exibicao, ativo").eq("id_salao", idSalao).order("nome").limit(1000),
-      supabase.from("caixa_sessoes").select("*").eq("id_salao", idSalao).eq("status", "aberto").order("aberto_em", { ascending: false }).limit(1).maybeSingle()
+        database.from("clientes").select("id, nome, whatsapp, telefone, cashback").eq("id_salao", idSalao).order("nome").limit(1000),
+        database.from("servicos").select("id, nome, preco, duracao_minutos, ativo").eq("id_salao", idSalao).order("nome").limit(1000),
+        database.from("produtos").select("id, nome, preco_venda, preco, valor, estoque_atual, ativo").eq("id_salao", idSalao).order("nome").limit(1000),
+        database.from("profissionais").select("id, nome, nome_exibicao, ativo").eq("id_salao", idSalao).order("nome").limit(1000),
+      database.from("caixa_sessoes").select("*").eq("id_salao", idSalao).eq("status", "aberto").order("aberto_em", { ascending: false }).limit(1).maybeSingle()
       ]);
       if (comandasRes.error) throw comandasRes.error;
       if (agendaRes.error) throw agendaRes.error;
@@ -103,15 +103,15 @@ export function CaixaPage({ session }: { session: AppSession }) {
   }
 
   async function loadMovimentos(idSessao: string) {
-    const { data } = await supabase.from("caixa_movimentacoes").select("*").eq("id_salao", idSalao).eq("id_sessao", idSessao).order("created_at", { ascending: false }).limit(60);
+    const { data } = await database.from("caixa_movimentacoes").select("*").eq("id_salao", idSalao).eq("id_sessao", idSessao).order("created_at", { ascending: false }).limit(60);
     setMovimentos((data || []) as AnyRow[]);
   }
 
   async function loadComanda(id: string) {
     const [{ data: detalhe }, { data: items }, { data: payments }] = await Promise.all([
-      supabase.from("comandas").select("id, numero, status, id_cliente, subtotal, desconto, acrescimo, total, observacoes, aberta_em, created_at, fechada_em, cancelada_em, clientes(nome, cashback, whatsapp)").eq("id", id).eq("id_salao", idSalao).maybeSingle(),
-      supabase.from("comanda_itens").select("*").eq("id_salao", idSalao).eq("id_comanda", id).eq("ativo", true).order("created_at", { ascending: true }),
-      supabase.from("comanda_pagamentos").select("*").eq("id_salao", idSalao).eq("id_comanda", id).order("created_at", { ascending: true })
+      database.from("comandas").select("id, numero, status, id_cliente, subtotal, desconto, acrescimo, total, observacoes, aberta_em, created_at, fechada_em, cancelada_em, clientes(nome, cashback, whatsapp)").eq("id", id).eq("id_salao", idSalao).maybeSingle(),
+      database.from("comanda_itens").select("*").eq("id_salao", idSalao).eq("id_comanda", id).eq("ativo", true).order("created_at", { ascending: true }),
+      database.from("comanda_pagamentos").select("*").eq("id_salao", idSalao).eq("id_comanda", id).order("created_at", { ascending: true })
     ]);
     if (detalhe) setSelected(detalhe as unknown as Comanda);
     setItens((items || []) as unknown as Item[]);
@@ -129,14 +129,14 @@ export function CaixaPage({ session }: { session: AppSession }) {
   }, [selected?.id]);
 
   useEffect(() => {
-    const channel = supabase
+    const channel = database
       .channel(`sistema-caixa-${idSalao}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "comandas", filter: `id_salao=eq.${idSalao}` }, () => void loadAll())
       .on("postgres_changes", { event: "*", schema: "public", table: "comanda_itens", filter: `id_salao=eq.${idSalao}` }, () => selected?.id ? void loadComanda(selected.id) : void loadAll())
       .on("postgres_changes", { event: "*", schema: "public", table: "comanda_pagamentos", filter: `id_salao=eq.${idSalao}` }, () => selected?.id ? void loadComanda(selected.id) : void loadAll())
       .subscribe();
     return () => {
-      void supabase.removeChannel(channel);
+      void database.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idSalao, selected?.id]);
@@ -179,11 +179,11 @@ export function CaixaPage({ session }: { session: AppSession }) {
   }
 
   async function createComandaFromAgendamento(item: AnyRow) {
-    const rpc = await supabase.rpc("fn_criar_comanda_por_agendamento", { p_id_agendamento: item.id });
+    const rpc = await database.rpc("fn_criar_comanda_por_agendamento", { p_id_agendamento: item.id });
     if (!rpc.error && rpc.data) return String(rpc.data);
     const numero = await nextComandaNumber(idSalao);
     const valor = Number((Array.isArray(item.servicos) ? item.servicos[0]?.preco : (item.servicos as AnyRow | null)?.preco) || 0);
-    const { data, error } = await supabase.from("comandas").insert({
+    const { data, error } = await database.from("comandas").insert({
       id_salao: idSalao,
       numero,
       id_cliente: item.cliente_id || null,
@@ -195,7 +195,7 @@ export function CaixaPage({ session }: { session: AppSession }) {
       observacoes: "Criada pela agenda no caixa Vite."
     }).select("id").maybeSingle();
     if (error || !data?.id) throw error || new Error("Erro ao criar comanda.");
-    await supabase.from("comanda_itens").insert({
+    await database.from("comanda_itens").insert({
       id_salao: idSalao,
       id_comanda: data.id,
       tipo_item: "servico",
@@ -209,14 +209,14 @@ export function CaixaPage({ session }: { session: AppSession }) {
       origem: "agenda",
       ativo: true
     });
-    await supabase.from("agendamentos").update({ id_comanda: data.id, status: "aguardando_pagamento" }).eq("id", item.id).eq("id_salao", idSalao);
+    await database.from("agendamentos").update({ id_comanda: data.id, status: "aguardando_pagamento" }).eq("id", item.id).eq("id_salao", idSalao);
     return String(data.id);
   }
 
   async function createComanda() {
     const cliente = clientes.find((item) => item.id === newComanda.clienteId);
     const numero = await nextComandaNumber(idSalao);
-    const { data, error } = await supabase.from("comandas").insert({
+    const { data, error } = await database.from("comandas").insert({
       id_salao: idSalao,
       numero,
       id_cliente: cliente?.id || null,
@@ -272,8 +272,8 @@ export function CaixaPage({ session }: { session: AppSession }) {
     if (itemForm.tipo === "servico") payload.id_servico = itemForm.catalogId || null;
     if (itemForm.tipo === "produto") payload.id_produto = itemForm.catalogId || null;
     const result = editingItem
-      ? await supabase.from("comanda_itens").update(payload).eq("id", editingItem.id).eq("id_salao", idSalao)
-      : await supabase.from("comanda_itens").insert(payload);
+      ? await database.from("comanda_itens").update(payload).eq("id", editingItem.id).eq("id_salao", idSalao)
+      : await database.from("comanda_itens").insert(payload);
     if (result.error) {
       setMsg(result.error.message);
       return;
@@ -285,18 +285,18 @@ export function CaixaPage({ session }: { session: AppSession }) {
 
   async function removeItem(item: Item) {
     if (!selected) return;
-    const { error } = await supabase.from("comanda_itens").update({ ativo: false }).eq("id", item.id).eq("id_salao", idSalao);
+    const { error } = await database.from("comanda_itens").update({ ativo: false }).eq("id", item.id).eq("id_salao", idSalao);
     if (error) setMsg(error.message);
     await recalcComanda(selected.id);
   }
 
   async function recalcComanda(idComanda: string, overrides?: { desconto?: number; acrescimo?: number }) {
-    const { data } = await supabase.from("comanda_itens").select("valor_total").eq("id_salao", idSalao).eq("id_comanda", idComanda).eq("ativo", true);
+    const { data } = await database.from("comanda_itens").select("valor_total").eq("id_salao", idSalao).eq("id_comanda", idComanda).eq("ativo", true);
     const subtotal = ((data || []) as AnyRow[]).reduce((acc, item) => acc + Number(item.valor_total || 0), 0);
     const desconto = overrides?.desconto ?? Number(selected?.desconto || 0);
     const acrescimo = overrides?.acrescimo ?? Number(selected?.acrescimo || 0);
     const total = Math.max(subtotal - desconto + acrescimo, 0);
-    await supabase.from("comandas").update({ subtotal, desconto, acrescimo, total }).eq("id", idComanda).eq("id_salao", idSalao);
+    await database.from("comandas").update({ subtotal, desconto, acrescimo, total }).eq("id", idComanda).eq("id_salao", idSalao);
     await loadComanda(idComanda);
     await loadAll();
   }
@@ -328,7 +328,7 @@ export function CaixaPage({ session }: { session: AppSession }) {
       taxa_maquininha_valor: 0,
       observacoes: paymentForm.observacoes || null
     };
-    const { error } = await supabase.from("comanda_pagamentos").insert(payload);
+    const { error } = await database.from("comanda_pagamentos").insert(payload);
     if (error) {
       setMsg(error.message);
       return;
@@ -339,7 +339,7 @@ export function CaixaPage({ session }: { session: AppSession }) {
 
   async function removePayment(item: Pagamento) {
     if (!selected) return;
-    const { error } = await supabase.from("comanda_pagamentos").delete().eq("id", item.id).eq("id_salao", idSalao);
+    const { error } = await database.from("comanda_pagamentos").delete().eq("id", item.id).eq("id_salao", idSalao);
     if (error) setMsg(error.message);
     await loadComanda(selected.id);
   }
@@ -350,14 +350,14 @@ export function CaixaPage({ session }: { session: AppSession }) {
       setMsg(`Ainda falta receber ${money(falta)}.`);
       return;
     }
-    const { error } = await supabase.from("comandas").update({ status: "fechada", fechada_em: new Date().toISOString(), total: totalComanda }).eq("id", selected.id).eq("id_salao", idSalao);
+    const { error } = await database.from("comandas").update({ status: "fechada", fechada_em: new Date().toISOString(), total: totalComanda }).eq("id", selected.id).eq("id_salao", idSalao);
     if (error) {
       setMsg(error.message);
       return;
     }
-    await supabase.from("agendamentos").update({ status: "atendido" }).eq("id_comanda", selected.id).eq("id_salao", idSalao);
+    await database.from("agendamentos").update({ status: "atendido" }).eq("id_comanda", selected.id).eq("id_salao", idSalao);
     if (sessao?.id) {
-      await supabase.from("caixa_movimentacoes").insert({
+      await database.from("caixa_movimentacoes").insert({
         id_salao: idSalao,
         id_sessao: sessao.id,
         id_usuario: session.usuario.id,
@@ -375,7 +375,7 @@ export function CaixaPage({ session }: { session: AppSession }) {
 
   async function cancelComanda() {
     if (!selected) return;
-    const { error } = await supabase.from("comandas").update({ status: "cancelada", cancelada_em: new Date().toISOString(), observacoes: `${selected.observacoes || ""}\nCancelamento: ${cancelReason}`.trim() }).eq("id", selected.id).eq("id_salao", idSalao);
+    const { error } = await database.from("comandas").update({ status: "cancelada", cancelada_em: new Date().toISOString(), observacoes: `${selected.observacoes || ""}\nCancelamento: ${cancelReason}`.trim() }).eq("id", selected.id).eq("id_salao", idSalao);
     if (error) setMsg(error.message);
     setCancelOpen(false);
     await loadAll();
@@ -383,7 +383,7 @@ export function CaixaPage({ session }: { session: AppSession }) {
   }
 
   async function openCashSession() {
-    const { data, error } = await supabase.from("caixa_sessoes").insert({
+    const { data, error } = await database.from("caixa_sessoes").insert({
       id_salao: idSalao,
       id_usuario_abertura: session.usuario.id,
       valor_abertura: Number(sessionForm.valor || 0),
@@ -403,7 +403,7 @@ export function CaixaPage({ session }: { session: AppSession }) {
     if (!sessao?.id) return;
     const previsto = Number(sessao.valor_abertura || 0) + movimentos.reduce((acc, item) => acc + signedMovement(item), 0);
     const valorInformado = Number(sessionForm.valor || previsto);
-    const { error } = await supabase.from("caixa_sessoes").update({
+    const { error } = await database.from("caixa_sessoes").update({
       id_usuario_fechamento: session.usuario.id,
       valor_fechamento_informado: valorInformado,
       status: "fechado",
@@ -421,7 +421,7 @@ export function CaixaPage({ session }: { session: AppSession }) {
       setMsg("Abra o caixa antes de lançar movimentação.");
       return;
     }
-    const { error } = await supabase.from("caixa_movimentacoes").insert({
+    const { error } = await database.from("caixa_movimentacoes").insert({
       id_salao: idSalao,
       id_sessao: sessao.id,
       id_usuario: session.usuario.id,
@@ -699,7 +699,7 @@ function Metric({ label, value }: { label: string; value: string }) {
 }
 
 async function nextComandaNumber(idSalao: string) {
-  const { data } = await supabase.from("comandas").select("numero").eq("id_salao", idSalao).order("numero", { ascending: false }).limit(1);
+  const { data } = await database.from("comandas").select("numero").eq("id_salao", idSalao).order("numero", { ascending: false }).limit(1);
   return Number((data?.[0] as AnyRow | undefined)?.numero || 0) + 1;
 }
 

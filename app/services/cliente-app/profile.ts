@@ -31,8 +31,8 @@ export async function updateClienteAppProfile(
   return runAdminOperation({
     action: "cliente_app_update_profile_global",
     actorId: idConta,
-    run: async (supabaseAdmin) => {
-      const { data: account, error } = await supabaseAdmin
+    run: async (databaseAdmin) => {
+      const { data: account, error } = await databaseAdmin
         .from("clientes_app_auth")
         .select("id, email, auth_version")
         .eq("id", idConta)
@@ -48,7 +48,7 @@ export async function updateClienteAppProfile(
         };
       }
 
-      const updated = await supabaseAdmin
+      const updated = await databaseAdmin
         .from("clientes_app_auth")
         .update({
           nome,
@@ -60,13 +60,13 @@ export async function updateClienteAppProfile(
         .eq("id", idConta);
       if (updated.error) return { ok: false as const, error: "Não foi possível salvar seu perfil agora." };
 
-      const { data: links } = await supabaseAdmin
+      const { data: links } = await databaseAdmin
         .from("clientes_auth")
         .select("id_cliente, id_salao")
         .eq("app_conta_id", idConta);
       for (const link of links || []) {
         if (!link.id_cliente || !link.id_salao) continue;
-        await supabaseAdmin
+        await databaseAdmin
           .from("clientes")
           .update({
             nome,
@@ -103,8 +103,8 @@ export async function deleteClienteAppAccount(params: {
   return runAdminOperation({
     action: "cliente_app_delete_account",
     actorId: idConta,
-    run: async (supabaseAdmin) => {
-      const { data: links, error } = await supabaseAdmin
+    run: async (databaseAdmin) => {
+      const { data: links, error } = await databaseAdmin
         .from("clientes_auth")
         .select("id, id_cliente, id_salao")
         .eq("app_conta_id", idConta);
@@ -113,7 +113,7 @@ export async function deleteClienteAppAccount(params: {
       const today = new Date().toISOString().slice(0, 10);
       for (const link of links || []) {
         if (!link.id_cliente || !link.id_salao) continue;
-        await supabaseAdmin
+        await databaseAdmin
           .from("agendamentos")
           .update({
             status: "cancelado",
@@ -126,11 +126,11 @@ export async function deleteClienteAppAccount(params: {
           .in("status", ["pendente", "confirmado"]);
       }
 
-      const authUpdate = await supabaseAdmin
+      const authUpdate = await databaseAdmin
         .from("clientes_auth")
         .update({ app_ativo: false, app_conta_id: null, updated_at: new Date().toISOString() })
         .eq("app_conta_id", idConta);
-      const deleteAccount = await supabaseAdmin.from("clientes_app_auth").delete().eq("id", idConta);
+      const deleteAccount = await databaseAdmin.from("clientes_app_auth").delete().eq("id", idConta);
       if (authUpdate.error || deleteAccount.error) {
         return { ok: false as const, error: "Não foi possível encerrar sua conta agora." };
       }

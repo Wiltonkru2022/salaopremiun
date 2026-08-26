@@ -30,7 +30,7 @@ const rows = [];
 
 for (const file of walk(cwd)) {
   const source = fs.readFileSync(file, "utf8");
-  if (!/getDatabaseAdmin\(|SUPABASE_SERVICE_ROLE_KEY|auth\.admin\./.test(source)) {
+  if (!/getDatabaseAdmin\(|NEON_ADMIN_DATABASE_URL|auth\.admin\./.test(source)) {
     continue;
   }
 
@@ -39,7 +39,7 @@ for (const file of walk(cwd)) {
     file: rel,
     route: routeFromFile(rel),
     authAdmin: /auth\.admin\./.test(source),
-    serviceRole: /getDatabaseAdmin\(|SUPABASE_SERVICE_ROLE_KEY/.test(source),
+    serviceRole: /getDatabaseAdmin\(|NEON_ADMIN_DATABASE_URL/.test(source),
     tenantGuard: /id_salao|idSalao|validarSalao|requireSalao|requireAdminMasterUser/.test(source),
     systemLog: /logSistema|registrarEvento|systemLog|logs_sistema|alerta/i.test(source),
   });

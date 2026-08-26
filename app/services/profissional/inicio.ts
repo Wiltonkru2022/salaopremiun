@@ -41,8 +41,8 @@ export async function listarProximosAgendamentosProfissional(
     action: "profissional_inicio_listar_agendamentos",
     actorId: idProfissional,
     idSalao,
-    run: async (supabase) => {
-      const { data: agendamentos, error: agendamentosError } = await (supabase as any)
+    run: async (database) => {
+      const { data: agendamentos, error: agendamentosError } = await (database as any)
         .from("agendamentos")
         .select(
           "id, data, hora_inicio, hora_fim, status, id_comanda, cliente_id, pessoa_atendida_cliente_id, servico_id"
@@ -73,14 +73,14 @@ export async function listarProximosAgendamentosProfissional(
 
       const [clientesResult, servicosResult] = await Promise.all([
         clienteIds.length > 0
-          ? supabase
+          ? database
               .from("clientes")
               .select("id, nome")
               .eq("id_salao", idSalao)
               .in("id", clienteIds)
           : Promise.resolve({ data: [], error: null }),
         servicoIds.length > 0
-          ? supabase
+          ? database
               .from("servicos")
               .select("id, nome")
               .eq("id_salao", idSalao)

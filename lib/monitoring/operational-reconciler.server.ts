@@ -93,8 +93,8 @@ async function writeTimeline(params: {
   publicVisible?: boolean;
   publicMessage?: string | null;
 }) {
-  const supabase = getDatabaseAdmin() as any;
-  await supabase.from("incident_updates").insert({
+  const database = getDatabaseAdmin() as any;
+  await database.from("incident_updates").insert({
     incident_id: params.incident.id,
     status_from: params.from,
     status_to: params.to,
@@ -108,13 +108,13 @@ async function writeTimeline(params: {
 }
 
 async function resolveLinkedAlerts(incident: IncidentRow, fingerprint?: string | null) {
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const keys = [
     `monitoring:${incident.chave}`,
     fingerprint ? `monitoring:${fingerprint}` : null,
   ].filter(Boolean) as string[];
   if (!keys.length) return;
-  await supabase
+  await database
     .from("alertas_sistema")
     .update({
       resolvido: true,
@@ -125,7 +125,7 @@ async function resolveLinkedAlerts(incident: IncidentRow, fingerprint?: string |
 }
 
 export async function reconcileOperationalIncidents() {
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const now = Date.now();
   const currentCommit = process.env.VERCEL_GIT_COMMIT_SHA || null;
   const currentDeployment = process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_URL || null;
@@ -138,27 +138,27 @@ export async function reconcileOperationalIncidents() {
     dependenciesResult,
     eventStatsResult,
   ] = await Promise.all([
-    supabase
+    database
       .from("incidentes_sistema")
       .select("id, chave, fingerprint, titulo, modulo, severidade, status, primeira_ocorrencia_em, ultima_ocorrencia_em, total_ocorrencias, component_key, catalog_code, referencia_json, required_healthy_probes, healthy_probe_count, primeiro_commit_sha, ultimo_commit_sha, first_healthy_at")
       .in("status", ["detectado", "aberto", "investigando", "recuperando", "recorrente"])
       .order("primeira_ocorrencia_em", { ascending: true })
       .limit(250),
-    supabase
+    database
       .from("incidentes_sistema")
       .select("id, fingerprint, status")
       .not("fingerprint", "is", null)
       .limit(1000),
-    supabase
+    database
       .from("operational_components")
       .select("component_key, estado_atual, criticidade, ultimo_sucesso_em, ultima_falha_em"),
-    supabase
+    database
       .from("health_checks_sistema")
       .select("component_key, status, atualizado_em, freshness_ttl_segundos, sucessos_consecutivos, falhas_consecutivas, ultimo_sucesso_em, deployment_id, commit_sha, evidence_json"),
-    supabase
+    database
       .from("operational_component_dependencies")
       .select("component_key, depends_on_component_key, critica"),
-    supabase.rpc("fn_operational_event_stats", {
+    database.rpc("fn_operational_event_stats", {
       p_since: new Date(now - RECOVERY_WINDOW_MS).toISOString(),
     }),
   ]);
@@ -222,7 +222,7 @@ export async function reconcileOperationalIncidents() {
           "Tentativa de autenticação recusada sem evidência de falha interna do serviço.",
         preservedSecurityTelemetry: true,
       };
-      await supabase
+      await database
         .from("incidentes_sistema")
         .update({
           status: "resolvido",
@@ -281,7 +281,7 @@ export async function reconcileOperationalIncidents() {
 
     if (existingOwner && existingOwner !== incident.id) {
       const previous = incident.status;
-      await supabase
+      await database
         .from("incidentes_sistema")
         .update({
           status: "suprimido",
@@ -422,7 +422,7 @@ export async function reconcileOperationalIncidents() {
         probeUpdatedAt: check?.atualizado_em,
         probeEvidence: check?.evidence_json || {},
       };
-      await supabase
+      await database
         .from("incidentes_sistema")
         .update({
           ...commonUpdate,
@@ -482,7 +482,7 @@ export async function reconcileOperationalIncidents() {
       });
     }
 
-    await supabase
+    await database
       .from("incidentes_sistema")
       .update({ ...commonUpdate, status: targetStatus })
       .eq("id", incident.id);

@@ -44,7 +44,7 @@ export default async function AdminMasterTicketsPage({ searchParams }: { searchP
   const params = searchParams ? await searchParams : {};
   const page = Math.max(0, int(params.pagina, 1) - 1);
   const periodDays = params.periodo && params.periodo !== "todos" ? Math.max(1, int(params.periodo, 30)) : undefined;
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const filters: AdminTicketListParams = {
     search: params.busca,
     status: params.status,
@@ -59,7 +59,7 @@ export default async function AdminMasterTicketsPage({ searchParams }: { searchP
   const [{ items }, globalMetrics, { data: adminsData }] = await Promise.all([
     listAdminTickets({ ...filters, page, limit: PAGE_SIZE }),
     getAdminTicketGlobalMetrics(filters),
-    supabase.from("admin_master_usuarios").select("id, nome, email").eq("status", "ativo").order("nome", { ascending: true }).limit(40),
+    database.from("admin_master_usuarios").select("id, nome, email").eq("status", "ativo").order("nome", { ascending: true }).limit(40),
   ]);
 
   const admins = ((adminsData || []) as Array<{ id: string; nome?: string | null; email?: string | null }>).map((row) => ({

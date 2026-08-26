@@ -20,7 +20,7 @@ import {
 import type { PainelSessionSnapshot } from "@/lib/painel/session-snapshot";
 import { createClient } from "@/lib/db/client";
 
-type CaixaSupabaseClient = ReturnType<typeof createClient>;
+type CaixaDatabaseClient = ReturnType<typeof createClient>;
 
 type UsuarioCaixa = {
   id: string;
@@ -38,7 +38,7 @@ const SELECT_COMANDA_ITENS_FALLBACK =
   "ativo, created_at, custo_total, descricao, id, id_agendamento, id_assistente, id_comanda, id_item_extra, id_produto, id_profissional, id_salao, id_servico, observacoes, origem, quantidade, tipo, tipo_item, updated_at, valor_total, valor_unitario";
 
 export async function carregarAcessoCaixa(
-  supabase: CaixaSupabaseClient,
+  database: CaixaDatabaseClient,
   sessionSnapshot?: PainelSessionSnapshot | null
 ) {
   if (sessionSnapshot?.idSalao && sessionSnapshot?.permissoes) {
@@ -61,7 +61,7 @@ export async function carregarAcessoCaixa(
   const {
     data: { user },
     error: authError,
-  } = await supabase.auth.getUser();
+  } = await database.auth.getUser();
 
   if (authError || !user) {
     return {
@@ -69,7 +69,7 @@ export async function carregarAcessoCaixa(
     };
   }
 
-  const { data: usuario, error: usuarioError } = await supabase
+  const { data: usuario, error: usuarioError } = await database
     .from("usuarios")
     .select("id, id_salao, nivel, status")
     .eq("auth_user_id", user.id)
@@ -83,7 +83,7 @@ export async function carregarAcessoCaixa(
     throw new Error("Usuario inativo.");
   }
 
-  const { data: permissoesDb } = await supabase
+  const { data: permissoesDb } = await database
     .from("usuarios_permissoes")
     .select(SELECT_USUARIOS_PERMISSOES)
     .eq("id_usuario", usuario.id)
@@ -109,10 +109,10 @@ export async function carregarAcessoCaixa(
 }
 
 export async function carregarConfiguracoesCaixa(
-  supabase: CaixaSupabaseClient,
+  database: CaixaDatabaseClient,
   idSalao: string
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("configuracoes_salao")
     .select(`
       id_salao,
@@ -149,38 +149,38 @@ export async function carregarConfiguracoesCaixa(
 }
 
 export async function carregarCatalogosCaixa(
-  supabase: CaixaSupabaseClient,
+  database: CaixaDatabaseClient,
   idSalao: string
 ) {
   const [servicosRes, produtosRes, extrasRes, profissionaisRes, assistentesRes] = await Promise.all([
-    supabase
+    database
       .from("servicos")
       .select("ativo, atualizado_em, base_calculo, categoria, combo_resumo, comissao_assistente_percentual, comissao_percentual, comissao_percentual_padrao, created_at, criado_em, custo_produto, desconta_taxa_maquininha, descricao, duracao, duracao_minutos, eh_combo, exige_avaliacao, gatilho_retorno_dias, id, id_categoria, id_salao, nome, pausa_minutos, preco, preco_minimo, preco_padrao, preco_variavel, recurso_nome, status, updated_at")
       .eq("id_salao", idSalao)
       .eq("status", "ativo")
       .order("nome", { ascending: true }),
 
-    supabase
+    database
       .from("produtos")
       .select("ativo, categoria, codigo_barras, comissao_revenda_percentual, created_at, custo_por_dose, custo_real, custos_extras, data_validade, destinacao, dose_padrao, estoque_atual, estoque_maximo, estoque_minimo, fornecedor_contato_nome, fornecedor_nome, fornecedor_telefone, fornecedor_whatsapp, foto_url, id, id_salao, linha, lote, marca, margem_lucro_percentual, nome, observacoes, prazo_medio_entrega_dias, preco_custo, preco_venda, quantidade_por_embalagem, sku, status, unidade_dose, unidade_medida, updated_at")
       .eq("id_salao", idSalao)
       .eq("status", "ativo")
       .order("nome", { ascending: true }),
 
-    supabase
+    database
       .from("itens_extras")
       .select("ativo, atualizado_em, categoria, comissao_percentual, comissionavel, controla_estoque, criado_em, custo, descricao, estoque_atual, estoque_minimo, id, id_salao, nome, preco_venda, unidade_medida")
       .eq("id_salao", idSalao)
       .order("nome", { ascending: true }),
 
-    supabase
+    database
       .from("profissionais")
       .select("id, nome, comissao_percentual, tipo_profissional")
       .eq("id_salao", idSalao)
       .eq("status", "ativo")
       .order("nome", { ascending: true }),
 
-    supabase
+    database
       .from("profissional_assistentes")
       .select("id_profissional, id_assistente")
       .eq("id_salao", idSalao)
@@ -247,10 +247,10 @@ function sortComandasFila(data: ComandaFila[]) {
 }
 
 async function carregarFilaComandas(
-  supabase: CaixaSupabaseClient,
+  database: CaixaDatabaseClient,
   idSalao: string
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("comandas")
     .select(`
       id,
@@ -282,10 +282,10 @@ async function carregarFilaComandas(
 }
 
 async function carregarAgendamentosSemComanda(
-  supabase: CaixaSupabaseClient,
+  database: CaixaDatabaseClient,
   idSalao: string
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("agendamentos")
     .select(`
       id,
@@ -306,7 +306,7 @@ async function carregarAgendamentosSemComanda(
     .limit(CAIXA_FILA_OPERACIONAL_LIMIT);
 
   if (error) {
-    console.error("Erro Supabase agendamentos sem comanda:", error);
+    console.error("Erro Neon agendamentos sem comanda:", error);
     throw new Error("Erro ao carregar agendamentos sem comanda.");
   }
 
@@ -329,7 +329,7 @@ async function carregarAgendamentosSemComanda(
   let mapaServicos = new Map<string, { id: string; nome: string; preco?: number | null }>();
 
   if (clienteIds.length > 0) {
-    const { data: clientesData, error: clientesError } = await supabase
+    const { data: clientesData, error: clientesError } = await database
       .from("clientes")
       .select("id, nome")
       .in("id", clienteIds);
@@ -348,7 +348,7 @@ async function carregarAgendamentosSemComanda(
   }
 
   if (profissionalIds.length > 0) {
-    const { data: profissionaisData, error: profissionaisError } = await supabase
+    const { data: profissionaisData, error: profissionaisError } = await database
       .from("profissionais")
       .select("id, nome")
       .in("id", profissionalIds);
@@ -367,7 +367,7 @@ async function carregarAgendamentosSemComanda(
   }
 
   if (servicoIds.length > 0) {
-    const { data: servicosData, error: servicosError } = await supabase
+    const { data: servicosData, error: servicosError } = await database
       .from("servicos")
       .select("id, nome, preco")
       .in("id", servicoIds);
@@ -402,7 +402,7 @@ async function carregarAgendamentosSemComanda(
 }
 
 async function carregarFechadasHoje(
-  supabase: CaixaSupabaseClient,
+  database: CaixaDatabaseClient,
   idSalao: string
 ) {
   const inicio = new Date();
@@ -410,7 +410,7 @@ async function carregarFechadasHoje(
   const fim = new Date();
   fim.setHours(23, 59, 59, 999);
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("comandas")
     .select(`
       id,
@@ -441,10 +441,10 @@ async function carregarFechadasHoje(
 }
 
 async function carregarCanceladas(
-  supabase: CaixaSupabaseClient,
+  database: CaixaDatabaseClient,
   idSalao: string
 ) {
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("comandas")
     .select(`
       id,
@@ -473,7 +473,7 @@ async function carregarCanceladas(
 }
 
 async function carregarItensComandaDetalhe(
-  supabase: CaixaSupabaseClient,
+  database: CaixaDatabaseClient,
   idSalao: string,
   idComanda: string
 ) {
@@ -481,7 +481,7 @@ async function carregarItensComandaDetalhe(
   let ultimoErro: unknown = null;
 
   for (const [indice, select] of selecoes.entries()) {
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from("comanda_itens")
       .select(select)
       .eq("id_salao", idSalao)
@@ -502,8 +502,8 @@ async function carregarItensComandaDetalhe(
     ultimoErro = error;
     console.error(
       indice === 0
-        ? "Erro Supabase comanda_itens (detalhado):"
-        : "Erro Supabase comanda_itens (fallback):",
+        ? "Erro Neon comanda_itens (detalhado):"
+        : "Erro Neon comanda_itens (fallback):",
       error
     );
   }
@@ -514,15 +514,15 @@ async function carregarItensComandaDetalhe(
 }
 
 export async function carregarListasCaixa(
-  supabase: CaixaSupabaseClient,
+  database: CaixaDatabaseClient,
   idSalao: string
 ) {
   const [
     { comandasFila, agendamentosFila },
     { comandasFechadas, comandasCanceladas },
   ] = await Promise.all([
-    carregarFilaOperacionalCaixa(supabase, idSalao),
-    carregarHistoricoCaixa(supabase, idSalao),
+    carregarFilaOperacionalCaixa(database, idSalao),
+    carregarHistoricoCaixa(database, idSalao),
   ]);
 
   return {
@@ -534,12 +534,12 @@ export async function carregarListasCaixa(
 }
 
 export async function carregarFilaOperacionalCaixa(
-  supabase: CaixaSupabaseClient,
+  database: CaixaDatabaseClient,
   idSalao: string
 ) {
   const [comandasFila, agendamentosFila] = await Promise.all([
-    carregarFilaComandas(supabase, idSalao),
-    carregarAgendamentosSemComanda(supabase, idSalao),
+    carregarFilaComandas(database, idSalao),
+    carregarAgendamentosSemComanda(database, idSalao),
   ]);
 
   return {
@@ -549,12 +549,12 @@ export async function carregarFilaOperacionalCaixa(
 }
 
 export async function carregarHistoricoCaixa(
-  supabase: CaixaSupabaseClient,
+  database: CaixaDatabaseClient,
   idSalao: string
 ) {
   const [comandasFechadas, comandasCanceladas] = await Promise.all([
-    carregarFechadasHoje(supabase, idSalao),
-    carregarCanceladas(supabase, idSalao),
+    carregarFechadasHoje(database, idSalao),
+    carregarCanceladas(database, idSalao),
   ]);
 
   return {
@@ -564,10 +564,10 @@ export async function carregarHistoricoCaixa(
 }
 
 export async function carregarComandaDetalhe(
-  supabase: CaixaSupabaseClient,
+  database: CaixaDatabaseClient,
   idComanda: string
 ) {
-  const { data: comandaData, error: comandaError } = await supabase
+  const { data: comandaData, error: comandaError } = await database
     .from("comandas")
     .select(`
       ${SELECT_COMANDAS},
@@ -593,23 +593,23 @@ export async function carregarComandaDetalhe(
   }
 
   const itensData = await carregarItensComandaDetalhe(
-    supabase,
+    database,
     idSalao,
     idComanda
   );
 
-  const { data: pagamentosData, error: pagamentosError } = await supabase
+  const { data: pagamentosData, error: pagamentosError } = await database
     .from("comanda_pagamentos")
     .select(SELECT_COMANDA_PAGAMENTOS)
     .eq("id_salao", idSalao)
     .eq("id_comanda", idComanda);
 
   if (pagamentosError) {
-    console.error("Erro Supabase comanda_pagamentos:", pagamentosError);
+    console.error("Erro Neon comanda_pagamentos:", pagamentosError);
     throw new Error("Erro ao carregar pagamentos da comanda.");
   }
 
-  const { data: cupomUsoData } = await (supabase as any)
+  const { data: cupomUsoData } = await (database as any)
     .from("cupom_salao_usos")
     .select("codigo, valor_desconto, status, cupons_salao(nome)")
     .eq("id_salao", idSalao)
@@ -631,14 +631,14 @@ export async function carregarComandaDetalhe(
   let mapaProfissionais = new Map<string, { id: string; nome: string }>();
 
   if (idsProfissionais.length > 0) {
-    const { data: profissionaisData, error: profissionaisError } = await supabase
+    const { data: profissionaisData, error: profissionaisError } = await database
       .from("profissionais")
       .select("id, nome")
       .eq("id_salao", idSalao)
       .in("id", idsProfissionais);
 
     if (profissionaisError) {
-      console.error("Erro Supabase profissionais:", profissionaisError);
+      console.error("Erro Neon profissionais:", profissionaisError);
       throw new Error("Erro ao carregar profissionais da comanda.");
     }
 

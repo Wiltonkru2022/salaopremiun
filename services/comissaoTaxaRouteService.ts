@@ -18,7 +18,7 @@ export function createComissaoTaxaRouteService() {
     }) {
       try {
         await reportOperationalIncident({
-          supabaseAdmin: getDatabaseAdmin(),
+          databaseAdmin: getDatabaseAdmin(),
           key: `comissoes:recalcular-taxa:${params.idSalao}:${params.idComanda || "sem-comanda"}`,
           module: "comissoes",
           title: "Recalculo de taxa profissional falhou",

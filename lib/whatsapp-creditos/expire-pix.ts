@@ -21,11 +21,11 @@ const PAYMENT_CLOSED_STATUSES = new Set([
 ]);
 
 export async function expireWhatsappPixRecargas(options: ExpirePixOptions = {}) {
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const now = new Date().toISOString();
   const limit = Math.min(Math.max(Number(options.limit || 20), 1), 100);
 
-  let query = supabase
+  let query = database
     .from("whatsapp_creditos_recargas")
     .select("id, id_salao, asaas_payment_id, status, expira_em")
     .eq("status", "pendente")
@@ -54,7 +54,7 @@ export async function expireWhatsappPixRecargas(options: ExpirePixOptions = {}) 
 
     try {
       if (!paymentId) {
-        await supabase
+        await database
           .from("whatsapp_creditos_recargas")
           .update({ status: "expirado", atualizado_em: now })
           .eq("id", id)
@@ -67,7 +67,7 @@ export async function expireWhatsappPixRecargas(options: ExpirePixOptions = {}) 
       const providerStatus = String(payment.status || "").toUpperCase();
 
       if (PAYMENT_PAID_STATUSES.has(providerStatus)) {
-        await supabase
+        await database
           .from("whatsapp_creditos_recargas")
           .update({
             status: "falhou",
@@ -83,7 +83,7 @@ export async function expireWhatsappPixRecargas(options: ExpirePixOptions = {}) 
       }
 
       if (PAYMENT_CLOSED_STATUSES.has(providerStatus)) {
-        await supabase
+        await database
           .from("whatsapp_creditos_recargas")
           .update({ status: "cancelado", atualizado_em: now })
           .eq("id", id)
@@ -94,7 +94,7 @@ export async function expireWhatsappPixRecargas(options: ExpirePixOptions = {}) 
 
       await excluirCobranca(paymentId);
 
-      await supabase
+      await database
         .from("whatsapp_creditos_recargas")
         .update({
           status: "expirado",
@@ -107,7 +107,7 @@ export async function expireWhatsappPixRecargas(options: ExpirePixOptions = {}) 
       result.expired += 1;
     } catch (error) {
       result.failed += 1;
-      await supabase
+      await database
         .from("whatsapp_creditos_recargas")
         .update({
           erro_texto:

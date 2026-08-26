@@ -110,7 +110,7 @@ export function findOperationalComponentForContext(params: {
     return getOperationalComponent("cash.core");
   }
   if (module.includes("security") || module.includes("auth")) {
-    return getOperationalComponent("supabase.auth");
+    return getOperationalComponent("database.auth");
   }
 
   return null;

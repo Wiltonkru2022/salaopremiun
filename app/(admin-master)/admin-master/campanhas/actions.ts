@@ -29,7 +29,7 @@ function parseFilters(value: string): Json {
 
 export async function salvarCampanhaAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const id = textValue(formData, "id");
   const nome = textValue(formData, "nome");
 
@@ -50,15 +50,15 @@ export async function salvarCampanhaAdminMaster(formData: FormData) {
   };
 
   const { data: before } = id
-    ? await supabase.from("campanhas").select("id, nome, tipo, publico_tipo, objetivo, status, inicio_em, fim_em, filtros_json").eq("id", id).maybeSingle()
+    ? await database.from("campanhas").select("id, nome, tipo, publico_tipo, objetivo, status, inicio_em, fim_em, filtros_json").eq("id", id).maybeSingle()
     : { data: null };
 
   let entityId = id || null;
   if (id) {
-    const { error } = await supabase.from("campanhas").update(payload).eq("id", id);
+    const { error } = await database.from("campanhas").update(payload).eq("id", id);
     if (error) throw new Error(error.message || "Nao foi possivel salvar a campanha.");
   } else {
-    const { data: created, error } = await supabase.from("campanhas").insert(payload).select("id").single();
+    const { data: created, error } = await database.from("campanhas").insert(payload).select("id").single();
     if (error || !created?.id) throw new Error(error?.message || "Nao foi possivel criar a campanha.");
     entityId = String(created.id);
   }

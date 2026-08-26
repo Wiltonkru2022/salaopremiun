@@ -58,8 +58,8 @@ export async function POST(request: Request) {
       status === "cancelado" ? "agenda_excluir" : "agenda_editar"
     );
 
-    const supabase = getDatabaseAdmin();
-    const { data: appointment, error: loadError } = await (supabase as any)
+    const database = getDatabaseAdmin();
+    const { data: appointment, error: loadError } = await (database as any)
       .from("agendamentos")
       .select(
         "id, status, sinal_status, cliente_id, profissional_id, servico_id, data, hora_inicio, hora_fim, id_comanda"
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
       }
 
       await cancelarAgendamentoComComanda({
-        supabase: supabase as any,
+        database: database as any,
         idSalao: usuario.id_salao,
         idAgendamento,
       });
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
           ? await buscarServicoPorId(usuario.id_salao, String(appointment.servico_id))
           : null;
         await notifyWaitlistAboutReleasedSlot({
-          supabaseAdmin: supabase,
+          databaseAdmin: database,
           releasedSlot: {
             idSalao: usuario.id_salao,
             idServico: appointment.servico_id || null,
@@ -134,7 +134,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const { error: updateError } = await (supabase as any)
+    const { error: updateError } = await (database as any)
       .from("agendamentos")
       .update(patch)
       .eq("id", idAgendamento)

@@ -24,7 +24,7 @@ type ProfissionalComandaInfo = ProfissionalComissaoSource & {
 };
 
 type SincronizarParams = {
-  supabase: DatabaseClient;
+  database: DatabaseClient;
   idSalao: string;
   idAgendamento: string;
   idComandaNova?: string | null;
@@ -60,7 +60,7 @@ function calcularDescontoCupomComanda(params: {
 }
 
 async function calcularDescontoCupomParaComanda(params: {
-  supabase: DatabaseClient;
+  database: DatabaseClient;
   idSalao: string;
   idCupom: string;
   idServico: string;
@@ -72,7 +72,7 @@ async function calcularDescontoCupomParaComanda(params: {
 
   const hoje = new Date().toISOString().slice(0, 10);
   const dataReferencia = String(params.data || "").slice(0, 10) || hoje;
-  const { data: cupom, error } = await (params.supabase as any)
+  const { data: cupom, error } = await (params.database as any)
     .from("cupons_salao")
     .select(
       "id, tipo_desconto, valor_desconto, valido_de, valido_ate, ativo, status_campanha"
@@ -93,7 +93,7 @@ async function calcularDescontoCupomParaComanda(params: {
     subtotal: params.subtotal,
   });
 
-  const { data: servicosCampanha } = await (params.supabase as any)
+  const { data: servicosCampanha } = await (params.database as any)
     .from("cupom_salao_servicos")
     .select("id_servico, tipo_beneficio, valor_beneficio")
     .eq("id_cupom", idCupom)
@@ -127,11 +127,11 @@ async function calcularDescontoCupomParaComanda(params: {
 }
 
 async function carregarSubtotalComanda(params: {
-  supabase: DatabaseClient;
+  database: DatabaseClient;
   idSalao: string;
   idComanda: string;
 }) {
-  const { data } = await params.supabase
+  const { data } = await params.database
     .from("comanda_itens")
     .select("valor_total")
     .eq("id_salao", params.idSalao)
@@ -145,11 +145,11 @@ async function carregarSubtotalComanda(params: {
 }
 
 async function buscarItensComboServico(params: {
-  supabase: DatabaseClient;
+  database: DatabaseClient;
   idSalao: string;
   idServicoCombo: string;
 }) {
-  const { data, error } = await params.supabase
+  const { data, error } = await params.database
     .from("servicos_combo_itens")
     .select(
       `
@@ -187,13 +187,13 @@ async function buscarItensComboServico(params: {
 }
 
 export async function recalcularTotaisComanda(params: {
-  supabase: DatabaseClient;
+  database: DatabaseClient;
   idSalao: string;
   idComanda: string;
 }) {
-  const { supabase, idSalao, idComanda } = params;
+  const { database, idSalao, idComanda } = params;
 
-  const { data: itens, error: itensError } = await supabase
+  const { data: itens, error: itensError } = await database
     .from("comanda_itens")
     .select("valor_total")
     .eq("id_salao", idSalao)
@@ -211,7 +211,7 @@ export async function recalcularTotaisComanda(params: {
     0
   );
 
-  const { data: comandaAtual, error: comandaError } = await supabase
+  const { data: comandaAtual, error: comandaError } = await database
     .from("comandas")
     .select("id, desconto, acrescimo")
     .eq("id", idComanda)
@@ -229,7 +229,7 @@ export async function recalcularTotaisComanda(params: {
   const acrescimo = Number(comandaAtual.acrescimo || 0);
   const total = subtotal - desconto + acrescimo;
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await database
     .from("comandas")
     .update({
       subtotal,
@@ -246,13 +246,13 @@ export async function recalcularTotaisComanda(params: {
 }
 
 export async function cancelarComandaSeVazia(params: {
-  supabase: DatabaseClient;
+  database: DatabaseClient;
   idSalao: string;
   idComanda: string;
 }) {
-  const { supabase, idSalao, idComanda } = params;
+  const { database, idSalao, idComanda } = params;
 
-  const { data: itens, error: itensError } = await supabase
+  const { data: itens, error: itensError } = await database
     .from("comanda_itens")
     .select("id")
     .eq("id_salao", idSalao)
@@ -268,7 +268,7 @@ export async function cancelarComandaSeVazia(params: {
   const possuiItens = Array.isArray(itens) && itens.length > 0;
   if (possuiItens) return;
 
-  const { data: comanda, error: comandaError } = await supabase
+  const { data: comanda, error: comandaError } = await database
     .from("comandas")
     .select("id, status")
     .eq("id", idComanda)
@@ -286,7 +286,7 @@ export async function cancelarComandaSeVazia(params: {
     return;
   }
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await database
     .from("comandas")
     .update({
       status: "cancelada",
@@ -304,13 +304,13 @@ export async function cancelarComandaSeVazia(params: {
 }
 
 async function removerAgendamentoDaComandaSemCancelar(params: {
-  supabase: DatabaseClient;
+  database: DatabaseClient;
   idSalao: string;
   idAgendamento: string;
 }) {
-  const { supabase, idSalao, idAgendamento } = params;
+  const { database, idSalao, idAgendamento } = params;
 
-  const { data: itens, error } = await supabase
+  const { data: itens, error } = await database
     .from("comanda_itens")
     .select("id, id_comanda")
     .eq("id_salao", idSalao)
@@ -330,7 +330,7 @@ async function removerAgendamentoDaComandaSemCancelar(params: {
     ...new Set(itens.map((item) => item.id_comanda).filter(Boolean)),
   ] as string[];
 
-  const { error: deleteError } = await supabase
+  const { error: deleteError } = await database
     .from("comanda_itens")
     .delete()
     .eq("id_salao", idSalao)
@@ -342,33 +342,33 @@ async function removerAgendamentoDaComandaSemCancelar(params: {
   }
 
   for (const idComanda of comandasAfetadas) {
-    await recalcularTotaisComanda({ supabase, idSalao, idComanda });
+    await recalcularTotaisComanda({ database, idSalao, idComanda });
   }
 
   return comandasAfetadas;
 }
 
 export async function removerAgendamentoDaComanda(params: {
-  supabase: DatabaseClient;
+  database: DatabaseClient;
   idSalao: string;
   idAgendamento: string;
 }) {
-  const { supabase, idSalao, idAgendamento } = params;
+  const { database, idSalao, idAgendamento } = params;
 
   const comandasAfetadas = await removerAgendamentoDaComandaSemCancelar({
-    supabase,
+    database,
     idSalao,
     idAgendamento,
   });
 
   for (const idComanda of comandasAfetadas) {
-    await cancelarComandaSeVazia({ supabase, idSalao, idComanda });
+    await cancelarComandaSeVazia({ database, idSalao, idComanda });
   }
 }
 
 export async function sincronizarAgendamentoComComanda(params: SincronizarParams) {
   const {
-    supabase,
+    database,
     idSalao,
     idAgendamento,
     idComandaNova,
@@ -378,7 +378,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
     profissional,
   } = params;
 
-  const { data: agendamentoAtual, error: agendamentoAtualError } = await supabase
+  const { data: agendamentoAtual, error: agendamentoAtualError } = await database
     .from("agendamentos")
     .select("id, id_comanda")
     .eq("id", idAgendamento)
@@ -401,7 +401,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
     | null = null;
 
   if (idComandaNova) {
-    const { data: comanda, error: comandaError } = await supabase
+    const { data: comanda, error: comandaError } = await database
       .from("comandas")
       .select("id, status")
       .eq("id", idComandaNova)
@@ -421,7 +421,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
 
     if (statusComanda === "fechada") {
       if (agendamentoAtual?.id_comanda === idComandaNova) {
-        const { error: clearAgendamentoError } = await supabase
+        const { error: clearAgendamentoError } = await database
           .from("agendamentos")
           .update({
             id_comanda: null,
@@ -448,13 +448,13 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
   }
 
   const comandasAntigasAfetadas = await removerAgendamentoDaComandaSemCancelar({
-    supabase,
+    database,
     idSalao,
     idAgendamento,
   });
 
   if (!idComandaNova) {
-    const { error: clearAgendamentoError } = await supabase
+    const { error: clearAgendamentoError } = await database
       .from("agendamentos")
       .update({
         id_comanda: null,
@@ -469,7 +469,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
     }
 
     for (const idComanda of comandasAntigasAfetadas) {
-      await cancelarComandaSeVazia({ supabase, idSalao, idComanda });
+      await cancelarComandaSeVazia({ database, idSalao, idComanda });
     }
 
     return;
@@ -480,7 +480,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
   }
 
   const vinculo = await buscarVinculoProfissionalServico({
-    supabase,
+    database,
     idSalao,
     idProfissional,
     idServico,
@@ -499,7 +499,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
   const statusComanda = String(comanda.status || "").toLowerCase();
 
   if (statusComanda === "cancelada") {
-    const { error: reabrirError } = await supabase
+    const { error: reabrirError } = await database
       .from("comandas")
       .update({
         status: "aberta",
@@ -540,7 +540,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
 
   if (ratearComboEmServicosFilhos && servico.eh_combo) {
     const itensCombo = await buscarItensComboServico({
-      supabase,
+      database,
       idSalao,
       idServicoCombo: servico.id,
     });
@@ -575,7 +575,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
           }
 
           const vinculoItem = await buscarVinculoProfissionalServico({
-            supabase,
+            database,
             idSalao,
             idProfissional,
             idServico: itemCombo.servico.id,
@@ -611,7 +611,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
     }
   }
 
-  const { error: insertError } = await supabase
+  const { error: insertError } = await database
     .from("comanda_itens")
     .insert(payloads);
 
@@ -620,7 +620,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
     throw new Error("Erro ao inserir item na comanda.");
   }
 
-  const { error: updateAgendamentoError } = await supabase
+  const { error: updateAgendamentoError } = await database
     .from("agendamentos")
     .update({
       id_comanda: idComandaNova,
@@ -635,20 +635,20 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
   }
 
   await recalcularTotaisComanda({
-    supabase,
+    database,
     idSalao,
     idComanda: idComandaNova,
   });
 
   for (const idComanda of comandasAntigasAfetadas) {
     if (idComanda !== idComandaNova) {
-      await cancelarComandaSeVazia({ supabase, idSalao, idComanda });
+      await cancelarComandaSeVazia({ database, idSalao, idComanda });
     }
   }
 }
 
 export async function sincronizarAgendamentoComComandaNoCaixa(params: {
-  supabase: DatabaseClient;
+  database: DatabaseClient;
   idSalao: string;
   idAgendamento: string;
   idComandaNova: string | null;
@@ -656,7 +656,7 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
   idProfissional: string;
 }) {
   const {
-    supabase,
+    database,
     idSalao,
     idAgendamento,
     idComandaNova,
@@ -665,13 +665,13 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
   } = params;
 
   await removerAgendamentoDaComanda({
-    supabase,
+    database,
     idSalao,
     idAgendamento,
   });
 
   if (!idComandaNova) {
-    const { error: clearAgendamentoError } = await supabase
+    const { error: clearAgendamentoError } = await database
       .from("agendamentos")
       .update({
         id_comanda: null,
@@ -689,13 +689,13 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
 
   const [{ data: agendamento, error: agendamentoError }, { data: comanda, error: comandaError }] =
     await Promise.all([
-      supabase
+      database
         .from("agendamentos")
         .select("id, cliente_id, observacoes, id_cupom_salao, codigo_cupom, desconto_cupom_valor, data")
         .eq("id", idAgendamento)
         .eq("id_salao", idSalao)
         .maybeSingle(),
-      supabase
+      database
         .from("comandas")
         .select("id, status, id_cliente, desconto, acrescimo")
         .eq("id", idComandaNova)
@@ -718,7 +718,7 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
   }
 
   if (statusComanda === "cancelada") {
-    const { error: reopenError } = await supabase
+    const { error: reopenError } = await database
       .from("comandas")
       .update({
         status: "aberta",
@@ -734,7 +734,7 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
   }
 
   await adicionarItemComanda({
-    supabaseAdmin: supabase,
+    databaseAdmin: database,
     idSalao,
     comanda: {
       idComanda: comanda.id,
@@ -754,7 +754,7 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
     idempotencyKey: `agenda-sync:${idAgendamento}:${comanda.id}:${idServico}:${idProfissional}`,
   });
 
-  const { data: adicionais } = await (supabase as any)
+  const { data: adicionais } = await (database as any)
     .from("agendamento_adicionais")
     .select("id, id_servico, nome, preco, status")
     .eq("id_salao", idSalao)
@@ -767,7 +767,7 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
     if (!idServicoAdicional || idServicoAdicional === idServico) continue;
 
     await adicionarItemComanda({
-      supabaseAdmin: supabase,
+      databaseAdmin: database,
       idSalao,
       comanda: {
         idComanda: comanda.id,
@@ -787,7 +787,7 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
       idempotencyKey: `agenda-upsell:${idAgendamento}:${comanda.id}:${idServicoAdicional}`,
     });
 
-    await (supabase as any)
+    await (database as any)
       .from("agendamento_adicionais")
       .update({
         status: "convertido",
@@ -798,7 +798,7 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
   }
 
   const subtotalComanda = await carregarSubtotalComanda({
-    supabase,
+    database,
     idSalao,
     idComanda: comanda.id,
   });
@@ -807,7 +807,7 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
     descontoCupomSalvo > 0
       ? descontoCupomSalvo
       : await calcularDescontoCupomParaComanda({
-          supabase,
+          database,
           idSalao,
           idCupom: String(agendamento.id_cupom_salao || ""),
           idServico,
@@ -817,7 +817,7 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
 
   if (agendamento.id_cupom_salao && descontoCupom > 0) {
     const descontoAtual = Number(comanda.desconto || 0);
-    await supabase
+    await database
       .from("comandas")
       .update({
         desconto: Math.max(descontoAtual, descontoCupom),
@@ -827,7 +827,7 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
       .eq("id_salao", idSalao);
 
     if (descontoCupomSalvo <= 0) {
-      await supabase
+      await database
         .from("agendamentos")
         .update({
           desconto_cupom_valor: descontoCupom,
@@ -854,7 +854,7 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
       updated_at: new Date().toISOString(),
     };
 
-    const { data: usoExistente } = await (supabase as any)
+    const { data: usoExistente } = await (database as any)
       .from("cupom_salao_usos")
       .select("id")
       .eq("id_salao", idSalao)
@@ -864,22 +864,22 @@ export async function sincronizarAgendamentoComComandaNoCaixa(params: {
       .maybeSingle();
 
     if (usoExistente?.id) {
-      await (supabase as any)
+      await (database as any)
         .from("cupom_salao_usos")
         .update(usoPayload)
         .eq("id", usoExistente.id);
     } else {
-      await (supabase as any).from("cupom_salao_usos").insert(usoPayload);
+      await (database as any).from("cupom_salao_usos").insert(usoPayload);
     }
 
     await recalcularTotaisComanda({
-      supabase,
+      database,
       idSalao,
       idComanda: comanda.id,
     });
   }
 
-  const { error: updateAgendamentoError } = await supabase
+  const { error: updateAgendamentoError } = await database
     .from("agendamentos")
     .update({
       id_comanda: comanda.id,

@@ -33,7 +33,7 @@ if (payload.overall.state === "unknown" && !status.text.includes("Estado desconh
 
 const history = await get("/status/history");
 if (history.response.status !== 200) throw new Error(`/status/history retornou HTTP ${history.response.status}`);
-if (/SUPABASE_SERVICE_ROLE_KEY|PROFISSIONAL_SESSION_SECRET|select \*|stack_resumida|authorization/i.test(history.text)) {
+if (/NEON_DATABASE_URL|CLERK_SECRET_KEY|CLOUDINARY_API_SECRET|PROFISSIONAL_SESSION_SECRET|select \*|stack_resumida|authorization/i.test(history.text)) {
   throw new Error("Histórico público contém possível detalhe interno sensível.");
 }
 

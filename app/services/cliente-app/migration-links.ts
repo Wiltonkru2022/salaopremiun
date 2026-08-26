@@ -51,8 +51,8 @@ export async function createClienteMigrationLink(params: {
     action: "cliente_app_create_migration_link",
     actorId: params.criadoPorUsuario || "painel",
     idSalao,
-    run: async (supabaseAdmin) => {
-      const { data: client, error } = await supabaseAdmin
+    run: async (databaseAdmin) => {
+      const { data: client, error } = await databaseAdmin
         .from("clientes")
         .select("id, nome, whatsapp, telefone, email, cpf, data_nascimento")
         .eq("id", idCliente)
@@ -61,7 +61,7 @@ export async function createClienteMigrationLink(params: {
         .maybeSingle();
       if (error || !client?.id) return { ok: false as const, error: "Cliente não encontrado neste salão." };
 
-      const { data: auth } = await supabaseAdmin
+      const { data: auth } = await databaseAdmin
         .from("clientes_auth")
         .select("app_conta_id")
         .eq("id_salao", idSalao)
@@ -69,7 +69,7 @@ export async function createClienteMigrationLink(params: {
         .limit(1)
         .maybeSingle();
 
-      await supabaseAdmin
+      await databaseAdmin
         .from("cliente_app_migracao_tokens")
         .update({ consumido_em: new Date().toISOString() })
         .eq("id_salao", idSalao)
@@ -77,7 +77,7 @@ export async function createClienteMigrationLink(params: {
         .is("consumido_em", null);
 
       const token = crypto.randomBytes(32).toString("base64url");
-      const insert = await supabaseAdmin.from("cliente_app_migracao_tokens").insert({
+      const insert = await databaseAdmin.from("cliente_app_migracao_tokens").insert({
         id_salao: idSalao,
         id_cliente: idCliente,
         conta_id: auth?.app_conta_id || null,
@@ -145,8 +145,8 @@ export async function completeClienteMigrationToken(params: {
   return runAdminOperation({
     action: "cliente_app_complete_migration_token",
     actorId: `migration:${tokenHash.slice(0, 16)}`,
-    run: async (supabaseAdmin) => {
-      const { data: tokenRow, error: tokenError } = await supabaseAdmin
+    run: async (databaseAdmin) => {
+      const { data: tokenRow, error: tokenError } = await databaseAdmin
         .from("cliente_app_migracao_tokens")
         .select("id, id_salao, id_cliente, conta_id, expira_em, consumido_em")
         .eq("token_hash", tokenHash)
@@ -161,7 +161,7 @@ export async function completeClienteMigrationToken(params: {
         return { ok: false as const, error: "Este link é inválido, já foi usado ou expirou." };
       }
 
-      const { data: client, error: clientError } = await supabaseAdmin
+      const { data: client, error: clientError } = await databaseAdmin
         .from("clientes")
         .select("id, nome, email")
         .eq("id", tokenRow.id_cliente)
@@ -170,7 +170,7 @@ export async function completeClienteMigrationToken(params: {
         .maybeSingle();
       if (clientError || !client?.id) return { ok: false as const, error: "Cliente não encontrado." };
 
-      const { data: cpfAccount } = await supabaseAdmin
+      const { data: cpfAccount } = await databaseAdmin
         .from("clientes_app_auth")
         .select("id, nome, email, auth_version, ativo")
         .eq("cpf", cpf)
@@ -191,7 +191,7 @@ export async function completeClienteMigrationToken(params: {
       } | null = null;
 
       if (accountId) {
-        const { data: existing } = await supabaseAdmin
+        const { data: existing } = await databaseAdmin
           .from("clientes_app_auth")
           .select("id, nome, email, auth_version, ativo, cpf")
           .eq("id", accountId)
@@ -202,7 +202,7 @@ export async function completeClienteMigrationToken(params: {
           return { ok: false as const, error: "Os dados informados não correspondem à conta vinculada." };
         }
         const next = Number(existing.auth_version || 1) + 1;
-        const updated = await supabaseAdmin
+        const updated = await databaseAdmin
           .from("clientes_app_auth")
           .update({
             cpf,
@@ -219,7 +219,7 @@ export async function completeClienteMigrationToken(params: {
       } else {
         const email = realEmail(client.email) || null;
         if (email) {
-          const { data: emailOwner } = await supabaseAdmin
+          const { data: emailOwner } = await databaseAdmin
             .from("clientes_app_auth")
             .select("id")
             .eq("email", email)
@@ -229,7 +229,7 @@ export async function completeClienteMigrationToken(params: {
         }
 
         if (accountId) {
-          const { data: existing } = await supabaseAdmin
+          const { data: existing } = await databaseAdmin
             .from("clientes_app_auth")
             .select("id, nome, email, auth_version, ativo, cpf")
             .eq("id", accountId)
@@ -239,13 +239,13 @@ export async function completeClienteMigrationToken(params: {
             return { ok: false as const, error: "Já existe uma conta incompatível com os dados informados." };
           }
           const next = Number(existing.auth_version || 1) + 1;
-          await supabaseAdmin
+          await databaseAdmin
             .from("clientes_app_auth")
             .update({ cpf, data_nascimento: birth, whatsapp, telefone: whatsapp, migracao_identidade_concluida: true, auth_version: next })
             .eq("id", accountId);
           account = { id: accountId, nome: existing.nome, email: existing.email, auth_version: next };
         } else {
-          const { data: created, error: createError } = await supabaseAdmin
+          const { data: created, error: createError } = await databaseAdmin
             .from("clientes_app_auth")
             .insert({
               nome: String(client.nome || "").trim() || "Cliente SalãoPremium",
@@ -267,14 +267,14 @@ export async function completeClienteMigrationToken(params: {
         }
       }
 
-      const clientUpdate = await supabaseAdmin
+      const clientUpdate = await databaseAdmin
         .from("clientes")
         .update({ cpf, data_nascimento: birth, telefone: whatsapp, whatsapp, atualizado_em: new Date().toISOString() })
         .eq("id", tokenRow.id_cliente)
         .eq("id_salao", tokenRow.id_salao);
       if (clientUpdate.error) return { ok: false as const, error: "Não foi possível atualizar a ficha do salão." };
 
-      const { data: authRow } = await supabaseAdmin
+      const { data: authRow } = await databaseAdmin
         .from("clientes_auth")
         .select("id")
         .eq("id_salao", tokenRow.id_salao)
@@ -288,8 +288,8 @@ export async function completeClienteMigrationToken(params: {
         updated_at: new Date().toISOString(),
       };
       const linked = authRow?.id
-        ? await supabaseAdmin.from("clientes_auth").update(linkPayload).eq("id", authRow.id)
-        : await supabaseAdmin.from("clientes_auth").insert({
+        ? await databaseAdmin.from("clientes_auth").update(linkPayload).eq("id", authRow.id)
+        : await databaseAdmin.from("clientes_auth").insert({
             id_salao: tokenRow.id_salao,
             id_cliente: tokenRow.id_cliente,
             senha_hash: null,
@@ -297,7 +297,7 @@ export async function completeClienteMigrationToken(params: {
           });
       if (linked.error) return { ok: false as const, error: "Não foi possível ativar o acesso ao salão." };
 
-      await supabaseAdmin
+      await databaseAdmin
         .from("cliente_app_migracao_tokens")
         .update({ consumido_em: new Date().toISOString(), conta_id: accountId })
         .eq("id", tokenRow.id)

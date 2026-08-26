@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { Button, Card, EmptyState, Field, Input, Modal, StatusPill, Textarea } from "../components/ui";
 import { duration, money, normalizeStatus, shortDate, time } from "../lib/format";
-import { supabase } from "../lib/supabase";
+import { database } from "../lib/database";
 import type { AppSession, AnyRow } from "../types";
 
 type ViewMode = "day" | "week";
@@ -85,12 +85,12 @@ export function AgendaPage({ session }: { session: AppSession }) {
       const start = viewMode === "day" ? date : visibleDates[0];
       const end = viewMode === "day" ? date : visibleDates[visibleDates.length - 1];
       const [configRes, profRes, clientesRes, servicosRes, vinculosRes, agendaRes, bloqueiosRes] = await Promise.all([
-        supabase.from("configuracoes_salao").select("hora_abertura, hora_fechamento, intervalo_minutos").eq("id_salao", idSalao).maybeSingle(),
-        supabase.from("profissionais").select("id, nome, nome_exibicao, cargo, categoria, ativo, status, intervalo_agenda_minutos, dias_trabalho, cor_agenda").eq("id_salao", idSalao).order("nome"),
-        supabase.from("clientes").select("id, nome, telefone, whatsapp, cashback").eq("id_salao", idSalao).order("nome").limit(1000),
-        supabase.from("servicos").select("id, nome, categoria, preco, preco_padrao, duracao_minutos, ativo, status").eq("id_salao", idSalao).order("nome").limit(1000),
-        supabase.from("profissional_servicos").select("id_profissional, id_servico, ativo, duracao_minutos, preco_personalizado").eq("id_salao", idSalao),
-        supabase
+        database.from("configuracoes_salao").select("hora_abertura, hora_fechamento, intervalo_minutos").eq("id_salao", idSalao).maybeSingle(),
+        database.from("profissionais").select("id, nome, nome_exibicao, cargo, categoria, ativo, status, intervalo_agenda_minutos, dias_trabalho, cor_agenda").eq("id_salao", idSalao).order("nome"),
+        database.from("clientes").select("id, nome, telefone, whatsapp, cashback").eq("id_salao", idSalao).order("nome").limit(1000),
+        database.from("servicos").select("id, nome, categoria, preco, preco_padrao, duracao_minutos, ativo, status").eq("id_salao", idSalao).order("nome").limit(1000),
+        database.from("profissional_servicos").select("id_profissional, id_servico, ativo, duracao_minutos, preco_personalizado").eq("id_salao", idSalao),
+        database
           .from("agendamentos")
           .select("id, id_salao, cliente_id, profissional_id, servico_id, id_comanda, data, hora_inicio, hora_fim, duracao_minutos, observacoes, status, origem, sinal_status, sinal_valor, clientes(nome, telefone, whatsapp, cashback), servicos(nome, preco, preco_padrao, duracao_minutos), profissionais(nome, nome_exibicao)")
           .eq("id_salao", idSalao)
@@ -98,7 +98,7 @@ export function AgendaPage({ session }: { session: AppSession }) {
           .lte("data", end)
           .order("data")
           .order("hora_inicio"),
-        supabase
+        database
           .from("agenda_bloqueios")
           .select("id, id_salao, profissional_id, data, hora_inicio, hora_fim, motivo, origem")
           .eq("id_salao", idSalao)
@@ -138,13 +138,13 @@ export function AgendaPage({ session }: { session: AppSession }) {
   }, [idSalao, date, viewMode]);
 
   useEffect(() => {
-    const channel = supabase
+    const channel = database
       .channel(`sistema-agenda-${idSalao}`)
       .on("postgres_changes", { event: "*", schema: "public", table: "agendamentos", filter: `id_salao=eq.${idSalao}` }, () => void loadAll())
       .on("postgres_changes", { event: "*", schema: "public", table: "agenda_bloqueios", filter: `id_salao=eq.${idSalao}` }, () => void loadAll())
       .subscribe();
     return () => {
-      void supabase.removeChannel(channel);
+      void database.removeChannel(channel);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idSalao, date, viewMode]);
@@ -228,8 +228,8 @@ export function AgendaPage({ session }: { session: AppSession }) {
       };
 
       const result = editing
-        ? await supabase.from("agendamentos").update(payload).eq("id", editing.id).eq("id_salao", idSalao)
-        : await supabase.from("agendamentos").insert(payload);
+        ? await database.from("agendamentos").update(payload).eq("id", editing.id).eq("id_salao", idSalao)
+        : await database.from("agendamentos").insert(payload);
       if (result.error) throw result.error;
       setAppointmentOpen(false);
       setEditing(null);
@@ -251,8 +251,8 @@ export function AgendaPage({ session }: { session: AppSession }) {
         motivo: blockForm.motivo || null
       };
       const result = editingBlock
-        ? await supabase.from("agenda_bloqueios").update(payload).eq("id", editingBlock.id).eq("id_salao", idSalao)
-        : await supabase.from("agenda_bloqueios").insert(payload);
+        ? await database.from("agenda_bloqueios").update(payload).eq("id", editingBlock.id).eq("id_salao", idSalao)
+        : await database.from("agenda_bloqueios").insert(payload);
       if (result.error) throw result.error;
       setBlockOpen(false);
       setEditingBlock(null);
@@ -263,7 +263,7 @@ export function AgendaPage({ session }: { session: AppSession }) {
   }
 
   async function updateStatus(item: Agendamento, status: string) {
-    const { error } = await supabase.from("agendamentos").update({ status, updated_at: new Date().toISOString() }).eq("id", item.id).eq("id_salao", idSalao);
+    const { error } = await database.from("agendamentos").update({ status, updated_at: new Date().toISOString() }).eq("id", item.id).eq("id_salao", idSalao);
     if (error) setMsg(error.message);
     await loadAll();
   }
@@ -273,13 +273,13 @@ export function AgendaPage({ session }: { session: AppSession }) {
       setMsg("Agendamento atendido não pode ser excluído.");
       return;
     }
-    const { error } = await supabase.from("agendamentos").delete().eq("id", item.id).eq("id_salao", idSalao);
+    const { error } = await database.from("agendamentos").delete().eq("id", item.id).eq("id_salao", idSalao);
     if (error) setMsg(error.message);
     await loadAll();
   }
 
   async function deleteBlock(item: Bloqueio) {
-    const { error } = await supabase.from("agenda_bloqueios").delete().eq("id", item.id).eq("id_salao", idSalao);
+    const { error } = await database.from("agenda_bloqueios").delete().eq("id", item.id).eq("id_salao", idSalao);
     if (error) setMsg(error.message);
     await loadAll();
   }
@@ -291,7 +291,7 @@ export function AgendaPage({ session }: { session: AppSession }) {
         return;
       }
       const idComanda = await createComandaFromAppointment(idSalao, item, clientes, servicos);
-      await supabase.from("agendamentos").update({ id_comanda: idComanda, status: "aguardando_pagamento", updated_at: new Date().toISOString() }).eq("id", item.id).eq("id_salao", idSalao);
+      await database.from("agendamentos").update({ id_comanda: idComanda, status: "aguardando_pagamento", updated_at: new Date().toISOString() }).eq("id", item.id).eq("id_salao", idSalao);
       setMsg("Agendamento enviado para o caixa.");
       await loadAll();
     } catch (error) {
@@ -522,14 +522,14 @@ function MiniAction({ title, icon, onClick, danger }: { title: string; icon: Rea
 }
 
 async function createComandaFromAppointment(idSalao: string, item: Agendamento, clientes: Cliente[], servicos: Servico[]) {
-  const rpc = await supabase.rpc("fn_criar_comanda_por_agendamento", { p_id_agendamento: item.id });
+  const rpc = await database.rpc("fn_criar_comanda_por_agendamento", { p_id_agendamento: item.id });
   if (!rpc.error && rpc.data) return String(rpc.data);
 
   const numero = await nextComandaNumber(idSalao);
   const _cliente = clientes.find((row) => row.id === item.cliente_id);
   const servico = servicos.find((row) => row.id === item.servico_id);
     const total = Number(servico?.preco ?? servico?.preco_padrao ?? 0);
-    const { data: comanda, error } = await supabase.from("comandas").insert({
+    const { data: comanda, error } = await database.from("comandas").insert({
       id_salao: idSalao,
       numero,
       id_cliente: item.cliente_id || null,
@@ -543,7 +543,7 @@ async function createComandaFromAppointment(idSalao: string, item: Agendamento, 
   if (error || !comanda?.id) throw error || new Error("Não foi possível criar comanda.");
 
   if (servico?.id) {
-    await supabase.from("comanda_itens").insert({
+    await database.from("comanda_itens").insert({
       id_salao: idSalao,
       id_comanda: comanda.id,
       tipo_item: "servico",
@@ -562,7 +562,7 @@ async function createComandaFromAppointment(idSalao: string, item: Agendamento, 
 }
 
 async function nextComandaNumber(idSalao: string) {
-  const { data } = await supabase.from("comandas").select("numero").eq("id_salao", idSalao).order("numero", { ascending: false }).limit(1);
+  const { data } = await database.from("comandas").select("numero").eq("id_salao", idSalao).order("numero", { ascending: false }).limit(1);
   return Number((data?.[0] as AnyRow | undefined)?.numero || 0) + 1;
 }
 

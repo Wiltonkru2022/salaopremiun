@@ -31,10 +31,10 @@ export async function GET() {
   const session = await getClienteSessionFromCookie();
   if (!session?.idConta) return json({ ok: false, notice: null }, 401);
 
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const now = new Date();
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("notificacoes_globais")
     .select(
       "id, titulo, descricao, tipo, publico_tipo, filtros_json, link_url, imagem_url, status, agendada_em, enviada_em, criada_em"
@@ -58,7 +58,7 @@ export async function GET() {
   if (!candidates.length) return json({ ok: true, notice: null });
 
   const ids = candidates.map((item) => item.id);
-  const { data: states, error: stateError } = await supabase
+  const { data: states, error: stateError } = await database
     .from("notificacoes_cliente_estado")
     .select(
       "id_notificacao, exibida_em, lida_em, dispensada_em, clicada_em"
@@ -93,7 +93,7 @@ export async function GET() {
   const previousState = stateByNotice.get(selected.id);
   if (!previousState?.lida_em || !previousState?.exibida_em) {
     const timestamp = now.toISOString();
-    const { error: trackingError } = await supabase
+    const { error: trackingError } = await database
       .from("notificacoes_cliente_estado")
       .upsert(
         {
@@ -142,8 +142,8 @@ export async function POST(request: Request) {
     return json({ ok: false, error: "Ação inválida." }, 400);
   }
 
-  const supabase = getDatabaseAdmin() as any;
-  const { data: notice, error } = await supabase
+  const database = getDatabaseAdmin() as any;
+  const { data: notice, error } = await database
     .from("notificacoes_globais")
     .select(
       "id, titulo, descricao, tipo, publico_tipo, filtros_json, link_url, imagem_url, status, agendada_em, enviada_em, criada_em"
@@ -179,7 +179,7 @@ export async function POST(request: Request) {
   if (action === "dismiss") update.dispensada_em = timestamp;
   if (action === "click") update.clicada_em = timestamp;
 
-  const { error: upsertError } = await supabase
+  const { error: upsertError } = await database
     .from("notificacoes_cliente_estado")
     .upsert(update, { onConflict: "id_notificacao,cliente_app_conta_id" });
 

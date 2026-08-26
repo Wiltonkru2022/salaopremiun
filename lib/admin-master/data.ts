@@ -304,8 +304,8 @@ function daysUntil(value?: string | null) {
 }
 
 async function countSaloesByStatus(status: string) {
-  const supabase = getDatabaseAdmin();
-  const result = await supabase
+  const database = getDatabaseAdmin();
+  const result = await database
     .from("saloes")
     .select("id", { count: "exact", head: true })
     .eq("status", status);
@@ -313,20 +313,20 @@ async function countSaloesByStatus(status: string) {
 }
 
 export async function getAdminMasterShellData(): Promise<AdminMasterShellData> {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
 
   const [{ count: alertasCriticos, error: alertasError }, { count: ticketsAbertos, error: ticketsError }, { data: auditoria }] =
     await Promise.all([
-      supabase
+      database
         .from("alertas_sistema")
         .select("id", { count: "exact", head: true })
         .eq("resolvido", false)
         .in("gravidade", ["alta", "critica"]),
-      supabase
+      database
         .from("tickets")
         .select("id", { count: "exact", head: true })
         .in("status", ["aberto", "em_atendimento", "aguardando_tecnico"]),
-      supabase
+      database
         .from("admin_master_auditoria")
         .select("id, acao, entidade, descricao, criado_em")
         .order("criado_em", { ascending: false })
@@ -353,7 +353,7 @@ export async function getAdminMasterShellData(): Promise<AdminMasterShellData> {
 }
 
 export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardData> {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   await syncAdminMasterAlerts();
   const operational = await getAdminMasterOperationalSnapshot();
   const inicioMes = new Date();
@@ -385,75 +385,75 @@ export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardDat
     saloesCrescimento,
     assinaturasRecentes,
   ] = await Promise.all([
-    supabase.from("saloes").select("id", { count: "exact", head: true }),
+    database.from("saloes").select("id", { count: "exact", head: true }),
     countSaloesByStatus("ativo"),
     countSaloesByStatus("bloqueado"),
     countSaloesByStatus("cancelado"),
-    supabase
+    database
       .from("assinaturas")
       .select("id", { count: "exact", head: true })
       .in("status", ["teste_gratis", "trial"]),
-    supabase
+    database
       .from("assinaturas")
       .select("id, valor")
       .in("status", ["ativo", "ativa", "pago"]),
-    supabase
+    database
       .from("assinaturas")
       .select("id", { count: "exact", head: true })
       .in("status", ["vencida", "bloqueada", "cancelada"]),
-    supabase
+    database
       .from("assinaturas_cobrancas")
       .select("valor, pago_em, payment_date, confirmed_date, status, created_at")
       .gte("created_at", inicioMesAnterior.toISOString()),
-    supabase
+    database
       .from("assinaturas_cobrancas")
       .select("id", { count: "exact", head: true })
       .lt("data_expiracao", new Date().toISOString())
       .in("status", ["pending", "pendente", "aguardando_pagamento"]),
-    supabase
+    database
       .from("assinatura_checkout_locks")
       .select("id", { count: "exact", head: true })
       .eq("status", "processando"),
-    supabase
+    database
       .from("assinatura_checkout_locks")
       .select("id", { count: "exact", head: true })
       .in("status", ["erro", "expirado"]),
-    supabase
+    database
       .from("tickets")
       .select("id", { count: "exact", head: true })
       .in("status", ["aberto", "em_atendimento", "aguardando_tecnico"]),
-    supabase
+    database
       .from("alertas_sistema")
       .select("id", { count: "exact", head: true })
       .eq("resolvido", false)
       .in("gravidade", ["alta", "critica"]),
-    supabase.from("clientes").select("id", { count: "exact", head: true }),
-    supabase
+    database.from("clientes").select("id", { count: "exact", head: true }),
+    database
       .from("clientes_auth")
       .select("id", { count: "exact", head: true })
       .eq("app_ativo", true)
       .not("app_conta_id", "is", null),
-    supabase
+    database
       .from("clientes")
       .select("id_salao, nome, telefone, whatsapp")
       .or("telefone.not.is.null,whatsapp.not.is.null")
       .limit(300),
-    supabase
+    database
       .from("planos_saas")
       .select("codigo, nome, valor_mensal, destaque")
       .eq("ativo", true)
       .order("ordem", { ascending: true }),
-    supabase
+    database
       .from("saloes")
       .select("id, nome, responsavel, email, plano, status, created_at")
       .order("created_at", { ascending: false })
       .limit(8),
-    supabase
+    database
       .from("saloes")
       .select("id, created_at")
       .gte("created_at", inicioMesAnterior.toISOString())
       .limit(500),
-    supabase
+    database
       .from("assinaturas")
       .select("id, status, trial_inicio_em, pago_em, updated_at, created_at")
       .gte("updated_at", inicioMesAnterior.toISOString())
@@ -651,8 +651,8 @@ export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardDat
 }
 
 export async function getAdminMasterSaloes() {
-  const supabase = getDatabaseAdmin();
-  const { data: saloes } = await supabase
+  const database = getDatabaseAdmin();
+  const { data: saloes } = await database
     .from("saloes")
     .select(
       "id, nome, responsavel, email, telefone, whatsapp, cidade, estado, plano, status, created_at"
@@ -678,13 +678,13 @@ export async function getAdminMasterSaloes() {
 
   const [{ data: assinaturas }, { data: scores }] = await Promise.all([
     salaoIds.length
-      ? supabase
+      ? database
           .from("assinaturas")
           .select("id_salao, plano, status, vencimento_em, trial_fim_em")
           .in("id_salao", salaoIds)
       : Promise.resolve({ data: [] as Array<{ id_salao: string }> }),
     salaoIds.length
-      ? supabase
+      ? database
           .from("score_onboarding_salao")
           .select("id_salao, score_total, atualizado_em")
           .in("id_salao", salaoIds)
@@ -738,7 +738,7 @@ export async function getAdminMasterSaloes() {
 }
 
 export async function getAdminMasterSalaoDetail(idSalao: string) {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const [
     { data: salao },
@@ -752,51 +752,51 @@ export async function getAdminMasterSalaoDetail(idSalao: string) {
     { data: alertasAtivos },
     access,
   ] = await Promise.all([
-    supabase
+    database
       .from("saloes")
       .select("bairro, cep, cidade, complemento, cpf_cnpj, created_at, email, endereco, estado, id, inscricao_estadual, limite_profissionais, limite_usuarios, logo_url, nome, nome_fantasia, numero, plano, razao_social, renovacao_automatica, responsavel, status, telefone, tipo_pessoa, trial_ativo, trial_fim_em, trial_inicio_em, updated_at, whatsapp")
       .eq("id", idSalao)
       .maybeSingle(),
-    supabase
+    database
       .from("assinaturas")
       .select("asaas_credit_card_brand, asaas_credit_card_last4, asaas_credit_card_token, asaas_credit_card_tokenized_at, asaas_customer_id, asaas_payment_id, asaas_subscription_id, asaas_subscription_status, created_at, forma_pagamento_atual, gateway, id, id_cobranca_atual, id_salao, limite_profissionais, limite_usuarios, pago_em, plano, referencia_atual, renovacao_automatica, status, trial_ativo, trial_fim_em, trial_inicio_em, updated_at, valor, vencimento_em")
       .eq("id_salao", idSalao)
       .maybeSingle(),
-    supabase
+    database
       .from("tickets")
       .select("id, numero, assunto, status, prioridade, criado_em")
       .eq("id_salao", idSalao)
       .order("criado_em", { ascending: false })
       .limit(10),
-    supabase
+    database
       .from("assinaturas_cobrancas")
       .select("id, referencia, descricao, valor, status, data_expiracao, pago_em")
       .eq("id_salao", idSalao)
       .order("created_at", { ascending: false })
       .limit(10),
-    supabase
+    database
       .from("admin_master_anotacoes_salao")
       .select("id, titulo, nota, criada_em")
       .eq("id_salao", idSalao)
       .order("criada_em", { ascending: false })
       .limit(10),
-    supabase
+    database
       .from("admin_master_salao_tags")
       .select("admin_master_tags_salao(nome, cor)")
       .eq("id_salao", idSalao),
-    supabase
+    database
       .from("score_saude_salao")
       .select("score_total, uso_recente, inadimplencia_risco, tickets_abertos, risco_cancelamento, atualizado_em")
       .eq("id_salao", idSalao)
       .maybeSingle(),
-    supabase
+    database
       .from("eventos_sistema")
       .select("id, modulo, tipo_evento, severidade, mensagem, rota, acao, response_ms, sucesso, created_at")
       .eq("id_salao", idSalao)
       .gte("created_at", last24h)
       .order("created_at", { ascending: false })
       .limit(20),
-    supabase
+    database
       .from("alertas_sistema")
       .select("id, tipo, gravidade, titulo, descricao, origem_modulo, criado_em, atualizado_em, resolvido")
       .eq("id_salao", idSalao)
@@ -890,21 +890,21 @@ export async function getAdminMasterSalaoDetail(idSalao: string) {
 }
 
 export async function getAdminMasterPlanosSection(): Promise<AdminSectionData> {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const [{ data: planos }, { data: recursos }, { data: assinaturas }, { data: saloes }] = await Promise.all([
-    supabase
+    database
       .from("planos_saas")
       .select(
         "id, codigo, nome, subtitulo, valor_mensal, preco_anual, limite_usuarios, limite_profissionais, destaque, ativo, trial_dias, ideal_para, cta, ordem"
       )
       .order("ordem", { ascending: true }),
-    supabase
+    database
       .from("planos_recursos")
       .select("id_plano, recurso_codigo, habilitado, limite_numero, observacao"),
-    supabase
+    database
       .from("assinaturas")
       .select("plano, status, valor"),
-    supabase
+    database
       .from("saloes")
       .select("plano, status"),
   ]);
@@ -1096,13 +1096,13 @@ export async function getAdminMasterPlanosSection(): Promise<AdminSectionData> {
 }
 
 export async function getAdminMasterRecursosSection(): Promise<AdminSectionData> {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const [{ data: planos }, { data: recursos }] = await Promise.all([
-    supabase
+    database
       .from("planos_saas")
       .select("id, codigo, nome, ativo, ordem")
       .order("ordem", { ascending: true }),
-    supabase
+    database
       .from("planos_recursos")
       .select("id_plano, recurso_codigo, habilitado, limite_numero, observacao"),
   ]);
@@ -1255,7 +1255,7 @@ export async function getAdminMasterRecursosSection(): Promise<AdminSectionData>
 }
 
 async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const inicioMes = new Date();
   inicioMes.setDate(1);
   inicioMes.setHours(0, 0, 0, 0);
@@ -1269,27 +1269,27 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
     { data: cobrancas },
     { data: checkoutLocks },
   ] = await Promise.all([
-      supabase
+      database
         .from("assinaturas")
         .select("id_salao, plano, status, valor, vencimento_em, trial_fim_em, updated_at")
         .order("updated_at", { ascending: false })
         .limit(150),
-      supabase
+      database
         .from("assinaturas")
         .select("valor")
         .in("status", ["ativo", "ativa", "pago"]),
-      supabase
+      database
         .from("assinaturas")
         .select("id", { count: "exact", head: true })
         .in("status", ["vencida", "cancelada", "bloqueada", "inadimplente"]),
-      supabase
+      database
         .from("assinaturas_cobrancas")
         .select(
           "id_salao, referencia, valor, status, forma_pagamento, gateway, data_expiracao, pago_em, payment_date, confirmed_date, created_at"
         )
         .order("created_at", { ascending: false })
         .limit(200),
-      supabase
+      database
         .from("assinatura_checkout_locks")
         .select("id_salao, status, id_cobranca, asaas_payment_id, erro_texto, created_at, updated_at")
         .order("updated_at", { ascending: false })
@@ -1335,7 +1335,7 @@ async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
     )
   ) as string[];
   const { data: saloes } = salaoIds.length
-    ? await supabase
+    ? await database
         .from("saloes")
         .select("id, nome, plano, status")
         .in("id", salaoIds)
@@ -1628,7 +1628,7 @@ function buildGenericRowAction(section: string, row: Record<string, unknown>) {
 export async function getAdminMasterSection(
   section: string
 ): Promise<AdminSectionData> {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
 
   if (section === "suporte") {
     const { items, metrics } = await listAdminTickets();
@@ -1738,14 +1738,14 @@ export async function getAdminMasterSection(
 
   if (section === "notificacoes") {
     const [{ data: notificacoes }, { data: destinos }] = await Promise.all([
-      supabase
+      database
         .from("notificacoes_globais")
         .select(
           "id, titulo, descricao, tipo, publico_tipo, status, agendada_em, enviada_em, criada_em, link_url"
         )
         .order("criada_em", { ascending: false })
         .limit(100),
-      supabase
+      database
         .from("notificacoes_destinos")
         .select("id_notificacao, id_salao, status, entregue_em, lida_em, clicada_em")
         .limit(1000),
@@ -1923,7 +1923,7 @@ export async function getAdminMasterSection(
   }
 
   if (section === "campanhas") {
-    const { data } = await supabase
+    const { data } = await database
       .from("campanhas")
       .select("id, nome, tipo, publico_tipo, objetivo, status, inicio_em, fim_em, criada_em")
       .order("criada_em", { ascending: false })
@@ -2047,24 +2047,24 @@ export async function getAdminMasterSection(
     const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const [{ data: envios }, { data: filas }, { data: saldos }, { data: templates }] =
       await Promise.all([
-        supabase
+        database
           .from("whatsapp_envios")
           .select(
             "id, id_salao, tipo, destino, template, status, custo_creditos, erro_texto, criado_em, enviado_em"
           )
           .order("criado_em", { ascending: false })
           .limit(120),
-        supabase
+        database
           .from("whatsapp_filas")
           .select("id, id_salao, status, tentativas, ultimo_erro, criado_em, processado_em")
           .order("criado_em", { ascending: false })
           .limit(120),
-        supabase
+        database
           .from("whatsapp_pacote_saloes")
           .select("id, id_salao, creditos_total, creditos_usados, creditos_saldo, status, expira_em")
           .order("comprado_em", { ascending: false })
           .limit(200),
-        supabase
+        database
           .from("whatsapp_templates")
           .select("id, nome, categoria, ativo, criado_em")
           .order("criado_em", { ascending: false })
@@ -2081,7 +2081,7 @@ export async function getAdminMasterSection(
       )
     ) as string[];
     const { data: saloes } = salaoIds.length
-      ? await supabase.from("saloes").select("id, nome").in("id", salaoIds).limit(salaoIds.length)
+      ? await database.from("saloes").select("id, nome").in("id", salaoIds).limit(salaoIds.length)
       : { data: [] as Array<{ id: string; nome?: string | null }> };
     const salaoById = new Map(
       ((saloes || []) as { id: string; nome?: string | null }[]).map((salao) => [
@@ -2261,12 +2261,12 @@ export async function getAdminMasterSection(
 
   if (section === "feature-flags") {
     const [{ data: flags }, { data: releases }] = await Promise.all([
-      supabase
+      database
         .from("feature_flags")
         .select("id, nome, descricao, status_global, tipo_liberacao, planos_json, data_inicio, data_fim, criado_em")
         .order("criado_em", { ascending: false })
         .limit(100),
-      supabase
+      database
         .from("feature_flag_saloes")
         .select("id_feature_flag, id_salao, ativo, criado_em")
         .limit(1000),
@@ -2372,18 +2372,18 @@ export async function getAdminMasterSection(
 
   if (section === "usuarios-admin") {
     const [{ data: admins }, { data: permissions }, { data: audits }] = await Promise.all([
-      supabase
+      database
         .from("admin_master_usuarios")
         .select("id, nome, email, perfil, status, ultimo_acesso_em, criado_em, atualizado_em")
         .order("atualizado_em", { ascending: false })
         .limit(100),
-      supabase
+      database
         .from("admin_master_permissoes")
         .select(
           "id, id_admin_master_usuario, dashboard_ver, saloes_ver, saloes_editar, saloes_entrar_como, financeiro_ver, relatorios_ver, assinaturas_ver, assinaturas_ajustar, cobrancas_ver, cobrancas_reprocessar, planos_editar, recursos_editar, produto_ver, operacao_ver, operacao_reprocessar, tickets_ver, tickets_editar, suporte_ver, notificacoes_editar, campanhas_editar, comunicacao_ver, whatsapp_ver, whatsapp_editar, feature_flags_editar, usuarios_admin_ver, usuarios_admin_editar, auditoria_ver, criado_em, atualizado_em"
         )
         .limit(200),
-      supabase
+      database
         .from("admin_master_auditoria")
         .select("id_admin_usuario, acao, criado_em")
         .order("criado_em", { ascending: false })
@@ -2489,17 +2489,17 @@ export async function getAdminMasterSection(
 
   if (section === "configuracoes-globais") {
     const [{ data: configs }, { data: history }, { data: admins }] = await Promise.all([
-      supabase
+      database
         .from("configuracoes_globais")
         .select("id, chave, descricao, valor_json, atualizado_por, atualizado_em")
         .order("atualizado_em", { ascending: false })
         .limit(120),
-      supabase
+      database
         .from("configuracoes_globais_historico")
         .select("chave, atualizado_por, atualizado_em")
         .order("atualizado_em", { ascending: false })
         .limit(250),
-      supabase
+      database
         .from("admin_master_usuarios")
         .select("id, nome")
         .limit(200),
@@ -2592,7 +2592,7 @@ export async function getAdminMasterSection(
   }
 
   if (section === "assinaturas") {
-    const { data } = await supabase
+    const { data } = await database
       .from("assinaturas")
       .select(
         "id, id_salao, plano, status, valor, vencimento_em, trial_fim_em, renovacao_automatica, asaas_customer_id, forma_pagamento_atual, asaas_credit_card_token, asaas_subscription_id"
@@ -2620,10 +2620,10 @@ export async function getAdminMasterSection(
 
     const [{ data: saloes }, { data: cobrancas }] = await Promise.all([
       salaoIds.length
-        ? supabase.from("saloes").select("id, nome").in("id", salaoIds).limit(salaoIds.length)
+        ? database.from("saloes").select("id, nome").in("id", salaoIds).limit(salaoIds.length)
         : Promise.resolve({ data: [] as Array<{ id: string; nome?: string | null }> }),
       salaoIds.length
-        ? supabase
+        ? database
             .from("assinaturas_cobrancas")
             .select("id_salao, status, data_expiracao, pago_em, created_at")
             .in("id_salao", salaoIds)
@@ -2903,14 +2903,14 @@ export async function getAdminMasterSection(
 
   if (section === "cobrancas") {
     const [{ data: cobrancas }, { data: checkoutLocks }] = await Promise.all([
-      supabase
+      database
         .from("assinaturas_cobrancas")
         .select(
           "id, id_salao, referencia, valor, status, forma_pagamento, gateway, data_expiracao, pago_em, created_at, asaas_payment_id, txid, idempotency_key"
         )
         .order("created_at", { ascending: false })
         .limit(100),
-      supabase
+      database
         .from("assinatura_checkout_locks")
         .select(
           "id, id_salao, plano_codigo, billing_type, valor, idempotency_key, status, id_cobranca, asaas_payment_id, erro_texto, expires_at, created_at, updated_at"
@@ -2930,7 +2930,7 @@ export async function getAdminMasterSection(
       )
     ) as string[];
     const { data: saloes } = salaoIds.length
-      ? await supabase.from("saloes").select("id, nome").in("id", salaoIds).limit(salaoIds.length)
+      ? await database.from("saloes").select("id, nome").in("id", salaoIds).limit(salaoIds.length)
       : { data: [] as Array<{ id: string; nome?: string | null }> };
 
     const salaoById = new Map(
@@ -3238,7 +3238,7 @@ export async function getAdminMasterSection(
           : "Falha ao sincronizar eventos reais do Asaas.";
     }
 
-    const { data: eventos } = await supabase
+    const { data: eventos } = await database
       .from("eventos_webhook")
       .select(
         "chave, origem, evento, id_salao, status, tentativas, erro_texto, payload_json, resposta_json, recebido_em, processado_em"
@@ -3254,7 +3254,7 @@ export async function getAdminMasterSection(
       )
     ) as string[];
     const { data: saloes } = webhookSalaoIds.length
-      ? await supabase
+      ? await database
           .from("saloes")
           .select("id, nome")
           .in("id", webhookSalaoIds)
@@ -3416,12 +3416,12 @@ export async function getAdminMasterSection(
 
     const [{ data: crons }, { data: webhooks }, { data: checkoutLocks }] =
       await Promise.all([
-      supabase
+      database
         .from("eventos_cron")
         .select("nome, status, resumo, erro_texto, iniciado_em, finalizado_em")
         .order("iniciado_em", { ascending: false })
         .limit(40),
-      supabase
+      database
         .from("eventos_webhook")
         .select(
           "evento, id_salao, status, erro_texto, resposta_json, recebido_em, processado_em"
@@ -3429,7 +3429,7 @@ export async function getAdminMasterSection(
         .in("status", ["erro", "pendente"])
         .order("recebido_em", { ascending: false })
         .limit(40),
-      supabase
+      database
         .from("assinatura_checkout_locks")
         .select(
           "id, id_salao, plano_codigo, billing_type, status, id_cobranca, asaas_payment_id, erro_texto, idempotency_key, created_at, updated_at"
@@ -3452,7 +3452,7 @@ export async function getAdminMasterSection(
       )
     ) as string[];
     const { data: saloes } = operacaoSalaoIds.length
-      ? await supabase
+      ? await database
           .from("saloes")
           .select("id, nome")
           .in("id", operacaoSalaoIds)
@@ -3626,7 +3626,7 @@ export async function getAdminMasterSection(
 
   if (section === "alertas") {
     const sync = await syncAdminMasterAlerts();
-    const { data: alertas } = await supabase
+    const { data: alertas } = await database
       .from("alertas_sistema")
       .select(
         "id, tipo, gravidade, origem_modulo, id_salao, titulo, descricao, payload_json, resolvido, resolvido_em, criado_em, atualizado_em, automatico, id_ticket"
@@ -3661,10 +3661,10 @@ export async function getAdminMasterSection(
 
     const [{ data: saloes }, { data: tickets }] = await Promise.all([
       salaoIds.length
-        ? supabase.from("saloes").select("id, nome").in("id", salaoIds).limit(salaoIds.length)
+        ? database.from("saloes").select("id, nome").in("id", salaoIds).limit(salaoIds.length)
         : Promise.resolve({ data: [] as Array<{ id: string; nome?: string | null }> }),
       ticketIds.length
-        ? supabase
+        ? database
             .from("tickets")
             .select("id, numero, status")
             .in("id", ticketIds)
@@ -3850,14 +3850,14 @@ export async function getAdminMasterSection(
   if (section === "logs") {
     const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const [{ data: logs }, { data: checkoutLocks }, { data: eventosSistema }] = await Promise.all([
-      supabase
+      database
         .from("logs_sistema")
         .select(
           "id, gravidade, modulo, id_salao, mensagem, detalhes_json, criado_em"
         )
         .order("criado_em", { ascending: false })
         .limit(120),
-      supabase
+      database
         .from("assinatura_checkout_locks")
         .select(
           "id, id_salao, plano_codigo, billing_type, status, id_cobranca, asaas_payment_id, erro_texto, idempotency_key, created_at, updated_at"
@@ -3867,7 +3867,7 @@ export async function getAdminMasterSection(
         .is("id_cobranca", null)
         .order("updated_at", { ascending: false })
         .limit(60),
-      supabase
+      database
         .from("eventos_sistema")
         .select(
           "id, id_salao, modulo, tipo_evento, severidade, mensagem, rota, acao, response_ms, sucesso, created_at"
@@ -3891,7 +3891,7 @@ export async function getAdminMasterSection(
       )
     ) as string[];
     const { data: saloes } = salaoIds.length
-      ? await supabase.from("saloes").select("id, nome").in("id", salaoIds).limit(salaoIds.length)
+      ? await database.from("saloes").select("id, nome").in("id", salaoIds).limit(salaoIds.length)
       : { data: [] as Array<{ id: string; nome?: string | null }> };
 
     const salaoById = new Map(
@@ -4233,7 +4233,7 @@ export async function getAdminMasterSection(
     actions: ["Abrir logs", "Auditar"],
   };
 
-  const adminQueryClient = supabase as unknown as {
+  const adminQueryClient = database as unknown as {
     from(table: string): {
       select(columns: string): {
         limit(count: number): Promise<{ data: unknown[] | null }>;
@@ -4288,7 +4288,7 @@ export async function getAdminMasterSection(
         label: "Fonte real",
         value: config.table,
         detail:
-          "Esta tela lê os registros diretamente do Supabase usado pelo SalãoPremium.",
+          "Esta tela lê os registros diretamente do Neon usado pelo SalãoPremium.",
         tone: "blue",
       },
       {

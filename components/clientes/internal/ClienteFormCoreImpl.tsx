@@ -48,7 +48,7 @@ import {
 import { Card, Input, Select, Switch, Textarea } from "./ClienteFormFields";
 
 export default function ClienteForm({ modo }: ClienteFormProps) {
-  const supabase = createClient();
+  const database = createClient();
   const router = useRouter();
   const params = useParams();
   const clienteId = typeof params?.id === "string" ? params.id : "";
@@ -87,7 +87,7 @@ export default function ClienteForm({ modo }: ClienteFormProps) {
       setIdSalao(usuarioLogado.idSalao);
       setCliente((prev) => ({ ...prev, id_salao: usuarioLogado.idSalao }));
 
-      const { data: listaProfissionais, error: profissionaisError } = await supabase
+      const { data: listaProfissionais, error: profissionaisError } = await database
         .from("profissionais")
         .select("id, nome")
         .eq("id_salao", usuarioLogado.idSalao)
@@ -109,7 +109,7 @@ export default function ClienteForm({ modo }: ClienteFormProps) {
   }
 
   async function carregarCliente(id: string, salaoId: string) {
-    const { data: clienteRows, error: clienteError } = await supabase
+    const { data: clienteRows, error: clienteError } = await database
       .from("clientes")
       .select("ativo, atualizado_em, bairro, cashback, cep, cidade, cpf, created_at, data_nascimento, deleted_at, email, endereco, estado, foto_url, id, id_salao, nome, nome_social, numero, observacoes, profissao, rua, status, telefone, whatsapp")
       .eq("id", id)
@@ -147,7 +147,7 @@ export default function ClienteForm({ modo }: ClienteFormProps) {
       ativo: String(row.ativo || "ativo").toLowerCase() === "ativo",
     });
 
-    const { data: fichaRows } = await supabase
+    const { data: fichaRows } = await database
       .from("clientes_ficha_tecnica")
       .select("alergias, condicoes_couro_cabeludo_pele, created_at, gestante, historico_quimico, id, id_cliente, id_salao, lactante, observacoes_tecnicas, restricoes_quimicas, updated_at, uso_medicamentos")
       .eq("id_cliente", id)
@@ -167,7 +167,7 @@ export default function ClienteForm({ modo }: ClienteFormProps) {
       });
     }
 
-    const { data: prefRows } = await supabase
+    const { data: prefRows } = await database
       .from("clientes_preferencias")
       .select("bebida_favorita, como_conheceu_salao, created_at, estilo_atendimento, frequencia_visitas, id, id_cliente, id_salao, preferencias_gerais, profissional_favorito_id, revistas_assuntos_preferidos, updated_at")
       .eq("id_cliente", id)
@@ -186,7 +186,7 @@ export default function ClienteForm({ modo }: ClienteFormProps) {
       });
     }
 
-    const { data: autRows } = await supabase
+    const { data: autRows } = await database
       .from("clientes_autorizacoes")
       .select("autoriza_email_marketing, autoriza_uso_imagem, autoriza_whatsapp_marketing, created_at, data_aceite_lgpd, id, id_cliente, id_salao, observacoes_autorizacao, termo_lgpd_aceito, updated_at")
       .eq("id_cliente", id)
@@ -203,7 +203,7 @@ export default function ClienteForm({ modo }: ClienteFormProps) {
       });
     }
 
-    const { data: authRows } = await supabase
+    const { data: authRows } = await database
       .from("clientes_auth")
       .select("app_ativo, created_at, email, id, id_cliente, id_salao, reset_token, reset_token_expira_em, senha_hash, ultimo_login_em, updated_at")
       .eq("id_cliente", id)

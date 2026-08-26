@@ -37,16 +37,16 @@ function statusStyle(status: string) {
 
 export default async function AdminMasterWhatsappRecargasPage() {
   await requireAdminMasterUser("whatsapp_ver");
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const now = new Date().toISOString();
 
-  await supabase
+  await database
     .from("whatsapp_creditos_recargas")
     .update({ status: "expirado", atualizado_em: now })
     .eq("status", "pendente")
     .lte("expira_em", now);
 
-  const { data: recargas, error } = await supabase
+  const { data: recargas, error } = await database
     .from("whatsapp_creditos_recargas")
     .select(
       "id, id_salao, status, valor_centavos, billing_type, asaas_payment_id, criado_em, expira_em, pago_em, creditado_em, erro_texto, atualizado_em"
@@ -59,7 +59,7 @@ export default async function AdminMasterWhatsappRecargasPage() {
   const rows = (recargas || []) as Array<Record<string, unknown>>;
   const salaoIds = [...new Set(rows.map((row) => String(row.id_salao || "")).filter(Boolean))];
   const { data: saloes } = salaoIds.length
-    ? await supabase.from("saloes").select("id, nome, responsavel").in("id", salaoIds)
+    ? await database.from("saloes").select("id, nome, responsavel").in("id", salaoIds)
     : { data: [] };
   const salaoMap = new Map<string, string>(
     (saloes || []).map((salao: Record<string, unknown>) => [

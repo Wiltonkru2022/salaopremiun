@@ -103,7 +103,7 @@ export default async function AdminMasterRelatoriosPage({
   const currentStartMs = now - days * DAY_MS;
   const previousStartMs = now - days * 2 * DAY_MS;
   const previousStartIso = new Date(previousStartMs).toISOString();
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
 
   const [
     { data: saloesData },
@@ -113,12 +113,12 @@ export default async function AdminMasterRelatoriosPage({
     { data: comandasData },
     { data: saudeData },
   ] = await Promise.all([
-    (supabase as any).from("saloes").select("id, nome, cidade, estado, plano, status, created_at").order("created_at", { ascending: false }).limit(300),
-    (supabase as any).from("assinaturas_saloes").select("id_salao, status, trial_ativo, valor_mensal").limit(300),
-    (supabase as any).from("assinaturas_cobrancas").select("id_salao, valor, status, created_at, pago_em, paid_em, data_expiracao").gte("created_at", previousStartIso).limit(1200),
-    (supabase as any).from("agendamentos").select("id_salao, status, origem, created_at, data").gte("created_at", previousStartIso).limit(2500),
-    (supabase as any).from("comandas").select("id_salao, status, total, created_at, fechada_em").gte("created_at", previousStartIso).limit(2500),
-    (supabase as any).from("score_saude_salao").select("id_salao, score_total, uso_recente, inadimplencia_risco, tickets_abertos, risco_cancelamento, atualizado_em").order("score_total", { ascending: true }).limit(200),
+    (database as any).from("saloes").select("id, nome, cidade, estado, plano, status, created_at").order("created_at", { ascending: false }).limit(300),
+    (database as any).from("assinaturas_saloes").select("id_salao, status, trial_ativo, valor_mensal").limit(300),
+    (database as any).from("assinaturas_cobrancas").select("id_salao, valor, status, created_at, pago_em, paid_em, data_expiracao").gte("created_at", previousStartIso).limit(1200),
+    (database as any).from("agendamentos").select("id_salao, status, origem, created_at, data").gte("created_at", previousStartIso).limit(2500),
+    (database as any).from("comandas").select("id_salao, status, total, created_at, fechada_em").gte("created_at", previousStartIso).limit(2500),
+    (database as any).from("score_saude_salao").select("id_salao, score_total, uso_recente, inadimplencia_risco, tickets_abertos, risco_cancelamento, atualizado_em").order("score_total", { ascending: true }).limit(200),
   ]);
 
   const saloes = (saloesData || []) as SalonRow[];

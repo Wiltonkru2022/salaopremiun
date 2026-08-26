@@ -40,15 +40,15 @@ export default async function AdminMasterSalaoDetalhePage({
   const data = await getAdminMasterSalaoDetail(id);
   const salao = data.salao || {};
   const assinatura = data.assinatura || {};
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
 
-  const { data: planos } = await supabase
+  const { data: planos } = await database
     .from("planos_saas")
     .select("codigo, nome")
     .eq("ativo", true)
     .order("ordem", { ascending: true });
 
-  const { data: trialControle } = await supabase
+  const { data: trialControle } = await database
     .from("assinaturas")
     .select("trial_fim_em, email_trial_3d_sent_at, email_trial_1d_sent_at, email_trial_today_sent_at, email_trial_expired_sent_at")
     .eq("id_salao", id)

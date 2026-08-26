@@ -61,8 +61,8 @@ export async function GET(request: NextRequest) {
   }
 
   const expiresAt = new Date(Date.now() + Number(tokenData.expires_in || 3300) * 1000);
-  const supabase = getDatabaseAdmin();
-  const { error } = await (supabase as any)
+  const database = getDatabaseAdmin();
+  const { error } = await (database as any)
     .from("saloes_google_calendar_connections")
     .upsert(
       {

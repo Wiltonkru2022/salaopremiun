@@ -180,7 +180,7 @@ function resolveStatus(
 export async function getWhatsappCreditosPainelData(
   idSalao: string
 ): Promise<WhatsAppCreditosPainelData> {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
 
   const [
     resumoResult,
@@ -189,16 +189,16 @@ export async function getWhatsappCreditosPainelData(
     recargasResult,
     templatesResult,
   ] = await Promise.all([
-    supabase.rpc("fn_whatsapp_creditos_resumo", {
+    database.rpc("fn_whatsapp_creditos_resumo", {
       p_id_salao: idSalao,
     }),
-    supabase
+    database
       .from("whatsapp_tarifas")
       .select(
         "id, tipo_interno, categoria_meta, nome, descricao, custo_base_meta_centavos, preco_venda_centavos, margem_centavos, ativo, atualizado_em"
       )
       .order("ordem", { ascending: true }),
-    supabase
+    database
       .from("whatsapp_creditos_movimentacoes")
       .select(
         "id, tipo, valor_centavos, saldo_depois_centavos, categoria, tipo_interno, descricao, criado_em"
@@ -206,14 +206,14 @@ export async function getWhatsappCreditosPainelData(
       .eq("id_salao", idSalao)
       .order("criado_em", { ascending: false })
       .limit(30),
-    supabase
+    database
       .from("whatsapp_creditos_recargas")
       .select("id, status, valor_centavos, invoice_url, pix_copia_cola, criado_em")
       .eq("id_salao", idSalao)
       .in("status", ["pendente", "expirado"])
       .order("criado_em", { ascending: false })
       .limit(5),
-    supabase
+    database
       .from("whatsapp_templates")
       .select("id, nome, categoria, conteudo, ativo, criado_em")
       .order("criado_em", { ascending: false })
@@ -283,8 +283,8 @@ export async function getWhatsappCreditosPainelData(
 }
 
 async function carregarSalao(idSalao: string) {
-  const supabase = getDatabaseAdmin();
-  const { data, error } = await supabase
+  const database = getDatabaseAdmin();
+  const { data, error } = await database
     .from("saloes")
     .select("id, nome, responsavel, email, telefone, whatsapp, cpf_cnpj")
     .eq("id", idSalao)
@@ -329,9 +329,9 @@ export async function criarWhatsappCreditosCheckout(params: {
     throw new WhatsAppCreditosServiceError("O valor maximo por recarga e R$ 2.000,00.", 400);
   }
 
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
 
-  const { data: existente, error: existenteError } = await supabase
+  const { data: existente, error: existenteError } = await database
     .from("whatsapp_creditos_recargas")
     .select(
       "id, status, valor_centavos, billing_type, asaas_payment_id, invoice_url, bank_slip_url, pix_copia_cola, qr_code_base64"
@@ -377,7 +377,7 @@ export async function criarWhatsappCreditosCheckout(params: {
   const recargaId = randomUUID();
   const externalReference = `whatsapp_credit_topup:${recargaId}`;
 
-  const { error: insertError } = await supabase
+  const { error: insertError } = await database
     .from("whatsapp_creditos_recargas")
     .insert({
       id: recargaId,
@@ -427,7 +427,7 @@ export async function criarWhatsappCreditosCheckout(params: {
     }
   }
 
-  const { error: updateError } = await supabase
+  const { error: updateError } = await database
     .from("whatsapp_creditos_recargas")
     .update({
       asaas_payment_id: paymentId,

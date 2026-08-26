@@ -26,9 +26,9 @@ export default async function ClienteAgendamentoSinalPage({
   const query = searchParams ? await searchParams : undefined;
   const salaoId = Array.isArray(query?.salao) ? query.salao[0] : query?.salao;
   const session = await requireClienteAppContext();
-  const supabaseAdmin = getDatabaseAdmin();
+  const databaseAdmin = getDatabaseAdmin();
 
-  const { data: agendamento } = await (supabaseAdmin as any)
+  const { data: agendamento } = await (databaseAdmin as any)
     .from("agendamentos")
     .select("id, cliente_id, id_salao, data, hora_inicio, status, sinal_valor, sinal_percentual, sinal_pix_chave, sinal_pix_recebedor, sinal_pix_cidade, reserva_expira_em, servicos(nome, preco_padrao, preco), profissionais(nome, nome_exibicao)")
     .eq("id", id)
@@ -36,7 +36,7 @@ export default async function ClienteAgendamentoSinalPage({
 
   if (!agendamento?.id) redirect("/app-cliente/agendamentos");
 
-  const { data: vinculo } = await (supabaseAdmin as any)
+  const { data: vinculo } = await (databaseAdmin as any)
     .from("clientes_auth")
     .select("id_cliente")
     .eq("id_cliente", agendamento.cliente_id)

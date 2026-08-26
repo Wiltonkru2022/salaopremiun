@@ -13,8 +13,8 @@ export async function GET() {
     );
   }
 
-  const supabase = getDatabaseAdmin() as any;
-  const { data, error } = await supabase
+  const database = getDatabaseAdmin() as any;
+  const { data, error } = await database
     .from("parceria_campanhas")
     .select("id, locais_exibicao")
     .order("criado_em", { ascending: false })

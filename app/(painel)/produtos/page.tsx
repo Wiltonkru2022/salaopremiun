@@ -68,7 +68,7 @@ function getMargemPercentual(produto: Produto) {
 }
 
 export default function ProdutosPage() {
-  const supabase = useMemo(() => createClient(), []);
+  const database = useMemo(() => createClient(), []);
   const router = useRouter();
   const { snapshot: painelSession } = usePainelSession();
   const { planoAccess } = usePlanoAccessSnapshot(true);
@@ -143,7 +143,7 @@ export default function ProdutosPage() {
       const from = page * PRODUTOS_PAGE_SIZE;
       const to = from + PRODUTOS_PAGE_SIZE - 1;
 
-      let query = supabase
+      let query = database
         .from("produtos")
         .select(
           [
@@ -191,7 +191,7 @@ export default function ProdutosPage() {
       setProdutosTotal(count ?? (append ? from + rows.length : rows.length));
       setProdutosHasMore((count ?? 0) > to + 1);
     },
-    [supabase, statusFiltro, buscaAplicada]
+    [database, statusFiltro, buscaAplicada]
   );
 
   const bootstrap = useCallback(async () => {

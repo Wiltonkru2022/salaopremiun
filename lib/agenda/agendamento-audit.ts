@@ -4,7 +4,7 @@ type OrigemAgendamento = "app_cliente" | "app_profissional" | "painel";
 type AtorAgendamento = "cliente" | "profissional" | "painel";
 
 type RegistrarCriacaoAgendamentoParams = {
-  supabase: any;
+  database: any;
   idSalao: string;
   idAgendamento: string;
   idCliente: string;
@@ -27,7 +27,7 @@ function origemLabel(origem: OrigemAgendamento) {
  * A agenda nunca deve falhar porque a trilha de auditoria ficou indisponivel.
  */
 export async function registrarCriacaoAgendamento({
-  supabase,
+  database,
   idSalao,
   idAgendamento,
   idCliente,
@@ -49,7 +49,7 @@ export async function registrarCriacaoAgendamento({
   };
 
   try {
-    const { data: existente, error: existingError } = await (supabase as any)
+    const { data: existente, error: existingError } = await (database as any)
       .from("clientes_timeline")
       .select("id")
       .eq("id_salao", idSalao)
@@ -66,7 +66,7 @@ export async function registrarCriacaoAgendamento({
       return true;
     }
 
-    const { error } = await (supabase as any).from("clientes_timeline").insert({
+    const { error } = await (database as any).from("clientes_timeline").insert({
       id_salao: idSalao,
       id_cliente: idCliente,
       tipo: "agendamento",

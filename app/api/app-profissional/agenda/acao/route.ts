@@ -51,9 +51,9 @@ export async function POST(request: Request) {
       action: `app_profissional_pwa_${action}`,
       actorId: session.idProfissional,
       idSalao: session.idSalao,
-      run: async (supabase) => {
+      run: async (database) => {
         if (action === "remover") {
-          let blockQuery = (supabase as any)
+          let blockQuery = (database as any)
             .from("agenda_bloqueios")
             .select("id, profissional_id")
             .eq("id", idAgendamento)
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
           if (blockLoadError) throw new Error(blockLoadError.message);
 
           if (block?.id) {
-            let deleteBlockQuery = (supabase as any)
+            let deleteBlockQuery = (database as any)
               .from("agenda_bloqueios")
               .delete()
               .eq("id", idAgendamento)
@@ -83,7 +83,7 @@ export async function POST(request: Request) {
           }
         }
 
-        let query = (supabase as any)
+        let query = (database as any)
           .from("agendamentos")
           .select("id, profissional_id, cliente_id, servico_id, data, hora_inicio, hora_fim, status, sinal_status")
           .eq("id", idAgendamento)
@@ -106,7 +106,7 @@ export async function POST(request: Request) {
             throw new Error("Este agendamento não pode mais ser cancelado.");
           }
 
-          const { error } = await (supabase as any)
+          const { error } = await (database as any)
             .from("agendamentos")
             .update({
               status: "cancelado",
@@ -138,7 +138,7 @@ export async function POST(request: Request) {
               : null;
 
             await notifyWaitlistAboutReleasedSlot({
-              supabaseAdmin: supabase,
+              databaseAdmin: database,
               releasedSlot: {
                 idSalao: session.idSalao,
                 idServico: current.servico_id || null,
@@ -156,7 +156,7 @@ export async function POST(request: Request) {
         }
 
         if (action === "confirmar_pix") {
-          const { data: profissional, error: profissionalError } = await (supabase as any)
+          const { data: profissional, error: profissionalError } = await (database as any)
             .from("profissionais")
             .select("sinal_confirmacao_responsavel")
             .eq("id", current.profissional_id)
@@ -169,7 +169,7 @@ export async function POST(request: Request) {
           if (String(current.sinal_status || "").toLowerCase() !== "comprovante_enviado") {
             throw new Error("Este agendamento nao possui comprovante Pix aguardando confirmacao.");
           }
-          const { error } = await (supabase as any)
+          const { error } = await (database as any)
             .from("agendamentos")
             .update({
               sinal_status: "confirmado",
@@ -187,7 +187,7 @@ export async function POST(request: Request) {
         }
 
         if (action === "confirmar") {
-          const { error } = await (supabase as any)
+          const { error } = await (database as any)
             .from("agendamentos")
             .update({
               status: "confirmado",
@@ -224,14 +224,14 @@ export async function POST(request: Request) {
           });
 
           const [appointmentsResult, blocksResult] = await Promise.all([
-            (supabase as any)
+            (database as any)
               .from("agendamentos")
               .select("id, hora_inicio, hora_fim, status")
               .eq("id_salao", session.idSalao)
               .eq("profissional_id", current.profissional_id)
               .eq("data", data)
               .neq("id", idAgendamento),
-            (supabase as any)
+            (database as any)
               .from("agenda_bloqueios")
               .select("id, hora_inicio, hora_fim")
               .eq("id_salao", session.idSalao)
@@ -256,7 +256,7 @@ export async function POST(request: Request) {
             throw new Error("Esse horário já possui outro agendamento ou bloqueio.");
           }
 
-          const { error } = await (supabase as any)
+          const { error } = await (database as any)
             .from("agendamentos")
             .update({
               data,

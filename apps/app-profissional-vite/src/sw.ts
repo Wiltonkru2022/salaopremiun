@@ -27,7 +27,7 @@ precacheAndRoute(self.__WB_MANIFEST);
 
 // JS e CSS do app são versionados pelo precache do Workbox. Não use CacheFirst
 // nesses arquivos, pois isso pode manter um bundle antigo ativo depois do deploy.
-// Respostas de API, Auth e REST do Supabase nunca são persistidas pelo Service Worker.
+// Respostas de API, Auth e REST do Neon nunca são persistidas pelo Service Worker.
 registerRoute(
   ({ request, url }) =>
     url.origin === self.location.origin &&
@@ -54,8 +54,8 @@ self.addEventListener("activate", (event) => {
       // Remove caches antigos, inclusive o que podia guardar respostas privadas.
       caches.delete("salaopremiun-assets"),
       caches.delete("salaopremiun-static-media-v2"),
-      caches.delete("salaopremiun-supabase-api"),
-      caches.delete("salaopremium-supabase-api"),
+      caches.delete("salaopremiun-database-api"),
+      caches.delete("salaopremium-database-api"),
     ])
   );
 });

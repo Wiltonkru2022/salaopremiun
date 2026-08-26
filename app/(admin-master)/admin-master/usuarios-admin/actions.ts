@@ -27,7 +27,7 @@ function normalizeEmail(value: string) {
 
 export async function salvarUsuarioAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("usuarios_admin_editar");
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const id = textValue(formData, "id");
   const nome = textValue(formData, "nome");
   const email = normalizeEmail(textValue(formData, "email"));
@@ -47,8 +47,8 @@ export async function salvarUsuarioAdminMaster(formData: FormData) {
   };
 
   const query = id
-    ? supabase.from("admin_master_usuarios").update(userPayload).eq("id", id).select("id").single()
-    : supabase.from("admin_master_usuarios").insert(userPayload).select("id").single();
+    ? database.from("admin_master_usuarios").update(userPayload).eq("id", id).select("id").single()
+    : database.from("admin_master_usuarios").insert(userPayload).select("id").single();
 
   const { data, error } = await query;
 
@@ -74,7 +74,7 @@ export async function salvarUsuarioAdminMaster(formData: FormData) {
     }
   );
 
-  const { error: permissionError } = await supabase
+  const { error: permissionError } = await database
     .from("admin_master_permissoes")
     .upsert(permissionPayload, { onConflict: "id_admin_master_usuario" });
 

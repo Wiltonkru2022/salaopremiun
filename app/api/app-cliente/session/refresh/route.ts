@@ -20,8 +20,8 @@ async function readRestoreToken(request: Request) {
 }
 
 async function validateSessionAgainstAccount(session: ClienteAppSession) {
-  const supabase = asLooseDbClient(getDatabaseAdmin());
-  const { data: account, error } = await supabase
+  const database = asLooseDbClient(getDatabaseAdmin());
+  const { data: account, error } = await database
     .from("clientes_app_auth")
     .select("id, nome, email, telefone, whatsapp, ativo, auth_version")
     .eq("id", session.idConta)

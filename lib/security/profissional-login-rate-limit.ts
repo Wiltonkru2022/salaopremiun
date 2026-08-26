@@ -46,8 +46,8 @@ async function getState(key: string): Promise<AttemptStateRow | null> {
     AdminOperationResult<AttemptStateRow | null>
   >({
     action: "profissional_login_rate_limit_get_state",
-    run: async (supabaseAdmin) => {
-      const result = await supabaseAdmin
+    run: async (databaseAdmin) => {
+      const result = await databaseAdmin
         .from("profissional_login_rate_limits")
         .select(
           "chave, tentativas, primeira_tentativa_em, bloqueado_ate, atualizado_em"
@@ -71,8 +71,8 @@ async function getState(key: string): Promise<AttemptStateRow | null> {
 async function deleteState(key: string) {
   const { error } = await runAdminOperation<AdminOperationResult>({
     action: "profissional_login_rate_limit_delete_state",
-    run: async (supabaseAdmin) => {
-      const result = await supabaseAdmin
+    run: async (databaseAdmin) => {
+      const result = await databaseAdmin
         .from("profissional_login_rate_limits")
         .delete()
         .eq("chave", key);
@@ -90,8 +90,8 @@ async function deleteState(key: string) {
 async function upsertState(state: AttemptStateRow) {
   const { error } = await runAdminOperation<AdminOperationResult>({
     action: "profissional_login_rate_limit_upsert_state",
-    run: async (supabaseAdmin) => {
-      const result = await supabaseAdmin.from("profissional_login_rate_limits").upsert(state, {
+    run: async (databaseAdmin) => {
+      const result = await databaseAdmin.from("profissional_login_rate_limits").upsert(state, {
         onConflict: "chave",
       });
       return {

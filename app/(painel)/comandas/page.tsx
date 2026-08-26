@@ -90,7 +90,7 @@ function getStatusMeta(status: string) {
 }
 
 export default function ComandasPage() {
-  const supabase = createClient();
+  const database = createClient();
   const router = useRouter();
   const { snapshot: painelSession } = usePainelSession();
 
@@ -145,7 +145,7 @@ export default function ComandasPage() {
       const from = page * COMANDAS_PAGE_SIZE;
       const to = from + COMANDAS_PAGE_SIZE - 1;
 
-      let comandasQuery = supabase
+      let comandasQuery = database
         .from("comandas")
         .select(`
           id,
@@ -181,7 +181,7 @@ export default function ComandasPage() {
       let clientesMap = new Map<string, string>();
 
       if (idsClientes.length > 0) {
-        const { data: clientesData, error: clientesError } = await supabase
+        const { data: clientesData, error: clientesError } = await database
           .from("clientes")
           .select("id, nome")
           .in("id", idsClientes);
@@ -210,7 +210,7 @@ export default function ComandasPage() {
       setComandasTotal(count ?? (append ? from + rows.length : rows.length));
       setComandasHasMore((count ?? 0) > to + 1);
     },
-    [supabase, statusFiltro]
+    [database, statusFiltro]
   );
 
   const bootstrap = useCallback(async () => {

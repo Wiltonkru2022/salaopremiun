@@ -15,14 +15,14 @@ function money(value: unknown) {
 }
 
 export async function getAdminMasterSmartActions(): Promise<AdminMasterSmartAction[]> {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const now = new Date();
   const nowIso = now.toISOString();
   const today = nowIso.slice(0, 10);
   const trialSoon = new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000).toISOString();
 
   const [ticketResult, failedCheckoutResult, overdueChargeResult, riskAlertResult, trialResult] = await Promise.all([
-    supabase
+    database
       .from("tickets")
       .select("id, id_salao, numero, assunto, sla_limite_em")
       .neq("origem", "app_profissional_login")
@@ -30,20 +30,20 @@ export async function getAdminMasterSmartActions(): Promise<AdminMasterSmartActi
       .lt("sla_limite_em", nowIso)
       .order("sla_limite_em", { ascending: true })
       .limit(1),
-    supabase
+    database
       .from("assinatura_checkout_locks")
       .select("id, id_salao, plano_codigo, valor, erro_texto, created_at")
       .eq("status", "erro")
       .order("created_at", { ascending: false })
       .limit(1),
-    supabase
+    database
       .from("assinaturas_cobrancas")
       .select("id, id_salao, referencia, valor, status, data_expiracao")
       .in("status", ["pending", "pendente", "aguardando_pagamento"])
       .lt("data_expiracao", today)
       .order("data_expiracao", { ascending: true })
       .limit(1),
-    supabase
+    database
       .from("alertas_sistema")
       .select("id, id_salao, titulo, descricao, gravidade, tipo, atualizado_em")
       .eq("resolvido", false)
@@ -51,7 +51,7 @@ export async function getAdminMasterSmartActions(): Promise<AdminMasterSmartActi
       .not("id_salao", "is", null)
       .order("atualizado_em", { ascending: false })
       .limit(1),
-    supabase
+    database
       .from("assinaturas")
       .select("id, id_salao, plano, status, trial_fim_em")
       .in("status", ["teste_gratis", "trial"])
@@ -76,7 +76,7 @@ export async function getAdminMasterSmartActions(): Promise<AdminMasterSmartActi
   ].filter(Boolean))) as string[];
 
   const { data: saloes } = salonIds.length
-    ? await supabase.from("saloes").select("id, nome").in("id", salonIds).limit(salonIds.length)
+    ? await database.from("saloes").select("id, nome").in("id", salonIds).limit(salonIds.length)
     : { data: [] as Array<{ id: string; nome?: string | null }> };
   const salonById = new Map(((saloes || []) as Array<{ id: string; nome?: string | null }>).map((item) => [item.id, item.nome || "Salão"]));
   const salonName = (id?: string | null) => (id ? salonById.get(id) || "Salão" : "Salão");

@@ -50,7 +50,7 @@ export function createEstoqueMutacaoService() {
     }) {
       try {
         await reportOperationalIncident({
-          supabaseAdmin: getDatabaseAdmin(),
+          databaseAdmin: getDatabaseAdmin(),
           key: `estoque:movimentacao_manual:${params.idSalao}`,
           module: "estoque",
           title: "Movimentacao manual de estoque falhou",

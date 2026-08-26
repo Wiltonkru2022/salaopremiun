@@ -25,8 +25,8 @@ export default async function ClienteMigrationCampaignPage({
   const params = searchParams ? await searchParams : undefined;
   const clienteFiltro = String(params?.cliente || "").trim();
 
-  const supabase = getDatabaseAdmin();
-  const { data: rows, error } = await supabase
+  const database = getDatabaseAdmin();
+  const { data: rows, error } = await database
     .from("clientes")
     .select("id, nome, whatsapp, telefone, email, cpf, data_nascimento, status, ativo")
     .eq("id_salao", usuario.id_salao)
@@ -48,7 +48,7 @@ export default async function ClienteMigrationCampaignPage({
 
   const ids = candidates.map((row) => row.id);
   const { data: authRows } = ids.length
-    ? await supabase
+    ? await database
         .from("clientes_auth")
         .select("id_cliente, app_conta_id, app_ativo")
         .eq("id_salao", usuario.id_salao)

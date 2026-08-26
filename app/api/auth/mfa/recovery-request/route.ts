@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { clerkAdminCompat } from "@/lib/platform/clerk-admin.server";
 import {
   buildMfaRecoveryMessage,
   buildMfaRecoverySubject,
@@ -11,7 +11,6 @@ import { createSuporteTicketService } from "@/services/suporteTicketService";
 
 export async function POST() {
   try {
-    const supabaseAdmin = getDatabaseAdmin();
     const service = createSuporteTicketService();
     const { user, usuario } = await getPainelUserContext({ allowAdminAal1: true });
 
@@ -23,7 +22,7 @@ export async function POST() {
     }
 
     const { data: factorsData, error: factorError } =
-      await supabaseAdmin.auth.admin.mfa.listFactors({
+      await clerkAdminCompat.mfa.listFactors({
         userId: user.id,
       });
 

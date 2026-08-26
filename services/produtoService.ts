@@ -5,7 +5,7 @@ type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
 type ProdutoPayload = Database["public"]["Tables"]["produtos"]["Insert"];
 
 export function createProdutoService(
-  supabaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
+  databaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
 ) {
   return {
     async salvar(params: {
@@ -14,7 +14,7 @@ export function createProdutoService(
       payload: Record<string, unknown>;
     }) {
       if (params.idProduto) {
-        const { data, error } = await supabaseAdmin
+        const { data, error } = await databaseAdmin
           .from("produtos")
           .update(params.payload as ProdutoPayload)
           .eq("id", params.idProduto)
@@ -30,7 +30,7 @@ export function createProdutoService(
         return { idProduto: data.id };
       }
 
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("produtos")
         .insert(params.payload as ProdutoPayload)
         .select("id")
@@ -48,7 +48,7 @@ export function createProdutoService(
       idProduto: string;
       ativo: boolean;
     }) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("produtos")
         .update({
           ativo: params.ativo,
@@ -80,17 +80,17 @@ export function createProdutoService(
         { count: consumoServicoCount, error: consumoServicoError },
         { count: comandaItensCount, error: comandaItensError },
       ] = await Promise.all([
-        supabaseAdmin
+        databaseAdmin
           .from("produtos_movimentacoes")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", params.idSalao)
           .eq("id_produto", params.idProduto),
-        supabaseAdmin
+        databaseAdmin
           .from("produto_servico_consumo")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", params.idSalao)
           .eq("id_produto", params.idProduto),
-        supabaseAdmin
+        databaseAdmin
           .from("comanda_itens")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", params.idSalao)
@@ -109,7 +109,7 @@ export function createProdutoService(
     },
 
     async excluir(params: { idSalao: string; idProduto: string }) {
-      const { error } = await supabaseAdmin.rpc("fn_excluir_produto_catalogo", {
+      const { error } = await databaseAdmin.rpc("fn_excluir_produto_catalogo", {
         p_id_salao: params.idSalao,
         p_id_produto: params.idProduto,
       });

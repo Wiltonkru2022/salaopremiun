@@ -48,7 +48,7 @@ export default [
     },
 
     rules: {
-      // IMPORTANTE: não travar dev em integrações Supabase/RPC ainda sem tipos gerados
+      // IMPORTANTE: não travar dev em integrações Neon/RPC ainda sem tipos gerados
       "@typescript-eslint/no-explicit-any": "off",
 
       // hooks funcionando corretamente

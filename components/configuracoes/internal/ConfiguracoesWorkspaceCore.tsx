@@ -78,7 +78,7 @@ export default function ConfiguracoesPageClient({
 }: {
   secao: ConfiguracoesSecao;
 }) {
-  const supabase = createClient();
+  const database = createClient();
   const { snapshot: painelSession } = usePainelSession();
   const { planoAccess, upgradeTarget } = usePlanoAccessSnapshot(
     secao === "usuarios"
@@ -153,7 +153,7 @@ export default function ConfiguracoesPageClient({
       const salaoIdFinal = salaoIdParam || idSalao;
       if (!salaoIdFinal) return;
 
-      const { data, error } = await supabase
+      const { data, error } = await database
         .from("usuarios")
         .select("id, id_salao, nome, email, nivel, status, auth_user_id, created_at")
         .eq("id_salao", salaoIdFinal)
@@ -166,7 +166,7 @@ export default function ConfiguracoesPageClient({
 
       setUsuarios((data as UsuarioSistema[]) || []);
     },
-    [supabase, idSalao]
+    [database, idSalao]
   );
 
   const init = useCallback(async () => {
@@ -192,8 +192,8 @@ export default function ConfiguracoesPageClient({
         { data: salaoData, error: salaoError },
         { data: configData, error: configError },
       ] = await Promise.all([
-        supabase.from("saloes").select("bairro, cep, cidade, complemento, cpf_cnpj, created_at, email, endereco, estado, id, inscricao_estadual, limite_profissionais, limite_usuarios, logo_url, nome, nome_fantasia, numero, plano, razao_social, renovacao_automatica, responsavel, status, telefone, tipo_pessoa, trial_ativo, trial_fim_em, trial_inicio_em, updated_at, whatsapp").eq("id", painelSession.idSalao).maybeSingle(),
-        (supabase as any)
+        database.from("saloes").select("bairro, cep, cidade, complemento, cpf_cnpj, created_at, email, endereco, estado, id, inscricao_estadual, limite_profissionais, limite_usuarios, logo_url, nome, nome_fantasia, numero, plano, razao_social, renovacao_automatica, responsavel, status, telefone, tipo_pessoa, trial_ativo, trial_fim_em, trial_inicio_em, updated_at, whatsapp").eq("id", painelSession.idSalao).maybeSingle(),
+        (database as any)
           .from("configuracoes_salao")
           .select(CONFIG_SELECT)
           .eq("id_salao", painelSession.idSalao)
@@ -297,7 +297,7 @@ export default function ConfiguracoesPageClient({
     } finally {
       setLoading(false);
     }
-  }, [supabase, carregarUsuarios, painelSession]);
+  }, [database, carregarUsuarios, painelSession]);
 
   useEffect(() => {
     if (salaoForm.status === "teste_gratis") {
@@ -380,7 +380,7 @@ export default function ConfiguracoesPageClient({
       updated_at: new Date().toISOString(),
     };
 
-    const { data, error } = await (supabase as any)
+    const { data, error } = await (database as any)
       .from("configuracoes_salao")
       .upsert(dataToSave, { onConflict: "id_salao" })
       .select(CONFIG_SELECT)
@@ -449,7 +449,7 @@ export default function ConfiguracoesPageClient({
       setErroTela("");
       setMsg("");
 
-      const { error } = await supabase
+      const { error } = await database
         .from("saloes")
         .update({
           nome: salaoForm.nome,

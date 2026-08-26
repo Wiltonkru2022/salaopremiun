@@ -47,7 +47,7 @@ export function PrivacidadePage() {
       <ShieldCheck className="text-emerald-600" size={28} />
       <h2 className="mt-5 text-2xl font-black tracking-[-0.05em]">Privacidade e termos</h2>
       <p className="mt-3 text-sm font-semibold leading-7 text-zinc-600">
-        O app usa dados de agenda, clientes e comandas somente para operacao do salao. Senhas nao aparecem na tela e o login do teste usa uma RPC segura no Supabase.
+        O app usa dados de agenda, clientes e comandas somente para operacao do salao. Senhas nao aparecem na tela e o login do teste usa uma RPC segura no Neon.
       </p>
     </Card>
   );

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createComandaService } from '@/services/comandaService';
 
-const mockSupabaseAdmin = {
+const mockDatabaseAdmin = {
   from: vi.fn(() => ({
     select: vi.fn(() => ({
       eq: vi.fn(() => ({
@@ -62,7 +62,7 @@ describe('createComandaService', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    service = createComandaService(mockSupabaseAdmin as any);
+    service = createComandaService(mockDatabaseAdmin as any);
   });
 
   describe('criarPorAgendamento', () => {
@@ -81,7 +81,7 @@ describe('createComandaService', () => {
       expect(result.idComanda).toBe('comanda-123');
       expect(result.jaExistia).toBe(false);
       expect(processarCriacaoPorAgendamento).toHaveBeenCalledWith({
-        supabaseAdmin: mockSupabaseAdmin,
+        databaseAdmin: mockDatabaseAdmin,
         idSalao: 'salao-1',
         idAgendamento: 'agend-123',
       });
@@ -105,7 +105,7 @@ describe('createComandaService', () => {
       expect(result.idComanda).toBe('comanda-123');
       expect(result.numero).toBe(1);
       expect(salvarBaseComanda).toHaveBeenCalledWith({
-        supabaseAdmin: mockSupabaseAdmin,
+        databaseAdmin: mockDatabaseAdmin,
         idSalao: 'salao-1',
         comanda: { numero: 1, status: 'aberta' },
       });
@@ -152,7 +152,7 @@ describe('createComandaService', () => {
       expect(result.idComanda).toBe('comanda-123');
       expect(result.idItem).toBe('item-456');
       expect(adicionarItemComanda).toHaveBeenCalledWith({
-        supabaseAdmin: mockSupabaseAdmin,
+        databaseAdmin: mockDatabaseAdmin,
         idSalao: 'salao-1',
         comanda: { idComanda: 'comanda-123' },
         item: { tipo_item: 'servico', id_servico: 'serv-1' },

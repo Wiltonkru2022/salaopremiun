@@ -24,7 +24,7 @@ export function createCaixaRouteService() {
     }) {
       try {
         await reportOperationalIncident({
-          supabaseAdmin: getDatabaseAdmin(),
+          databaseAdmin: getDatabaseAdmin(),
           key: `caixa:processar:${params.acaoRaw || "desconhecida"}:${params.idSalao}`,
           module: "caixa",
           title: "Processamento de caixa falhou",

@@ -68,7 +68,7 @@ export function getVendaPermissionByAcao(acao: AcaoVenda) {
 }
 
 export async function validarComandaVenda(params: {
-  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
+  databaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   idSalao: string;
   idComanda: string;
 }) {
@@ -92,17 +92,17 @@ export async function carregarContextoVenda(params: {
 
   return {
     membership,
-    supabaseAdmin: getDatabaseAdmin(),
+    databaseAdmin: getDatabaseAdmin(),
   };
 }
 
 export async function obterDetalhesVenda(params: {
-  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
+  databaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   idComanda: string;
 }) {
-  const { supabaseAdmin, idComanda } = params;
+  const { databaseAdmin, idComanda } = params;
 
-  const { data, error } = await supabaseAdmin.rpc("fn_detalhes_venda", {
+  const { data, error } = await databaseAdmin.rpc("fn_detalhes_venda", {
     p_id_comanda: idComanda,
   });
 
@@ -128,7 +128,7 @@ export async function obterDetalhesVenda(params: {
       : null;
 
   if ((!clienteAtual || !clienteAtual.cpf) && comanda?.id_cliente) {
-    const { data: cliente } = await supabaseAdmin
+    const { data: cliente } = await databaseAdmin
       .from("clientes")
       .select("nome, cpf")
       .eq("id", String(comanda.id_cliente))
@@ -154,14 +154,14 @@ export async function obterDetalhesVenda(params: {
 }
 
 export async function reabrirVenda(params: {
-  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
+  databaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   idSalao: string;
   idComanda: string;
   motivo?: string | null;
   idUsuario: string;
 }) {
-  const { supabaseAdmin, idSalao, idComanda, motivo, idUsuario } = params;
-  const { data: configuracao, error: configuracaoError } = await supabaseAdmin
+  const { databaseAdmin, idSalao, idComanda, motivo, idUsuario } = params;
+  const { data: configuracao, error: configuracaoError } = await databaseAdmin
     .from("configuracoes_salao")
     .select("permitir_reabrir_venda")
     .eq("id_salao", idSalao)
@@ -178,7 +178,7 @@ export async function reabrirVenda(params: {
   }
 
   return executarMutacaoComandaComEstoque({
-    supabaseAdmin,
+    databaseAdmin,
     idSalao,
     idComanda,
     idUsuario,
@@ -186,7 +186,7 @@ export async function reabrirVenda(params: {
     sourceAction: "reabrir_venda",
     stockMode: "revert",
     mutate: async () => {
-      const { error } = await supabaseAdmin.rpc("fn_reabrir_venda_para_caixa", {
+      const { error } = await databaseAdmin.rpc("fn_reabrir_venda_para_caixa", {
         p_id_comanda: idComanda,
         p_motivo: sanitizeText(motivo) || undefined,
         p_reopened_by: idUsuario,
@@ -207,15 +207,15 @@ export async function reabrirVenda(params: {
 }
 
 export async function excluirVenda(params: {
-  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
+  databaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   idSalao: string;
   idComanda: string;
   motivo?: string | null;
   idUsuario: string;
 }) {
-  const { supabaseAdmin, idSalao, idComanda, motivo, idUsuario } = params;
+  const { databaseAdmin, idSalao, idComanda, motivo, idUsuario } = params;
   return executarMutacaoComandaComEstoque({
-    supabaseAdmin,
+    databaseAdmin,
     idSalao,
     idComanda,
     idUsuario,
@@ -223,7 +223,7 @@ export async function excluirVenda(params: {
     sourceAction: "excluir_venda",
     stockMode: "revert",
     mutate: async () => {
-      const { error } = await supabaseAdmin.rpc("fn_excluir_venda_completa", {
+      const { error } = await databaseAdmin.rpc("fn_excluir_venda_completa", {
         p_id_comanda: idComanda,
         p_motivo: sanitizeText(motivo) || undefined,
         p_deleted_by: idUsuario,

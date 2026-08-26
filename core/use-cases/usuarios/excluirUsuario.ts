@@ -69,13 +69,13 @@ export async function excluirUsuarioUseCase(params: {
 
       if (authDeleteError) {
         authAviso =
-          "Usuário removido das tabelas, mas não foi possível excluir do Supabase Auth.";
+          "Usuário removido das tabelas, mas não foi possível excluir do Neon Auth.";
       } else {
         authRemovido = true;
       }
     } else {
       authAviso =
-        "Usuário removido das tabelas. Não havia auth_user_id para excluir no Supabase Auth.";
+        "Usuário removido das tabelas. Não havia auth_user_id para excluir no Neon Auth.";
     }
 
     return {

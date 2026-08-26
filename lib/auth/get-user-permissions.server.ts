@@ -7,8 +7,8 @@ export type UserPermissionsRow = Record<string, unknown> | null;
 
 const getCachedUserPermissions = unstable_cache(
   async (idSalao: string, idUsuario: string): Promise<UserPermissionsRow> => {
-    const supabaseAdmin = getDatabaseAdmin();
-    const { data, error } = await supabaseAdmin
+    const databaseAdmin = getDatabaseAdmin();
+    const { data, error } = await databaseAdmin
       .from("usuarios_permissoes")
       .select(SELECT_USUARIOS_PERMISSOES)
       .eq("id_usuario", idUsuario)

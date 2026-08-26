@@ -146,9 +146,9 @@ export default function AppShell({
     await monitorClientOperation(
       { module: "auth", action: "logout", screen: "painel_shell", successMessage: "Logout executado com sucesso.", errorMessage: "Falha ao encerrar sessão." },
       async () => {
-        const supabase = createClient();
+        const database = createClient();
         try {
-          await supabase.auth.signOut({ scope: "local" });
+          await database.auth.signOut({ scope: "local" });
         } finally {
           try { window.localStorage.removeItem(PAINEL_SESSION_STORAGE_KEY); } catch {}
         }

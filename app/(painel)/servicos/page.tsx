@@ -70,7 +70,7 @@ function formatMinutes(value?: number | null) {
 }
 
 export default function ServicosPage() {
-  const supabase = useMemo(() => createClient(), []);
+  const database = useMemo(() => createClient(), []);
   const router = useRouter();
   const { snapshot: painelSession } = usePainelSession();
 
@@ -145,7 +145,7 @@ export default function ServicosPage() {
       const from = page * SERVICOS_PAGE_SIZE;
       const to = from + SERVICOS_PAGE_SIZE - 1;
 
-      let query = supabase
+      let query = database
         .from("servicos")
         .select(
           [
@@ -194,7 +194,7 @@ export default function ServicosPage() {
       setServicosTotal(count ?? 0);
       setServicosHasMore((count ?? 0) > to + 1);
     },
-    [buscaAplicada, statusFiltro, supabase]
+    [buscaAplicada, statusFiltro, database]
   );
 
   const bootstrap = useCallback(async () => {

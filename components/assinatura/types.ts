@@ -83,7 +83,7 @@ export type CheckoutResponse = {
   error?: string;
 };
 
-export type UsuarioSupabase = {
+export type UsuarioDatabase = {
   id: string;
   email?: string;
   user_metadata?: Record<string, unknown>;

@@ -26,8 +26,8 @@ export async function GET(request: Request) {
       action: "app_profissional_pwa_comissoes",
       actorId: session.idProfissional,
       idSalao: session.idSalao,
-      run: async (supabase) => {
-        let query = (supabase as any)
+      run: async (database) => {
+        let query = (database as any)
           .from("comissoes_lancamentos")
           .select("id, id_profissional, descricao, valor_base, valor_comissao, percentual, percentual_aplicado, status, competencia, competencia_data, pago_em, criado_em")
           .eq("id_salao", session.idSalao)

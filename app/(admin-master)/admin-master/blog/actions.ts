@@ -10,7 +10,7 @@ import {
 } from "@/lib/db/loose-client";
 import { enviarNewsletterPostPublicado } from "@/services/blogNewsletterEmail";
 
-type BlogSupabaseClient = LooseDbClient;
+type BlogDatabaseClient = LooseDbClient;
 
 type BlogPostStatus = "rascunho" | "publicado" | "arquivado";
 
@@ -70,8 +70,8 @@ function isUnsafeCategory(category?: { slug?: string | null; nome?: string | nul
   );
 }
 
-async function getDefaultCategoryId(supabase: BlogSupabaseClient) {
-  const { data: existing, error: existingError } = await supabase
+async function getDefaultCategoryId(database: BlogDatabaseClient) {
+  const { data: existing, error: existingError } = await database
     .from("blog_categorias")
     .select("id")
     .eq("slug", "agenda-online")
@@ -80,7 +80,7 @@ async function getDefaultCategoryId(supabase: BlogSupabaseClient) {
   if (existingError) throw existingError;
   if (existing?.id) return existing.id;
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("blog_categorias")
     .upsert(
       {
@@ -99,15 +99,15 @@ async function getDefaultCategoryId(supabase: BlogSupabaseClient) {
   return data.id;
 }
 
-async function resolveCategoryId(supabase: BlogSupabaseClient, value: string) {
+async function resolveCategoryId(database: BlogDatabaseClient, value: string) {
   const cleanValue = value.trim();
 
   if (!cleanValue) {
-    return getDefaultCategoryId(supabase);
+    return getDefaultCategoryId(database);
   }
 
   if (isUuid(cleanValue)) {
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from("blog_categorias")
       .select("id, slug, nome")
       .eq("id", cleanValue)
@@ -116,15 +116,15 @@ async function resolveCategoryId(supabase: BlogSupabaseClient, value: string) {
     if (error) throw error;
     if (data?.id && !isUnsafeCategory(data)) return data.id;
 
-    return getDefaultCategoryId(supabase);
+    return getDefaultCategoryId(database);
   }
 
   if (isUuidLikeCategory(cleanValue)) {
-    return getDefaultCategoryId(supabase);
+    return getDefaultCategoryId(database);
   }
 
   const slug = slugify(cleanValue || "agenda-online");
-  const { data: existing, error: existingError } = await supabase
+  const { data: existing, error: existingError } = await database
     .from("blog_categorias")
     .select("id, slug, nome")
     .eq("slug", slug)
@@ -134,10 +134,10 @@ async function resolveCategoryId(supabase: BlogSupabaseClient, value: string) {
   if (existing?.id && !isUnsafeCategory(existing)) return existing.id;
 
   if (isUnsafeCategory(existing)) {
-    return getDefaultCategoryId(supabase);
+    return getDefaultCategoryId(database);
   }
 
-  const { data, error } = await supabase
+  const { data, error } = await database
     .from("blog_categorias")
     .upsert(
       {
@@ -180,8 +180,8 @@ export async function createBlogCategory(formData: FormData) {
     throw new Error("Use um nome de categoria em português, não um código interno.");
   }
 
-  const supabase = asLooseDbClient(getBlogDatabase());
-  const { error } = await supabase.from("blog_categorias").upsert(
+  const database = asLooseDbClient(getBlogDatabase());
+  const { error } = await database.from("blog_categorias").upsert(
     {
       nome,
       slug,
@@ -239,17 +239,17 @@ export async function createBlogPost(
   const safeDescricao = descricao || "Rascunho em edição.";
   const safeConteudo = conteudo || "<p></p>";
   const now = new Date().toISOString();
-  const supabase = asLooseDbClient(getBlogDatabase());
+  const database = asLooseDbClient(getBlogDatabase());
 
   try {
-    const resolvedCategoryId = await resolveCategoryId(supabase, categoriaId);
+    const resolvedCategoryId = await resolveCategoryId(database, categoriaId);
     const { data: existingPost } = id
-      ? await supabase
+      ? await database
           .from("blog_posts")
           .select("status")
           .eq("id", id)
           .maybeSingle<{ status?: string | null }>()
-      : await supabase
+      : await database
           .from("blog_posts")
           .select("status")
           .eq("slug", slug)
@@ -276,10 +276,10 @@ export async function createBlogPost(
     };
 
     const { error } = id
-      ? await supabase
+      ? await database
           .from("blog_posts")
           .upsert({ ...payload, id }, { onConflict: "id" })
-      : await supabase.from("blog_posts").upsert(payload, { onConflict: "slug" });
+      : await database.from("blog_posts").upsert(payload, { onConflict: "slug" });
 
     if (error) {
       return {
@@ -332,8 +332,8 @@ export async function deleteBlogPost(formData: FormData) {
     throw new Error("Post inválido para exclusão.");
   }
 
-  const supabase = asLooseDbClient(getBlogDatabase());
-  const { error } = await supabase.from("blog_posts").delete().eq("id", id);
+  const database = asLooseDbClient(getBlogDatabase());
+  const { error } = await database.from("blog_posts").delete().eq("id", id);
 
   if (error) {
     throw new Error(`Não foi possível excluir o post: ${error.message}`);

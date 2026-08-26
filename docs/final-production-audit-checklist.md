@@ -41,7 +41,7 @@ Checklist final antes de promover um release do SalãoPremium.
 
 ## Auth e tenant
 
-- [ ] Painel: Supabase Auth + usuário/salão coerentes;
+- [ ] Painel: Neon Auth + usuário/salão coerentes;
 - [ ] App Cliente: login/cadastro/recuperação funcionam;
 - [ ] App Profissional Vite: CPF/senha, session e logout funcionam;
 - [ ] Admin Master: guard próprio;

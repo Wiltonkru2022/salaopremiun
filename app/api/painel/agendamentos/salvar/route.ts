@@ -76,9 +76,9 @@ async function assertMonthlyLimit(params: {
   const limite = access.limites.agendamentosMensais;
   if (limite == null) return;
 
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const range = getMonthRange(params.date);
-  const { count, error } = await (supabase as any)
+  const { count, error } = await (database as any)
     .from("agendamentos")
     .select("id", { count: "exact", head: true })
     .eq("id_salao", params.idSalao)
@@ -172,29 +172,29 @@ export async function POST(request: Request) {
     });
     const horaFim = normalizeTime(horario.horaFim);
 
-    const supabase = getDatabaseAdmin();
+    const database = getDatabaseAdmin();
     const [clienteResult, conflitosResult, bloqueiosResult, currentResult, comandaResult] =
       await Promise.all([
-        (supabase as any)
+        (database as any)
           .from("clientes")
           .select("id")
           .eq("id", idCliente)
           .eq("id_salao", usuario.id_salao)
           .maybeSingle(),
-        (supabase as any)
+        (database as any)
           .from("agendamentos")
           .select("id, hora_inicio, hora_fim, status")
           .eq("id_salao", usuario.id_salao)
           .eq("profissional_id", idProfissional)
           .eq("data", data),
-        (supabase as any)
+        (database as any)
           .from("agenda_bloqueios")
           .select("id, hora_inicio, hora_fim")
           .eq("id_salao", usuario.id_salao)
           .eq("profissional_id", idProfissional)
           .eq("data", data),
         idAgendamento
-          ? (supabase as any)
+          ? (database as any)
               .from("agendamentos")
               .select("id, data, hora_inicio, status, id_comanda")
               .eq("id", idAgendamento)
@@ -202,7 +202,7 @@ export async function POST(request: Request) {
               .maybeSingle()
           : Promise.resolve({ data: null, error: null }),
         idComanda
-          ? (supabase as any)
+          ? (database as any)
               .from("comandas")
               .select("id, id_cliente")
               .eq("id", idComanda)
@@ -280,14 +280,14 @@ export async function POST(request: Request) {
 
     let savedId = idAgendamento;
     if (idAgendamento) {
-      const { error } = await (supabase as any)
+      const { error } = await (database as any)
         .from("agendamentos")
         .update(dataToSave)
         .eq("id", idAgendamento)
         .eq("id_salao", usuario.id_salao);
       if (error) throw new Error(error.message);
     } else {
-      const { data: inserted, error } = await (supabase as any)
+      const { data: inserted, error } = await (database as any)
         .from("agendamentos")
         .insert({
           id_salao: usuario.id_salao,
@@ -308,7 +308,7 @@ export async function POST(request: Request) {
 
       if (savedId) {
         await registrarCriacaoAgendamento({
-          supabase,
+          database,
           idSalao: usuario.id_salao,
           idAgendamento: savedId,
           idCliente,

@@ -73,19 +73,19 @@ export default async function CompararPlanosPage({
   const query = searchParams ? await searchParams : undefined;
   const erro = firstParam(query?.erro);
   const { user, usuario } = await getPainelUserContext();
-  const supabaseAdmin = getDatabaseAdmin();
+  const databaseAdmin = getDatabaseAdmin();
 
   let planoAtual = "teste_gratis";
   let jaPossuiAssinatura = false;
 
   if (user && usuario?.id_salao) {
     const [{ data: assinatura }, { data: salao }] = await Promise.all([
-      supabaseAdmin
+      databaseAdmin
         .from("assinaturas")
         .select("id, plano, status")
         .eq("id_salao", usuario.id_salao)
         .maybeSingle(),
-      supabaseAdmin
+      databaseAdmin
         .from("saloes")
         .select("plano, status")
         .eq("id", usuario.id_salao)

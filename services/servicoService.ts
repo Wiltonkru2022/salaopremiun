@@ -9,11 +9,11 @@ export type CategoriaServicoResult = {
 type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
 
 export function createServicoService(
-  supabaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
+  databaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
 ) {
   return {
     async criarOuObterCategoria(params: { idSalao: string; nome: string }) {
-      const { data, error } = await supabaseAdmin.rpc(
+      const { data, error } = await databaseAdmin.rpc(
         "fn_get_or_create_servico_categoria",
         {
           p_id_salao: params.idSalao,
@@ -37,7 +37,7 @@ export function createServicoService(
     },
 
     async obterCategoria(params: { idSalao: string; idCategoria: string }) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("servicos_categorias")
         .select("id, nome")
         .eq("id", params.idCategoria)
@@ -63,7 +63,7 @@ export function createServicoService(
       consumos: unknown[];
       comboItens: unknown[];
     }) {
-      const { data, error } = await supabaseAdmin.rpc(
+      const { data, error } = await databaseAdmin.rpc(
         "fn_salvar_servico_catalogo_transacional",
         {
           p_id_salao: params.idSalao,
@@ -101,7 +101,7 @@ export function createServicoService(
       }
 
       if (Object.keys(camposServicoAtualizados).length) {
-        const { error: updateVisibilityError } = await supabaseAdmin
+        const { error: updateVisibilityError } = await databaseAdmin
           .from("servicos")
           .update(camposServicoAtualizados)
           .eq("id", idServico)
@@ -118,7 +118,7 @@ export function createServicoService(
       idServico: string;
       ativo: boolean;
     }) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await databaseAdmin
         .from("servicos")
         .update({
           ativo: params.ativo,
@@ -145,7 +145,7 @@ export function createServicoService(
     },
 
     async excluir(params: { idSalao: string; idServico: string }) {
-      const { error } = await supabaseAdmin.rpc("fn_excluir_servico_catalogo", {
+      const { error } = await databaseAdmin.rpc("fn_excluir_servico_catalogo", {
         p_id_salao: params.idSalao,
         p_id_servico: params.idServico,
       });

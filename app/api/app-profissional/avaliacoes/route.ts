@@ -26,8 +26,8 @@ export async function GET(request: Request) {
       action: "app_profissional_pwa_avaliacoes",
       actorId: session.idProfissional,
       idSalao: session.idSalao,
-      run: async (supabase) => {
-        let appointmentQuery = (supabase as any)
+      run: async (database) => {
+        let appointmentQuery = (database as any)
           .from("agendamentos")
           .select("id, profissional_id, cliente_id, servico_id")
           .eq("id_salao", session.idSalao)
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
         );
 
         const [evaluationResult, clientsResult, servicesResult, professionalsResult] = await Promise.all([
-          (supabase as any)
+          (database as any)
             .from("clientes_avaliacoes")
             .select("id, id_cliente, id_agendamento, nota, comentario, created_at")
             .eq("id_salao", session.idSalao)
@@ -63,13 +63,13 @@ export async function GET(request: Request) {
             .order("created_at", { ascending: false })
             .limit(500),
           clientIds.length
-            ? (supabase as any).from("clientes").select("id, nome").eq("id_salao", session.idSalao).in("id", clientIds)
+            ? (database as any).from("clientes").select("id, nome").eq("id_salao", session.idSalao).in("id", clientIds)
             : Promise.resolve({ data: [], error: null }),
           serviceIds.length
-            ? (supabase as any).from("servicos").select("id, nome").eq("id_salao", session.idSalao).in("id", serviceIds)
+            ? (database as any).from("servicos").select("id, nome").eq("id_salao", session.idSalao).in("id", serviceIds)
             : Promise.resolve({ data: [], error: null }),
           professionalIds.length
-            ? (supabase as any).from("profissionais").select("id, nome, nome_exibicao").eq("id_salao", session.idSalao).in("id", professionalIds)
+            ? (database as any).from("profissionais").select("id, nome, nome_exibicao").eq("id_salao", session.idSalao).in("id", professionalIds)
             : Promise.resolve({ data: [], error: null }),
         ]);
 

@@ -12,6 +12,8 @@ import {
   buildMfaRecoveryRejectedMessage,
 } from "@/lib/auth/mfa-recovery";
 import { registrarLogSistema } from "@/lib/system-logs";
+import { clerkAdminCompat } from "@/lib/platform/clerk-admin.server";
+import { cloudinaryStorageCompat } from "@/lib/platform/cloudinary-storage-compat.server";
 import type { Json } from "@/types/database.generated";
 import crypto from "node:crypto";
 
@@ -486,14 +488,14 @@ function normalizeTicketAttachments(value: unknown): TicketAttachment[] {
 }
 
 async function signTicketAttachments(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  database: Awaited<ReturnType<typeof createClient>>,
   attachments: TicketAttachment[]
 ) {
   if (!attachments.length) return [];
 
   const signed = await Promise.all(
     attachments.map(async (attachment) => {
-      const { data } = await supabase.storage
+      const { data } = await cloudinaryStorageCompat
         .from(attachment.bucket)
         .createSignedUrl(attachment.path, 60 * 60);
 
@@ -508,11 +510,11 @@ async function signTicketAttachments(
 }
 
 async function mapTicketMessage(
-  supabase: Awaited<ReturnType<typeof createClient>>,
+  database: Awaited<ReturnType<typeof createClient>>,
   row: TicketMessageRow
 ): Promise<TicketDetailMessage> {
   const anexos = await signTicketAttachments(
-    supabase,
+    database,
     normalizeTicketAttachments(row.anexos_json)
   );
 
@@ -587,8 +589,8 @@ export async function listSalaoTickets(idSalao: string) {
   return runAdminOperation({
     action: "support_list_salao_tickets",
     idSalao,
-    run: async (supabase) => {
-      const { data: tickets, error } = await supabase
+    run: async (database) => {
+      const { data: tickets, error } = await database
         .from("tickets")
         .select(
           "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, sla_limite_em, origem_contexto"
@@ -607,7 +609,7 @@ export async function listSalaoTickets(idSalao: string) {
 
       if (ids.length > 0) {
         const mensagensLimit = Math.max(ids.length * 3, 150);
-        const { data: mensagens, error: mensagensError } = await supabase
+        const { data: mensagens, error: mensagensError } = await database
           .from("ticket_mensagens")
           .select(
             "id, id_ticket, mensagem, criada_em, autor_tipo, autor_nome, interna"
@@ -653,7 +655,7 @@ export type AdminTicketListParams = {
 export async function listAdminTickets(params?: AdminTicketListParams) {
   return runAdminOperation({
     action: "support_list_admin_tickets",
-    run: async (supabase) => {
+    run: async (database) => {
       const limit = Math.min(Math.max(params?.limit ?? 10, 1), 50);
       const page = Math.max(params?.page ?? 0, 0);
       const from = page * limit;
@@ -665,7 +667,7 @@ export async function listAdminTickets(params?: AdminTicketListParams) {
 
       if (search.length >= 2) {
         const cleanSearch = search.replace(/[,%()]/g, " ").trim();
-        const { data: salaoMatches } = await supabase
+        const { data: salaoMatches } = await database
           .from("saloes")
           .select("id")
           .or(
@@ -675,7 +677,7 @@ export async function listAdminTickets(params?: AdminTicketListParams) {
         salaoSearchIds = ((salaoMatches || []) as Array<{ id: string }>).map((item) => item.id);
       }
 
-      let query = supabase
+      let query = database
         .from("tickets")
         .select(
           "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, sla_limite_em, origem_contexto, id_responsavel_admin",
@@ -753,10 +755,10 @@ export async function listAdminTickets(params?: AdminTicketListParams) {
 
       const [saloesResult, adminsResult] = await Promise.all([
         salaoIds.length
-          ? supabase.from("saloes").select("id, nome").in("id", salaoIds).limit(salaoIds.length)
+          ? database.from("saloes").select("id, nome").in("id", salaoIds).limit(salaoIds.length)
           : Promise.resolve({ data: [] as Array<{ id: string; nome?: string | null }>, error: null }),
         adminIds.length
-          ? supabase.from("admin_master_usuarios").select("id, nome, email").in("id", adminIds).limit(adminIds.length)
+          ? database.from("admin_master_usuarios").select("id, nome, email").in("id", adminIds).limit(adminIds.length)
           : Promise.resolve({ data: [] as Array<{ id: string; nome?: string | null; email?: string | null }>, error: null }),
       ]);
 
@@ -767,7 +769,7 @@ export async function listAdminTickets(params?: AdminTicketListParams) {
 
       if (ids.length > 0) {
         const mensagensLimit = Math.max(ids.length * 4, 120);
-        const { data: mensagens, error: mensagensError } = await supabase
+        const { data: mensagens, error: mensagensError } = await database
           .from("ticket_mensagens")
           .select("id, id_ticket, mensagem, criada_em, autor_tipo, autor_nome, interna")
           .in("id_ticket", ids)
@@ -801,8 +803,8 @@ export async function getSalaoTicketDetail(params: {
   return runAdminOperation({
     action: "support_get_salao_ticket_detail",
     idSalao: params.idSalao,
-    run: async (supabase) => {
-      const { data: ticket, error } = await supabase
+    run: async (database) => {
+      const { data: ticket, error } = await database
         .from("tickets")
         .select(
           "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, solicitante_email, origem_contexto, sla_limite_em, id_responsavel_admin"
@@ -823,7 +825,7 @@ export async function getSalaoTicketDetail(params: {
         { data: mensagens, error: mensagensError },
         { data: eventos, error: eventosError },
       ] = await Promise.all([
-        supabase
+        database
           .from("ticket_mensagens")
           .select(
             "id, id_ticket, autor_tipo, autor_nome, mensagem, interna, criada_em, id_usuario_salao, id_profissional, id_admin_usuario, anexos_json"
@@ -831,7 +833,7 @@ export async function getSalaoTicketDetail(params: {
           .eq("id_ticket", params.idTicket)
           .eq("interna", false)
           .order("criada_em", { ascending: true }),
-        supabase
+        database
           .from("ticket_eventos")
           .select("id, evento, descricao, payload_json, criado_em")
           .eq("id_ticket", params.idTicket)
@@ -848,7 +850,7 @@ export async function getSalaoTicketDetail(params: {
 
       const rawMessages = (mensagens || []) as TicketMessageRow[];
       const detailedMessages = await Promise.all(
-        rawMessages.map((row) => mapTicketMessage(supabase, row))
+        rawMessages.map((row) => mapTicketMessage(database, row))
       );
 
       return {
@@ -865,8 +867,8 @@ export async function getAdminTicketDetail(
 ): Promise<AdminTicketDetail> {
   return runAdminOperation({
     action: "support_get_admin_ticket_detail",
-    run: async (supabase) => {
-      const { data: ticket, error } = await supabase
+    run: async (database) => {
+      const { data: ticket, error } = await database
         .from("tickets")
         .select(
           "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, solicitante_email, origem_contexto, sla_limite_em, id_responsavel_admin"
@@ -893,27 +895,27 @@ export async function getAdminTicketDetail(
         { data: salao },
         { data: responsavelAdmin },
       ] = await Promise.all([
-        supabase
+        database
           .from("ticket_mensagens")
           .select(
             "id, id_ticket, autor_tipo, autor_nome, mensagem, interna, criada_em, id_usuario_salao, id_profissional, id_admin_usuario, anexos_json"
           )
           .eq("id_ticket", idTicket)
           .order("criada_em", { ascending: true }),
-        supabase
+        database
           .from("ticket_eventos")
           .select("id, evento, descricao, payload_json, criado_em")
           .eq("id_ticket", idTicket)
           .order("criado_em", { ascending: false }),
         header.id_salao
-          ? supabase
+          ? database
               .from("saloes")
               .select("id, nome, responsavel, email")
               .eq("id", header.id_salao)
               .maybeSingle()
           : Promise.resolve({ data: null, error: null }),
         header.id_responsavel_admin
-          ? supabase
+          ? database
               .from("admin_master_usuarios")
               .select("id, nome, email")
               .eq("id", header.id_responsavel_admin)
@@ -931,7 +933,7 @@ export async function getAdminTicketDetail(
 
       const rawMessages = (mensagens || []) as TicketMessageRow[];
       const detailedMessages = await Promise.all(
-        rawMessages.map((row) => mapTicketMessage(supabase, row))
+        rawMessages.map((row) => mapTicketMessage(database, row))
       );
 
       return {
@@ -1006,8 +1008,8 @@ export async function createSalaoTicket(params: {
         ? params.context.idUsuario
         : params.context.idProfissional,
     idSalao: params.context.idSalao,
-    run: async (supabase) => {
-      const { data: createdTicket, error } = await supabase
+    run: async (database) => {
+      const { data: createdTicket, error } = await database
         .from("tickets")
         .insert({
           id_salao: params.context.idSalao,
@@ -1055,7 +1057,7 @@ export async function createSalaoTicket(params: {
         messagePayload.id_usuario_salao = params.context.idUsuario;
       }
 
-      const { error: messageError } = await supabase
+      const { error: messageError } = await database
         .from("ticket_mensagens")
         .insert(messagePayload);
 
@@ -1065,7 +1067,7 @@ export async function createSalaoTicket(params: {
         );
       }
 
-      await supabase.from("ticket_eventos").insert({
+      await database.from("ticket_eventos").insert({
         id_ticket: createdTicket.id,
         evento: "ticket_aberto",
         descricao:
@@ -1124,8 +1126,8 @@ export async function replySalaoTicket(params: {
         ? params.context.idUsuario
         : params.context.idProfissional,
     idSalao: params.context.idSalao,
-    run: async (supabase) => {
-      const { data: ticket, error } = await supabase
+    run: async (database) => {
+      const { data: ticket, error } = await database
         .from("tickets")
         .select("id, status")
         .eq("id", params.idTicket)
@@ -1165,7 +1167,7 @@ export async function replySalaoTicket(params: {
         messagePayload.id_usuario_salao = params.context.idUsuario;
       }
 
-      const { error: replyError } = await supabase
+      const { error: replyError } = await database
         .from("ticket_mensagens")
         .insert(messagePayload);
 
@@ -1180,7 +1182,7 @@ export async function replySalaoTicket(params: {
           : "aguardando_tecnico";
       const now = new Date().toISOString();
 
-      await supabase
+      await database
         .from("tickets")
         .update({
           status: nextStatus,
@@ -1191,7 +1193,7 @@ export async function replySalaoTicket(params: {
         .eq("id", params.idTicket)
         .eq("id_salao", params.context.idSalao);
 
-      await supabase.from("ticket_eventos").insert({
+      await database.from("ticket_eventos").insert({
         id_ticket: params.idTicket,
         evento: "mensagem_cliente",
         descricao:
@@ -1240,8 +1242,8 @@ export async function updateSalaoTicketStatus(params: {
         ? params.context.idUsuario
         : params.context.idProfissional,
     idSalao: params.context.idSalao,
-    run: async (supabase) => {
-      const { data: ticket, error } = await supabase
+    run: async (database) => {
+      const { data: ticket, error } = await database
         .from("tickets")
         .select("id, status")
         .eq("id", params.idTicket)
@@ -1258,7 +1260,7 @@ export async function updateSalaoTicketStatus(params: {
 
       const now = new Date().toISOString();
 
-      await supabase
+      await database
         .from("tickets")
         .update({
           status: newStatus,
@@ -1269,7 +1271,7 @@ export async function updateSalaoTicketStatus(params: {
         .eq("id", params.idTicket)
         .eq("id_salao", params.context.idSalao);
 
-      await supabase.from("ticket_eventos").insert({
+      await database.from("ticket_eventos").insert({
         id_ticket: params.idTicket,
         evento:
           newStatus === "fechado"
@@ -1329,8 +1331,8 @@ export async function replyAdminTicket(params: {
   await runAdminOperation({
     action: "support_reply_admin_ticket",
     actorId: params.context.idAdmin,
-    run: async (supabase) => {
-      const { data: ticket, error } = await supabase
+    run: async (database) => {
+      const { data: ticket, error } = await database
         .from("tickets")
         .select("id, status")
         .eq("id", params.idTicket)
@@ -1344,7 +1346,7 @@ export async function replyAdminTicket(params: {
         throw new Error("NOT_FOUND");
       }
 
-      const { error: replyError } = await supabase
+      const { error: replyError } = await database
         .from("ticket_mensagens")
         .insert({
           id_ticket: params.idTicket,
@@ -1371,12 +1373,12 @@ export async function replyAdminTicket(params: {
         updatePayload.id_responsavel_admin = params.context.idAdmin;
       }
 
-      await supabase
+      await database
         .from("tickets")
         .update(updatePayload)
         .eq("id", params.idTicket);
 
-      await supabase.from("ticket_eventos").insert({
+      await database.from("ticket_eventos").insert({
         id_ticket: params.idTicket,
         evento: "resposta_admin",
         descricao: "Resposta enviada pelo AdminMaster.",
@@ -1422,8 +1424,8 @@ export async function updateAdminTicketStatus(params: {
   const statusResult = await runAdminOperation({
     action: "support_update_admin_ticket_status",
     actorId: params.context.idAdmin,
-    run: async (supabase) => {
-      const { data: ticket, error } = await supabase
+    run: async (database) => {
+      const { data: ticket, error } = await database
         .from("tickets")
         .select("id, id_salao, prioridade, status, origem_contexto, id_responsavel_admin")
         .eq("id", params.idTicket)
@@ -1569,7 +1571,7 @@ export async function updateAdminTicketStatus(params: {
             throw new Error("Não foi possível localizar a conta desta recuperação.");
           }
 
-          const { data: usuarioSalao, error: usuarioSalaoError } = await supabase
+          const { data: usuarioSalao, error: usuarioSalaoError } = await database
             .from("usuarios")
             .select("auth_user_id")
             .eq("id", userIdSalao)
@@ -1584,7 +1586,7 @@ export async function updateAdminTicketStatus(params: {
           }
 
           const { data: factorsData, error: factorError } =
-            await supabase.auth.admin.mfa.listFactors({
+            await clerkAdminCompat.mfa.listFactors({
               userId: usuarioSalao.auth_user_id,
             });
 
@@ -1602,7 +1604,7 @@ export async function updateAdminTicketStatus(params: {
 
           if (totpFactor) {
             const { error: deleteFactorError } =
-              await supabase.auth.admin.mfa.deleteFactor({
+              await clerkAdminCompat.mfa.deleteFactor({
                 id: totpFactor.id,
                 userId: usuarioSalao.auth_user_id,
               });
@@ -1616,7 +1618,7 @@ export async function updateAdminTicketStatus(params: {
           }
 
           const { data: authUserData, error: authUserError } =
-            await supabase.auth.admin.getUserById(usuarioSalao.auth_user_id);
+            await clerkAdminCompat.getUserById(usuarioSalao.auth_user_id);
 
           if (authUserError || !authUserData?.user) {
             throw new Error(
@@ -1635,7 +1637,7 @@ export async function updateAdminTicketStatus(params: {
           ).toISOString();
 
           const { error: updateAuthError } =
-            await supabase.auth.admin.updateUserById(usuarioSalao.auth_user_id, {
+            await clerkAdminCompat.updateUserById(usuarioSalao.auth_user_id, {
               app_metadata: {
                 ...currentAppMetadata,
                 salaopremium_mfa: {
@@ -1685,7 +1687,7 @@ export async function updateAdminTicketStatus(params: {
 
       if (params.responsavelAdminId !== undefined) {
         if (params.responsavelAdminId) {
-          const { data: responsavel, error: responsavelError } = await supabase
+          const { data: responsavel, error: responsavelError } = await database
             .from("admin_master_usuarios")
             .select("id")
             .eq("id", params.responsavelAdminId)
@@ -1702,12 +1704,12 @@ export async function updateAdminTicketStatus(params: {
         updatePayload.id_responsavel_admin = params.context.idAdmin;
       }
 
-      await supabase
+      await database
         .from("tickets")
         .update(updatePayload)
         .eq("id", params.idTicket);
 
-      await supabase.from("ticket_eventos").insert({
+      await database.from("ticket_eventos").insert({
         id_ticket: params.idTicket,
         evento: eventName,
         descricao: eventDescription,
@@ -1720,7 +1722,7 @@ export async function updateAdminTicketStatus(params: {
       });
 
       if (customerMessage) {
-        await supabase.from("ticket_mensagens").insert({
+        await database.from("ticket_mensagens").insert({
           id_ticket: params.idTicket,
           autor_tipo: "admin",
           autor_nome: "Equipe de seguranca",
@@ -1806,8 +1808,8 @@ export async function uploadSalaoTicketAttachment(params: {
         ? params.context.idUsuario
         : params.context.idProfissional,
     idSalao: params.context.idSalao,
-    run: async (supabase) => {
-      const { data: ticket, error } = await supabase
+    run: async (database) => {
+      const { data: ticket, error } = await database
         .from("tickets")
         .select("id, status")
         .eq("id", params.idTicket)
@@ -1822,7 +1824,7 @@ export async function uploadSalaoTicketAttachment(params: {
         throw new Error("NOT_FOUND");
       }
 
-      const { error: uploadError } = await supabase.storage
+      const { error: uploadError } = await cloudinaryStorageCompat
         .from(TICKET_ATTACHMENT_BUCKET)
         .upload(attachmentPath, params.bytes, {
           contentType,
@@ -1868,7 +1870,7 @@ export async function uploadSalaoTicketAttachment(params: {
         messagePayload.id_usuario_salao = params.context.idUsuario;
       }
 
-      const { error: messageError } = await supabase
+      const { error: messageError } = await database
         .from("ticket_mensagens")
         .insert(messagePayload);
 
@@ -1883,7 +1885,7 @@ export async function uploadSalaoTicketAttachment(params: {
           : "aguardando_tecnico";
       const now = new Date().toISOString();
 
-      await supabase
+      await database
         .from("tickets")
         .update({
           status: nextStatus,
@@ -1894,7 +1896,7 @@ export async function uploadSalaoTicketAttachment(params: {
         .eq("id", params.idTicket)
         .eq("id_salao", params.context.idSalao);
 
-      await supabase.from("ticket_eventos").insert({
+      await database.from("ticket_eventos").insert({
         id_ticket: params.idTicket,
         evento: "anexo_cliente",
         descricao:

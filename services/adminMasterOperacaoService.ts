@@ -39,8 +39,8 @@ export function createAdminMasterOperacaoService() {
       return runAdminOperation({
         action: "admin_master_avaliar_extensao_trial",
         idSalao,
-        run: async (supabaseAdmin) => {
-          const { data, error } = await supabaseAdmin.rpc(
+        run: async (databaseAdmin) => {
+          const { data, error } = await databaseAdmin.rpc(
             "fn_admin_master_avaliar_extensao_trial",
             {
               p_id_salao: idSalao || undefined,

@@ -158,7 +158,7 @@ function hasChargeCoverage(
 export async function syncAdminMasterAlerts() {
   return runAdminOperation({
     action: "admin_master_sync_alerts",
-    run: async (supabase) => {
+    run: async (database) => {
   const now = new Date();
   const nowIso = now.toISOString();
   const recentAlertsFrom = new Date(
@@ -192,7 +192,7 @@ export async function syncAdminMasterAlerts() {
     renewalRes,
     existingAlertsRes,
   ] = await Promise.all([
-    supabase
+    database
       .from("assinatura_checkout_locks")
       .select(
         "id, id_salao, plano_codigo, billing_type, valor, idempotency_key, status, id_cobranca, asaas_payment_id, erro_texto, expires_at, created_at, updated_at"
@@ -201,7 +201,7 @@ export async function syncAdminMasterAlerts() {
       .gte("created_at", recentAlertsFrom)
       .order("created_at", { ascending: false })
       .limit(CHECKOUT_ALERT_LIMIT),
-    supabase
+    database
       .from("asaas_webhook_eventos")
       .select(
         "id, payment_id, evento, payment_status, status_processamento, tentativas, erro_mensagem, ultimo_recebido_em, id_salao, id_assinatura, id_cobranca, decisao"
@@ -210,7 +210,7 @@ export async function syncAdminMasterAlerts() {
       .gte("ultimo_recebido_em", recentAlertsFrom)
       .order("ultimo_recebido_em", { ascending: false })
       .limit(WEBHOOK_ALERT_LIMIT),
-    supabase
+    database
       .from("eventos_webhook")
       .select(
         "id, chave, evento, id_salao, status, payload_json, resposta_json, erro_texto, tentativas, recebido_em, processado_em, automatico"
@@ -221,7 +221,7 @@ export async function syncAdminMasterAlerts() {
       .gte("recebido_em", recentAlertsFrom)
       .order("recebido_em", { ascending: false })
       .limit(WEBHOOK_ALERT_LIMIT),
-    supabase
+    database
       .from("assinaturas_cobrancas")
       .select(
         "id, id_salao, referencia, valor, status, forma_pagamento, data_expiracao, created_at"
@@ -231,7 +231,7 @@ export async function syncAdminMasterAlerts() {
       .gte("created_at", overdueSince)
       .order("data_expiracao", { ascending: true })
       .limit(OVERDUE_CHARGE_ALERT_LIMIT),
-    supabase
+    database
       .from("assinaturas")
       .select("id, id_salao, plano, status, trial_fim_em")
       .in("status", ["teste_gratis", "trial"])
@@ -240,7 +240,7 @@ export async function syncAdminMasterAlerts() {
       .lte("trial_fim_em", trialSoonUntil)
       .order("trial_fim_em", { ascending: true })
       .limit(TRIAL_ALERT_LIMIT),
-    supabase
+    database
       .from("assinaturas")
       .select(
         "id, id_salao, plano, status, vencimento_em, renovacao_automatica, asaas_customer_id, forma_pagamento_atual, asaas_credit_card_token, asaas_subscription_id"
@@ -252,7 +252,7 @@ export async function syncAdminMasterAlerts() {
       .lte("vencimento_em", renewalSoonUntil)
       .order("vencimento_em", { ascending: true })
       .limit(RENEWAL_ALERT_LIMIT),
-    supabase
+    database
       .from("alertas_sistema")
       .select("id, chave, resolvido, payload_json")
       .eq("automatico", true)
@@ -349,7 +349,7 @@ export async function syncAdminMasterAlerts() {
 
   const renewalIds = renewalRows.map((row) => row.id);
   const { data: renewalChargesData } = renewalIds.length
-    ? await supabase
+    ? await database
         .from("assinaturas_cobrancas")
         .select(
           "id, id_assinatura, status, data_expiracao, created_at, pago_em, forma_pagamento, gerada_automaticamente, tipo_movimento, asaas_payment_id"
@@ -387,7 +387,7 @@ export async function syncAdminMasterAlerts() {
   );
 
   const { data: saloes } = salaoIds.length
-    ? await supabase
+    ? await database
         .from("saloes")
         .select("id, nome")
         .in("id", salaoIds)
@@ -724,7 +724,7 @@ export async function syncAdminMasterAlerts() {
   );
 
   if (activeCandidates.length > 0) {
-    const { error } = await supabase
+    const { error } = await database
       .from("alertas_sistema")
       .upsert(activeCandidates, { onConflict: "chave" });
 
@@ -741,7 +741,7 @@ export async function syncAdminMasterAlerts() {
   );
 
   if (staleAlerts.length > 0) {
-    const { error } = await supabase
+    const { error } = await database
       .from("alertas_sistema")
       .update({
         resolvido: true,
@@ -768,7 +768,7 @@ export async function syncAdminMasterAlerts() {
   );
 
   const { data: alertasSemTicket } = hasRenewalRiskAlerts
-    ? await supabase
+    ? await database
         .from("alertas_sistema")
         .select("id")
         .eq("automatico", true)

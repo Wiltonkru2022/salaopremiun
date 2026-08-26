@@ -47,8 +47,8 @@ async function fetchPasswordNotifications(
   idSalao: string,
   idProfissional: string
 ): Promise<ProfissionalAppNotification[]> {
-  const supabaseAdmin = getDatabaseAdmin();
-  const { data: tickets, error: ticketsError } = await supabaseAdmin
+  const databaseAdmin = getDatabaseAdmin();
+  const { data: tickets, error: ticketsError } = await databaseAdmin
     .from("tickets")
     .select("id, numero, origem_contexto")
     .eq("id_salao", idSalao)
@@ -77,7 +77,7 @@ async function fetchPasswordNotifications(
     ownedTickets.map((ticket) => [ticket.id, Number(ticket.numero || 0)])
   );
 
-  const { data: eventos, error: eventosError } = await supabaseAdmin
+  const { data: eventos, error: eventosError } = await databaseAdmin
     .from("ticket_eventos")
     .select("id, id_ticket, evento, descricao, payload_json, criado_em")
     .in("id_ticket", ownedTickets.map((ticket) => ticket.id))
@@ -117,8 +117,8 @@ async function fetchJobNotifications(
   idSalao: string,
   idProfissional: string
 ): Promise<ProfissionalAppNotification[]> {
-  const supabaseAdmin = getDatabaseAdmin();
-  const { data, error } = await (supabaseAdmin as any)
+  const databaseAdmin = getDatabaseAdmin();
+  const { data, error } = await (databaseAdmin as any)
     .from("notification_jobs")
     .select("id, tipo, titulo, mensagem, status, url, enviar_em, created_at, metadata")
     .eq("id_salao", idSalao)

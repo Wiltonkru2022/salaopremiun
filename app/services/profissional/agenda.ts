@@ -166,8 +166,8 @@ export async function buscarConfiguracaoAgendaProfissional(
     action: "profissional_agenda_buscar_configuracao",
     actorId: idProfissional,
     idSalao,
-    run: async (supabase) => {
-      const { data, error } = await supabase
+    run: async (database) => {
+      const { data, error } = await database
         .from("profissionais")
         .select("id, nome, nome_exibicao, ativo, dias_trabalho, pausas")
         .eq("id", idProfissional)
@@ -194,8 +194,8 @@ export async function buscarServicoPorId(idSalao: string, idServico: string) {
   return runAdminOperation({
     action: "profissional_agenda_buscar_servico",
     idSalao,
-    run: async (supabase) => {
-      const { data, error } = await supabase
+    run: async (database) => {
+      const { data, error } = await database
         .from("servicos")
         .select("id, nome, duracao, duracao_minutos, preco, preco_padrao")
         .eq("id", idServico)
@@ -219,15 +219,15 @@ export async function buscarServicoDoProfissional(params: {
     action: "profissional_agenda_buscar_servico_do_profissional",
     actorId: params.idProfissional,
     idSalao: params.idSalao,
-    run: async (supabase) => {
+    run: async (database) => {
       const [servicoResult, vinculoResult] = await Promise.all([
-        supabase
+        database
           .from("servicos")
           .select("id, nome, duracao, duracao_minutos, preco, preco_padrao")
           .eq("id", params.idServico)
           .eq("id_salao", params.idSalao)
           .maybeSingle(),
-        supabase
+        database
           .from("profissional_servicos")
           .select("duracao_minutos, preco_personalizado")
           .eq("id_salao", params.idSalao)
@@ -267,8 +267,8 @@ export async function validarServicoVinculadoAoProfissional(
     action: "profissional_agenda_validar_servico_vinculado",
     actorId: idProfissional,
     idSalao,
-    run: async (supabase) => {
-      const { data, error } = await supabase
+    run: async (database) => {
+      const { data, error } = await database
         .from("profissional_servicos")
         .select("id")
         .eq("id_salao", idSalao)
@@ -290,8 +290,8 @@ export async function buscarConflitosNoHorario(params: BuscarConflitosParams) {
     action: "profissional_agenda_buscar_conflitos",
     actorId: params.idProfissional,
     idSalao: params.idSalao,
-    run: async (supabase) => {
-      const { data, error } = await supabase
+    run: async (database) => {
+      const { data, error } = await database
         .from("agendamentos")
         .select(SELECT_AGENDAMENTOS)
         .eq("id_salao", params.idSalao)
@@ -321,8 +321,8 @@ export async function buscarConflitosBloqueioNoHorario(params: BuscarConflitosPa
     action: "profissional_agenda_buscar_conflitos_bloqueio",
     actorId: params.idProfissional,
     idSalao: params.idSalao,
-    run: async (supabase) => {
-      const { data, error } = await supabase
+    run: async (database) => {
+      const { data, error } = await database
         .from("agenda_bloqueios")
         .select("id, hora_inicio, hora_fim")
         .eq("id_salao", params.idSalao)
@@ -407,7 +407,7 @@ export async function buscarAgendaProfissional(
     action: "profissional_agenda_buscar_agenda",
     actorId: idProfissional,
     idSalao,
-    run: async (supabase) => {
+    run: async (database) => {
       const rangeMes = monthRange(dataSelecionada);
       const [
         { data: agendamentosData, error: agendamentosError },
@@ -417,7 +417,7 @@ export async function buscarAgendaProfissional(
         { data: profissionalData, error: profissionalError },
       ] = await Promise.all([
         (() => {
-          let query = supabase
+          let query = database
           .from("agendamentos")
           .select(SELECT_AGENDAMENTOS)
           .eq("id_salao", idSalao)
@@ -431,7 +431,7 @@ export async function buscarAgendaProfissional(
           return query;
         })(),
         (() => {
-          let query = supabase
+          let query = database
           .from("agendamentos")
           .select("data, profissional_id")
           .eq("id_salao", idSalao)
@@ -447,7 +447,7 @@ export async function buscarAgendaProfissional(
           return query;
         })(),
         (() => {
-          let query = supabase
+          let query = database
           .from("agenda_bloqueios")
           .select("id, profissional_id, data, hora_inicio, hora_fim, motivo")
           .eq("id_salao", idSalao)
@@ -461,7 +461,7 @@ export async function buscarAgendaProfissional(
           return query;
         })(),
         (() => {
-          let query = supabase
+          let query = database
           .from("agenda_bloqueios")
           .select("data, profissional_id")
           .eq("id_salao", idSalao)
@@ -475,7 +475,7 @@ export async function buscarAgendaProfissional(
 
           return query;
         })(),
-        supabase
+        database
           .from("profissionais")
           .select("nome, nome_exibicao, dias_trabalho")
           .eq("id", idProfissional)
@@ -508,16 +508,16 @@ export async function buscarAgendaProfissional(
 
       const [clientesResult, servicosResult, profissionaisResult] = await Promise.all([
         clienteIds.length
-          ? supabase.from("clientes").select("id, nome").in("id", clienteIds)
+          ? database.from("clientes").select("id, nome").in("id", clienteIds)
           : Promise.resolve({ data: [], error: null }),
         servicoIds.length
-          ? supabase
+          ? database
               .from("servicos")
               .select("id, nome, preco, preco_padrao")
               .in("id", servicoIds)
           : Promise.resolve({ data: [], error: null }),
         profissionalIds.length
-          ? supabase
+          ? database
               .from("profissionais")
               .select("id, nome, nome_exibicao")
               .eq("id_salao", idSalao)

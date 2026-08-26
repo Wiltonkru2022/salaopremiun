@@ -39,22 +39,22 @@ export async function buscarResumoInicioProfissional(
     action: "profissional_resumo_inicio",
     actorId: idProfissional,
     idSalao,
-    run: async (supabaseAdmin) => {
+    run: async (databaseAdmin) => {
       const [hojeResult, mesResult, comissoesResult] = await Promise.all([
-        supabaseAdmin
+        databaseAdmin
           .from("agendamentos")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", idSalao)
           .eq("profissional_id", idProfissional)
           .eq("data", hoje),
-        supabaseAdmin
+        databaseAdmin
           .from("agendamentos")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", idSalao)
           .eq("profissional_id", idProfissional)
           .gte("data", inicioMes)
           .lte("data", fimMes),
-        supabaseAdmin
+        databaseAdmin
           .from("comissoes_lancamentos")
           .select("valor_comissao")
           .eq("id_salao", idSalao)

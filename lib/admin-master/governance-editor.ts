@@ -19,7 +19,7 @@ function stringifyConfigValue(value: Json | null | undefined) {
 }
 
 export async function getAdminMasterGovernanceEditorData(): Promise<AdminMasterGovernanceEditorData> {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
 
   const [
     { data: flags },
@@ -30,39 +30,39 @@ export async function getAdminMasterGovernanceEditorData(): Promise<AdminMasterG
     { data: configs },
     { data: planos },
   ] = await Promise.all([
-    supabase
+    database
       .from("feature_flags")
       .select(
         "id, nome, descricao, status_global, tipo_liberacao, planos_json, data_inicio, data_fim, criado_em"
       )
       .order("criado_em", { ascending: false })
       .limit(100),
-    supabase
+    database
       .from("feature_flag_saloes")
       .select("id, id_feature_flag, id_salao, ativo, criado_em")
       .limit(1000),
-    supabase
+    database
       .from("saloes")
       .select("id, nome, cidade, plano, status")
       .order("nome", { ascending: true })
       .limit(300),
-    supabase
+    database
       .from("admin_master_usuarios")
       .select("id, auth_user_id, nome, email, perfil, status, ultimo_acesso_em, criado_em, atualizado_em")
       .order("atualizado_em", { ascending: false })
       .limit(100),
-    supabase
+    database
       .from("admin_master_permissoes")
       .select(
         "id, id_admin_master_usuario, dashboard_ver, saloes_ver, saloes_editar, saloes_entrar_como, financeiro_ver, relatorios_ver, assinaturas_ver, assinaturas_ajustar, cobrancas_ver, cobrancas_reprocessar, planos_editar, recursos_editar, produto_ver, operacao_ver, operacao_reprocessar, tickets_ver, tickets_editar, suporte_ver, notificacoes_editar, campanhas_editar, comunicacao_ver, whatsapp_ver, whatsapp_editar, feature_flags_editar, usuarios_admin_ver, usuarios_admin_editar, auditoria_ver, criado_em, atualizado_em"
       )
       .limit(200),
-    supabase
+    database
       .from("configuracoes_globais")
       .select("id, chave, descricao, valor_json, atualizado_por, atualizado_em")
       .order("atualizado_em", { ascending: false })
       .limit(120),
-    supabase
+    database
       .from("planos_saas")
       .select("codigo, nome")
       .eq("ativo", true)

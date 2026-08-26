@@ -2,7 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 
 const cwd = process.cwd();
-const migrationsDir = path.join(cwd, "supabase", "migrations");
+const migrationsDir = path.join(cwd, "database", "migrations");
 
 const REQUIRED_TABLES = [
   "admin_master_usuarios",

@@ -53,8 +53,8 @@ async function recordCron(
 
   if (storedInNeon) return;
 
-  const supabaseAdmin = getDatabaseAdmin();
-  await supabaseAdmin.from("eventos_cron").insert({
+  const databaseAdmin = getDatabaseAdmin();
+  await databaseAdmin.from("eventos_cron").insert({
     nome: CRON_NAME,
     status,
     resumo,
@@ -65,13 +65,13 @@ async function recordCron(
 }
 
 async function archiveOldAuditLogs() {
-  const supabaseAdmin = getDatabaseAdmin();
+  const databaseAdmin = getDatabaseAdmin();
   const cutoff = new Date(Date.now() - AUDIT_ARCHIVE_DAYS * 24 * 60 * 60 * 1000).toISOString();
   let archived = 0;
   let batches = 0;
 
   for (let batch = 0; batch < ARCHIVE_MAX_BATCHES; batch += 1) {
-    const { data, error } = await supabaseAdmin
+    const { data, error } = await databaseAdmin
       .from("auditoria_logs")
       .select(
         "id,id_salao,auth_user_id,id_usuario,modulo,entidade,entidade_id,acao,descricao,dados_anteriores,dados_novos,metadata,created_at"
@@ -91,7 +91,7 @@ async function archiveOldAuditLogs() {
         componentKey: "cron.observability_cleanup",
         eventType: "audit_archive_deferred",
         level: "warning",
-        message: "Arquivamento de auditoria adiado; nenhum registro foi removido do Supabase.",
+        message: "Arquivamento de auditoria adiado; nenhum registro foi removido do Neon.",
         metadata: {
           expected: rows.length,
           archived: archiveResult.archived,
@@ -102,7 +102,7 @@ async function archiveOldAuditLogs() {
     }
 
     const ids = rows.map((row) => row.id);
-    const { error: deleteError } = await supabaseAdmin.from("auditoria_logs").delete().in("id", ids);
+    const { error: deleteError } = await databaseAdmin.from("auditoria_logs").delete().in("id", ids);
     if (deleteError) throw deleteError;
 
     archived += rows.length;
@@ -118,13 +118,13 @@ async function archiveOldTelemetryRows(input: {
   timestampColumn: "checked_at" | "iniciado_em";
   retentionDays: number;
 }) {
-  const supabaseAdmin = getDatabaseAdmin();
+  const databaseAdmin = getDatabaseAdmin();
   const cutoff = new Date(Date.now() - input.retentionDays * 24 * 60 * 60 * 1000).toISOString();
   let archived = 0;
   let batches = 0;
 
   for (let batch = 0; batch < ARCHIVE_MAX_BATCHES; batch += 1) {
-    const { data, error } = await (supabaseAdmin as any)
+    const { data, error } = await (databaseAdmin as any)
       .from(input.tableName)
       .select("*")
       .lt(input.timestampColumn, cutoff)
@@ -148,7 +148,7 @@ async function archiveOldTelemetryRows(input: {
         componentKey: "cron.observability_cleanup",
         eventType: "telemetry_archive_deferred",
         level: "warning",
-        message: `Arquivamento de ${input.tableName} adiado; nenhum registro foi removido do Supabase.`,
+        message: `Arquivamento de ${input.tableName} adiado; nenhum registro foi removido do Neon.`,
         metadata: {
           sourceTable: input.tableName,
           expected: rows.length,
@@ -160,7 +160,7 @@ async function archiveOldTelemetryRows(input: {
     }
 
     const ids = rows.map((row) => row.id);
-    const { error: deleteError } = await (supabaseAdmin as any)
+    const { error: deleteError } = await (databaseAdmin as any)
       .from(input.tableName)
       .delete()
       .in("id", ids);
@@ -182,7 +182,7 @@ export async function limparObservabilidade() {
     operationalProbeHistoryDays: OPERATIONAL_PROBE_HISTORY_DAYS,
   });
 
-  const supabaseAdmin = getDatabaseAdmin();
+  const databaseAdmin = getDatabaseAdmin();
   const auditArchive = await archiveOldAuditLogs();
   const probeArchive = await archiveOldTelemetryRows({
     tableName: "operational_probe_history",
@@ -197,7 +197,7 @@ export async function limparObservabilidade() {
 
   const [{ data, error }, { data: operationalData, error: operationalError }] =
     await Promise.all([
-      supabaseAdmin.rpc("fn_observability_retention_cleanup", {
+      databaseAdmin.rpc("fn_observability_retention_cleanup", {
         p_eventos_sistema_days:
           OBSERVABILITY_RETENTION_DEFAULTS.eventosSistemaDays,
         p_logs_sistema_days: OBSERVABILITY_RETENTION_DEFAULTS.logsSistemaDays,
@@ -210,7 +210,7 @@ export async function limparObservabilidade() {
         p_eventos_cron_days: OBSERVABILITY_RETENTION_DEFAULTS.eventosCronDays,
         p_batch_limit: OBSERVABILITY_RETENTION_DEFAULTS.batchLimit,
       }),
-      (supabaseAdmin as any).rpc("fn_operational_retention_cleanup", {
+      (databaseAdmin as any).rpc("fn_operational_retention_cleanup", {
         p_probe_history_days: OPERATIONAL_PROBE_HISTORY_DAYS,
         p_incident_update_days: 365,
         p_delivery_days: 180,
@@ -277,7 +277,7 @@ export async function registrarFalhaLimpezaObservabilidade(error: unknown) {
 
   try {
     await reportOperationalIncident({
-      supabaseAdmin: getDatabaseAdmin(),
+      databaseAdmin: getDatabaseAdmin(),
       key: "cron:limpar-observabilidade:erro",
       module: "cron_observabilidade",
       title: "Cron de limpeza de observabilidade falhou",

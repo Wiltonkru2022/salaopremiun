@@ -35,24 +35,24 @@ function cents(value: unknown) {
 }
 
 export async function getAdminWhatsappCreditosData() {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
 
   const [{ data: tarifas }, { data: saldos }, { data: saloesOptions }] =
     await Promise.all([
-      supabase
+      database
         .from("whatsapp_tarifas")
         .select(
           "id, tipo_interno, categoria_meta, nome, descricao, custo_base_meta_centavos, preco_venda_centavos, margem_centavos, ativo, atualizado_em, ordem"
         )
         .order("ordem", { ascending: true }),
-      supabase
+      database
         .from("whatsapp_creditos_saloes")
         .select(
           "id_salao, saldo_centavos, total_recarregado_centavos, total_consumido_centavos, alerta_saldo_baixo_centavos"
         )
         .order("saldo_centavos", { ascending: true })
         .limit(120),
-      supabase
+      database
         .from("saloes")
         .select("id, nome")
         .order("nome", { ascending: true })
@@ -65,7 +65,7 @@ export async function getAdminWhatsappCreditosData() {
     .filter(Boolean);
 
   const { data: saloesSaldo } = saldoSalaoIds.length
-    ? await supabase
+    ? await database
         .from("saloes")
         .select("id, nome, plano, status")
         .in("id", saldoSalaoIds)

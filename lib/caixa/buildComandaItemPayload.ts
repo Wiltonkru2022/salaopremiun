@@ -7,10 +7,10 @@ import {
 } from "@/lib/comissoes/regrasServico";
 import { createClient } from "@/lib/db/client";
 
-type CaixaSupabaseClient = ReturnType<typeof createClient>;
+type CaixaDatabaseClient = ReturnType<typeof createClient>;
 
 type Params = {
-  supabase: CaixaSupabaseClient;
+  database: CaixaDatabaseClient;
   idSalao: string;
   idComanda: string;
   itemModal: ModalItemState;
@@ -22,7 +22,7 @@ type Params = {
 };
 
 export async function buildComandaItemPayload({
-  supabase,
+  database,
   idSalao,
   idComanda,
   itemModal,
@@ -80,7 +80,7 @@ export async function buildComandaItemPayload({
   const vinculo =
     servico?.id && itemModal.idProfissional
       ? await buscarVinculoProfissionalServico({
-          supabase,
+          database,
           idSalao,
           idProfissional: itemModal.idProfissional,
           idServico: servico.id,

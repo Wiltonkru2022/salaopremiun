@@ -6,11 +6,11 @@ O SalãoPremium possui três contextos de autenticação diferentes. Eles não d
 
 ### Tecnologia
 
-- Supabase Auth;
+- Neon Auth;
 - sessão SSR/server-side;
 - tabela `usuarios` para dados e vínculo de negócio.
 
-A tabela `usuarios` relaciona o usuário autenticado ao salão, nível/status e permissões. O `auth_user_id` é a ponte para Supabase Auth.
+A tabela `usuarios` relaciona o usuário autenticado ao salão, nível/status e permissões. O `auth_user_id` é a ponte para Neon Auth.
 
 ### Regras
 
@@ -67,7 +67,7 @@ A credencial de entrada atual é CPF + senha. A API valida o profissional e cria
 - cookie seguro/httpOnly em produção;
 - cada operação revalida `id_profissional` e `id_salao`;
 - profissional bloqueado/inativo/plano inválido não recebe contexto operacional;
-- publishable key do Supabase pode existir no PWA, Service Role nunca.
+- publishable key do Neon pode existir no PWA, Service Role nunca.
 
 ## 4. Admin Master
 
@@ -76,7 +76,7 @@ Admin Master possui guard/contexto próprio e não deve ser liberado apenas porq
 ## Fluxos separados
 
 ```text
-Painel          → Supabase Auth → usuarios → id_salao
+Painel          → Neon Auth → usuarios → id_salao
 App Cliente     → contexto cliente → identidade cliente
 App Profissional→ API auth própria → sessão profissional
 Admin Master    → sessão/guard Admin Master

@@ -12,7 +12,7 @@ type MigrationStatus = {
 };
 
 export default function ClienteAppMigrationCard({ clienteId }: { clienteId: string }) {
-  const supabase = useMemo(() => createClient(), []);
+  const database = useMemo(() => createClient(), []);
   const [status, setStatus] = useState<MigrationStatus>({
     loading: true,
     connected: false,
@@ -32,13 +32,13 @@ export default function ClienteAppMigrationCard({ clienteId }: { clienteId: stri
       try {
         setStatus((prev) => ({ ...prev, loading: true, error: null }));
         const [clienteResult, authResult] = await Promise.all([
-          supabase
+          database
             .from("clientes")
             .select("cpf, data_nascimento")
             .eq("id", clienteId)
             .limit(1)
             .maybeSingle(),
-          supabase
+          database
             .from("clientes_auth")
             .select("app_conta_id, app_ativo")
             .eq("id_cliente", clienteId)
@@ -76,7 +76,7 @@ export default function ClienteAppMigrationCard({ clienteId }: { clienteId: stri
     return () => {
       cancelled = true;
     };
-  }, [clienteId, supabase]);
+  }, [clienteId, database]);
 
   const label = status.loading
     ? "Verificando status..."

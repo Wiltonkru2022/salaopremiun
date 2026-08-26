@@ -35,12 +35,12 @@ export function extractWebhookSourceId(chave?: string | null) {
 export async function syncAdminMasterWebhookEvents() {
   return runAdminOperation({
     action: "admin_master_sync_webhook_events",
-    run: async (supabase) => {
+    run: async (database) => {
       const since = new Date(
         Date.now() - 14 * 24 * 60 * 60 * 1000
       ).toISOString();
 
-      const { data, error } = await supabase
+      const { data, error } = await database
         .from("asaas_webhook_eventos")
         .select(
           "id, evento, payment_id, payment_status, status_processamento, tentativas, erro_mensagem, payload, primeiro_recebido_em, ultimo_recebido_em, processado_em, id_salao, id_assinatura, id_cobranca, event_order, decisao"
@@ -118,7 +118,7 @@ export async function syncAdminMasterWebhookEvents() {
         };
       });
 
-      const { error: upsertError } = await supabase
+      const { error: upsertError } = await database
         .from("eventos_webhook")
         .upsert(payload, { onConflict: "chave" });
 

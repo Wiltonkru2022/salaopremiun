@@ -15,7 +15,9 @@ type ClerkEmailAddress = {
 };
 
 type ClerkExternalAccount = {
+  id?: string;
   provider?: string;
+  email_address?: string | null;
 };
 
 type ClerkRawUser = {
@@ -38,7 +40,7 @@ type CompatUser = {
   email: string | null;
   user_metadata: Record<string, unknown>;
   app_metadata: Record<string, unknown>;
-  identities: Array<{ provider: string }>;
+  identities: Array<{ id: string; provider: string; identity_data: { email: string | null } }>;
   totp_enabled: boolean;
   backup_code_enabled: boolean;
   two_factor_enabled: boolean;
@@ -121,9 +123,12 @@ function toCompatUser(user: ClerkRawUser): CompatUser {
     },
     app_metadata: { ...(user.private_metadata || {}) },
     identities: (user.external_accounts || [])
-      .map((account) => normalizeProvider(account.provider))
-      .filter(Boolean)
-      .map((provider) => ({ provider })),
+      .map((account) => ({
+        id: String(account.id || ""),
+        provider: normalizeProvider(account.provider),
+        identity_data: { email: account.email_address || null },
+      }))
+      .filter((identity) => Boolean(identity.provider)),
     totp_enabled: Boolean(user.totp_enabled),
     backup_code_enabled: Boolean(user.backup_code_enabled),
     two_factor_enabled: Boolean(user.two_factor_enabled),
@@ -305,6 +310,20 @@ export const clerkAdminCompat = {
       };
     } catch (error) {
       return { data: { users: [] }, error: resultError(error) };
+    }
+  },
+
+  async unlinkExternalAccount(userId: string, provider: string) {
+    try {
+      const normalizedProvider = normalizeProvider(provider);
+      if (!normalizedProvider) throw new Error("Provedor externo invalido.");
+      await clerkRequest(
+        `/users/${encodeURIComponent(userId)}/external_accounts/${encodeURIComponent(normalizedProvider)}`,
+        { method: "DELETE" }
+      );
+      return { data: null, error: null };
+    } catch (error) {
+      return { data: null, error: resultError(error) };
     }
   },
 

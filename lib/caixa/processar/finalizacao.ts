@@ -10,11 +10,11 @@ export async function finalizarComanda(params: {
   idComanda: string;
 }) {
   const { ctx, idComanda } = params;
-  await carregarSessaoAberta(ctx.supabaseAdmin, ctx.idSalao);
+  await carregarSessaoAberta(ctx.databaseAdmin, ctx.idSalao);
 
   const snapshot = await getPlanoAccessSnapshot(ctx.idSalao);
   if (snapshot.planoCodigo === "basico") {
-    const { count, error: produtoCountError } = await ctx.supabaseAdmin
+    const { count, error: produtoCountError } = await ctx.databaseAdmin
       .from("comanda_itens")
       .select("id", { count: "exact", head: true })
       .eq("id_salao", ctx.idSalao)
@@ -34,7 +34,7 @@ export async function finalizarComanda(params: {
     }
   }
 
-  const { data: config, error: configError } = await ctx.supabaseAdmin
+  const { data: config, error: configError } = await ctx.databaseAdmin
     .from("configuracoes_salao")
     .select("exigir_cliente_na_venda")
     .eq("id_salao", ctx.idSalao)
@@ -50,7 +50,7 @@ export async function finalizarComanda(params: {
   );
 
   return executarMutacaoComandaComEstoque({
-    supabaseAdmin: ctx.supabaseAdmin,
+    databaseAdmin: ctx.databaseAdmin,
     idSalao: ctx.idSalao,
     idComanda,
     idUsuario: ctx.idUsuario,
@@ -58,7 +58,7 @@ export async function finalizarComanda(params: {
     sourceAction: "finalizar_comanda",
     stockMode: "apply",
     mutate: async () => {
-      const { error } = await ctx.supabaseAdmin.rpc("fn_caixa_finalizar_comanda", {
+      const { error } = await ctx.databaseAdmin.rpc("fn_caixa_finalizar_comanda", {
         p_id_salao: ctx.idSalao,
         p_id_comanda: idComanda,
         p_exigir_cliente: exigirCliente,
@@ -93,7 +93,7 @@ export async function cancelarComanda(params: {
   const { ctx, body, idComanda } = params;
   const motivo = sanitizeText(body.motivo);
 
-  const { error } = await ctx.supabaseAdmin.rpc("fn_caixa_cancelar_comanda", {
+  const { error } = await ctx.databaseAdmin.rpc("fn_caixa_cancelar_comanda", {
     p_id_salao: ctx.idSalao,
     p_id_comanda: idComanda,
     p_motivo: motivo || undefined,

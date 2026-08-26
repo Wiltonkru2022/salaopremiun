@@ -46,7 +46,7 @@ function formatQuantidade(value?: number | null) {
 }
 
 export default function ServicosExtrasPage() {
-  const supabase = createClient();
+  const database = createClient();
   const router = useRouter();
   const { snapshot: painelSession } = usePainelSession();
   const { planoAccess } = usePlanoAccessSnapshot(true);
@@ -103,7 +103,7 @@ export default function ServicosExtrasPage() {
       const termoBusca = busca.trim();
       const from = paginaAtual * EXTRAS_PAGE_SIZE;
       const to = from + EXTRAS_PAGE_SIZE - 1;
-      let query = supabase
+      let query = database
         .from("itens_extras")
         .select(
           "id, nome, categoria, descricao, preco_venda, custo, controla_estoque, estoque_atual",
@@ -129,7 +129,7 @@ export default function ServicosExtrasPage() {
       setItens((data as ItemExtra[]) || []);
       setTotalItens(count || 0);
     },
-    [busca, paginaAtual, supabase]
+    [busca, paginaAtual, database]
   );
 
   const bootstrap = useCallback(async () => {
@@ -172,7 +172,7 @@ export default function ServicosExtrasPage() {
       setErro("");
       setMsg("");
 
-      const { error } = await supabase
+      const { error } = await database
         .from("itens_extras")
         .delete()
         .eq("id", id)

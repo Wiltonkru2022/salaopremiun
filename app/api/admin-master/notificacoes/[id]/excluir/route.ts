@@ -24,8 +24,8 @@ export async function POST(
     );
   }
 
-  const supabase = getDatabaseAdmin() as any;
-  const { data: current, error: currentError } = await supabase
+  const database = getDatabaseAdmin() as any;
+  const { data: current, error: currentError } = await database
     .from("notificacoes_globais")
     .select("id, titulo, status")
     .eq("id", id)
@@ -45,7 +45,7 @@ export async function POST(
     );
   }
 
-  const { error: deleteError } = await supabase
+  const { error: deleteError } = await database
     .from("notificacoes_globais")
     .delete()
     .eq("id", id);
@@ -58,7 +58,7 @@ export async function POST(
     );
   }
 
-  const { error: auditError } = await supabase
+  const { error: auditError } = await database
     .from("admin_master_auditoria")
     .insert({
       id_admin_usuario: access.usuario.id,

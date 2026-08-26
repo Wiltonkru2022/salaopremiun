@@ -53,7 +53,7 @@ export type AssinaturaWebhookContextRow = {
 };
 
 type ResolveWebhookContextParams = {
-  supabaseAdmin: DatabaseClient;
+  databaseAdmin: DatabaseClient;
   paymentId: string;
   payment: Record<string, unknown>;
   body: Record<string, unknown>;
@@ -64,10 +64,10 @@ type ResolveWebhookContextParams = {
 };
 
 export async function carregarCobrancaWebhook(
-  supabaseAdmin: DatabaseClient,
+  databaseAdmin: DatabaseClient,
   paymentId: string
 ) {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await databaseAdmin
     .from("assinaturas_cobrancas")
     .select(
       `
@@ -101,10 +101,10 @@ export async function carregarCobrancaWebhook(
 }
 
 export async function carregarAssinaturaWebhook(
-  supabaseAdmin: DatabaseClient,
+  databaseAdmin: DatabaseClient,
   idAssinatura: string
 ) {
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await databaseAdmin
     .from("assinaturas")
     .select(
       `
@@ -135,12 +135,12 @@ export async function carregarAssinaturaWebhook(
 }
 
 export async function carregarPlanoWebhook(
-  supabaseAdmin: DatabaseClient,
+  databaseAdmin: DatabaseClient,
   idPlano: string | null | undefined
 ) {
   if (!idPlano) return null;
 
-  const { data, error } = await supabaseAdmin
+  const { data, error } = await databaseAdmin
     .from("planos_saas")
     .select(
       `
@@ -163,7 +163,7 @@ export async function carregarPlanoWebhook(
 }
 
 export async function resolverContextoWebhookAsaas({
-  supabaseAdmin,
+  databaseAdmin,
   paymentId,
   payment,
   body,
@@ -175,11 +175,11 @@ export async function resolverContextoWebhookAsaas({
   const asaasSubscriptionId =
     String(payment.subscription || "").trim() || null;
 
-  let cobrancaAtual = await carregarCobrancaWebhook(supabaseAdmin, paymentId);
+  let cobrancaAtual = await carregarCobrancaWebhook(databaseAdmin, paymentId);
 
   if (!cobrancaAtual && asaasSubscriptionId) {
     cobrancaAtual = await criarCobrancaWebhookDeAssinaturaRecorrente({
-      supabaseAdmin,
+      databaseAdmin,
       asaasSubscriptionId,
       paymentId,
       payment,
@@ -205,7 +205,7 @@ export async function resolverContextoWebhookAsaas({
   }
 
   const assinatura = await carregarAssinaturaWebhook(
-    supabaseAdmin,
+    databaseAdmin,
     cobrancaAtual.id_assinatura
   );
 
@@ -213,7 +213,7 @@ export async function resolverContextoWebhookAsaas({
     throw new Error("Assinatura nao encontrada.");
   }
 
-  const plano = await carregarPlanoWebhook(supabaseAdmin, cobrancaAtual.id_plano);
+  const plano = await carregarPlanoWebhook(databaseAdmin, cobrancaAtual.id_plano);
 
   return {
     cobrancaAtual: cobrancaAtual as CobrancaWebhookResolvedRow,

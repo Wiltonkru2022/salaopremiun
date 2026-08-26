@@ -22,7 +22,7 @@ function createQuery(result: Record<string, unknown>) {
 }
 
 const defaultResult = { data: [], error: null };
-const mockSupabaseAdmin = {
+const mockDatabaseAdmin = {
   from: vi.fn(() => createQuery(defaultResult)),
   rpc: vi.fn(() => Promise.resolve(defaultResult)),
 };
@@ -31,14 +31,14 @@ describe("createClienteService", () => {
   let service: ReturnType<typeof createClienteService>;
 
   beforeEach(() => {
-    mockSupabaseAdmin.from.mockReset();
-    mockSupabaseAdmin.from.mockImplementation(() => createQuery(defaultResult));
-    service = createClienteService(mockSupabaseAdmin as any);
+    mockDatabaseAdmin.from.mockReset();
+    mockDatabaseAdmin.from.mockImplementation(() => createQuery(defaultResult));
+    service = createClienteService(mockDatabaseAdmin as any);
   });
 
   describe("verificarDuplicidade", () => {
     it("throws when email already exists for another client", async () => {
-      mockSupabaseAdmin.from.mockImplementationOnce(() =>
+      mockDatabaseAdmin.from.mockImplementationOnce(() =>
         createQuery({ data: [{ id: "cliente-456", nome: "João" }], error: null })
       );
 
@@ -52,7 +52,7 @@ describe("createClienteService", () => {
     });
 
     it("allows same email for current client being updated", async () => {
-      mockSupabaseAdmin.from.mockImplementationOnce(() =>
+      mockDatabaseAdmin.from.mockImplementationOnce(() =>
         createQuery({ data: [{ id: "cliente-123", nome: "João" }], error: null })
       );
 
@@ -66,7 +66,7 @@ describe("createClienteService", () => {
     });
 
     it("throws when whatsapp matches existing client", async () => {
-      mockSupabaseAdmin.from.mockImplementationOnce(() =>
+      mockDatabaseAdmin.from.mockImplementationOnce(() =>
         createQuery({ data: [{ id: "cliente-456", nome: "Maria", whatsapp: "11999999999" }], error: null })
       );
 
@@ -76,7 +76,7 @@ describe("createClienteService", () => {
     });
 
     it("normalizes phone numbers before comparison", async () => {
-      mockSupabaseAdmin.from.mockImplementationOnce(() =>
+      mockDatabaseAdmin.from.mockImplementationOnce(() =>
         createQuery({ data: [{ id: "cliente-456", nome: "Maria", telefone: "(11) 99999-9999" }], error: null })
       );
 
@@ -88,7 +88,7 @@ describe("createClienteService", () => {
 
   describe("salvar", () => {
     it("creates new client when no id provided", async () => {
-      mockSupabaseAdmin.from.mockImplementationOnce(() =>
+      mockDatabaseAdmin.from.mockImplementationOnce(() =>
         createQuery({ data: { id: "cliente-123" }, error: null })
       );
 
@@ -98,11 +98,11 @@ describe("createClienteService", () => {
       });
 
       expect(result.idCliente).toBe("cliente-123");
-      expect(mockSupabaseAdmin.from).toHaveBeenCalledWith("clientes");
+      expect(mockDatabaseAdmin.from).toHaveBeenCalledWith("clientes");
     });
 
     it("updates existing client when id provided", async () => {
-      mockSupabaseAdmin.from.mockImplementationOnce(() =>
+      mockDatabaseAdmin.from.mockImplementationOnce(() =>
         createQuery({ data: { id: "cliente-123" }, error: null })
       );
 
@@ -116,7 +116,7 @@ describe("createClienteService", () => {
     });
 
     it("throws when updating non-existent client", async () => {
-      mockSupabaseAdmin.from.mockImplementationOnce(() => createQuery({ data: null, error: null }));
+      mockDatabaseAdmin.from.mockImplementationOnce(() => createQuery({ data: null, error: null }));
 
       await expect(
         service.salvar({
@@ -130,7 +130,7 @@ describe("createClienteService", () => {
 
   describe("alterarStatus", () => {
     it("activates client", async () => {
-      mockSupabaseAdmin.from.mockImplementationOnce(() =>
+      mockDatabaseAdmin.from.mockImplementationOnce(() =>
         createQuery({ data: { id: "cliente-123", ativo: "ativo", status: "ativo" }, error: null })
       );
 
@@ -141,7 +141,7 @@ describe("createClienteService", () => {
     });
 
     it("deactivates client", async () => {
-      mockSupabaseAdmin.from.mockImplementationOnce(() =>
+      mockDatabaseAdmin.from.mockImplementationOnce(() =>
         createQuery({ data: { id: "cliente-123", ativo: "inativo", status: "inativo" }, error: null })
       );
 
@@ -154,7 +154,7 @@ describe("createClienteService", () => {
 
   describe("contarDependenciasExclusao", () => {
     it("returns counts of appointments and comandas", async () => {
-      mockSupabaseAdmin.from
+      mockDatabaseAdmin.from
         .mockImplementationOnce(() => createQuery({ count: 5, error: null }))
         .mockImplementationOnce(() => createQuery({ count: 3, error: null }));
 
@@ -167,16 +167,16 @@ describe("createClienteService", () => {
 
   describe("excluir", () => {
     it("deletes all related records then the client", async () => {
-      mockSupabaseAdmin.from.mockImplementation(() => createQuery({ error: null }));
+      mockDatabaseAdmin.from.mockImplementation(() => createQuery({ error: null }));
 
       const result = await service.excluir({ idSalao: "salao-1", idCliente: "cliente-123" });
 
       expect(result.idCliente).toBe("cliente-123");
-      expect(mockSupabaseAdmin.from).toHaveBeenCalledTimes(6);
+      expect(mockDatabaseAdmin.from).toHaveBeenCalledTimes(6);
     });
 
     it("throws on first delete error", async () => {
-      mockSupabaseAdmin.from
+      mockDatabaseAdmin.from
         .mockImplementationOnce(() => createQuery({ error: { message: "FK violation" } }))
         .mockImplementation(() => createQuery({ error: null }));
 
@@ -188,7 +188,7 @@ describe("createClienteService", () => {
 
   describe("upsertByCliente", () => {
     it("updates existing record", async () => {
-      mockSupabaseAdmin.from
+      mockDatabaseAdmin.from
         .mockImplementationOnce(() => createQuery({ data: [{ id: "existing-1" }], error: null }))
         .mockImplementationOnce(() => createQuery({ error: null }));
 
@@ -199,11 +199,11 @@ describe("createClienteService", () => {
         idCliente: "cliente-123",
       });
 
-      expect(mockSupabaseAdmin.from).toHaveBeenCalledWith("clientes_ficha_tecnica");
+      expect(mockDatabaseAdmin.from).toHaveBeenCalledWith("clientes_ficha_tecnica");
     });
 
     it("inserts new record when none exists", async () => {
-      mockSupabaseAdmin.from
+      mockDatabaseAdmin.from
         .mockImplementationOnce(() => createQuery({ data: [], error: null }))
         .mockImplementationOnce(() => createQuery({ error: null }));
 

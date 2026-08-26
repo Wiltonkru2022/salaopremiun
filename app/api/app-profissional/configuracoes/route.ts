@@ -31,8 +31,8 @@ export async function POST(request: Request) {
       action: "app_profissional_salvar_configuracoes",
       actorId: context.idProfissional,
       idSalao: context.idSalao,
-      run: async (supabase) => {
-        const { error } = await (supabase as any)
+      run: async (database) => {
+        const { error } = await (database as any)
           .from("profissionais")
           .update({
             nome: cleanText(body.nome) || context.nome,

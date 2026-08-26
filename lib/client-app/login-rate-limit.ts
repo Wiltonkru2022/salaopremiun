@@ -33,10 +33,10 @@ export async function assertClienteCpfLoginAllowed(params: {
   cpf: string;
   ip?: string | null;
 }) {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const identityKey = buildClienteCpfIdentityKey(params.cpf);
 
-  const identityQuery = supabase
+  const identityQuery = database
     .from("security_login_attempts")
     .select("id", { count: "exact", head: true })
     .eq("tipo_usuario", "cliente")
@@ -45,7 +45,7 @@ export async function assertClienteCpfLoginAllowed(params: {
 
   const ip = String(params.ip || "").trim();
   const ipQuery = ip
-    ? supabase
+    ? database
         .from("security_login_attempts")
         .select("id", { count: "exact", head: true })
         .eq("tipo_usuario", "cliente")

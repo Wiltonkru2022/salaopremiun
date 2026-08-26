@@ -23,9 +23,9 @@ export async function hasAdminMasterAccess(params: {
   }
 
   try {
-    const supabaseAdmin = getDatabaseAdmin();
+    const databaseAdmin = getDatabaseAdmin();
 
-    const { data: byAuthUserId, error: byAuthUserIdError } = await supabaseAdmin
+    const { data: byAuthUserId, error: byAuthUserIdError } = await databaseAdmin
       .from("admin_master_usuarios")
       .select("id, status")
       .eq("auth_user_id", params.authUserId)
@@ -41,7 +41,7 @@ export async function hasAdminMasterAccess(params: {
       return false;
     }
 
-    const { data: byEmail, error: byEmailError } = await supabaseAdmin
+    const { data: byEmail, error: byEmailError } = await databaseAdmin
       .from("admin_master_usuarios")
       .select("id, status")
       .eq("email", normalizedEmail)

@@ -250,11 +250,11 @@ export async function getClientSalonProfile(
   idSalaoOrSlug: string
 ): Promise<ClientSalonProfile> {
   const base = await getClientAppSalonDetail(idSalaoOrSlug);
-  const supabaseAdmin = getDatabaseAdmin();
+  const databaseAdmin = getDatabaseAdmin();
 
   const [extrasResult, configResult, serviceImagesResult, reviewsResult] =
     await Promise.all([
-      (supabaseAdmin as any)
+      (databaseAdmin as any)
         .from("saloes")
         .select(
           "plano, instagram_url, acessibilidade, wifi, cafe, ar_condicionado"
@@ -262,7 +262,7 @@ export async function getClientSalonProfile(
         .eq("id", base.id)
         .limit(1)
         .maybeSingle(),
-      (supabaseAdmin as any)
+      (databaseAdmin as any)
         .from("configuracoes_salao")
         .select(
           "hora_abertura, hora_fechamento, dias_funcionamento, fuso_horario"
@@ -271,7 +271,7 @@ export async function getClientSalonProfile(
         .limit(1)
         .maybeSingle(),
       base.servicos.length
-        ? (supabaseAdmin as any)
+        ? (databaseAdmin as any)
             .from("servicos")
             .select("id, imagem_url")
             .eq("id_salao", base.id)
@@ -281,7 +281,7 @@ export async function getClientSalonProfile(
             )
             .limit(200)
         : Promise.resolve({ data: [] }),
-      (supabaseAdmin as any)
+      (databaseAdmin as any)
         .from("clientes_avaliacoes")
         .select(
           "id, id_agendamento, id_profissional, nota, comentario, created_at, imagens_url, clientes(nome)"
@@ -312,7 +312,7 @@ export async function getClientSalonProfile(
 
   const appointmentProfessionalMap = new Map<string, string>();
   if (unresolvedAppointmentIds.length) {
-    const { data: appointmentRows } = await (supabaseAdmin as any)
+    const { data: appointmentRows } = await (databaseAdmin as any)
       .from("agendamentos")
       .select("id, profissional_id")
       .eq("id_salao", base.id)

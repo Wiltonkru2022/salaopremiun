@@ -28,7 +28,7 @@ import {
 } from "./plan-utils";
 
 export function useAssinaturaPage() {
-  const supabase = useMemo(() => createClient(), []);
+  const database = useMemo(() => createClient(), []);
   const searchParams = useSearchParams();
 
   const [loading, setLoading] = useState(true);
@@ -59,7 +59,7 @@ export function useAssinaturaPage() {
     acessoCarregado,
     nivel,
     carregarAcesso,
-  } = useAssinaturaAccess({ supabase });
+  } = useAssinaturaAccess({ database });
 
   const podeGerenciar = nivel === "admin";
   const planoUrl = searchParams.get("plano");
@@ -108,7 +108,7 @@ export function useAssinaturaPage() {
     carregarCheckoutAtual,
     carregarStatusAssinatura,
   } = useAssinaturaStatus({
-    supabase,
+    database,
     planoEscolhidoManualmenteRef,
     planoSelecionadoRef,
     setPlanoSelecionado: selecionarPlano,
@@ -194,7 +194,7 @@ export function useAssinaturaPage() {
     iniciarTrial,
     copiarPix,
   } = useAssinaturaCheckout({
-    supabase,
+    database,
     salao,
     checkout,
     planoSelecionado,

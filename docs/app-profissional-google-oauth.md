@@ -10,7 +10,7 @@ Google OAuth **não** é um método de login do App Profissional.
 
 Motivos:
 
-- o painel já utiliza Supabase Auth e possui contexto administrativo diferente;
+- o painel já utiliza Neon Auth e possui contexto administrativo diferente;
 - o profissional possui sessão e permissões próprias;
 - compartilhar o mesmo fluxo de Auth sem separação forte pode misturar sessões e superfícies;
 - a implementação Next antiga do profissional foi removida.

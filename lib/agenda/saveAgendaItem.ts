@@ -17,7 +17,7 @@ import {
 const STATUS_SEM_CONFLITO = new Set(["cancelado", "faltou", "atendido", "expirado"]);
 
 export async function saveAgendaItem(params: {
-  supabase: DatabaseClient;
+  database: DatabaseClient;
   payload: Record<string, unknown>;
   idSalao: string;
   config: ConfigSalao;
@@ -45,7 +45,7 @@ export async function saveAgendaItem(params: {
   }) => Promise<void>;
 }) {
   const {
-    supabase,
+    database,
     payload,
     idSalao,
     bloqueios,
@@ -227,7 +227,7 @@ export async function saveAgendaItem(params: {
         throw new Error("Esse intervalo já possui agendamento ou bloqueio.");
       }
 
-      const { error } = await supabase
+      const { error } = await database
         .from("agenda_bloqueios")
         .update({
           profissional_id: payload.profissionalId,
@@ -274,7 +274,7 @@ export async function saveAgendaItem(params: {
       );
     }
 
-    const { error } = await supabase.from("agenda_bloqueios").insert(
+    const { error } = await database.from("agenda_bloqueios").insert(
       datasBloqueio.map((data) => ({
         id_salao: idSalao,
         profissional_id: payload.profissionalId,

@@ -130,7 +130,7 @@ export async function carregarPainelDashboardResumo(
       startOfDayArg: string,
       endOfDayArg: string
     ) => {
-      const supabaseAdmin = getDatabaseAdmin();
+      const databaseAdmin = getDatabaseAdmin();
 
       const [
         { count: agendamentosHoje, error: agHojeError },
@@ -152,73 +152,73 @@ export async function carregarPainelDashboardResumo(
         { data: itensMesRows, error: itensMesError },
         { data: comandasSerieRows, error: comandasSerieError },
       ] = await Promise.all([
-        supabaseAdmin
+        databaseAdmin
           .from("agendamentos")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", cachedSalaoId)
           .eq("data", nowDateArg)
           .in("status", ["confirmado", "pendente", "atendido", "aguardando_pagamento"]),
-        supabaseAdmin
+        databaseAdmin
           .from("agendamentos")
           .select("data, hora_inicio")
           .eq("id_salao", cachedSalaoId)
           .eq("status", "confirmado")
           .in("data", [nowDateArg, inTwoHoursDateArg]),
-        supabaseAdmin
+        databaseAdmin
           .from("clientes")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", cachedSalaoId),
-        supabaseAdmin
+        databaseAdmin
           .from("comandas")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", cachedSalaoId)
           .eq("status", "fechada")
           .gte("fechada_em", startOfPeriodArg)
           .lt("fechada_em", endOfPeriodArg),
-        supabaseAdmin
+        databaseAdmin
           .from("comandas")
           .select("total, id_cliente")
           .eq("id_salao", cachedSalaoId)
           .eq("status", "fechada")
           .gte("fechada_em", startOfPeriodArg)
           .lt("fechada_em", endOfPeriodArg),
-        supabaseAdmin
+        databaseAdmin
           .from("comissoes_lancamentos")
           .select("valor_comissao")
           .eq("id_salao", cachedSalaoId)
           .eq("status", "pendente")
           .gte("competencia_data", startOfPeriodArg.slice(0, 10))
           .lt("competencia_data", endOfPeriodArg.slice(0, 10)),
-        supabaseAdmin
+        databaseAdmin
           .from("comandas")
           .select("total")
           .eq("id_salao", cachedSalaoId)
           .eq("status", "fechada")
           .gte("fechada_em", startOfDayArg)
           .lt("fechada_em", endOfDayArg),
-        supabaseAdmin
+        databaseAdmin
           .from("profissionais")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", cachedSalaoId)
           .eq("status", "ativo"),
-        supabaseAdmin
+        databaseAdmin
           .from("comandas")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", cachedSalaoId)
           .eq("status", "aguardando_pagamento"),
-        supabaseAdmin
+        databaseAdmin
           .from("agendamentos")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", cachedSalaoId)
           .eq("status", "cancelado")
           .gte("data", startOfPeriodArg.slice(0, 10))
           .lt("data", endOfPeriodArg.slice(0, 10)),
-        supabaseAdmin
+        databaseAdmin
           .from("saloes")
           .select("plano")
           .eq("id", cachedSalaoId)
           .maybeSingle(),
-        supabaseAdmin
+        databaseAdmin
           .from("agendamentos")
           .select("id, data, hora_inicio, hora_fim, status, cliente_id, profissional_id, servico_id")
           .eq("id_salao", cachedSalaoId)
@@ -226,7 +226,7 @@ export async function carregarPainelDashboardResumo(
           .in("status", ["confirmado", "pendente", "atendido", "aguardando_pagamento"])
           .order("hora_inicio", { ascending: true })
           .limit(12),
-        supabaseAdmin
+        databaseAdmin
           .from("agendamentos")
           .select("id, data, hora_inicio, hora_fim, status, cliente_id, profissional_id, servico_id")
           .eq("id_salao", cachedSalaoId)
@@ -235,13 +235,13 @@ export async function carregarPainelDashboardResumo(
           .order("data", { ascending: true })
           .order("hora_inicio", { ascending: true })
           .limit(8),
-        supabaseAdmin
+        databaseAdmin
           .from("clientes")
           .select("id, nome, telefone, whatsapp, created_at")
           .eq("id_salao", cachedSalaoId)
           .order("created_at", { ascending: true })
           .limit(250),
-        supabaseAdmin
+        databaseAdmin
           .from("comandas")
           .select("id_cliente, fechada_em")
           .eq("id_salao", cachedSalaoId)
@@ -249,7 +249,7 @@ export async function carregarPainelDashboardResumo(
           .gte("fechada_em", new Date(now.getTime() - 120 * 24 * 60 * 60 * 1000).toISOString())
           .order("fechada_em", { ascending: false })
           .limit(1000),
-        supabaseAdmin
+        databaseAdmin
           .from("agendamentos")
           .select("cliente_id, data, hora_inicio")
           .eq("id_salao", cachedSalaoId)
@@ -258,7 +258,7 @@ export async function carregarPainelDashboardResumo(
           .order("data", { ascending: true })
           .order("hora_inicio", { ascending: true })
           .limit(1000),
-        supabaseAdmin
+        databaseAdmin
           .from("comanda_itens")
           .select("id_profissional, id_servico, valor_total, quantidade")
           .eq("id_salao", cachedSalaoId)
@@ -266,7 +266,7 @@ export async function carregarPainelDashboardResumo(
           .gte("created_at", startOfPeriodArg)
           .lt("created_at", endOfPeriodArg)
           .limit(1500),
-        supabaseAdmin
+        databaseAdmin
           .from("comandas")
           .select("total, fechada_em")
           .eq("id_salao", cachedSalaoId)
@@ -306,7 +306,7 @@ export async function carregarPainelDashboardResumo(
         { data: clientesAgendaRows, error: clientesAgendaRowsError },
       ] = await Promise.all([
         profissionalIds.length
-          ? supabaseAdmin
+          ? databaseAdmin
               .from("profissionais")
               .select("id, nome, nome_exibicao")
               .eq("id_salao", cachedSalaoId)
@@ -314,7 +314,7 @@ export async function carregarPainelDashboardResumo(
               .limit(80)
           : Promise.resolve({ data: [], error: null }),
         servicoIds.length
-          ? supabaseAdmin
+          ? databaseAdmin
               .from("servicos")
               .select("id, nome")
               .eq("id_salao", cachedSalaoId)
@@ -322,7 +322,7 @@ export async function carregarPainelDashboardResumo(
               .limit(120)
           : Promise.resolve({ data: [], error: null }),
         clienteIds.length
-          ? supabaseAdmin
+          ? databaseAdmin
               .from("clientes")
               .select("id, nome")
               .eq("id_salao", cachedSalaoId)

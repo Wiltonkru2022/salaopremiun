@@ -30,8 +30,8 @@ export async function POST(request: Request) {
       action: "app_profissional_pwa_bloquear_horario",
       actorId: session.idProfissional,
       idSalao: session.idSalao,
-      run: async (supabase) => {
-        const { data: professional, error: professionalError } = await supabase
+      run: async (database) => {
+        const { data: professional, error: professionalError } = await database
           .from("profissionais")
           .select("id, ativo, id_salao, tipo_profissional")
           .eq("id", target)
@@ -40,7 +40,7 @@ export async function POST(request: Request) {
         if (professionalError) throw new Error(professionalError.message);
         if (!professional?.id || !professional.ativo || String(professional.tipo_profissional || "").toLowerCase() === "assistente") throw new Error("Profissional sem acesso a esta agenda.");
 
-        const { data: conflicts, error: conflictError } = await supabase
+        const { data: conflicts, error: conflictError } = await database
           .from("agenda_bloqueios")
           .select("data, hora_inicio, hora_fim")
           .eq("id_salao", session.idSalao)
@@ -50,7 +50,7 @@ export async function POST(request: Request) {
         if ((conflicts || []).some((item) => dates.includes(String(item.data).slice(0, 10)) && minutes(start) < minutes(String(item.hora_fim)) && minutes(end) > minutes(String(item.hora_inicio)))) {
           throw new Error("Ja existe bloqueio nesse intervalo.");
         }
-        const { error } = await supabase.from("agenda_bloqueios").insert(dates.map((data) => ({
+        const { error } = await database.from("agenda_bloqueios").insert(dates.map((data) => ({
           id_salao: session.idSalao,
           profissional_id: target,
           data,

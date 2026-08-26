@@ -15,8 +15,8 @@ export async function GET() {
     );
   }
 
-  const supabase = getDatabaseAdmin();
-  const { data: profissional, error } = await supabase
+  const database = getDatabaseAdmin();
+  const { data: profissional, error } = await database
     .from("profissionais")
     .select("id, id_salao, nome, nome_exibicao, cpf, telefone, whatsapp, email, cargo, categoria, bio, pix_tipo, pix_chave, sinal_pix_recebedor, nivel_acesso, ativo, intervalo_agenda_minutos, dias_trabalho, pausas")
     .eq("id", validation.context.idProfissional)

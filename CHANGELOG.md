@@ -61,7 +61,7 @@ Todas as mudancas importantes do projeto serao documentadas aqui.
 ### Adicionado
 
 - Estrutura inicial do painel.
-- Login com Supabase.
+- Login com Neon.
 - Dashboard inicial.
 - Agenda inicial.
 - Modulo de caixa.

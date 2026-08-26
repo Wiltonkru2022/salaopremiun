@@ -27,10 +27,10 @@ export function createMonitoringService() {
   return {
     async resolveMonitoringIdentity() {
       try {
-        const supabase = await createClient();
+        const database = await createClient();
         const {
           data: { user },
-        } = await supabase.auth.getUser();
+        } = await database.auth.getUser();
 
         if (!user) {
           return {

@@ -31,7 +31,7 @@ A classificação e retenção devem considerar finalidade, necessidade e acesso
 
 ### Painel
 
-Supabase Auth + `usuarios` + `id_salao` + permissões.
+Neon Auth + `usuarios` + `id_salao` + permissões.
 
 ### App Cliente
 

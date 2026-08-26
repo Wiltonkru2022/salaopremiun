@@ -77,8 +77,8 @@ export async function getPublicStatusSnapshot() {
 }
 
 export async function getPublicStatusHistory(limit = 50): Promise<PublicStatusHistoryItem[]> {
-  const supabase = getDatabaseAdmin() as any;
-  const { data, error } = await supabase
+  const database = getDatabaseAdmin() as any;
+  const { data, error } = await database
     .from("incidentes_sistema")
     .select("id, titulo, status, component_key, mensagem_publica, primeira_ocorrencia_em, ultima_ocorrencia_em, resolvido_em, resolution_mode, resolution_reason, operational_components(nome)")
     .eq("visibilidade_publica", true)

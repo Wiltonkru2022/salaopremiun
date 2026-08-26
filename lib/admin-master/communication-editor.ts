@@ -36,8 +36,8 @@ function toInputDateTime(value?: string | null) {
 }
 
 export async function getAdminCampaignEditorData() {
-  const supabase = getDatabaseAdmin();
-  const { data } = await supabase
+  const database = getDatabaseAdmin();
+  const { data } = await database
     .from("campanhas")
     .select("id, nome, tipo, publico_tipo, objetivo, status, inicio_em, fim_em, filtros_json")
     .order("criada_em", { ascending: false })
@@ -67,14 +67,14 @@ export async function getAdminCampaignEditorData() {
 }
 
 export async function getAdminWhatsappEditorData() {
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const [{ data: packages }, { data: templates }] = await Promise.all([
-    supabase
+    database
       .from("whatsapp_pacotes")
       .select("id, nome, preco, quantidade_creditos, ativo")
       .order("criado_em", { ascending: false })
       .limit(80),
-    supabase
+    database
       .from("whatsapp_templates")
       .select("id, nome, categoria, conteudo, ativo")
       .order("criado_em", { ascending: false })

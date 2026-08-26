@@ -4,8 +4,8 @@ Use antes de liberar venda/uso real em produção.
 
 ## 1. Segredos e ambientes
 
-- [ ] Supabase público configurado;
-- [ ] `SUPABASE_SERVICE_ROLE_KEY` somente server-side;
+- [ ] URLs Neon configuradas somente no servidor;
+- [ ] chaves Clerk e Cloudinary configuradas conforme `.env.example`;
 - [ ] `ASAAS_API_KEY`, `ASAAS_BASE_URL`, `ASAAS_WEBHOOK_TOKEN` corretos;
 - [ ] `BREVO_API_KEY` configurada se e-mail estiver ativo;
 - [ ] `CRON_SECRET` definido;
@@ -49,9 +49,9 @@ Use antes de liberar venda/uso real em produção.
 - [ ] favoritar/compartilhar;
 - [ ] PWA/push em dispositivo real.
 
-## 5. Supabase
+## 5. Neon
 
-- [ ] `npx supabase db push --dry-run` revisado quando aplicável;
+- [ ] `npx database db push --dry-run` revisado quando aplicável;
 - [ ] migrations remotas atualizadas;
 - [ ] backup/restore conhecido;
 - [ ] RLS multi-tenant revisada;

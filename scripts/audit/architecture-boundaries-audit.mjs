@@ -23,13 +23,13 @@ const IGNORED_DIRS = new Set([".git", ".next", "node_modules"]);
 const CODE_EXTENSIONS = new Set([".ts", ".tsx", ".mts", ".cts"]);
 
 const ROUTE_FORBIDDEN_PATTERNS = [
-  { name: "Supabase .from direto no route handler", pattern: /(?<!Buffer)\.from\s*\(/ },
-  { name: "Supabase .rpc direto no route handler", pattern: /\.rpc\s*\(/ },
+  { name: "Neon .from direto no route handler", pattern: /(?<!Buffer)\.from\s*\(/ },
+  { name: "Neon .rpc direto no route handler", pattern: /\.rpc\s*\(/ },
   { name: "calculo .reduce direto no route handler", pattern: /\.reduce\s*\(/ },
 ];
 
 const ANY_PATTERN = /(?::\s*any\b|\bas\s+any\b|<\s*any\s*>)/;
-const ANY_ALLOWLIST = new Set(["types/supabase.ts"]);
+const ANY_ALLOWLIST = new Set(["types/database.ts"]);
 const ROUTE_ALLOWLIST = new Set([
   "app/api/agenda/google-calendar/route.ts",
   "app/api/auth/google-login-precheck/route.ts",

@@ -38,8 +38,8 @@ function normalize(row?: Record<string, unknown> | null): AutomationPreferences 
 }
 
 async function loadPreferences(idSalao: string) {
-  const supabase = getDatabaseAdmin() as any;
-  const { data, error } = await supabase
+  const database = getDatabaseAdmin() as any;
+  const { data, error } = await database
     .from("whatsapp_automacoes_saloes")
     .select(AUTOMATION_SELECT)
     .eq("id_salao", idSalao)
@@ -48,7 +48,7 @@ async function loadPreferences(idSalao: string) {
   if (error) throw error;
   if (data) return normalize(data as Record<string, unknown>);
 
-  const { data: created, error: createError } = await supabase
+  const { data: created, error: createError } = await database
     .from("whatsapp_automacoes_saloes")
     .upsert({ id_salao: idSalao, ...DEFAULTS }, { onConflict: "id_salao" })
     .select(AUTOMATION_SELECT)
@@ -92,11 +92,11 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const supabase = getDatabaseAdmin() as any;
+    const database = getDatabaseAdmin() as any;
     const current = await loadPreferences(actor.idSalao);
     const next = { ...current, [key]: body.enabled };
 
-    const { data, error } = await supabase
+    const { data, error } = await database
       .from("whatsapp_automacoes_saloes")
       .upsert(
         {

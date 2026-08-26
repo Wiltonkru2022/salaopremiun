@@ -48,7 +48,7 @@ async function callUnknownRpc<T>(
   functionName: string,
   args: Record<string, unknown>
 ): Promise<RpcResult<T>> {
-  return (ctx.supabaseAdmin.rpc as unknown as (
+  return (ctx.databaseAdmin.rpc as unknown as (
     name: string,
     params: Record<string, unknown>
   ) => Promise<RpcResult<T>>)(functionName, args);
@@ -58,7 +58,7 @@ async function carregarResumoComanda(
   ctx: CaixaProcessarContext,
   idComanda: string
 ): Promise<ComandaResumoPagamento> {
-  const { data: comanda, error: comandaError } = await ctx.supabaseAdmin
+  const { data: comanda, error: comandaError } = await ctx.databaseAdmin
     .from("comandas")
     .select("id_cliente, total")
     .eq("id", idComanda)
@@ -69,7 +69,7 @@ async function carregarResumoComanda(
     throw new Error("Nao foi possivel identificar a comanda para o pagamento.");
   }
 
-  const { data: pagamentos, error: pagamentosError } = await ctx.supabaseAdmin
+  const { data: pagamentos, error: pagamentosError } = await ctx.databaseAdmin
     .from("comanda_pagamentos")
     .select("valor, valor_credito_cliente, valor_troco")
     .eq("id_salao", ctx.idSalao)
@@ -119,7 +119,7 @@ async function carregarPagamentoPorIdempotencia(params: {
     return null;
   }
 
-  const { data, error } = await ctx.supabaseAdmin
+  const { data, error } = await ctx.databaseAdmin
     .from("comanda_pagamentos")
     .select(
       "id, id_movimentacao, forma_pagamento, valor, parcelas, taxa_maquininha_percentual, taxa_maquininha_valor, valor_credito_cliente, valor_troco, destino_excedente, observacoes"
@@ -240,8 +240,8 @@ export async function adicionarPagamento(params: {
   idComanda: string;
 }) {
   const { ctx, body, idComanda } = params;
-  const sessao = await carregarSessaoAberta(ctx.supabaseAdmin, ctx.idSalao);
-  const { data: config, error: configError } = await ctx.supabaseAdmin
+  const sessao = await carregarSessaoAberta(ctx.databaseAdmin, ctx.idSalao);
+  const { data: config, error: configError } = await ctx.databaseAdmin
     .from("configuracoes_salao")
     .select(
       "repassa_taxa_cliente, taxa_maquininha_credito, taxa_maquininha_debito, taxa_maquininha_pix, taxa_maquininha_transferencia, taxa_maquininha_boleto, taxa_maquininha_outro, taxa_credito_1x, taxa_credito_2x, taxa_credito_3x, taxa_credito_4x, taxa_credito_5x, taxa_credito_6x, taxa_credito_7x, taxa_credito_8x, taxa_credito_9x, taxa_credito_10x, taxa_credito_11x, taxa_credito_12x"
@@ -338,7 +338,7 @@ export async function adicionarPagamento(params: {
     p_observacoes: observacoes,
   };
 
-  let { data, error } = await ctx.supabaseAdmin.rpc(
+  let { data, error } = await ctx.databaseAdmin.rpc(
     "fn_caixa_adicionar_pagamento_comanda_idempotente",
     {
       ...pagamentoPayload,
@@ -353,7 +353,7 @@ export async function adicionarPagamento(params: {
       "fn_caixa_adicionar_pagamento_comanda_idempotente"
     )
   ) {
-    const fallback = await ctx.supabaseAdmin.rpc(
+    const fallback = await ctx.databaseAdmin.rpc(
       "fn_caixa_adicionar_pagamento_comanda",
       pagamentoPayload
     );
@@ -405,7 +405,7 @@ export async function adicionarPagamento(params: {
 
     if (creditoError) throw creditoError;
     valorCreditoGerado = excedente;
-    const { error: pagamentoCreditoUpdateError } = await ctx.supabaseAdmin
+    const { error: pagamentoCreditoUpdateError } = await ctx.databaseAdmin
       .from("comanda_pagamentos")
       .update({ destino_excedente: "credito_cliente" })
       .eq("id", idPagamento)
@@ -427,7 +427,7 @@ export async function adicionarPagamento(params: {
     valorTroco = excedente;
     const valorLiquidoCaixa = sanitizeMoney(valorFinalCobrado - excedente);
 
-    const { error: pagamentoUpdateError } = await ctx.supabaseAdmin
+    const { error: pagamentoUpdateError } = await ctx.databaseAdmin
       .from("comanda_pagamentos")
       .update({
         valor_troco: valorTroco,
@@ -440,7 +440,7 @@ export async function adicionarPagamento(params: {
     if (pagamentoUpdateError) throw pagamentoUpdateError;
 
     if (idMovimentacao) {
-      const { error: movimentoUpdateError } = await ctx.supabaseAdmin
+      const { error: movimentoUpdateError } = await ctx.databaseAdmin
         .from("caixa_movimentacoes")
         .update({
           valor: valorLiquidoCaixa,
@@ -508,7 +508,7 @@ export async function removerPagamento(params: {
     throw new CaixaInputError("Pagamento obrigatorio para remocao.");
   }
 
-  const { data: pagamento, error: pagamentoError } = await ctx.supabaseAdmin
+  const { data: pagamento, error: pagamentoError } = await ctx.databaseAdmin
     .from("comanda_pagamentos")
     .select("id, forma_pagamento, valor_credito_cliente, valor_troco")
     .eq("id", idPagamento)
@@ -549,7 +549,7 @@ export async function removerPagamento(params: {
       if (creditoError) throw creditoError;
     }
 
-    const { error } = await ctx.supabaseAdmin.rpc(
+    const { error } = await ctx.databaseAdmin.rpc(
       "fn_caixa_remover_pagamento_comanda",
       {
         p_id_salao: ctx.idSalao,

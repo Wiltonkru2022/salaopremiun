@@ -112,11 +112,11 @@ function renderTemplateMessage(template: WhatsAppTemplateConfig, values: string[
 }
 
 async function findTemplateByColumn(
-  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>,
+  databaseAdmin: ReturnType<typeof getDatabaseAdmin>,
   column: string,
   value: string
 ) {
-  const { data, error } = await (supabaseAdmin as any)
+  const { data, error } = await (databaseAdmin as any)
     .from("whatsapp_templates")
     .select(
       "id, nome, nome_meta, idioma, categoria_meta, tipo_interno, conteudo, variaveis_json"
@@ -135,16 +135,16 @@ async function findTemplateByColumn(
 }
 
 async function loadWhatsAppTemplateConfig(
-  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>,
+  databaseAdmin: ReturnType<typeof getDatabaseAdmin>,
   template?: string | null
 ): Promise<WhatsAppTemplateConfig | null> {
   const name = String(template || "").trim();
   if (!name) return null;
 
   const row =
-    (await findTemplateByColumn(supabaseAdmin, "nome_meta", name)) ||
-    (await findTemplateByColumn(supabaseAdmin, "nome", name)) ||
-    (await findTemplateByColumn(supabaseAdmin, "tipo_interno", name));
+    (await findTemplateByColumn(databaseAdmin, "nome_meta", name)) ||
+    (await findTemplateByColumn(databaseAdmin, "nome", name)) ||
+    (await findTemplateByColumn(databaseAdmin, "tipo_interno", name));
 
   if (!row?.id) {
     throw new Error(`Template WhatsApp nao encontrado ou inativo: ${name}.`);
@@ -180,10 +180,10 @@ export async function sendManualMarketingWhatsApp({
 }: SendManualMarketingWhatsAppParams) {
   await assertCanMutatePlanFeature(idSalao, "whatsapp");
 
-  const supabaseAdmin = getDatabaseAdmin();
+  const databaseAdmin = getDatabaseAdmin();
   const destinoNormalizado = normalizeDestino(destino);
   const envioId = randomUUID();
-  const templateConfig = await loadWhatsAppTemplateConfig(supabaseAdmin, template);
+  const templateConfig = await loadWhatsAppTemplateConfig(databaseAdmin, template);
   const templateValues = normalizeTemplateValues(templateVariables);
   const tipoInternoResolvido =
     templateConfig?.tipoInterno || resolveTipoInterno(tipo, tipoInterno);
@@ -215,7 +215,7 @@ export async function sendManualMarketingWhatsApp({
     throw new Error("Mensagem obrigatoria.");
   }
 
-  const envioExistente = await supabaseAdmin
+  const envioExistente = await databaseAdmin
     .from("whatsapp_envios")
     .select("id, provider_message_id, id_credito_movimentacao, status")
     .eq("id_salao", idSalao)
@@ -242,7 +242,7 @@ export async function sendManualMarketingWhatsApp({
   let providerAccepted = false;
 
   try {
-    const envioInsert = await supabaseAdmin
+    const envioInsert = await databaseAdmin
       .from("whatsapp_envios")
       .insert({
         id: envioId,
@@ -284,7 +284,7 @@ export async function sendManualMarketingWhatsApp({
       );
     }
 
-    const debitoResult = await supabaseAdmin.rpc("fn_whatsapp_creditos_debitar", {
+    const debitoResult = await databaseAdmin.rpc("fn_whatsapp_creditos_debitar", {
       p_id_salao: idSalao,
       p_tipo_interno: tipoInternoResolvido,
       p_idempotency_key: idempotency,
@@ -310,7 +310,7 @@ export async function sendManualMarketingWhatsApp({
     const margemCentavos = getDebitNumber(debito, "margemCentavos");
     const categoriaMeta = String(debito.categoriaMeta || "").trim() || null;
 
-    const debitoUpdate = await supabaseAdmin
+    const debitoUpdate = await databaseAdmin
       .from("whatsapp_envios")
       .update({
         id_credito_movimentacao: creditoMovimentacaoId,
@@ -356,7 +356,7 @@ export async function sendManualMarketingWhatsApp({
     const providerMessageId = getProviderMessageId(providerResult);
     providerAccepted = true;
 
-    const updateResult = await supabaseAdmin
+    const updateResult = await databaseAdmin
       .from("whatsapp_envios")
       .update({
         status: "enviado",
@@ -397,7 +397,7 @@ export async function sendManualMarketingWhatsApp({
     const estornoAutomatico = Boolean(creditoMovimentacaoId && !providerAccepted);
 
     if (creditoMovimentacaoId && !providerAccepted) {
-      await supabaseAdmin.rpc("fn_whatsapp_creditos_estornar", {
+      await databaseAdmin.rpc("fn_whatsapp_creditos_estornar", {
         p_id_salao: idSalao,
         p_movimentacao_id: creditoMovimentacaoId,
         p_idempotency_key: `estorno:${envioId}:${creditoMovimentacaoId}`,
@@ -406,7 +406,7 @@ export async function sendManualMarketingWhatsApp({
     }
 
     if (envioId) {
-      await supabaseAdmin
+      await databaseAdmin
         .from("whatsapp_envios")
         .update({
           status: "erro",

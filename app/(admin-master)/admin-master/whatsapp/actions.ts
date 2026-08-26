@@ -23,7 +23,7 @@ function centsValue(formData: FormData, key: string) {
 
 export async function salvarWhatsappPacoteAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("whatsapp_editar");
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const id = textValue(formData, "id");
   const payload = {
     nome: textValue(formData, "nome"),
@@ -35,10 +35,10 @@ export async function salvarWhatsappPacoteAdminMaster(formData: FormData) {
   if (!payload.nome) throw new Error("Informe o nome do pacote.");
 
   if (id) {
-    const { error } = await supabase.from("whatsapp_pacotes").update(payload).eq("id", id);
+    const { error } = await database.from("whatsapp_pacotes").update(payload).eq("id", id);
     if (error) throw new Error(error.message || "Nao foi possivel salvar o pacote.");
   } else {
-    const { error } = await supabase.from("whatsapp_pacotes").insert(payload);
+    const { error } = await database.from("whatsapp_pacotes").insert(payload);
     if (error) throw new Error(error.message || "Nao foi possivel criar o pacote.");
   }
 
@@ -57,7 +57,7 @@ export async function salvarWhatsappPacoteAdminMaster(formData: FormData) {
 
 export async function salvarWhatsappTemplateAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("whatsapp_editar");
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const id = textValue(formData, "id");
   const payload = {
     nome: textValue(formData, "nome"),
@@ -71,10 +71,10 @@ export async function salvarWhatsappTemplateAdminMaster(formData: FormData) {
   }
 
   if (id) {
-    const { error } = await supabase.from("whatsapp_templates").update(payload).eq("id", id);
+    const { error } = await database.from("whatsapp_templates").update(payload).eq("id", id);
     if (error) throw new Error(error.message || "Nao foi possivel salvar o template.");
   } else {
-    const { error } = await supabase.from("whatsapp_templates").insert(payload);
+    const { error } = await database.from("whatsapp_templates").insert(payload);
     if (error) throw new Error(error.message || "Nao foi possivel criar o template.");
   }
 
@@ -93,7 +93,7 @@ export async function salvarWhatsappTemplateAdminMaster(formData: FormData) {
 
 export async function salvarWhatsappTarifaAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("whatsapp_editar");
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const id = textValue(formData, "id");
   const payload = {
     nome: textValue(formData, "nome"),
@@ -110,10 +110,10 @@ export async function salvarWhatsappTarifaAdminMaster(formData: FormData) {
   }
 
   if (id) {
-    const { error } = await supabase.from("whatsapp_tarifas").update(payload).eq("id", id);
+    const { error } = await database.from("whatsapp_tarifas").update(payload).eq("id", id);
     if (error) throw new Error(error.message || "Nao foi possivel salvar a tarifa.");
   } else {
-    const { error } = await supabase.from("whatsapp_tarifas").insert(payload);
+    const { error } = await database.from("whatsapp_tarifas").insert(payload);
     if (error) throw new Error(error.message || "Nao foi possivel criar a tarifa.");
   }
 
@@ -132,7 +132,7 @@ export async function salvarWhatsappTarifaAdminMaster(formData: FormData) {
 
 export async function ajustarWhatsappSaldoAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("whatsapp_editar");
-  const supabase = getDatabaseAdmin();
+  const database = getDatabaseAdmin();
   const idSalao = textValue(formData, "id_salao");
   const valorCentavos = centsValue(formData, "valor");
   const motivo = textValue(formData, "motivo");
@@ -141,7 +141,7 @@ export async function ajustarWhatsappSaldoAdminMaster(formData: FormData) {
   if (!valorCentavos) throw new Error("Informe um valor de ajuste.");
   if (!motivo) throw new Error("Informe o motivo do ajuste.");
 
-  const result = await supabase.rpc("fn_whatsapp_creditos_ajuste_admin", {
+  const result = await database.rpc("fn_whatsapp_creditos_ajuste_admin", {
     p_id_salao: idSalao,
     p_valor_centavos: valorCentavos,
     p_motivo: motivo,
@@ -176,8 +176,8 @@ async function reconciliarRecargaWhatsapp(formData: FormData, exigirPagamento: b
   const id = textValue(formData, "id");
   if (!id) throw new Error("Recarga nao informada.");
 
-  const supabase = getDatabaseAdmin();
-  const { data: recarga, error } = await (supabase as any)
+  const database = getDatabaseAdmin();
+  const { data: recarga, error } = await (database as any)
     .from("whatsapp_creditos_recargas")
     .select("id, id_salao, asaas_payment_id, external_reference, status, valor_centavos")
     .eq("id", id)
@@ -199,7 +199,7 @@ async function reconciliarRecargaWhatsapp(formData: FormData, exigirPagamento: b
   }
 
   const result = await processarWebhookRecargaWhatsapp({
-    supabaseAdmin: supabase as any,
+    databaseAdmin: database as any,
     paymentId,
     payment,
     paymentStatus,

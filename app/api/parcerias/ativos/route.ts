@@ -90,15 +90,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ campanha: null, campanhas: [] }, { status: 200 });
   }
 
-  const supabase = getDatabaseAdmin() as any;
+  const database = getDatabaseAdmin() as any;
   const now = new Date().toISOString();
   const today = now.slice(0, 10);
 
   const [{ data: salao }, { data: campanhas }] = await Promise.all([
     idSalao
-      ? supabase.from("saloes").select("cidade,estado").eq("id", idSalao).maybeSingle()
+      ? database.from("saloes").select("cidade,estado").eq("id", idSalao).maybeSingle()
       : Promise.resolve({ data: null }),
-    supabase
+    database
       .from("parceria_campanhas")
       .select(
         "id,nome,descricao,destino_url,cupom_codigo,publico,locais_exibicao,regioes,inicio_em,fim_em,status,prioridade,peso_rotacao,limite_frequencia_dia,limite_impressoes_dia,exclusiva,origem,categoria_interna,parceiros_comerciais(nome_fantasia,razao_social),parceria_criativos(id,titulo,subtitulo,imagem_url,alt_text,cta_texto,destino_url,formato,ordem,ativo),parceria_criativos_locais(id,local_exibicao,imagem_url,formato,ativo)"
@@ -129,7 +129,7 @@ export async function GET(request: NextRequest) {
   if (!elegiveis.length) return NextResponse.json({ campanha: null, campanhas: [] });
 
   const ids = elegiveis.map((c: any) => c.id);
-  const { data: metricas } = await supabase
+  const { data: metricas } = await database
     .from("parceria_metricas_diarias")
     .select("id_campanha,impressoes")
     .in("id_campanha", ids)
@@ -210,8 +210,8 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
-    const supabase = getDatabaseAdmin() as any;
-    const { error } = await supabase.rpc("registrar_parceria_metrica", {
+    const database = getDatabaseAdmin() as any;
+    const { error } = await database.rpc("registrar_parceria_metrica", {
       p_id_campanha: idCampanha,
       p_local_exibicao: local.slice(0, 60),
       p_tipo: tipo,
