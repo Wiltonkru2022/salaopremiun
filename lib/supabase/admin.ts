@@ -12,13 +12,25 @@ const globalStore = globalThis as typeof globalThis & {
   __salaopremiumNeonAdminCompat?: SupabaseAdminClient;
 };
 
+const disabledSupabaseTarget = new Proxy({} as Record<string, unknown>, {
+  get() {
+    return () => {
+      throw new Error(
+        "Supabase foi desativado. Configure NEON_DATABASE_URL e NEON_ADMIN_DATABASE_URL."
+      );
+    };
+  },
+});
+
 export function getSupabaseAdmin(): SupabaseAdminClient {
   if (typeof window !== "undefined") {
     throw new Error("O cliente administrativo de banco so pode ser usado no servidor.");
   }
 
   if (!globalStore.__salaopremiumNeonAdminCompat) {
-    globalStore.__salaopremiumNeonAdminCompat = createNeonSupabaseCompat();
+    globalStore.__salaopremiumNeonAdminCompat = createNeonSupabaseCompat(
+      disabledSupabaseTarget
+    );
   }
 
   return globalStore.__salaopremiumNeonAdminCompat;
