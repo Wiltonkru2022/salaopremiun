@@ -155,6 +155,10 @@ function createRemoteBuilder(table: string) {
       state.filters.push({ op: "in", column, value });
       return builder;
     },
+    contains(column: string, value: unknown) {
+      state.filters.push({ op: "contains", column, value });
+      return builder;
+    },
     or(value: string) {
       state.filters.push({ op: "or", value });
       return builder;
@@ -216,9 +220,10 @@ function createRemoteBuilder(table: string) {
   return builder;
 }
 
-function createPainelAuthProxy(raw: AppSupabaseClient) {
-  return new Proxy(raw.auth as any, {
-    get(target, property, receiver) {
+function createPainelAuthProxy() {
+  const target: Record<string, unknown> = {};
+  return new Proxy(target as any, {
+    get(_target, property) {
       if (property === "getUser") {
         return async () => {
           try {
@@ -232,8 +237,16 @@ function createPainelAuthProxy(raw: AppSupabaseClient) {
               return { data: { user: payload.user }, error: null };
             }
             return { data: { user: null }, error: null };
-          } catch {
-            return target.getUser();
+          } catch (cause) {
+            return {
+              data: { user: null },
+              error: {
+                message:
+                  cause instanceof Error
+                    ? cause.message
+                    : "Falha ao validar sessao Clerk do painel.",
+              },
+            };
           }
         };
       }
@@ -251,7 +264,7 @@ function createPainelAuthProxy(raw: AppSupabaseClient) {
               return {
                 data: {
                   session: {
-                    access_token: "painel-provider-session",
+                    access_token: "painel-clerk-session",
                     refresh_token: "",
                     token_type: "bearer",
                     expires_in: 0,
@@ -263,24 +276,53 @@ function createPainelAuthProxy(raw: AppSupabaseClient) {
               };
             }
             return { data: { session: null }, error: null };
-          } catch {
-            return target.getSession();
+          } catch (cause) {
+            return {
+              data: { session: null },
+              error: {
+                message:
+                  cause instanceof Error
+                    ? cause.message
+                    : "Falha ao validar sessao Clerk do painel.",
+              },
+            };
           }
         };
       }
 
       if (property === "signOut") {
-        return async (...args: unknown[]) => {
-          await fetch("/api/auth/painel/logout", {
-            method: "POST",
-            cache: "no-store",
-            credentials: "same-origin",
-          }).catch(() => undefined);
-          return target.signOut(...args);
+        return async () => {
+          try {
+            const response = await fetch("/api/auth/painel/logout", {
+              method: "POST",
+              cache: "no-store",
+              credentials: "same-origin",
+            });
+            if (!response.ok) {
+              return { error: { message: "Nao foi possivel encerrar a sessao do painel." } };
+            }
+            return { error: null };
+          } catch (cause) {
+            return {
+              error: {
+                message: cause instanceof Error ? cause.message : "Falha ao sair do painel.",
+              },
+            };
+          }
         };
       }
 
-      return Reflect.get(target, property, receiver);
+      if (property === "onAuthStateChange") {
+        return () => ({
+          data: {
+            subscription: {
+              unsubscribe() {},
+            },
+          },
+        });
+      }
+
+      return undefined;
     },
   });
 }
@@ -299,10 +341,11 @@ function createNoopRealtimeChannel() {
   return channel;
 }
 
-function createPainelClient(raw: AppSupabaseClient): AppSupabaseClient {
-  const auth = createPainelAuthProxy(raw);
-  return new Proxy(raw as any, {
-    get(target, property, receiver) {
+function createPainelClient(): AppSupabaseClient {
+  const auth = createPainelAuthProxy();
+  const target: Record<string, unknown> = {};
+  return new Proxy(target as any, {
+    get(_target, property) {
       if (property === "from") {
         return (table: string) => createRemoteBuilder(table);
       }
@@ -315,7 +358,7 @@ function createPainelClient(raw: AppSupabaseClient): AppSupabaseClient {
       if (property === "removeChannel") return async () => "ok";
       if (property === "removeAllChannels") return async () => [];
       if (property === "getChannels") return () => [];
-      return Reflect.get(target, property, receiver);
+      return undefined;
     },
   }) as AppSupabaseClient;
 }
@@ -346,8 +389,9 @@ function getRawBrowserClient(): AppSupabaseClient {
 }
 
 export function createClient(): AppSupabaseClient {
-  const raw = getRawBrowserClient();
-  if (!isPainelHost()) return raw;
-  if (!painelBrowserClient) painelBrowserClient = createPainelClient(raw);
-  return painelBrowserClient;
+  if (isPainelHost()) {
+    if (!painelBrowserClient) painelBrowserClient = createPainelClient();
+    return painelBrowserClient;
+  }
+  return getRawBrowserClient();
 }
