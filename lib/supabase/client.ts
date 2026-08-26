@@ -285,6 +285,20 @@ function createPainelAuthProxy(raw: AppSupabaseClient) {
   });
 }
 
+function createNoopRealtimeChannel() {
+  const channel: any = {
+    on() {
+      return channel;
+    },
+    subscribe(callback?: (status: string) => void) {
+      callback?.("SUBSCRIBED");
+      return channel;
+    },
+    unsubscribe: async () => "ok",
+  };
+  return channel;
+}
+
 function createPainelClient(raw: AppSupabaseClient): AppSupabaseClient {
   const auth = createPainelAuthProxy(raw);
   return new Proxy(raw as any, {
@@ -297,6 +311,10 @@ function createPainelClient(raw: AppSupabaseClient): AppSupabaseClient {
           remoteRequest({ kind: "rpc", fn, args: args || {} });
       }
       if (property === "auth") return auth;
+      if (property === "channel") return () => createNoopRealtimeChannel();
+      if (property === "removeChannel") return async () => "ok";
+      if (property === "removeAllChannels") return async () => [];
+      if (property === "getChannels") return () => [];
       return Reflect.get(target, property, receiver);
     },
   }) as AppSupabaseClient;
