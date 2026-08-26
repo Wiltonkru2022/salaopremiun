@@ -65,7 +65,7 @@ function LoginContent() {
             </div>
 
             <ClerkAdminSignIn
-              exchangeEndpoint="/api/auth/painel/clerk/exchange"
+              exchangeEndpoint="/api/auth/painel/clerk"
               migrationEndpoint="/api/auth/painel/migrate-to-clerk"
               nextPath={nextPath}
               onAuthenticated={onAuthenticated}
