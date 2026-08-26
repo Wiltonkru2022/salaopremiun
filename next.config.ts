@@ -1,12 +1,5 @@
 import type { NextConfig } from "next";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseHostname = supabaseUrl ? new URL(supabaseUrl).hostname : undefined;
-const blogSupabaseUrl =
-  process.env.BLOG_SUPABASE_URL || "https://qwabnqbzbhtxicwizxmv.supabase.co";
-const blogSupabaseHostname = blogSupabaseUrl
-  ? new URL(blogSupabaseUrl).hostname
-  : undefined;
 const cloudinaryHostname = "res.cloudinary.com";
 const appRootDomain = process.env.APP_ROOT_DOMAIN || "salaopremiun.com.br";
 const loginHost = process.env.APP_LOGIN_HOST || `login.${appRootDomain}`;
@@ -45,12 +38,6 @@ function buildCsp() {
   const connectSrc = [
     "'self'",
     ...managedHosts.map((host) => `https://${host}`),
-    ...(supabaseHostname
-      ? [`https://${supabaseHostname}`, `wss://${supabaseHostname}`]
-      : []),
-    ...(blogSupabaseHostname
-      ? [`https://${blogSupabaseHostname}`, `wss://${blogSupabaseHostname}`]
-      : []),
     `https://${cloudinaryHostname}`,
     ...clerkSources,
     "https://viacep.com.br",
@@ -69,8 +56,6 @@ function buildCsp() {
     "'self'",
     "data:",
     "blob:",
-    ...(supabaseHostname ? [`https://${supabaseHostname}`] : []),
-    ...(blogSupabaseHostname ? [`https://${blogSupabaseHostname}`] : []),
     `https://${cloudinaryHostname}`,
     ...clerkSources,
     "https://*.googleusercontent.com",
@@ -89,8 +74,6 @@ function buildCsp() {
     "'self'",
     "data:",
     "blob:",
-    ...(supabaseHostname ? [`https://${supabaseHostname}`] : []),
-    ...(blogSupabaseHostname ? [`https://${blogSupabaseHostname}`] : []),
     `https://${cloudinaryHostname}`,
   ];
   const scriptSrc = [
@@ -152,28 +135,10 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
-      ...(supabaseHostname
-        ? [{ protocol: "https" as const, hostname: supabaseHostname, pathname: "/storage/v1/object/public/**" }]
-        : []),
-      ...(blogSupabaseHostname
-        ? [{ protocol: "https" as const, hostname: blogSupabaseHostname, pathname: "/storage/v1/object/public/**" }]
-        : []),
       { protocol: "https", hostname: cloudinaryHostname, pathname: "/**" },
       { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
       { protocol: "https", hostname: "images.pexels.com", pathname: "/**" },
     ],
-  },
-  async redirects() {
-    if (String(process.env.PAINEL_AUTH_PROVIDER || "supabase").trim().toLowerCase() !== "clerk") {
-      return [];
-    }
-    return [
-      {
-        source: "/login",
-        destination: "/login-clerk",
-        permanent: false,
-      },
-    ];
   },
   async headers() {
     return [
