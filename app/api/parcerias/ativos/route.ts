@@ -9,6 +9,11 @@ function normalize(value?: string | null) {
   return String(value || "").trim().toLowerCase();
 }
 
+function asList<T = any>(value: T | T[] | null | undefined): T[] {
+  if (Array.isArray(value)) return value;
+  return value && typeof value === "object" ? [value] : [];
+}
+
 function hashScore(seed: string, id: string) {
   const hex = createHash("sha256").update(`${seed}:${id}`).digest("hex").slice(0, 12);
   return parseInt(hex, 16) / 0xffffffffffff;
@@ -23,20 +28,19 @@ function campaignLabel(origem: string, categoria?: string | null) {
 }
 
 function asCampaign(campanha: any, local: string) {
-  const parceiro = Array.isArray(campanha.parceiros_comerciais)
-    ? campanha.parceiros_comerciais[0]
-    : campanha.parceiros_comerciais;
+  const parceiros = asList(campanha.parceiros_comerciais);
+  const parceiro = parceiros[0] || null;
 
-  const criativos = (campanha.parceria_criativos || [])
-    .filter((item: any) => item.ativo !== false)
-    .sort((a: any, b: any) => Number(a.ordem || 0) - Number(b.ordem || 0));
+  const criativos = asList(campanha.parceria_criativos)
+    .filter((item: any) => item?.ativo !== false)
+    .sort((a: any, b: any) => Number(a?.ordem || 0) - Number(b?.ordem || 0));
   const criativo = criativos[0] || null;
 
   const arteLocal =
-    (campanha.parceria_criativos_locais || []).find(
+    asList(campanha.parceria_criativos_locais).find(
       (item: any) =>
-        item.ativo !== false &&
-        String(item.local_exibicao || "") === String(local || "")
+        item?.ativo !== false &&
+        String(item?.local_exibicao || "") === String(local || "")
     ) || null;
 
   const origem = campanha.origem || "parceiro";
