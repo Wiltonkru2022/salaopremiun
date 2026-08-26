@@ -1,10 +1,28 @@
 "use client";
 
-import { useCallback } from "react";
+import { Suspense, useCallback } from "react";
 import { useSearchParams } from "next/navigation";
 import { ClerkAdminSignIn } from "@/components/auth/ClerkAdminSignIn";
 
 export default function PainelClerkLoginPage() {
+  return (
+    <Suspense fallback={<PainelClerkLoginFallback />}>
+      <PainelClerkLoginContent />
+    </Suspense>
+  );
+}
+
+function PainelClerkLoginFallback() {
+  return (
+    <main className="min-h-screen bg-zinc-50 px-5 py-10 text-zinc-950">
+      <div className="mx-auto w-full max-w-[460px] rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
+        <p className="text-sm font-semibold text-zinc-500">Carregando autenticação segura...</p>
+      </div>
+    </main>
+  );
+}
+
+function PainelClerkLoginContent() {
   const search = useSearchParams();
   const next = search.get("returnTo") || search.get("next") || "/dashboard?boot=1";
   const onAuthenticated = useCallback((redirectTo: string) => {
