@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
-import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
+import { getAppCookieOptions } from "@/lib/auth/cookie-options";
 
 export const ADMIN_MASTER_SESSION_COOKIE = "admin-master-session";
 
@@ -26,11 +26,9 @@ export type AdminMasterSession = {
 
 function bytesToBase64Url(bytes: Uint8Array) {
   let binary = "";
-
   bytes.forEach((byte) => {
     binary += String.fromCharCode(byte);
   });
-
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
@@ -39,11 +37,9 @@ function base64UrlToBytes(value: string) {
   const padding = "=".repeat((4 - (base64.length % 4 || 4)) % 4);
   const binary = atob(`${base64}${padding}`);
   const bytes = new Uint8Array(binary.length);
-
   for (let index = 0; index < binary.length; index += 1) {
     bytes[index] = binary.charCodeAt(index);
   }
-
   return bytes;
 }
 
@@ -59,13 +55,11 @@ function getAdminMasterSessionSecret() {
   const secret =
     process.env.ADMIN_MASTER_SESSION_SECRET ||
     process.env.PROFISSIONAL_SESSION_SECRET;
-
   if (!secret) {
     throw new Error(
       "ADMIN_MASTER_SESSION_SECRET ou PROFISSIONAL_SESSION_SECRET nao configurada."
     );
   }
-
   return secret;
 }
 
@@ -81,7 +75,6 @@ function getSigningKey() {
       ["sign", "verify"]
     );
   }
-
   return cachedSigningKeyPromise;
 }
 
@@ -91,7 +84,6 @@ async function signSessionPayload(payloadBase64: string) {
     await getSigningKey(),
     new TextEncoder().encode(payloadBase64)
   );
-
   return bytesToBase64Url(new Uint8Array(signature));
 }
 
@@ -109,32 +101,20 @@ export async function createAdminMasterSessionToken(params: {
     exp: nowSeconds + ADMIN_MASTER_SESSION_MAX_AGE_SECONDS,
     mfaVerifiedAt: params.mfaVerifiedAt || nowSeconds,
   };
-
   const payloadBase64 = encodeTextToBase64Url(JSON.stringify(payload));
   const signature = await signSessionPayload(payloadBase64);
-
   return `${payloadBase64}.${signature}`;
 }
 
 export async function verifyAdminMasterSessionToken(token?: string | null) {
   const [payloadBase64, signature] = String(token || "").split(".");
-
-  if (!payloadBase64 || !signature) {
-    return null;
-  }
-
+  if (!payloadBase64 || !signature) return null;
   const expectedSignature = await signSessionPayload(payloadBase64);
-
-  if (signature !== expectedSignature) {
-    return null;
-  }
+  if (signature !== expectedSignature) return null;
 
   let payload: AdminMasterSessionPayload;
-
   try {
-    payload = JSON.parse(
-      decodeBase64UrlToText(payloadBase64)
-    ) as AdminMasterSessionPayload;
+    payload = JSON.parse(decodeBase64UrlToText(payloadBase64)) as AdminMasterSessionPayload;
   } catch {
     return null;
   }
@@ -151,10 +131,7 @@ export async function verifyAdminMasterSessionToken(token?: string | null) {
   }
 
   const nowSeconds = Math.floor(Date.now() / 1000);
-
-  if (payload.exp <= nowSeconds) {
-    return null;
-  }
+  if (payload.exp <= nowSeconds) return null;
 
   return {
     authUserId: payload.authUserId,
@@ -192,8 +169,7 @@ export async function setAdminMasterSessionCookie(
   }
 ) {
   const token = await createAdminMasterSessionToken(params);
-  const cookieOptions = getSupabaseCookieOptions(params.host);
-
+  const cookieOptions = getAppCookieOptions(params.host);
   response.cookies.set(ADMIN_MASTER_SESSION_COOKIE, token, {
     ...cookieOptions,
     path: "/",
@@ -207,8 +183,7 @@ export function clearAdminMasterSessionCookie(
   response: NextResponse,
   host?: string | null
 ) {
-  const cookieOptions = getSupabaseCookieOptions(host);
-
+  const cookieOptions = getAppCookieOptions(host);
   response.cookies.set(ADMIN_MASTER_SESSION_COOKIE, "", {
     ...cookieOptions,
     path: "/",
