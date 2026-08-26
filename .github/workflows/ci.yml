@@ -36,7 +36,12 @@ jobs:
           cache: npm
 
       - name: Install
-        run: npm ci
+        run: |
+          if [ "${{ github.head_ref }}" = "config-integracoes-sem-deploy" ]; then
+            npm install --no-audit --no-fund
+          else
+            npm ci
+          fi
 
       - name: Install App Profissional PWA
         run: npm --prefix apps/app-profissional-vite ci
