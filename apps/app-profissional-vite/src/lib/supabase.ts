@@ -26,14 +26,28 @@ function createLocalChannel(): LocalChannel {
 export const supabaseConfigured = false;
 
 // Compatibilidade temporaria apenas para componentes antigos que ainda chamam
-// channel/removeChannel. Nenhuma URL, chave, Auth, Realtime ou banco Supabase e
-// carregado no navegador.
+// channel/removeChannel/storage. Nenhuma URL, chave, Auth, Realtime ou banco
+// Supabase e carregado no navegador.
 export const supabase = {
   channel(_name: string) {
     return createLocalChannel();
   },
   async removeChannel(_channel: LocalChannel) {
     return "ok" as const;
+  },
+  storage: {
+    from(bucket: string) {
+      return {
+        getPublicUrl(path: string) {
+          const params = new URLSearchParams({ bucket, path });
+          return {
+            data: {
+              publicUrl: `/api/app-profissional/media/public?${params.toString()}`,
+            },
+          };
+        },
+      };
+    },
   },
 };
 
