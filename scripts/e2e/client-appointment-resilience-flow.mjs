@@ -1,10 +1,10 @@
 import { chromium } from "playwright";
-import { createClient } from "@supabase/supabase-js";
+import { Pool } from "@neondatabase/serverless";
 import fs from "node:fs";
 import { loadLocalEnv, requireEnv } from "../lib/load-env.mjs";
 
 loadLocalEnv();
-requireEnv(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
+requireEnv(["NEON_ADMIN_DATABASE_URL"]);
 
 const accounts = JSON.parse(
   fs.readFileSync(
@@ -17,11 +17,7 @@ const baseUrl = (
   accounts.baseUrlHint ||
   "http://localhost:3000"
 ).replace(/\/$/, "");
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { persistSession: false, autoRefreshToken: false } }
-);
+const pool = new Pool({ connectionString: process.env.NEON_ADMIN_DATABASE_URL });
 const marker = `codex-resilience-${Date.now()}`;
 const premium = accounts.salons.premium;
 const report = { baseUrl, marker, checks: [], ok: false };
@@ -32,27 +28,24 @@ function check(name, ok, detail = "") {
   if (!ok) throw new Error(name);
 }
 
+async function query(text, values = []) {
+  const client = await pool.connect();
+  try {
+    return await client.query(text, values);
+  } finally {
+    client.release();
+  }
+}
+
 async function getTestIds() {
-  const [{ data: client }, { data: professional }, { data: service }] =
-    await Promise.all([
-      supabase
-        .from("clientes")
-        .select("id")
-        .eq("id_salao", premium.idSalao)
-        .eq("email", accounts.client.email)
-        .maybeSingle(),
-      supabase
-        .from("profissionais")
-        .select("id")
-        .eq("id_salao", premium.idSalao)
-        .eq("cpf", premium.professionalCpf)
-        .maybeSingle(),
-      supabase
-        .from("servicos")
-        .select("id, duracao_minutos, preco")
-        .eq("id", premium.serviceIds[0])
-        .maybeSingle(),
-    ]);
+  const [clientResult, professionalResult, serviceResult] = await Promise.all([
+    query("select id from clientes where id_salao = $1 and email = $2 limit 1", [premium.idSalao, accounts.client.email]),
+    query("select id from profissionais where id_salao = $1 and cpf = $2 limit 1", [premium.idSalao, premium.professionalCpf]),
+    query("select id, duracao_minutos, preco from servicos where id = $1 limit 1", [premium.serviceIds[0]]),
+  ]);
+  const client = clientResult.rows?.[0];
+  const professional = professionalResult.rows?.[0];
+  const service = serviceResult.rows?.[0];
   if (!client?.id || !professional?.id || !service?.id) {
     throw new Error("Dados E2E do cliente, profissional ou serviço não encontrados.");
   }
@@ -72,41 +65,76 @@ function tomorrow() {
 }
 
 async function cleanup() {
-  await supabase
-    .from("agendamentos")
-    .delete()
-    .eq("id_salao", premium.idSalao)
-    .like("observacoes", `%${marker}%`);
+  await query("delete from agendamentos where id_salao = $1 and observacoes like $2", [premium.idSalao, `%${marker}%`]);
 }
 
 async function seedAppointments(ids) {
   const data = tomorrow();
-  const rows = [
+  const baseRows = [
     { hora_inicio: "08:00", hora_fim: "10:00", status: "confirmado" },
     { hora_inicio: "10:30", hora_fim: "12:30", status: "confirmado" },
     { hora_inicio: "14:00", hora_fim: "16:00", status: "confirmado" },
-  ].map((item) => ({
-    id_salao: premium.idSalao,
-    cliente_id: ids.idCliente,
-    profissional_id: ids.idProfissional,
-    servico_id: ids.idServico,
-    data,
-    hora_inicio: item.hora_inicio,
-    hora_fim: item.hora_fim,
-    duracao_minutos: ids.duracao,
-    status: item.status,
-    origem: "codex_e2e",
-    observacoes: marker,
-    sinal_status: "nao_exigido",
-    sinal_valor: 0,
-    sinal_confirmacao_responsavel: "salao",
-  }));
-  const { data: inserted, error } = await supabase
-    .from("agendamentos")
-    .insert(rows)
-    .select("id, hora_inicio");
-  if (error || !inserted?.length) throw error || new Error("Não foi possível criar os agendamentos E2E.");
+  ];
+  const inserted = [];
+  for (const item of baseRows) {
+    const result = await query(
+      `insert into agendamentos (
+        id_salao, cliente_id, profissional_id, servico_id, data, hora_inicio, hora_fim,
+        duracao_minutos, status, origem, observacoes, sinal_status, sinal_valor,
+        sinal_confirmacao_responsavel
+      ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)
+      returning id, hora_inicio`,
+      [
+        premium.idSalao,
+        ids.idCliente,
+        ids.idProfissional,
+        ids.idServico,
+        data,
+        item.hora_inicio,
+        item.hora_fim,
+        ids.duracao,
+        item.status,
+        "codex_e2e",
+        marker,
+        "nao_exigido",
+        0,
+        "salao",
+      ]
+    );
+    inserted.push(result.rows[0]);
+  }
   return { data, inserted };
+}
+
+async function insertConflict(ids, conflictDate, conflictTime, conflictEnd) {
+  await query(
+    `insert into agendamentos (
+      id_salao, cliente_id, profissional_id, servico_id, data, hora_inicio, hora_fim,
+      duracao_minutos, status, origem, observacoes, sinal_status, sinal_valor,
+      sinal_confirmacao_responsavel
+    ) values ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
+    [
+      premium.idSalao,
+      ids.idCliente,
+      ids.idProfissional,
+      ids.idServico,
+      conflictDate,
+      conflictTime,
+      conflictEnd,
+      ids.duracao,
+      "confirmado",
+      "codex_e2e",
+      marker,
+      "nao_exigido",
+      0,
+      "salao",
+    ]
+  );
+}
+
+async function loadAppointment(id) {
+  const result = await query("select data, hora_inicio from agendamentos where id = $1 limit 1", [id]);
+  return result.rows?.[0] || null;
 }
 
 async function loginCliente(page) {
@@ -151,42 +179,18 @@ async function run() {
 
     await page.goto(`${baseUrl}/app-cliente/agendamentos`, { waitUntil: "domcontentloaded" });
     const conflictCard = page.locator("article").filter({ hasText: "14:00" }).first();
-    const conflictId = await conflictCard
-      .locator("input[name='agendamento']")
-      .first()
-      .inputValue();
+    const conflictId = await conflictCard.locator("input[name='agendamento']").first().inputValue();
     await conflictCard.getByRole("button", { name: /^Reagendar$/ }).click();
     const conflictTarget = conflictCard.locator("button").filter({ hasText: /^\d{2}:\d{2}$/ }).first();
     await conflictTarget.waitFor({ state: "visible", timeout: 30000 });
     const conflictTime = (await conflictTarget.textContent()).trim();
     const conflictDate = (await conflictCard.locator("input[name='data']").inputValue()).trim();
     const conflictEnd = `${String(Number(conflictTime.slice(0, 2)) + 2).padStart(2, "0")}:${conflictTime.slice(3)}`;
-    const { error: raceInsertError } = await supabase.from("agendamentos").insert({
-      id_salao: premium.idSalao,
-      cliente_id: ids.idCliente,
-      profissional_id: ids.idProfissional,
-      servico_id: ids.idServico,
-      data: conflictDate,
-      hora_inicio: conflictTime,
-      hora_fim: conflictEnd,
-      duracao_minutos: ids.duracao,
-      status: "confirmado",
-      origem: "codex_e2e",
-      observacoes: marker,
-      sinal_status: "nao_exigido",
-      sinal_valor: 0,
-      sinal_confirmacao_responsavel: "salao",
-    });
-    if (raceInsertError) throw raceInsertError;
+    await insertConflict(ids, conflictDate, conflictTime, conflictEnd);
     await conflictTarget.click();
     await conflictCard.getByRole("button", { name: /^Confirmar$/ }).click();
     await page.waitForTimeout(500);
-    const { data: conflictAfter, error: conflictReadError } = await supabase
-      .from("agendamentos")
-      .select("data, hora_inicio")
-      .eq("id", conflictId)
-      .maybeSingle();
-    if (conflictReadError) throw conflictReadError;
+    const conflictAfter = await loadAppointment(conflictId);
     const conflictMessageVisible = await page
       .getByText(/hor.*ocupado|disponibilidade|não foi possível reagendar/i)
       .first()
@@ -209,6 +213,7 @@ async function run() {
   } finally {
     await browser.close();
     await cleanup();
+    await pool.end();
   }
 }
 
