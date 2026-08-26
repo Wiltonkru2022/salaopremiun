@@ -38,15 +38,97 @@ type RegistryShape = {
 
 const registry = registryJson as RegistryShape;
 
-export const OPERATIONAL_REGISTRY_VERSION = registry.version;
-export const OPERATIONAL_COMPONENTS = Object.freeze(registry.components);
+const LEGACY_PROVIDER_KEYS: Record<string, string> = {
+  "database.database": "neon.database",
+  "database.data_api": "neon.gateway",
+  "database.auth": "clerk.auth",
+  "database.storage": "cloudinary.storage",
+  "database.periodic_sync": "neon.sync",
+};
+
+const PROVIDER_PRESENTATION: Record<
+  string,
+  Pick<OperationalComponentDefinition, "name" | "description" | "category" | "owner"> & {
+    sourcePatterns?: string[];
+  }
+> = {
+  "neon.database": {
+    name: "Neon Database",
+    description: "PostgreSQL principal do SalãoPremium hospedado no Neon.",
+    category: "Neon",
+    owner: "Backend/Dados",
+    sourcePatterns: ["lib/neon/**", "database/migrations/**"],
+  },
+  "neon.gateway": {
+    name: "Gateway Neon",
+    description: "Camada server-side de consultas, RPCs e acesso ao PostgreSQL Neon.",
+    category: "Neon",
+    owner: "Backend/Dados",
+    sourcePatterns: ["lib/neon/**", "lib/db/**", "app/api/**"],
+  },
+  "clerk.auth": {
+    name: "Clerk Auth",
+    description: "Autenticação, sessão, MFA e identidades administrativas via Clerk.",
+    category: "Clerk",
+    owner: "Segurança/Auth",
+    sourcePatterns: ["lib/platform/clerk-**", "app/**/clerk/**", "lib/auth/**"],
+  },
+  "cloudinary.storage": {
+    name: "Cloudinary Media",
+    description: "Armazenamento e entrega de imagens e arquivos de mídia do sistema.",
+    category: "Cloudinary",
+    owner: "Backend/Mídia",
+    sourcePatterns: ["lib/platform/cloudinary.server.ts", "services/**/*Media*", "app/api/**"],
+  },
+  "neon.sync": {
+    name: "Sincronização periódica Neon",
+    description: "Atualização periódica de agenda, caixa e PWAs através do gateway Neon.",
+    category: "Neon",
+    owner: "Backend/Sincronização",
+  },
+};
+
+function canonicalComponentKey(value: string) {
+  const normalized = String(value || "").trim();
+  return LEGACY_PROVIDER_KEYS[normalized] || normalized;
+}
+
+function normalizeComponent(
+  component: OperationalComponentDefinition
+): OperationalComponentDefinition {
+  const componentKey = canonicalComponentKey(component.componentKey);
+  const presentation = PROVIDER_PRESENTATION[componentKey];
+  const dependencies = component.dependencies.map(canonicalComponentKey);
+
+  // Clerk e Cloudinary são serviços independentes do Neon. Mantemos os aliases
+  // do JSON antigo apenas para preservar compatibilidade com telemetria histórica.
+  const normalizedDependencies =
+    componentKey === "clerk.auth" || componentKey === "cloudinary.storage"
+      ? dependencies.filter((dependency) => dependency !== "neon.database")
+      : dependencies;
+
+  return {
+    ...component,
+    componentKey,
+    dependencies: normalizedDependencies,
+    ...(presentation || {}),
+    ...(presentation?.sourcePatterns
+      ? { sourcePatterns: presentation.sourcePatterns }
+      : {}),
+  };
+}
+
+export const OPERATIONAL_REGISTRY_VERSION = `${registry.version}-neon-clerk-cloudinary`;
+export const OPERATIONAL_COMPONENTS = Object.freeze(
+  registry.components.map(normalizeComponent)
+);
 
 const componentMap = new Map(
   OPERATIONAL_COMPONENTS.map((component) => [component.componentKey, component])
 );
 
 export function getOperationalComponent(componentKey?: string | null) {
-  return componentMap.get(String(componentKey || "").trim()) || null;
+  return componentMap.get(canonicalComponentKey(String(componentKey || ""))) || null;
 }
 
 export function listOperationalComponents() {
@@ -110,7 +192,7 @@ export function findOperationalComponentForContext(params: {
     return getOperationalComponent("cash.core");
   }
   if (module.includes("security") || module.includes("auth")) {
-    return getOperationalComponent("database.auth");
+    return getOperationalComponent("clerk.auth");
   }
 
   return null;
