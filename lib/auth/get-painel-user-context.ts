@@ -2,6 +2,8 @@ import { unstable_cache } from "next/cache";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 import { hasAal2 } from "@/lib/auth/mfa-assurance";
+import { getAuthProviderForSurface } from "@/lib/platform/provider-config.server";
+import { readPainelClerkSession } from "@/lib/platform/painel-clerk-session.server";
 
 export type PainelUserContext = {
   id: string;
@@ -25,9 +27,7 @@ const getCachedPainelUserContextByAuthUserId = unstable_cache(
       .eq("auth_user_id", authUserId)
       .maybeSingle();
 
-    if (error || !data?.id_salao) {
-      return null;
-    }
+    if (error || !data?.id_salao) return null;
 
     return {
       id: String(data.id),
@@ -39,33 +39,56 @@ const getCachedPainelUserContextByAuthUserId = unstable_cache(
     };
   },
   ["painel-user-context"],
-  {
-    revalidate: 60,
-  }
+  { revalidate: 60 }
 );
 
 export async function getPainelUserContextByAuthUserId(authUserId: string) {
   return getCachedPainelUserContextByAuthUserId(authUserId);
 }
 
+async function getClerkPainelUserContext(options: GetPainelUserContextOptions) {
+  const session = await readPainelClerkSession();
+  if (!session) return { user: null, usuario: null, mfaRequired: false };
+
+  const usuario: PainelUserContext = {
+    id: session.userId,
+    id_salao: session.idSalao,
+    nome: session.nome,
+    email: session.email,
+    nivel: session.nivel,
+    status: session.status,
+  };
+  const isAdmin = String(usuario.nivel || "").toLowerCase() === "admin";
+  if (isAdmin && !options.allowAdminAal1 && !session.mfaVerified) {
+    return { user: null, usuario: null, mfaRequired: true };
+  }
+
+  return {
+    user: { id: session.clerkSubject, email: session.email },
+    usuario,
+    mfaRequired: false,
+  };
+}
+
 export async function getPainelUserContext(
   options: GetPainelUserContextOptions = {}
 ) {
+  if (getAuthProviderForSurface("painel") === "clerk") {
+    return getClerkPainelUserContext(options);
+  }
+
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
 
-  if (!user) {
-    return { user: null, usuario: null, mfaRequired: false };
-  }
+  if (!user) return { user: null, usuario: null, mfaRequired: false };
 
   const usuario = await getPainelUserContextByAuthUserId(user.id);
   const isAdmin = String(usuario?.nivel || "").toLowerCase() === "admin";
 
   if (isAdmin && !options.allowAdminAal1) {
     const mfaSatisfied = await hasAal2();
-
     if (!mfaSatisfied) {
       return { user: null, usuario: null, mfaRequired: true };
     }
