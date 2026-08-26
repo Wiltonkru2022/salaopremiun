@@ -1,8 +1,13 @@
 export const ADMIN_MASTER_LOGIN_PATH = "/admin-master/login";
+export const ADMIN_MASTER_CLERK_LOGIN_PATH = "/admin-master/clerk-login";
 export const ADMIN_MASTER_HOME_PATH = "/admin-master";
 
 export function isAdminMasterLoginPath(pathname?: string | null) {
-  return String(pathname || "").trim() === ADMIN_MASTER_LOGIN_PATH;
+  const normalized = String(pathname || "").trim();
+  return (
+    normalized === ADMIN_MASTER_LOGIN_PATH ||
+    normalized === ADMIN_MASTER_CLERK_LOGIN_PATH
+  );
 }
 
 export function sanitizeAdminMasterNextPath(value?: string | null) {
@@ -19,7 +24,10 @@ export function sanitizeAdminMasterNextPath(value?: string | null) {
   if (
     normalized === ADMIN_MASTER_LOGIN_PATH ||
     normalized.startsWith(`${ADMIN_MASTER_LOGIN_PATH}/`) ||
-    normalized.startsWith(`${ADMIN_MASTER_LOGIN_PATH}?`)
+    normalized.startsWith(`${ADMIN_MASTER_LOGIN_PATH}?`) ||
+    normalized === ADMIN_MASTER_CLERK_LOGIN_PATH ||
+    normalized.startsWith(`${ADMIN_MASTER_CLERK_LOGIN_PATH}/`) ||
+    normalized.startsWith(`${ADMIN_MASTER_CLERK_LOGIN_PATH}?`)
   ) {
     return null;
   }
