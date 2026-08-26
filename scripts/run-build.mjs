@@ -43,39 +43,14 @@ const typecheckScript = "./scripts/run-typecheck.mjs";
 const prepareClientHeroScript = "./scripts/prepare-client-hero-video.mjs";
 const professionalAppDir = "apps/app-profissional-vite";
 
-const supabasePublicKey = String(
-  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
-    process.env.VITE_SUPABASE_ANON_KEY ||
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
-    ""
-).trim();
-
-// O Next e o Vite podem compartilhar a publishable key do Supabase. Mantemos
-// VITE_SUPABASE_ANON_KEY como alias durante a migracao para nao quebrar bundles
-// antigos, mas o valor preferido e VITE_SUPABASE_PUBLISHABLE_KEY.
-const professionalAppEnv = {
-  VITE_SUPABASE_URL: String(
-    process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || ""
-  ).trim(),
-  VITE_SUPABASE_PUBLISHABLE_KEY: supabasePublicKey,
-  VITE_SUPABASE_ANON_KEY: supabasePublicKey,
-};
-
 // Reconstrua o vídeo estático do hero antes do Next build. O arquivo final fica
 // em public/ e é servido diretamente pelo app cliente.
 await run(nodeBin, [prepareClientHeroScript]);
 
 // O app profissional e um Vite/PWA independente servido a partir de
-// public/app-profissional. Sempre gere esse bundle antes do Next build para
-// impedir que a Vercel publique fontes novos com assets antigos ja commitados.
+// public/app-profissional. Dados e autenticacao passam pelas APIs do produto;
+// o bundle nao recebe credenciais de banco.
 if (process.env.SKIP_PROFESSIONAL_BUILD !== "1") {
-  if (!professionalAppEnv.VITE_SUPABASE_URL || !supabasePublicKey) {
-    throw new Error(
-      "Build do app profissional exige NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (ou os aliases VITE_SUPABASE_* / *_ANON_KEY)."
-    );
-  }
-
   await run(npmBin, [
     "ci",
     "--prefix",
@@ -84,11 +59,7 @@ if (process.env.SKIP_PROFESSIONAL_BUILD !== "1") {
     "--no-audit",
     "--no-fund",
   ]);
-  await run(
-    npmBin,
-    ["--prefix", professionalAppDir, "run", "build"],
-    professionalAppEnv
-  );
+  await run(npmBin, ["--prefix", professionalAppDir, "run", "build"]);
 }
 
 if (process.env.SKIP_PREBUILD_TYPECHECK !== "1") {
