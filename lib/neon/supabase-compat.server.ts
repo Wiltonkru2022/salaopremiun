@@ -7,6 +7,7 @@ import {
   type PainelDbOrder,
   type PainelDbQuery,
 } from "@/lib/neon/painel-query.server";
+import { resolveNeonRuntimeUrl } from "@/lib/neon/runtime-url.server";
 
 type SupabaseLike = any;
 
@@ -18,9 +19,14 @@ type State = PainelDbQuery & {
 let adminPool: Pool | null = null;
 let adminPoolUrl = "";
 
-function getAdminPool() {
-  const url = String(process.env.NEON_ADMIN_DATABASE_URL || "").trim();
+function adminDatabaseUrl() {
+  const url = resolveNeonRuntimeUrl(process.env.NEON_ADMIN_DATABASE_URL);
   if (!url) throw new Error("NEON_ADMIN_DATABASE_URL nao configurada.");
+  return url;
+}
+
+function getAdminPool() {
+  const url = adminDatabaseUrl();
   if (!adminPool || adminPoolUrl !== url) {
     adminPool = new Pool({ connectionString: url });
     adminPoolUrl = url;
@@ -31,7 +37,7 @@ function getAdminPool() {
 function neonEnabled() {
   return (
     String(process.env.DATABASE_PROVIDER || "supabase").trim().toLowerCase() === "neon" &&
-    Boolean(String(process.env.NEON_ADMIN_DATABASE_URL || "").trim())
+    Boolean(resolveNeonRuntimeUrl(process.env.NEON_ADMIN_DATABASE_URL))
   );
 }
 
@@ -224,8 +230,6 @@ export function createNeonSupabaseCompat(supabase: SupabaseLike): SupabaseLike {
           return supabase.rpc(fn, args);
         };
       }
-      // Auth continua no provedor de autenticacao; Storage/Functions/Realtime
-      // possuem suas proprias camadas e nao sao tratados como PostgreSQL.
       return Reflect.get(target, property, receiver);
     },
   });
