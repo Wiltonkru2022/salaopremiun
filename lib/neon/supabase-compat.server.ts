@@ -157,6 +157,10 @@ function createBuilder(supabase: SupabaseLike, table: string) {
       state.filters.push({ op: "in", column, value });
       return builder;
     },
+    contains(column: string, value: unknown) {
+      state.filters.push({ op: "contains", column, value });
+      return builder;
+    },
     or(value: string) {
       state.filters.push({ op: "or", value });
       return builder;
