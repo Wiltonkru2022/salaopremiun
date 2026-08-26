@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/db/server";
 import { getDatabaseAdmin } from "@/lib/db/admin";
-import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
+import { readPainelClerkSession } from "@/lib/platform/painel-clerk-session.server";
 import {
   buildBackupMetadata,
   clearBackupMetadata,
@@ -27,46 +26,34 @@ type RequestBody = {
 const APP_METADATA_KEY = "salaopremium_mfa";
 
 async function getAuthenticatedContext() {
-  const supabase = await createClient();
-  const supabaseAdmin = getDatabaseAdmin();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
+  const session = await readPainelClerkSession();
+  if (!session) {
     throw new Error("Sessao invalida.");
   }
 
-  const usuario = await getPainelUserContextByAuthUserId(user.id);
-
-  if (!usuario?.id_salao) {
+  if (!session.idSalao) {
     throw new Error("Nao foi possivel identificar o salao do usuario.");
   }
 
-  if (usuario.status && usuario.status !== "ativo") {
+  if (session.status && session.status !== "ativo") {
     throw new Error("Usuario inativo.");
   }
 
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
+  const admin = getDatabaseAdmin();
   const { data: authUserData, error: authUserError } =
-    await supabaseAdmin.auth.admin.getUserById(user.id);
+    await admin.auth.admin.getUserById(session.clerkSubject);
 
   if (authUserError || !authUserData?.user) {
-    throw new Error("Nao foi possivel carregar a conta autenticada.");
+    throw new Error("Nao foi possivel carregar a conta Clerk autenticada.");
   }
 
   const { data: factorsData, error: factorError } =
-    await supabaseAdmin.auth.admin.mfa.listFactors({
-      userId: user.id,
+    await admin.auth.admin.mfa.listFactors({
+      userId: session.clerkSubject,
     });
 
   if (factorError) {
-    throw new Error(factorError.message || "Erro ao carregar fatores MFA.");
+    throw new Error(factorError.message || "Erro ao carregar fatores MFA do Clerk.");
   }
 
   const totpFactor =
@@ -74,16 +61,7 @@ async function getAuthenticatedContext() {
       (factor) => factor.factor_type === "totp" && factor.status === "verified"
     ) || null;
 
-  let currentLevel: "aal1" | "aal2" | null = null;
-
-  if (session?.access_token) {
-    const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel(
-      session.access_token
-    );
-    currentLevel =
-      (aalData?.currentLevel as "aal1" | "aal2" | null | undefined) ?? null;
-  }
-
+  const currentLevel: "aal1" | "aal2" = session.mfaVerified ? "aal2" : "aal1";
   const appMetadata = (authUserData.user.app_metadata ||
     {}) as Record<string, unknown>;
   const mfaMetadata =
@@ -91,9 +69,10 @@ async function getAuthenticatedContext() {
     null;
 
   return {
-    supabaseAdmin,
+    admin,
     authUser: authUserData.user,
-    idSalao: usuario.id_salao,
+    clerkSubject: session.clerkSubject,
+    idSalao: session.idSalao,
     currentLevel,
     totpFactor,
     mfaMetadata,
@@ -104,19 +83,17 @@ async function persistMfaMetadata(params: {
   authUserId: string;
   nextMetadata: SalaoPremiumMfaMetadata;
 }) {
-  const supabaseAdmin = getDatabaseAdmin();
-  const { data, error } = await supabaseAdmin.auth.admin.getUserById(
-    params.authUserId
-  );
+  const admin = getDatabaseAdmin();
+  const { data, error } = await admin.auth.admin.getUserById(params.authUserId);
 
   if (error || !data?.user) {
-    throw new Error("Nao foi possivel atualizar a conta do autenticador.");
+    throw new Error("Nao foi possivel atualizar a conta do autenticador Clerk.");
   }
 
   const currentAppMetadata = (data.user.app_metadata ||
     {}) as Record<string, unknown>;
 
-  const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
+  const { error: updateError } = await admin.auth.admin.updateUserById(
     params.authUserId,
     {
       app_metadata: {
@@ -128,7 +105,7 @@ async function persistMfaMetadata(params: {
 
   if (updateError) {
     throw new Error(
-      updateError.message || "Nao foi possivel salvar os backup codes."
+      updateError.message || "Nao foi possivel salvar os backup codes no Clerk."
     );
   }
 }
@@ -139,6 +116,7 @@ export async function GET() {
 
     return NextResponse.json({
       ok: true,
+      provider: "clerk",
       factorActive: Boolean(ctx.totpFactor),
       currentLevel: ctx.currentLevel,
       backupCodesRemaining: getRemainingBackupCodeCount(ctx.mfaMetadata),
@@ -172,7 +150,7 @@ export async function POST(request: NextRequest) {
     if (body.action === "generate_backup_codes") {
       if (!ctx.totpFactor) {
         return NextResponse.json(
-          { ok: false, error: "Nenhum autenticador ativo foi encontrado." },
+          { ok: false, error: "Nenhum autenticador Clerk ativo foi encontrado." },
           { status: 400 }
         );
       }
@@ -182,7 +160,7 @@ export async function POST(request: NextRequest) {
           {
             ok: false,
             error:
-              "Confirme o autenticador nesta sessao antes de gerar novos backup codes.",
+              "Confirme o autenticador no Clerk nesta sessao antes de gerar novos backup codes.",
           },
           { status: 403 }
         );
@@ -209,7 +187,7 @@ export async function POST(request: NextRequest) {
     if (body.action === "consume_backup_code") {
       if (!ctx.totpFactor) {
         return NextResponse.json(
-          { ok: false, error: "Nenhum autenticador ativo foi encontrado." },
+          { ok: false, error: "Nenhum autenticador Clerk ativo foi encontrado." },
           { status: 400 }
         );
       }
@@ -265,7 +243,7 @@ export async function POST(request: NextRequest) {
     if (body.action === "disable_factor") {
       if (!ctx.totpFactor) {
         return NextResponse.json(
-          { ok: false, error: "Nenhum autenticador ativo foi encontrado." },
+          { ok: false, error: "Nenhum autenticador Clerk ativo foi encontrado." },
           { status: 400 }
         );
       }
@@ -316,18 +294,16 @@ export async function POST(request: NextRequest) {
           {
             ok: false,
             error:
-              "Confirme o autenticador nesta sessao antes de desativar a protecao.",
+              "Confirme o autenticador no Clerk nesta sessao antes de desativar a protecao.",
           },
           { status: 403 }
         );
       }
 
-      const { error: deleteError } = await ctx.supabaseAdmin.auth.admin.mfa.deleteFactor(
-        {
-          id: ctx.totpFactor.id,
-          userId: ctx.authUser.id,
-        }
-      );
+      const { error: deleteError } = await ctx.admin.auth.admin.mfa.deleteFactor({
+        id: ctx.totpFactor.id,
+        userId: ctx.clerkSubject,
+      });
 
       if (deleteError) {
         return NextResponse.json(
@@ -335,7 +311,7 @@ export async function POST(request: NextRequest) {
             ok: false,
             error:
               deleteError.message ||
-              "Nao foi possivel desativar o autenticador.",
+              "Nao foi possivel desativar o autenticador no Clerk.",
           },
           { status: 400 }
         );
