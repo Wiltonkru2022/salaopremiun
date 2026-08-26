@@ -49,24 +49,23 @@ function AdminMasterClerkLoginContent() {
           <div>
             <p className="text-xs font-black uppercase tracking-[0.24em] text-[#d7b36f]">SalãoPremium</p>
             <h1 className="mt-6 text-5xl font-black leading-[0.95] tracking-[-0.05em]">Admin Master seguro, sem perder a identidade do sistema.</h1>
-            <p className="mt-5 max-w-md text-base leading-7 text-white/70">Clerk cuida da autenticação e do MFA por trás. O acesso, permissões e dados continuam integrados ao Salão Premium.</p>
+            <p className="mt-5 max-w-md text-base leading-7 text-white/70">Clerk cuida da autenticação e do MFA. O acesso, permissões e dados ficam integrados ao Salão Premium com banco Neon.</p>
           </div>
           <div className="grid gap-3 text-sm text-white/75">
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">MFA obrigatório para acesso administrativo.</div>
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">Sessão separada do painel dos salões.</div>
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">Contas antigas podem ser migradas no primeiro acesso.</div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">Dados administrativos persistidos no Neon.</div>
           </div>
         </section>
 
         <section className="p-6 sm:p-8 lg:p-10">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-[#9d7c45]">Acesso executivo</p>
           <h2 className="mt-2 text-3xl font-black tracking-[-0.04em]">Entrar no Admin Master</h2>
-          <p className="mt-3 text-sm leading-6 text-[#6b5b45]">Use sua conta administrativa. Se ela existia antes da migração, use o mesmo e-mail e senha uma única vez para vinculá-la ao Clerk.</p>
+          <p className="mt-3 text-sm leading-6 text-[#6b5b45]">Use sua conta administrativa do Clerk. O segundo fator é validado antes de liberar o Admin Master.</p>
 
           <div className="mt-6">
             <ClerkAdminSignIn
               exchangeEndpoint="/api/admin-master/auth/clerk"
-              migrationEndpoint="/api/admin-master/auth/migrate-to-clerk"
               nextPath={nextPath}
               onAuthenticated={onAuthenticated}
             />
