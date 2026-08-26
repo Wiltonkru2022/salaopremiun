@@ -7,6 +7,7 @@ const blogSupabaseUrl =
 const blogSupabaseHostname = blogSupabaseUrl
   ? new URL(blogSupabaseUrl).hostname
   : undefined;
+const cloudinaryHostname = "res.cloudinary.com";
 const appRootDomain = process.env.APP_ROOT_DOMAIN || "salaopremiun.com.br";
 const loginHost = process.env.APP_LOGIN_HOST || `login.${appRootDomain}`;
 const isDevelopment = process.env.NODE_ENV !== "production";
@@ -49,6 +50,7 @@ function buildCsp() {
     ...(blogSupabaseHostname
       ? [`https://${blogSupabaseHostname}`, `wss://${blogSupabaseHostname}`]
       : []),
+    `https://${cloudinaryHostname}`,
     "https://viacep.com.br",
     "https://vitals.vercel-insights.com",
     "https://*.vercel-insights.com",
@@ -67,6 +69,7 @@ function buildCsp() {
     "blob:",
     ...(supabaseHostname ? [`https://${supabaseHostname}`] : []),
     ...(blogSupabaseHostname ? [`https://${blogSupabaseHostname}`] : []),
+    `https://${cloudinaryHostname}`,
     "https://*.googleusercontent.com",
     "https://*.gstatic.com",
     "https://images.unsplash.com",
@@ -84,6 +87,7 @@ function buildCsp() {
     "blob:",
     ...(supabaseHostname ? [`https://${supabaseHostname}`] : []),
     ...(blogSupabaseHostname ? [`https://${blogSupabaseHostname}`] : []),
+    `https://${cloudinaryHostname}`,
   ];
   return [
     "default-src 'self'",
@@ -192,6 +196,11 @@ const nextConfig: NextConfig = {
             },
           ]
         : []),
+      {
+        protocol: "https",
+        hostname: cloudinaryHostname,
+        pathname: "/**",
+      },
       {
         protocol: "https",
         hostname: "images.unsplash.com",
