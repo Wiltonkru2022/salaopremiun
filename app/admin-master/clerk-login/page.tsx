@@ -66,6 +66,7 @@ function AdminMasterClerkLoginContent() {
           <div className="mt-6">
             <ClerkAdminSignIn
               exchangeEndpoint="/api/admin-master/auth/clerk"
+              migrationEndpoint="/api/admin-master/auth/migrate-to-clerk"
               nextPath={nextPath}
               onAuthenticated={onAuthenticated}
             />
