@@ -15,7 +15,7 @@ const cadastroSalaoSchema = z.object({
     .string()
     .trim()
     .min(1, "Informe a senha.")
-    .min(6, "A senha deve ter pelo menos 6 caracteres."),
+    .min(8, "A senha deve ter pelo menos 8 caracteres."),
   nomeSalao: z.string().trim().min(1, "Informe o nome do salão."),
   responsavel: z.string().trim().min(1, "Informe o responsável."),
   whatsapp: optionalString,
