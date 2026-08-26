@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import type { Session } from "@supabase/supabase-js";
 import { Shell } from "./components/Shell";
 import { Button } from "./components/ui";
-import { supabase, supabaseConfigured } from "./lib/supabase";
+import { supabase } from "./lib/supabase";
 import type { AppSession, ModuleKey, Salao, UsuarioPainel } from "./types";
 import { LoginPage } from "./pages/LoginPage";
 import { DashboardPage } from "./pages/DashboardPage";
@@ -13,14 +12,21 @@ import { SettingsPage } from "./pages/SettingsPage";
 
 const PAGE_KEY = "sistema-salao-premiun.page";
 
+type ClerkCompatSession = {
+  user: {
+    id: string;
+    email?: string | null;
+  };
+};
+
 export default function App() {
   const [loading, setLoading] = useState(true);
   const [session, setSession] = useState<AppSession | null>(null);
-  const [authSession, setAuthSession] = useState<Session | null>(null);
+  const [authSession, setAuthSession] = useState<ClerkCompatSession | null>(null);
   const [error, setError] = useState("");
   const [page, setPage] = useState<ModuleKey>(() => (localStorage.getItem(PAGE_KEY) as ModuleKey) || "dashboard");
 
-  const loadSession = useCallback(async (nextAuthSession?: Session | null) => {
+  const loadSession = useCallback(async (nextAuthSession?: ClerkCompatSession | null) => {
     setLoading(true);
     setError("");
     try {
@@ -38,7 +44,7 @@ export default function App() {
         .maybeSingle();
 
       if (usuarioError) throw usuarioError;
-      if (!usuario?.id_salao) throw new Error("Usuário não está vinculado a nenhum salão.");
+      if (!usuario?.id_salao) throw new Error("Usuario nao esta vinculado a nenhum salao.");
 
       const { data: salao } = await supabase
         .from("saloes")
@@ -54,7 +60,7 @@ export default function App() {
       });
     } catch (err) {
       console.error(err);
-      setError(err instanceof Error ? err.message : "Erro ao carregar sessão do painel.");
+      setError(err instanceof Error ? err.message : "Erro ao carregar sessao do painel.");
       setSession(null);
     } finally {
       setLoading(false);
@@ -63,8 +69,8 @@ export default function App() {
 
   useEffect(() => {
     void loadSession();
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      void loadSession(nextSession);
+    const { data } = supabase.auth.onAuthStateChange(() => {
+      void loadSession();
     });
     return () => data.subscription.unsubscribe();
   }, [loadSession]);
@@ -79,24 +85,11 @@ export default function App() {
     return <ResourcePage session={session} config={config} />;
   }, [page, session]);
 
-  if (!supabaseConfigured) {
-    return (
-      <div className="grid min-h-screen place-items-center px-5">
-        <div className="max-w-lg rounded-[1.5rem] border border-amber-200 bg-amber-50 p-6 text-amber-900 shadow-soft">
-          <h1 className="text-2xl font-black">Configure o Supabase</h1>
-          <p className="mt-2 text-sm font-bold leading-6">
-            Crie um arquivo `.env` neste projeto com `VITE_SUPABASE_URL` e `VITE_SUPABASE_ANON_KEY`.
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   if (loading) {
     return (
       <div className="grid min-h-screen place-items-center text-center">
         <div>
-          <img src="/icons/icon-192.png" className="mx-auto h-16 w-16 rounded-2xl" alt="Salão Premiun" />
+          <img src="/icons/icon-192.png" className="mx-auto h-16 w-16 rounded-2xl" alt="Salao Premiun" />
           <div className="mt-4 text-lg font-black">Carregando painel Vite...</div>
         </div>
       </div>
@@ -107,10 +100,10 @@ export default function App() {
     return (
       <LoginPage
         error={error}
-        onLogin={async (email, password) => {
-          const { error: loginError, data } = await supabase.auth.signInWithPassword({ email, password });
-          if (loginError) throw loginError;
-          await loadSession(data.session);
+        onLogin={async () => {
+          const next = encodeURIComponent(window.location.href);
+          const base = String(import.meta.env.VITE_PAINEL_API_BASE_URL || "").replace(/\/$/, "");
+          window.location.assign(`${base}/login?next=${next}`);
         }}
       />
     );
