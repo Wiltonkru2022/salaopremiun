@@ -1,5 +1,3 @@
-import "server-only";
-
 const VERIFIED_NEON_RUNTIME_HOST =
   "ep-proud-unit-aya64n85-pooler.c-5.us-east-2.aws.neon.tech";
 
