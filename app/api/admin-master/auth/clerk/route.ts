@@ -2,8 +2,10 @@ import { NextResponse } from "next/server";
 import { sanitizeAdminMasterNextPath } from "@/lib/admin-master/auth/login-path";
 import { resolveAdminMasterAccessForIdentity } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { setAdminMasterSessionCookie } from "@/lib/admin-master/auth/session";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { emitSecurityEvent } from "@/lib/security/security-events";
 import { getAuthProviderForSurface } from "@/lib/platform/provider-config.server";
+import { clerkAdminApi } from "@/lib/platform/clerk-admin-api.server";
 import { readBearerToken, verifyClerkBearerToken } from "@/lib/platform/clerk-auth.server";
 
 type RequestBody = { next?: string | null };
@@ -14,6 +16,12 @@ function getRequestHost(request: Request) {
 
 function getClientIp(request: Request) {
   return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || null;
+}
+
+function isUuid(value: unknown) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    String(value || "").trim()
+  );
 }
 
 export async function POST(request: Request) {
@@ -51,8 +59,34 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, mfaRequired: true, message: "Conclua a autenticação em dois fatores no Clerk para entrar no Admin Master." }, { status: 403, headers: { "Cache-Control": "no-store" } });
     }
 
+    const { data: clerkData } = await clerkAdminApi.getUserById(identity.subject);
+    let stableAuthId = String(clerkData.user?.externalId || "").trim();
+
+    // Contas existentes podem ter o UUID histórico somente no Neon. No primeiro
+    // login Clerk, espelhamos esse UUID em external_id e preservamos os vínculos.
+    if (!isUuid(stableAuthId)) {
+      const db = getDatabaseAdmin();
+      const { data: adminByEmail } = await db
+        .from("admin_master_usuarios")
+        .select("auth_user_id")
+        .eq("email", email)
+        .maybeSingle();
+      const legacyAuthId = String(adminByEmail?.auth_user_id || "").trim();
+      if (isUuid(legacyAuthId)) {
+        stableAuthId = legacyAuthId;
+        await clerkAdminApi
+          .updateUserById(identity.subject, { externalId: legacyAuthId })
+          .catch(() => undefined);
+      }
+    }
+
+    if (!stableAuthId) stableAuthId = identity.subject;
+
     const nome = [identity.firstName, identity.lastName].filter(Boolean).join(" ").trim();
-    const access = await resolveAdminMasterAccessForIdentity({ id: identity.subject, email, nome: nome || null }, "dashboard_ver");
+    const access = await resolveAdminMasterAccessForIdentity(
+      { id: stableAuthId, email, nome: nome || null },
+      "dashboard_ver"
+    );
 
     if (!access.ok) {
       return NextResponse.json({ ok: false, message: access.message }, { status: access.status, headers: { "Cache-Control": "no-store" } });
@@ -65,7 +99,7 @@ export async function POST(request: Request) {
     }, { status: 200, headers: { "Cache-Control": "no-store" } });
 
     await setAdminMasterSessionCookie(response, {
-      authUserId: identity.subject,
+      authUserId: stableAuthId,
       email,
       host: getRequestHost(request),
       mfaVerifiedAt: identity.mfaVerified ? Math.floor(Date.now() / 1000) : 0,
@@ -74,13 +108,18 @@ export async function POST(request: Request) {
     void emitSecurityEvent({
       evento: "admin_master_login_sucesso",
       tipoUsuario: "salao",
-      userId: identity.subject,
+      userId: stableAuthId,
       risco: "baixo",
       ip: getClientIp(request),
       userAgent: request.headers.get("user-agent") || null,
       origem: "admin-master-clerk",
       route: "/admin-master/login",
-      detalhes: { email, provider: "clerk", mfa: identity.mfaVerified ? "validado" : "nao_cadastrado" },
+      detalhes: {
+        email,
+        provider: "clerk",
+        clerk_subject: identity.subject,
+        mfa: identity.mfaVerified ? "validado" : "nao_cadastrado",
+      },
     });
 
     return response;
