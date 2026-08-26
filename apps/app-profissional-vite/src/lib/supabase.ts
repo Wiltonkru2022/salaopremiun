@@ -1,6 +1,6 @@
 import { resolvePublicMediaUrl } from "./media";
 
-// Adaptador local de mídia. Não conecta a nenhum serviço externo de banco/auth.
+// Adaptador local temporário de mídia. Não conecta banco, autenticação ou realtime.
 export const supabase = {
   storage: {
     from(_bucket?: string) {
