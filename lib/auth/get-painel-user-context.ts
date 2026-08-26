@@ -15,32 +15,48 @@ type GetPainelUserContextOptions = {
   allowAdminAal1?: boolean;
 };
 
-const getCachedPainelUserContextByAuthUserId = unstable_cache(
-  async (authUserId: string): Promise<PainelUserContext | null> => {
+function mapContext(data: any): PainelUserContext | null {
+  if (!data?.id_salao) return null;
+  return {
+    id: String(data.id),
+    id_salao: String(data.id_salao),
+    nome: data.nome ? String(data.nome) : null,
+    email: data.email ? String(data.email) : null,
+    nivel: data.nivel ? String(data.nivel) : null,
+    status: data.status ? String(data.status) : null,
+  };
+}
+
+const getCachedPainelUserContextByIdentity = unstable_cache(
+  async (identityId: string): Promise<PainelUserContext | null> => {
     const database = getDatabaseAdmin();
+    const identity = String(identityId || "").trim();
+    if (!identity) return null;
+
+    if (identity.startsWith("user_")) {
+      const { data, error } = await database
+        .from("usuarios")
+        .select("id, id_salao, nome, email, nivel, status")
+        .eq("clerk_user_id", identity)
+        .maybeSingle();
+      if (error) return null;
+      return mapContext(data);
+    }
+
     const { data, error } = await database
       .from("usuarios")
       .select("id, id_salao, nome, email, nivel, status")
-      .eq("auth_user_id", authUserId)
+      .eq("auth_user_id", identity)
       .maybeSingle();
-
-    if (error || !data?.id_salao) return null;
-
-    return {
-      id: String(data.id),
-      id_salao: String(data.id_salao),
-      nome: data.nome ? String(data.nome) : null,
-      email: data.email ? String(data.email) : null,
-      nivel: data.nivel ? String(data.nivel) : null,
-      status: data.status ? String(data.status) : null,
-    };
+    if (error) return null;
+    return mapContext(data);
   },
-  ["painel-user-context"],
+  ["painel-user-context-identity-v2"],
   { revalidate: 60 }
 );
 
 export async function getPainelUserContextByAuthUserId(authUserId: string) {
-  return getCachedPainelUserContextByAuthUserId(authUserId);
+  return getCachedPainelUserContextByIdentity(authUserId);
 }
 
 export async function getPainelUserContext(
