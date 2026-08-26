@@ -1,10 +1,10 @@
 import { chromium } from "playwright";
-import { createClient } from "@supabase/supabase-js";
+import { neon } from "@neondatabase/serverless";
 import fs from "node:fs";
 import { loadLocalEnv, requireEnv } from "../lib/load-env.mjs";
 
 loadLocalEnv();
-requireEnv(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
+requireEnv(["NEON_ADMIN_DATABASE_URL"]);
 
 const accountsPath =
   process.env.E2E_TEST_ACCOUNTS_FILE || ".codex-test-accounts.local.json";
@@ -16,11 +16,7 @@ if (!fs.existsSync(accountsPath)) {
 
 const accounts = JSON.parse(fs.readFileSync(accountsPath, "utf8"));
 const baseUrl = (process.env.E2E_BASE_URL || accounts.baseUrlHint || "http://localhost:3000").replace(/\/$/, "");
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { persistSession: false, autoRefreshToken: false } }
-);
+const sql = neon(process.env.NEON_ADMIN_DATABASE_URL);
 const report = {
   baseUrl,
   startedAt: new Date().toISOString(),
@@ -44,10 +40,7 @@ async function expectText(page, text, name) {
 }
 
 async function cleanupAppointments() {
-  await supabase
-    .from("agendamentos")
-    .delete()
-    .eq("id_salao", accounts.salons.premium.idSalao);
+  await sql`delete from public.agendamentos where id_salao = ${accounts.salons.premium.idSalao}`;
 }
 
 async function loginCliente(page) {
@@ -121,14 +114,14 @@ async function run() {
   await expectText(page, "Pagamento do sinal", "cliente cai na tela de sinal");
   await expectText(page, "Pro PREMIUM E2E", "sinal usa recebedor do profissional");
 
-  const { data: appointment, error: appointmentError } = await supabase
-    .from("agendamentos")
-    .select("id, data, status, sinal_status, sinal_valor, sinal_confirmacao_responsavel, created_at")
-    .eq("id_salao", accounts.salons.premium.idSalao)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle();
-  if (appointmentError) throw appointmentError;
+  const appointments = await sql`
+    select id, data, status, sinal_status, sinal_valor, sinal_confirmacao_responsavel, created_at
+    from public.agendamentos
+    where id_salao = ${accounts.salons.premium.idSalao}
+    order by created_at desc
+    limit 1
+  `;
+  const appointment = appointments[0] || null;
   addCheck(
     "agendamento com sinal salvo",
     appointment?.status === "reservado_aguardando_pagamento" &&
