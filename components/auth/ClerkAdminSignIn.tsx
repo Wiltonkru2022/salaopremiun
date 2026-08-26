@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
-import { Loader2, ShieldCheck } from "lucide-react";
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { Loader2, Mail, ShieldCheck } from "lucide-react";
 
 type ClerkSessionLike = { getToken: () => Promise<string | null> };
 type ClerkLike = {
@@ -25,6 +25,11 @@ type ExchangePayload = {
   redirectTo?: string;
   mfaRequired?: boolean;
   mfaEnrollmentRequired?: boolean;
+};
+
+type FirstAccessPayload = {
+  ok?: boolean;
+  message?: string;
 };
 
 function decodeClerkDomain(publishableKey: string) {
@@ -72,10 +77,12 @@ function loadExternalScript(src: string, attrs?: Record<string, string>) {
 
 export function ClerkAdminSignIn({
   exchangeEndpoint,
+  migrationEndpoint,
   nextPath,
   onAuthenticated,
 }: {
   exchangeEndpoint: string;
+  migrationEndpoint?: string;
   nextPath: string;
   onAuthenticated: (redirectTo: string) => void;
 }) {
@@ -83,6 +90,9 @@ export function ClerkAdminSignIn({
   const exchangedTokenRef = useRef<string | null>(null);
   const [status, setStatus] = useState("Carregando autenticação segura...");
   const [error, setError] = useState("");
+  const [firstAccessEmail, setFirstAccessEmail] = useState("");
+  const [firstAccessLoading, setFirstAccessLoading] = useState(false);
+  const [firstAccessMessage, setFirstAccessMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -212,11 +222,92 @@ export function ClerkAdminSignIn({
     };
   }, [exchangeEndpoint, nextPath, onAuthenticated]);
 
+  async function requestFirstAccess(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!migrationEndpoint || firstAccessLoading) return;
+
+    const email = firstAccessEmail.trim().toLowerCase();
+    if (!email) return;
+
+    setFirstAccessLoading(true);
+    setFirstAccessMessage("");
+    setError("");
+    try {
+      const response = await fetch(migrationEndpoint, {
+        method: "POST",
+        cache: "no-store",
+        credentials: "same-origin",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+      const payload = (await response.json().catch(() => null)) as FirstAccessPayload | null;
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.message || "Não foi possível solicitar o primeiro acesso.");
+      }
+      setFirstAccessMessage(
+        payload.message ||
+          "Se o e-mail estiver habilitado para migração, você receberá um convite seguro do Clerk."
+      );
+    } catch (cause) {
+      setError(
+        cause instanceof Error ? cause.message : "Falha ao solicitar o primeiro acesso."
+      );
+    } finally {
+      setFirstAccessLoading(false);
+    }
+  }
+
   return (
     <div className="space-y-5">
       <div className="flex items-center gap-2 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
         <ShieldCheck size={17} /> Acesso protegido com MFA
       </div>
+
+      {migrationEndpoint ? (
+        <form
+          onSubmit={requestFirstAccess}
+          className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4"
+        >
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-white text-zinc-700 shadow-sm">
+              <Mail size={16} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-black text-zinc-950">
+                Primeiro acesso depois da migração?
+              </p>
+              <p className="mt-1 text-xs leading-5 text-zinc-600">
+                Informe o e-mail antigo. Se ele estiver ativo no Neon e ainda precisar migrar,
+                o Clerk enviará um convite de acesso. Nenhuma senha antiga é enviada ou reutilizada.
+              </p>
+            </div>
+          </div>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+            <input
+              type="email"
+              autoComplete="email"
+              required
+              value={firstAccessEmail}
+              onChange={(event) => setFirstAccessEmail(event.target.value)}
+              placeholder="seu@email.com"
+              className="h-11 min-w-0 flex-1 rounded-xl border border-zinc-200 bg-white px-3 text-sm outline-none focus:border-zinc-950"
+            />
+            <button
+              type="submit"
+              disabled={firstAccessLoading}
+              className="inline-flex h-11 items-center justify-center gap-2 rounded-xl bg-zinc-900 px-4 text-sm font-black text-white disabled:opacity-60"
+            >
+              {firstAccessLoading ? <Loader2 size={15} className="animate-spin" /> : null}
+              Enviar convite
+            </button>
+          </div>
+          {firstAccessMessage ? (
+            <p className="mt-3 rounded-xl border border-sky-200 bg-sky-50 px-3 py-2 text-xs font-semibold leading-5 text-sky-800">
+              {firstAccessMessage}
+            </p>
+          ) : null}
+        </form>
+      ) : null}
 
       {status ? (
         <div className="flex items-center justify-center gap-2 rounded-2xl border border-zinc-200 bg-white px-4 py-3 text-sm text-zinc-600">
