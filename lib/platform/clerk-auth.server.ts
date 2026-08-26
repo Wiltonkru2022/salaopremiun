@@ -26,6 +26,7 @@ export type ClerkAdminIdentity = {
   email: string | null;
   firstName: string | null;
   lastName: string | null;
+  mfaEnrolled: boolean;
   mfaVerified: boolean;
   secondFactorAgeMinutes: number | null;
   payload: JWTPayload;
@@ -46,14 +47,15 @@ type ClerkUserResponse = {
 function parseFactorVerificationAge(payload: JWTPayload) {
   const raw = payload.fva;
   if (!Array.isArray(raw) || raw.length < 2) {
-    return { mfaVerified: false, secondFactorAgeMinutes: null };
+    return { mfaEnrolled: false, mfaVerified: false, secondFactorAgeMinutes: null };
   }
 
   const second = Number(raw[1]);
+  const mfaEnrolled = Number.isFinite(second) && second >= 0;
   return {
-    mfaVerified: Number.isFinite(second) && second >= 0,
-    secondFactorAgeMinutes:
-      Number.isFinite(second) && second >= 0 ? second : null,
+    mfaEnrolled,
+    mfaVerified: mfaEnrolled,
+    secondFactorAgeMinutes: mfaEnrolled ? second : null,
   };
 }
 
@@ -147,7 +149,7 @@ export async function withClerkNeonRls<T>(
   return withNeonRls(
     {
       email: clerk.email,
-      mfaVerified: clerk.mfaVerified,
+      mfaVerified: clerk.mfaVerified || !clerk.mfaEnrolled,
     },
     (client, context) => operation(client, context, clerk)
   );
