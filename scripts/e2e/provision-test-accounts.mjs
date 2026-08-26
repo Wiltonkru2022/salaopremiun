@@ -1,19 +1,17 @@
-import { createClient } from "@supabase/supabase-js";
+import { Pool } from "@neondatabase/serverless";
 import bcrypt from "bcryptjs";
 import fs from "node:fs";
-import { randomBytes } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import { loadLocalEnv, requireEnv } from "../lib/load-env.mjs";
 
 loadLocalEnv();
-requireEnv(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
+requireEnv(["NEON_ADMIN_DATABASE_URL", "CLERK_SECRET_KEY"]);
 
-const outputPath = ".codex-test-accounts.local.json";
+const outputPath = process.env.E2E_TEST_ACCOUNTS_FILE || ".codex-test-accounts.local.json";
+const databaseUrl = process.env.NEON_ADMIN_DATABASE_URL || process.env.NEON_DATABASE_URL;
+const clerkSecret = String(process.env.CLERK_SECRET_KEY || "").trim();
 const nowIso = new Date().toISOString();
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { persistSession: false, autoRefreshToken: false } }
-);
+const pool = new Pool({ connectionString: databaseUrl });
 
 function readExistingPassword() {
   if (!fs.existsSync(outputPath)) return null;
@@ -27,612 +25,135 @@ function readExistingPassword() {
   }
 }
 
-const password =
-  process.env.E2E_TEST_PASSWORD ||
-  readExistingPassword() ||
-  `SpE2E!${randomBytes(8).toString("hex")}`;
+const password = process.env.E2E_TEST_PASSWORD || readExistingPassword() || `SpE2e!${randomBytes(8).toString("hex")}`;
 
 const personas = [
-  {
-    key: "basico",
-    plan: "basico",
-    email: "e2e+basico@salaopremiun.local",
-    name: "Salao Basico E2E",
-    owner: "Responsavel Basico E2E",
-    cpf: "11122233344",
-    city: "Sao Paulo",
-    district: "Pinheiros",
-    street: "Rua dos Pinheiros",
-    number: "101",
-  },
-  {
-    key: "pro",
-    plan: "pro",
-    email: "e2e+pro@salaopremiun.local",
-    name: "Salao Pro E2E",
-    owner: "Responsavel Pro E2E",
-    cpf: "22233344455",
-    city: "Sao Paulo",
-    district: "Moema",
-    street: "Avenida Ibirapuera",
-    number: "202",
-  },
-  {
-    key: "premium",
-    plan: "premium",
-    email: "e2e+premium@salaopremiun.local",
-    name: "Salao Premium E2E",
-    owner: "Responsavel Premium E2E",
-    cpf: "33344455566",
-    city: "Tres Lagoas",
-    district: "Santa Rita",
-    street: "Rua Manoel Jorge",
-    number: "1433",
-  },
+  { key: "basico", plan: "basico", email: "e2e+basico@salaopremiun.local", name: "Salao Basico E2E", owner: "Responsavel Basico E2E", cpf: "11122233344" },
+  { key: "pro", plan: "pro", email: "e2e+pro@salaopremiun.local", name: "Salao Pro E2E", owner: "Responsavel Pro E2E", cpf: "22233344455" },
+  { key: "premium", plan: "premium", email: "e2e+premium@salaopremiun.local", name: "Salao Premium E2E", owner: "Responsavel Premium E2E", cpf: "33344455566" },
 ];
 
-async function findAuthUserByEmail(email) {
-  let page = 1;
-  for (;;) {
-    const { data, error } = await supabase.auth.admin.listUsers({
-      page,
-      perPage: 1000,
-    });
-    if (error) throw error;
-    const found = data.users.find(
-      (user) => user.email?.toLowerCase() === email.toLowerCase()
-    );
-    if (found) return found;
-    if (!data.users.length || data.users.length < 1000) return null;
-    page += 1;
-  }
-}
-
-async function upsertAuthUser(email, nome) {
-  const existing = await findAuthUserByEmail(email);
-  if (existing?.id) {
-    const { data, error } = await supabase.auth.admin.updateUserById(existing.id, {
-      password,
-      email_confirm: true,
-      user_metadata: { nome },
-    });
-    if (error) throw error;
-    return data.user;
-  }
-
-  const { data, error } = await supabase.auth.admin.createUser({
-    email,
-    password,
-    email_confirm: true,
-    user_metadata: { nome },
+async function clerkRequest(path, init = {}) {
+  const response = await fetch(`https://api.clerk.com/v1${path}`, {
+    ...init,
+    headers: {
+      Authorization: `Bearer ${clerkSecret}`,
+      Accept: "application/json",
+      "Content-Type": "application/json",
+      ...(init.headers || {}),
+    },
   });
-  if (error) throw error;
-  return data.user;
+  const payload = await response.json().catch(() => null);
+  if (!response.ok) throw new Error(`Clerk ${response.status}: ${JSON.stringify(payload)}`);
+  return payload;
 }
 
-async function getPlanLimits(plan) {
-  const { data } = await supabase
-    .from("planos_saas")
-    .select("limite_usuarios, limite_profissionais, valor_mensal")
-    .eq("codigo", plan)
-    .maybeSingle();
-  return {
-    limite_usuarios: data?.limite_usuarios ?? (plan === "premium" ? 999 : 3),
-    limite_profissionais:
-      data?.limite_profissionais ?? (plan === "premium" ? 999 : 3),
-    valor_mensal: data?.valor_mensal ?? 0,
-  };
+async function findClerkUser(email) {
+  const users = await clerkRequest(`/users?email_address=${encodeURIComponent(email)}&limit=20`);
+  return Array.isArray(users)
+    ? users.find((user) => Array.isArray(user.email_addresses) && user.email_addresses.some((item) => String(item.email_address || "").toLowerCase() === email.toLowerCase())) || null
+    : null;
 }
 
-async function upsertSalon(persona, authUserId) {
-  const limits = await getPlanLimits(persona.plan);
-  const common = {
-    nome: persona.name,
-    nome_fantasia: persona.name,
-    responsavel: persona.owner,
-    email: persona.email,
-    telefone: "11999999999",
-    whatsapp: "11999999999",
-    cpf_cnpj: persona.cpf,
-    cep: "01001000",
-    endereco: persona.street,
-    numero: persona.number,
-    bairro: persona.district,
-    cidade: persona.city,
-    estado: "SP",
-    status: "ativo",
-    trial_ativo: false,
-    plano: persona.plan,
-    limite_usuarios: limits.limite_usuarios,
-    limite_profissionais: limits.limite_profissionais,
-    descricao_publica:
-      persona.plan === "premium"
-        ? "Salao premium E2E publicado para validar marketplace, valores e agendamento online."
-        : `Salao ${persona.plan} E2E para validar painel e bloqueios de plano.`,
-    estacionamento: persona.plan === "premium",
-    formas_pagamento_publico: ["Pix", "Credito", "Debito"],
-    app_cliente_publicado: persona.plan === "premium",
-    updated_at: nowIso,
-  };
+async function upsertClerkUser(email, nome) {
+  const existing = await findClerkUser(email);
+  const [firstName, ...rest] = String(nome).trim().split(/\s+/);
+  const lastName = rest.join(" ") || "E2E";
+  if (existing?.id) {
+    return clerkRequest(`/users/${encodeURIComponent(existing.id)}`, {
+      method: "PATCH",
+      body: JSON.stringify({ first_name: firstName, last_name: lastName, password }),
+    });
+  }
+  return clerkRequest("/users", {
+    method: "POST",
+    body: JSON.stringify({ email_address: [email], password, first_name: firstName, last_name: lastName, skip_password_checks: true, skip_password_requirement: true }),
+  });
+}
 
-  const { data: existing } = await supabase
-    .from("saloes")
-    .select("id")
-    .eq("email", persona.email)
-    .maybeSingle();
+async function one(client, text, values = []) {
+  const result = await client.query(text, values);
+  return result.rows?.[0] || null;
+}
 
-  let idSalao = existing?.id;
-  if (idSalao) {
-    const { error } = await supabase.from("saloes").update(common).eq("id", idSalao);
-    if (error) throw error;
+async function upsertSalon(client, persona, clerkUserId) {
+  const existing = await one(client, "select id from saloes where lower(email)=lower($1) limit 1", [persona.email]);
+  const idSalao = existing?.id || randomUUID();
+  if (existing?.id) {
+    await client.query("update saloes set nome=$2,responsavel=$3,cpf_cnpj=$4,status='ativo',plano=$5,updated_at=$6 where id=$1", [idSalao, persona.name, persona.owner, persona.cpf, persona.plan, nowIso]);
   } else {
-    const { data, error } = await supabase
-      .from("saloes")
-      .insert({ ...common, created_at: nowIso })
-      .select("id")
-      .single();
-    if (error) throw error;
-    idSalao = data.id;
+    await client.query("insert into saloes (id,nome,responsavel,email,telefone,whatsapp,cpf_cnpj,status,plano,created_at,updated_at) values ($1,$2,$3,$4,'11999999999','11999999999',$5,'ativo',$6,$7,$7)", [idSalao, persona.name, persona.owner, persona.email, persona.cpf, persona.plan, nowIso]);
   }
 
-  const { data: userRow } = await supabase
-    .from("usuarios")
-    .select("id")
-    .eq("email", persona.email)
-    .maybeSingle();
-  const userPayload = {
-    auth_user_id: authUserId,
-    email: persona.email,
-    nome: persona.owner,
-    id_salao: idSalao,
-    nivel: "admin",
-    status: "ativo",
-    updated_at: nowIso,
-  };
-  if (userRow?.id) {
-    const { error } = await supabase
-      .from("usuarios")
-      .update(userPayload)
-      .eq("id", userRow.id);
-    if (error) throw error;
+  const user = await one(client, "select id from usuarios where lower(email)=lower($1) limit 1", [persona.email]);
+  if (user?.id) {
+    await client.query("update usuarios set auth_user_id=$2,nome=$3,id_salao=$4,nivel='admin',status='ativo',updated_at=$5 where id=$1", [user.id, clerkUserId, persona.owner, idSalao, nowIso]);
   } else {
-    const { error } = await supabase
-      .from("usuarios")
-      .insert({ ...userPayload, created_at: nowIso });
-    if (error) throw error;
+    await client.query("insert into usuarios (id,auth_user_id,email,nome,id_salao,nivel,status,created_at,updated_at) values ($1,$2,$3,$4,$5,'admin','ativo',$6,$6)", [randomUUID(), clerkUserId, persona.email, persona.owner, idSalao, nowIso]);
   }
-
-  const { data: assinatura } = await supabase
-    .from("assinaturas")
-    .select("id")
-    .eq("id_salao", idSalao)
-    .maybeSingle();
-  const assinaturaPayload = {
-    id_salao: idSalao,
-    plano: persona.plan,
-    valor: limits.valor_mensal,
-    status: "ativo",
-    limite_usuarios: limits.limite_usuarios,
-    limite_profissionais: limits.limite_profissionais,
-    trial_ativo: false,
-    vencimento_em: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10),
-    updated_at: nowIso,
-  };
-  if (assinatura?.id) {
-    const { error } = await supabase
-      .from("assinaturas")
-      .update(assinaturaPayload)
-      .eq("id", assinatura.id);
-    if (error) throw error;
-  } else {
-    const { error } = await supabase
-      .from("assinaturas")
-      .insert({ ...assinaturaPayload, created_at: nowIso });
-    if (error) throw error;
-  }
-
-  const { data: config } = await supabase
-    .from("configuracoes_salao")
-    .select("id")
-    .eq("id_salao", idSalao)
-    .maybeSingle();
-  const configPayload = {
-    id_salao: idSalao,
-    hora_abertura: "08:00",
-    hora_fechamento: "18:00",
-    intervalo_minutos: 30,
-    sinal_agendamento_ativo: true,
-    sinal_agendamento_percentual: 20,
-    sinal_pix_chave: "11999999999",
-    sinal_pix_recebedor: persona.name,
-    sinal_pix_cidade: persona.city,
-    sinal_whatsapp: "11999999999",
-    sinal_reserva_minutos: 30,
-    sinal_mensagem_comprovante: "Envie o comprovante para confirmar o horario.",
-    dias_funcionamento: [
-      "segunda",
-      "terca",
-      "quarta",
-      "quinta",
-      "sexta",
-      "sabado",
-    ],
-    updated_at: nowIso,
-  };
-  if (config?.id) {
-    const { error } = await supabase
-      .from("configuracoes_salao")
-      .update(configPayload)
-      .eq("id", config.id);
-    if (error) throw error;
-  } else {
-    const { error } = await supabase
-      .from("configuracoes_salao")
-      .insert({ ...configPayload, created_at: nowIso });
-    if (error) throw error;
-  }
-
   return idSalao;
 }
 
-async function upsertProfessional(persona, idSalao) {
-  const cpf = persona.plan === "basico" ? "10020030040" : persona.plan === "pro" ? "20030040050" : "30040050060";
-  const { data: existing } = await supabase
-    .from("profissionais")
-    .select("id")
-    .eq("id_salao", idSalao)
-    .eq("cpf", cpf)
-    .maybeSingle();
-  const payload = {
-    id_salao: idSalao,
-    nome: `Profissional ${persona.plan.toUpperCase()} E2E`,
-    nome_exibicao: `Pro ${persona.plan.toUpperCase()} E2E`,
-    cpf,
-    telefone: "11988887777",
-    whatsapp: "11988887777",
-    email: `e2e+prof-${persona.plan}@salaopremiun.local`,
-    status: "ativo",
-    ativo: true,
-    tipo_profissional: "profissional",
-    eh_assistente: false,
-    pode_usar_sistema: true,
-    especialidade_publica: "Cortes e finalizacao",
-    bio_publica: "Profissional E2E para validar agenda e app profissional.",
-    app_cliente_visivel: persona.plan === "premium",
-    pix_tipo: "CPF",
-    pix_chave: cpf,
-    sinal_pix_proprio: true,
-    sinal_pix_recebedor: `Pro ${persona.plan.toUpperCase()} E2E`,
-    sinal_whatsapp: "11988887777",
-    sinal_confirmacao_responsavel: "profissional",
-    intervalo_agenda_minutos: 30,
-    dias_trabalho: [
-      { dia: "segunda", ativo: true, inicio: "08:00", fim: "18:00" },
-      { dia: "terca", ativo: true, inicio: "08:00", fim: "18:00" },
-      { dia: "quarta", ativo: true, inicio: "08:00", fim: "18:00" },
-      { dia: "quinta", ativo: true, inicio: "08:00", fim: "18:00" },
-      { dia: "sexta", ativo: true, inicio: "08:00", fim: "18:00" },
-      { dia: "sabado", ativo: true, inicio: "08:00", fim: "18:00" },
-      { dia: "domingo", ativo: false, inicio: "08:00", fim: "18:00" },
-    ],
-    ordem_agenda: 1,
-  };
-  let idProfissional = existing?.id;
-  if (idProfissional) {
-    const { error } = await supabase
-      .from("profissionais")
-      .update(payload)
-      .eq("id", idProfissional);
-    if (error) throw error;
+async function ensurePremiumFixtures(client, idSalao) {
+  const professionalCpf = "30040050060";
+  const professional = await one(client, "select id from profissionais where id_salao=$1 and cpf=$2 limit 1", [idSalao, professionalCpf]);
+  const idProfissional = professional?.id || randomUUID();
+  if (professional?.id) {
+    await client.query("update profissionais set nome='Profissional PREMIUM E2E',nome_exibicao='Pro PREMIUM E2E',status='ativo',ativo=true,pix_tipo='CPF',pix_chave=$2 where id=$1", [idProfissional, professionalCpf]);
   } else {
-    const { data, error } = await supabase
-      .from("profissionais")
-      .insert(payload)
-      .select("id")
-      .single();
-    if (error) throw error;
-    idProfissional = data.id;
+    await client.query("insert into profissionais (id,id_salao,nome,nome_exibicao,cpf,telefone,whatsapp,email,status,ativo,pix_tipo,pix_chave) values ($1,$2,'Profissional PREMIUM E2E','Pro PREMIUM E2E',$3,'11988887777','11988887777','e2e+prof-premium@salaopremiun.local','ativo',true,'CPF',$3)", [idProfissional, idSalao, professionalCpf]);
   }
 
   const senhaHash = await bcrypt.hash(password, 10);
-  const { data: acesso } = await supabase
-    .from("profissionais_acessos")
-    .select("id")
-    .eq("cpf", cpf)
-    .maybeSingle();
-  const acessoPayload = {
-    id_profissional: idProfissional,
-    cpf,
-    senha_hash: senhaHash,
-    ativo: true,
-    atualizado_em: nowIso,
-  };
-  if (acesso?.id) {
-    const { error } = await supabase
-      .from("profissionais_acessos")
-      .update(acessoPayload)
-      .eq("id", acesso.id);
-    if (error) throw error;
+  const access = await one(client, "select id from profissionais_acessos where cpf=$1 limit 1", [professionalCpf]);
+  if (access?.id) {
+    await client.query("update profissionais_acessos set id_profissional=$2,senha_hash=$3,ativo=true,atualizado_em=$4 where id=$1", [access.id, idProfissional, senhaHash, nowIso]);
   } else {
-    const { error } = await supabase
-      .from("profissionais_acessos")
-      .insert({ ...acessoPayload, criado_em: nowIso });
-    if (error) throw error;
+    await client.query("insert into profissionais_acessos (id,id_profissional,cpf,senha_hash,ativo,criado_em,atualizado_em) values ($1,$2,$3,$4,true,$5,$5)", [randomUUID(), idProfissional, professionalCpf, senhaHash, nowIso]);
   }
 
-  return { idProfissional, cpf };
+  const service = await one(client, "select id from servicos where id_salao=$1 and nome='Corte PREMIUM E2E' limit 1", [idSalao]);
+  const idServico = service?.id || randomUUID();
+  if (service?.id) {
+    await client.query("update servicos set preco=79.90,duracao=120,duracao_minutos=120,status='ativo',ativo=true where id=$1", [idServico]);
+  } else {
+    await client.query("insert into servicos (id,id_salao,nome,descricao,duracao,duracao_minutos,preco,status,ativo,categoria) values ($1,$2,'Corte PREMIUM E2E','Servico E2E',120,120,79.90,'ativo',true,'Cabelo')", [idServico, idSalao]);
+  }
+
+  const clientEmail = "e2e+cliente@salaopremiun.local";
+  const existingClient = await one(client, "select id from clientes where id_salao=$1 and lower(email)=lower($2) limit 1", [idSalao, clientEmail]);
+  const idCliente = existingClient?.id || randomUUID();
+  if (existingClient?.id) {
+    await client.query("update clientes set nome='Cliente App E2E',whatsapp='11977776666' where id=$1", [idCliente]);
+  } else {
+    await client.query("insert into clientes (id,id_salao,nome,email,whatsapp,telefone,created_at) values ($1,$2,'Cliente App E2E',$3,'11977776666','11977776666',$4)", [idCliente, idSalao, clientEmail, nowIso]);
+  }
+
+  return { professionalCpf, idProfissional, serviceIds: [idServico], idCliente, clientEmail };
 }
 
-async function upsertServices(persona, idSalao, idProfissional) {
-  const services = [
-    {
-      nome: `Corte ${persona.plan.toUpperCase()} E2E`,
-      preco: 79.9,
-      duracao: 120,
-      exige_avaliacao: false,
-      descricao_publica: "Servico E2E com valor visivel no app cliente.",
-    },
-    {
-      nome: `Coloracao ${persona.plan.toUpperCase()} E2E`,
-      preco: 0,
-      duracao: 45,
-      exige_avaliacao: true,
-      descricao_publica: "Servico E2E sob avaliacao antes de confirmar valor.",
-    },
-  ];
-
-  const ids = [];
-  for (const service of services) {
-    const { data: existing } = await supabase
-      .from("servicos")
-      .select("id")
-      .eq("id_salao", idSalao)
-      .eq("nome", service.nome)
-      .maybeSingle();
-    const payload = {
-      id_salao: idSalao,
-      nome: service.nome,
-      descricao: service.descricao_publica,
-      descricao_publica: service.descricao_publica,
-      duracao: service.duracao,
-      duracao_minutos: service.duracao,
-      preco: service.preco,
-      preco_padrao: service.preco,
-      status: "ativo",
-      ativo: true,
-      exige_avaliacao: service.exige_avaliacao,
-      categoria: "Cabelo",
-      app_cliente_visivel: persona.plan === "premium",
-      cobra_sinal_agendamento: service.preco > 0,
-      sinal_percentual_personalizado: service.preco > 0 ? 20 : null,
-      atualizado_em: nowIso,
-      updated_at: nowIso,
-    };
-    let idServico = existing?.id;
-    if (idServico) {
-      const { error } = await supabase
-        .from("servicos")
-        .update(payload)
-        .eq("id", idServico);
-      if (error) throw error;
-    } else {
-      const { data, error } = await supabase
-        .from("servicos")
-        .insert({ ...payload, criado_em: nowIso, created_at: nowIso })
-        .select("id")
-        .single();
-      if (error) throw error;
-      idServico = data.id;
-    }
-    ids.push(idServico);
-
-    const { data: link } = await supabase
-      .from("profissional_servicos")
-      .select("id")
-      .eq("id_salao", idSalao)
-      .eq("id_profissional", idProfissional)
-      .eq("id_servico", idServico)
-      .maybeSingle();
-    const linkPayload = {
-      id_salao: idSalao,
-      id_profissional: idProfissional,
-      id_servico: idServico,
-      duracao_minutos: service.duracao,
-      ativo: true,
-      updated_at: nowIso,
-    };
-    if (link?.id) {
-      const { error } = await supabase
-        .from("profissional_servicos")
-        .update(linkPayload)
-        .eq("id", link.id);
-      if (error) throw error;
-    } else {
-      const { error } = await supabase
-        .from("profissional_servicos")
-        .insert({ ...linkPayload, created_at: nowIso });
-      if (error) throw error;
+const result = { baseUrlHint: process.env.E2E_BASE_URL || "http://localhost:3000", password, salons: {}, client: null };
+const client = await pool.connect();
+try {
+  await client.query("begin");
+  for (const persona of personas) {
+    const clerkUser = await upsertClerkUser(persona.email, persona.owner);
+    const idSalao = await upsertSalon(client, persona, clerkUser.id);
+    result.salons[persona.key] = { idSalao, email: persona.email, clerkUserId: clerkUser.id };
+    if (persona.key === "premium") {
+      const fixtures = await ensurePremiumFixtures(client, idSalao);
+      Object.assign(result.salons.premium, fixtures);
+      result.client = { email: fixtures.clientEmail, idCliente: fixtures.idCliente };
     }
   }
-  return ids;
+  await client.query("commit");
+} catch (error) {
+  await client.query("rollback");
+  throw error;
+} finally {
+  client.release();
+  await pool.end();
 }
-
-async function upsertClient(idSalaoPremium) {
-  const email = "e2e+cliente@salaopremiun.local";
-  const senhaHash = await bcrypt.hash(password, 10);
-  const { data: account } = await supabase
-    .from("clientes_app_auth")
-    .select("id")
-    .eq("email", email)
-    .maybeSingle();
-  const accountPayload = {
-    nome: "Cliente App E2E",
-    email,
-    telefone: "11977776666",
-    senha_hash: senhaHash,
-    ativo: true,
-    updated_at: nowIso,
-  };
-  let idConta = account?.id;
-  if (idConta) {
-    const { error } = await supabase
-      .from("clientes_app_auth")
-      .update(accountPayload)
-      .eq("id", idConta);
-    if (error) throw error;
-  } else {
-    const { data, error } = await supabase
-      .from("clientes_app_auth")
-      .insert(accountPayload)
-      .select("id")
-      .single();
-    if (error) throw error;
-    idConta = data.id;
-  }
-
-  const { data: cliente } = await supabase
-    .from("clientes")
-    .select("id")
-    .eq("id_salao", idSalaoPremium)
-    .eq("email", email)
-    .maybeSingle();
-  const clientePayload = {
-    id_salao: idSalaoPremium,
-    nome: "Cliente App E2E",
-    email,
-    telefone: "11977776666",
-    whatsapp: "11977776666",
-    status: "ativo",
-    ativo: "ativo",
-    atualizado_em: nowIso,
-  };
-  let idCliente = cliente?.id;
-  if (idCliente) {
-    const { error } = await supabase
-      .from("clientes")
-      .update(clientePayload)
-      .eq("id", idCliente);
-    if (error) throw error;
-  } else {
-    const { data, error } = await supabase
-      .from("clientes")
-      .insert(clientePayload)
-      .select("id")
-      .single();
-    if (error) throw error;
-    idCliente = data.id;
-  }
-
-  const { data: auth } = await supabase
-    .from("clientes_auth")
-    .select("id")
-    .eq("id_salao", idSalaoPremium)
-    .eq("email", email)
-    .maybeSingle();
-  const authPayload = {
-    id_salao: idSalaoPremium,
-    id_cliente: idCliente,
-    email,
-    senha_hash: senhaHash,
-    app_ativo: true,
-    app_conta_id: idConta,
-    updated_at: nowIso,
-  };
-  if (auth?.id) {
-    const { error } = await supabase
-      .from("clientes_auth")
-      .update(authPayload)
-      .eq("id", auth.id);
-    if (error) throw error;
-  } else {
-    const { error } = await supabase
-      .from("clientes_auth")
-      .insert({ ...authPayload, created_at: nowIso });
-    if (error) throw error;
-  }
-
-  return { idConta, idCliente, email };
-}
-
-async function upsertAdminMaster() {
-  const email = "e2e+admin-master@salaopremiun.local";
-  const authUser = await upsertAuthUser(email, "Admin Master E2E");
-  const { data: admin } = await supabase
-    .from("admin_master_usuarios")
-    .select("id")
-    .eq("email", email)
-    .maybeSingle();
-  const payload = {
-    auth_user_id: authUser.id,
-    email,
-    nome: "Admin Master E2E",
-    perfil: "owner",
-    status: "ativo",
-    atualizado_em: nowIso,
-  };
-  let idAdmin = admin?.id;
-  if (idAdmin) {
-    const { error } = await supabase
-      .from("admin_master_usuarios")
-      .update(payload)
-      .eq("id", idAdmin);
-    if (error) throw error;
-  } else {
-    const { data, error } = await supabase
-      .from("admin_master_usuarios")
-      .insert({ ...payload, criado_em: nowIso })
-      .select("id")
-      .single();
-    if (error) throw error;
-    idAdmin = data.id;
-  }
-  return { idAdmin, email };
-}
-
-const result = {
-  createdAt: nowIso,
-  baseUrlHint: process.env.E2E_BASE_URL || "http://localhost:3000",
-  password,
-  salons: {},
-  client: null,
-  adminMaster: null,
-};
-
-for (const persona of personas) {
-  const authUser = await upsertAuthUser(persona.email, persona.owner);
-  const idSalao = await upsertSalon(persona, authUser.id);
-  const professional = await upsertProfessional(persona, idSalao);
-  const services = await upsertServices(persona, idSalao, professional.idProfissional);
-  result.salons[persona.key] = {
-    plan: persona.plan,
-    idSalao,
-    email: persona.email,
-    professionalCpf: professional.cpf,
-    serviceIds: services,
-  };
-}
-
-result.client = await upsertClient(result.salons.premium.idSalao);
-result.adminMaster = await upsertAdminMaster();
 
 fs.writeFileSync(outputPath, `${JSON.stringify(result, null, 2)}\n`);
-console.log(
-  JSON.stringify(
-    {
-      ok: true,
-      outputPath,
-      salons: Object.fromEntries(
-        Object.entries(result.salons).map(([key, value]) => [
-          key,
-          { idSalao: value.idSalao, email: value.email, plan: value.plan },
-        ])
-      ),
-      clientEmail: result.client.email,
-      adminMasterEmail: result.adminMaster.email,
-    },
-    null,
-    2
-  )
-);
+console.log(`Contas E2E Clerk + Neon gravadas em ${outputPath}`);
