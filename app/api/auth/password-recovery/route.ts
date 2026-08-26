@@ -1,13 +1,10 @@
 import { NextResponse } from "next/server";
-import { getPublicAuthUrl } from "@/lib/auth/public-auth-url";
-import { htmlEscape, sendBrevoEmail } from "@/lib/email/brevo";
 import {
   assertPublicRateLimit,
   getPublicRateLimitIdentity,
 } from "@/lib/security/public-rate-limit";
 import { emitSecurityEvent } from "@/lib/security/security-events";
 import { findSalaoUsuarioByEmail } from "@/lib/security/salao-user-lookup";
-import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -17,45 +14,12 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-function getRequestHost(request: Request) {
-  return (
-    request.headers.get("x-forwarded-host") ||
-    request.headers.get("host") ||
-    null
-  );
-}
-
 function getClientIp(request: Request) {
   return (
     request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
     request.headers.get("x-real-ip") ||
     null
   );
-}
-
-function buildRecoveryEmailHtml(params: { link: string; email: string }) {
-  const link = htmlEscape(params.link);
-  const email = htmlEscape(params.email);
-
-  return `
-    <div style="font-family:Inter,Arial,sans-serif;background:#f8fafc;padding:32px;color:#0f172a">
-      <div style="max-width:620px;margin:0 auto;background:#ffffff;border:1px solid #e2e8f0;border-radius:20px;overflow:hidden">
-        <div style="padding:30px 30px 12px">
-          <p style="margin:0 0 10px;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;color:#64748b">SalãoPremium</p>
-          <h1 style="margin:0;font-size:30px;line-height:1.15;color:#0f172a">Recuperar acesso</h1>
-          <p style="margin:18px 0 0;font-size:16px;line-height:1.7;color:#475569">
-            Recebemos uma solicitação para redefinir a senha da conta ${email}.
-          </p>
-          <a href="${link}" style="display:inline-block;margin-top:24px;background:#0f172a;color:#ffffff;text-decoration:none;border-radius:999px;padding:13px 20px;font-size:14px;font-weight:800">Criar nova senha</a>
-        </div>
-        <div style="padding:20px 30px 30px">
-          <p style="margin:0;font-size:13px;line-height:1.7;color:#64748b">
-            Se você não solicitou essa recuperação, ignore este e-mail. Por segurança, o link expira automaticamente.
-          </p>
-        </div>
-      </div>
-    </div>
-  `;
 }
 
 export async function POST(request: Request) {
@@ -76,9 +40,7 @@ export async function POST(request: Request) {
       windowMs: 15 * 60 * 1000,
     });
 
-    const supabase = getDatabaseAdmin();
     const usuario = await findSalaoUsuarioByEmail(email);
-
     void emitSecurityEvent({
       evento: "recuperacao_senha_solicitada",
       tipoUsuario: "salao",
@@ -89,56 +51,25 @@ export async function POST(request: Request) {
       userAgent: request.headers.get("user-agent") || null,
       origem: "password-recovery",
       route: "/recuperar-senha",
-      detalhes: { email },
+      detalhes: { email, provider: "clerk" },
     });
 
-    const redirectTo = getPublicAuthUrl(
-      "/atualizar-senha",
-      getRequestHost(request)
-    );
+    const redirect = new URL("https://login.salaopremiun.com.br/login-clerk");
+    redirect.searchParams.set("mode", "recovery");
+    redirect.searchParams.set("email", email);
+    redirect.searchParams.set("next", "/dashboard");
 
-    const { data, error } = await supabase.auth.admin.generateLink({
-      type: "recovery",
-      email,
-      options: {
-        redirectTo,
-      },
+    return NextResponse.json({
+      ok: true,
+      provider: "clerk",
+      redirectTo: redirect.toString(),
     });
-
-    if (error) {
-      const message = String(error.message || "").toLowerCase();
-      if (message.includes("not found") || message.includes("user")) {
-        return NextResponse.json({ ok: true });
-      }
-
-      throw error;
-    }
-
-    const actionLink = data?.properties?.action_link;
-    if (!actionLink) {
-      throw new Error("Link de recuperação não foi gerado.");
-    }
-
-    await sendBrevoEmail({
-      from:
-        process.env.PASSWORD_RECOVERY_EMAIL_FROM ||
-        "SalãoPremium <recuperar@salaopremiun.com.br>",
-      to: email,
-      subject: "Recuperar senha - SalãoPremium",
-      html: buildRecoveryEmailHtml({ link: actionLink, email }),
-      text: `Use este link para criar uma nova senha: ${actionLink}`,
-      replyTo: process.env.PASSWORD_RECOVERY_EMAIL_REPLY_TO || undefined,
-      idempotencyKey: `password-recovery-${email}-${Date.now()}`,
-    });
-
-    return NextResponse.json({ ok: true });
   } catch (error) {
-    console.error("[PASSWORD_RECOVERY_EMAIL_ERROR]", {
+    console.error("[PASSWORD_RECOVERY_ERROR]", {
       error: error instanceof Error ? error.message : "erro_desconhecido",
     });
-
     return NextResponse.json(
-      { message: "Não foi possível enviar o link de recuperação." },
+      { message: "Não foi possível iniciar a recuperação de acesso." },
       { status: 500 }
     );
   }
