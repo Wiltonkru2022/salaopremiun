@@ -69,7 +69,6 @@ function LoginPageContent() {
 
             <ClerkAdminSignIn
               exchangeEndpoint="/api/auth/painel/clerk"
-              migrationEndpoint="/api/auth/painel/migrate-to-clerk"
               nextPath={next}
               onAuthenticated={onAuthenticated}
             />
