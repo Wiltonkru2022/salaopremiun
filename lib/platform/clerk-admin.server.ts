@@ -2,10 +2,11 @@ import "server-only";
 
 const CLERK_API_BASE = "https://api.clerk.com/v1";
 
-type ClerkUser = {
+export type ClerkUser = {
   id: string;
   first_name?: string | null;
   last_name?: string | null;
+  public_metadata?: Record<string, unknown>;
   primary_email_address_id?: string | null;
   email_addresses?: Array<{ id?: string; email_address?: string }>;
 };
@@ -43,13 +44,17 @@ async function clerkRequest<T>(path: string, init: RequestInit = {}): Promise<T>
   return (await response.json()) as T;
 }
 
+export function getClerkUser(userId: string) {
+  return clerkRequest<ClerkUser>(`/users/${encodeURIComponent(userId)}`);
+}
+
 export async function createClerkUser(params: {
   email: string;
   password: string;
   nome: string;
   publicMetadata?: Record<string, unknown>;
 }) {
-  const user = await clerkRequest<ClerkUser>("/users", {
+  return clerkRequest<ClerkUser>("/users", {
     method: "POST",
     body: JSON.stringify({
       email_address: [params.email],
@@ -58,7 +63,6 @@ export async function createClerkUser(params: {
       public_metadata: params.publicMetadata || {},
     }),
   });
-  return user;
 }
 
 export async function updateClerkUser(params: {
