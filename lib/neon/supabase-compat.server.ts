@@ -11,7 +11,6 @@ import { resolveNeonRuntimeUrl } from "@/lib/neon/runtime-url.server";
 import { getProviderConfig } from "@/lib/platform/provider-config.server";
 
 type SupabaseLike = any;
-
 type State = PainelDbQuery & {
   filters: PainelDbFilter[];
   orders: PainelDbOrder[];
@@ -60,8 +59,18 @@ async function executeNeonRpc(fn: string, args?: Record<string, unknown>) {
   }
 }
 
-function applySupabase(supabase: SupabaseLike, state: State) {
-  let query: any = supabase.from(state.table);
+function requireSupabaseFallback(supabase: SupabaseLike | null) {
+  if (!supabase) {
+    throw new Error(
+      "Operacao solicitou fallback Supabase enquanto o backend esta em modo Neon."
+    );
+  }
+  return supabase;
+}
+
+function applySupabase(supabase: SupabaseLike | null, state: State) {
+  const fallback = requireSupabaseFallback(supabase);
+  let query: any = fallback.from(state.table);
   const mutation = state.mutation as PainelDbMutation | undefined;
   if (mutation?.kind === "insert") query = query.insert(mutation.payload);
   else if (mutation?.kind === "update") query = query.update(mutation.payload);
@@ -86,7 +95,7 @@ function applySupabase(supabase: SupabaseLike, state: State) {
   return query;
 }
 
-function createBuilder(supabase: SupabaseLike, table: string) {
+function createBuilder(supabase: SupabaseLike | null, table: string) {
   const state: State = {
     kind: "query",
     table,
@@ -223,19 +232,24 @@ function createBuilder(supabase: SupabaseLike, table: string) {
   return builder;
 }
 
-export function createNeonSupabaseCompat(supabase: SupabaseLike): SupabaseLike {
-  return new Proxy(supabase, {
-    get(target, property, receiver) {
+export function createNeonSupabaseCompat(
+  supabase: SupabaseLike | null = null
+): SupabaseLike {
+  // O Proxy usa um alvo neutro quando o sistema esta 100% em Neon. O objeto
+  // Supabase so e necessario no modo de rollback/fallback explicito.
+  const target = supabase || {};
+  return new Proxy(target, {
+    get(currentTarget, property, receiver) {
       if (property === "from") {
         return (table: string) => createBuilder(supabase, table);
       }
       if (property === "rpc") {
         return async (fn: string, args?: Record<string, unknown>) => {
           if (neonEnabled()) return executeNeonRpc(fn, args);
-          return supabase.rpc(fn, args);
+          return requireSupabaseFallback(supabase).rpc(fn, args);
         };
       }
-      return Reflect.get(target, property, receiver);
+      return Reflect.get(currentTarget, property, receiver);
     },
   });
 }
