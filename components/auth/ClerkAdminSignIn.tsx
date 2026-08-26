@@ -18,7 +18,6 @@ type ClerkLike = {
 declare global {
   interface Window {
     Clerk?: ClerkLike;
-    __internal_ClerkUICtor?: unknown;
   }
 }
 
@@ -27,28 +26,33 @@ function decodeClerkDomain(publishableKey: string) {
   if (!encoded) throw new Error("Publishable Key do Clerk inválida.");
   const normalized = encoded.replace(/-/g, "+").replace(/_/g, "/");
   const padded = normalized + "=".repeat((4 - (normalized.length % 4 || 4)) % 4);
-  return window.atob(padded).slice(0, -1);
+  const decoded = window.atob(padded).replace(/\$$/, "").trim();
+  if (!decoded || !decoded.includes(".")) {
+    throw new Error("Não foi possível resolver o domínio do Clerk.");
+  }
+  return decoded;
 }
 
-function loadScript(src: string, attributes: Record<string, string> = {}) {
+function loadClerkScript(src: string, publishableKey: string) {
   return new Promise<void>((resolve, reject) => {
     const existing = document.querySelector<HTMLScriptElement>(`script[src="${src}"]`);
     if (existing) {
-      if (existing.dataset.loaded === "true") resolve();
+      if (window.Clerk) resolve();
       else existing.addEventListener("load", () => resolve(), { once: true });
       return;
     }
 
     const script = document.createElement("script");
     script.src = src;
-    script.defer = true;
+    script.async = true;
     script.crossOrigin = "anonymous";
-    Object.entries(attributes).forEach(([key, value]) => script.setAttribute(key, value));
-    script.addEventListener("load", () => {
-      script.dataset.loaded = "true";
-      resolve();
-    }, { once: true });
-    script.addEventListener("error", () => reject(new Error("Falha ao carregar autenticação Clerk.")), { once: true });
+    script.setAttribute("data-clerk-publishable-key", publishableKey);
+    script.addEventListener("load", () => resolve(), { once: true });
+    script.addEventListener(
+      "error",
+      () => reject(new Error("Falha ao carregar autenticação Clerk.")),
+      { once: true }
+    );
     document.head.appendChild(script);
   });
 }
@@ -63,7 +67,7 @@ export function ClerkAdminSignIn({
   onAuthenticated: (redirectTo: string) => void;
 }) {
   const hostRef = useRef<HTMLDivElement | null>(null);
-  const exchangedSessionRef = useRef<ClerkSessionLike | null>(null);
+  const exchangedTokenRef = useRef<string | null>(null);
   const [status, setStatus] = useState("Carregando autenticação segura...");
   const [error, setError] = useState("");
 
@@ -73,14 +77,16 @@ export function ClerkAdminSignIn({
     const host = hostRef.current;
 
     async function exchangeSession(session?: ClerkSessionLike | null) {
-      if (!session || exchangedSessionRef.current === session || cancelled) return;
-      exchangedSessionRef.current = session;
+      if (!session || cancelled) return;
+
       setStatus("Validando acesso e MFA...");
       setError("");
 
       try {
         const token = await session.getToken();
         if (!token) throw new Error("O Clerk não retornou uma sessão válida.");
+        if (exchangedTokenRef.current === token) return;
+        exchangedTokenRef.current = token;
 
         const response = await fetch(exchangeEndpoint, {
           method: "POST",
@@ -92,12 +98,13 @@ export function ClerkAdminSignIn({
           },
           body: JSON.stringify({ next: nextPath }),
         });
+
         const payload = (await response.json().catch(() => null)) as
           | { ok?: boolean; message?: string; redirectTo?: string; mfaRequired?: boolean }
           | null;
 
         if (!response.ok || !payload?.ok) {
-          exchangedSessionRef.current = null;
+          exchangedTokenRef.current = null;
           throw new Error(
             payload?.message ||
               (payload?.mfaRequired
@@ -117,18 +124,17 @@ export function ClerkAdminSignIn({
 
     async function setup() {
       const publishableKey = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
-      if (!publishableKey) throw new Error("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY não configurada.");
+      if (!publishableKey) {
+        throw new Error("NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY não configurada.");
+      }
+
       const clerkDomain = decodeClerkDomain(publishableKey);
-      const uiSrc = `https://${clerkDomain}/npm/@clerk/ui@1/dist/ui.browser.js`;
       const clerkSrc = `https://${clerkDomain}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`;
 
-      await loadScript(uiSrc);
-      await loadScript(clerkSrc, { "data-clerk-publishable-key": publishableKey });
+      await loadClerkScript(clerkSrc, publishableKey);
       if (!window.Clerk) throw new Error("ClerkJS não inicializou.");
 
-      await window.Clerk.load({
-        ui: { ClerkUI: window.__internal_ClerkUICtor },
-      });
+      await window.Clerk.load();
       if (cancelled || !host) return;
 
       window.Clerk.mountSignIn(host, {
