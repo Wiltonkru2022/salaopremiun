@@ -224,7 +224,7 @@ function createBuilder(supabase: SupabaseLike, table: string) {
           ? await executeNeon(state)
           : await applyFallback(supabase, state);
         return resolve(result);
-      } catch (error) {
+      } catch {
         // Falha Neon nunca derruba a producao durante a janela de migracao.
         try {
           const fallback = await applyFallback(supabase, state);
