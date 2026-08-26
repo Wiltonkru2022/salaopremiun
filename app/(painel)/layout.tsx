@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
 import AppShell from "@/components/layout/AppShell";
 import PanelFormPendingGuard from "@/components/layout/PanelFormPendingGuard";
 import PartnerAdSlot from "@/components/parcerias/PartnerAdSlot";
@@ -66,6 +66,7 @@ export default async function PainelLayout({ children }: { children: React.React
   try {
     operational = await requireOnboardingConcluido();
   } catch (error) {
+    unstable_rethrow(error);
     console.error("[PAINEL_ONBOARDING_GUARD_ERROR]", error);
     return (
       <main className="min-h-screen bg-zinc-50 p-6">
