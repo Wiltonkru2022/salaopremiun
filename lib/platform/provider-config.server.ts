@@ -1,5 +1,6 @@
 export type DatabaseProvider = "supabase" | "neon";
 export type AdminAuthProvider = "supabase" | "clerk";
+export type AppAuthProvider = "session";
 export type MediaProvider = "supabase" | "cloudinary";
 export type AuthSurface = "admin-master" | "painel" | "cliente" | "profissional";
 
@@ -69,8 +70,10 @@ export function getAuthProviderForSurface(surface: AuthSurface) {
     );
   }
 
-  // Cliente e Profissional continuam usando seus fluxos atuais de Supabase Auth.
-  return "supabase" as const;
+  // Os apps Cliente e Profissional possuem autenticacao propria por sessao
+  // criptografada e consultam as credenciais/perfis no banco operacional Neon.
+  // Eles nao dependem de Supabase Auth.
+  return "session" as AppAuthProvider;
 }
 
 export function isClerkEnabledForSurface(surface: AuthSurface) {
@@ -140,7 +143,7 @@ export function assertProviderReadiness() {
     (config.adminMasterAuth === "clerk" || config.painelAuth === "clerk") &&
     !config.clerkReady
   ) {
-    throw new Error("Clerk ativo em área administrativa sem credenciais completas.");
+    throw new Error("Clerk ativo em area administrativa sem credenciais completas.");
   }
   if (config.media === "cloudinary" && !config.cloudinaryReady) {
     throw new Error("Cloudinary ativo sem credenciais completas.");
