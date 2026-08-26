@@ -1,14 +1,11 @@
 import { randomUUID } from "node:crypto";
 import { addDays, format } from "date-fns";
-import { createServerClient } from "@supabase/ssr";
-import { cookies, headers } from "next/headers";
 import {
   buscarQrCodePix,
   criarCobranca,
   criarOuBuscarCliente,
 } from "@/lib/payments/pix-provider";
-import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
-import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
+import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 type BillingType = "PIX" | "BOLETO";
@@ -54,32 +51,6 @@ export class WhatsappPacoteCheckoutServiceError extends Error {
   }
 }
 
-async function getSupabaseServer() {
-  const cookieStore = await cookies();
-  const headersList = await headers();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    throw new WhatsappPacoteCheckoutServiceError(
-      "Configuracao do Supabase incompleta.",
-      500
-    );
-  }
-
-  const cookieOptions = getSupabaseCookieOptions(headersList.get("host"));
-
-  return createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookieOptions,
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll() {},
-    },
-  });
-}
-
 function onlyNumbers(value?: string | null) {
   return String(value || "").replace(/\D/g, "");
 }
@@ -90,27 +61,20 @@ function toMoney(value?: number | string | null) {
 }
 
 async function validarSalaoAdmin() {
-  const supabase = await getSupabaseServer();
+  const { usuario, mfaRequired } = await getPainelUserContext();
 
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError) {
+  if (mfaRequired) {
     throw new WhatsappPacoteCheckoutServiceError(
-      "Erro ao validar usuário autenticado.",
-      401
+      "Confirme o MFA para continuar.",
+      403
     );
   }
 
-  if (!user?.id) {
+  if (!usuario) {
     throw new WhatsappPacoteCheckoutServiceError("Usuário não autenticado.", 401);
   }
 
-  const usuario = await getPainelUserContextByAuthUserId(user.id);
-
-  if (!usuario?.id_salao) {
+  if (!usuario.id_salao) {
     throw new WhatsappPacoteCheckoutServiceError("Usuário sem salão vinculado.", 403);
   }
 
