@@ -35,9 +35,7 @@ type AdminMasterIdentity = {
 type AdminMasterAuthUser = {
   id: string;
   email: string;
-  user_metadata: {
-    nome: string;
-  };
+  user_metadata: { nome: string };
 };
 
 type AdminMasterAccessAllowed = {
@@ -53,9 +51,7 @@ type AdminMasterAccessDenied = {
   message: string;
 };
 
-export type AdminMasterAccessResult =
-  | AdminMasterAccessAllowed
-  | AdminMasterAccessDenied;
+export type AdminMasterAccessResult = AdminMasterAccessAllowed | AdminMasterAccessDenied;
 
 function getOwnerEmails() {
   return String(process.env.ADMIN_MASTER_OWNER_EMAILS || "")
@@ -64,38 +60,35 @@ function getOwnerEmails() {
     .filter(Boolean);
 }
 
+function isLegacyUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 async function bootstrapOwnerIfAllowed(params: {
   authUserId: string;
   email: string;
   nome: string;
 }) {
   const ownerEmails = getOwnerEmails();
-  if (!ownerEmails.includes(params.email.toLowerCase())) {
-    return null;
-  }
+  if (!ownerEmails.includes(params.email.toLowerCase())) return null;
 
   const supabaseAdmin = getSupabaseAdmin();
+  const payload: Record<string, unknown> = {
+    email: params.email.toLowerCase(),
+    nome: params.nome,
+    perfil: "owner",
+    status: "ativo",
+    atualizado_em: new Date().toISOString(),
+  };
+  if (isLegacyUuid(params.authUserId)) payload.auth_user_id = params.authUserId;
 
   const { data, error } = await supabaseAdmin
     .from("admin_master_usuarios")
-    .upsert(
-      {
-        auth_user_id: params.authUserId,
-        email: params.email.toLowerCase(),
-        nome: params.nome,
-        perfil: "owner",
-        status: "ativo",
-        atualizado_em: new Date().toISOString(),
-      },
-      { onConflict: "email" }
-    )
+    .upsert(payload, { onConflict: "email" })
     .select("id, nome, email, perfil, status")
     .single();
 
-  if (error) {
-    throw new AdminMasterAuthError("Erro ao criar owner AdminMaster.", 500);
-  }
-
+  if (error) throw new AdminMasterAuthError("Erro ao criar owner AdminMaster.", 500);
   const usuario = data as AdminMasterUsuarioRow;
 
   await supabaseAdmin.from("admin_master_permissoes").upsert(
@@ -142,16 +135,21 @@ export async function resolveAdminMasterAccessForIdentity(
 ): Promise<AdminMasterAccessResult> {
   const supabaseAdmin = getSupabaseAdmin();
   const email = String(identity.email || "").trim().toLowerCase();
-  const nome =
-    String(identity.nome || "").trim() || email.split("@")[0] || "Admin Master";
+  const nome = String(identity.nome || "").trim() || email.split("@")[0] || "Admin Master";
+  const legacyUuid = isLegacyUuid(identity.id);
 
-  const adminUserResult = await supabaseAdmin
-    .from("admin_master_usuarios")
-    .select("id, nome, email, perfil, status")
-    .eq("auth_user_id", identity.id)
-    .maybeSingle();
-  let adminUser = adminUserResult.data;
-  const error = adminUserResult.error;
+  let adminUser: any = null;
+  let error: any = null;
+
+  if (legacyUuid) {
+    const result = await supabaseAdmin
+      .from("admin_master_usuarios")
+      .select("id, nome, email, perfil, status")
+      .eq("auth_user_id", identity.id)
+      .maybeSingle();
+    adminUser = result.data;
+    error = result.error;
+  }
 
   if (!adminUser && email) {
     const { data: adminByEmail, error: emailError } = await supabaseAdmin
@@ -160,59 +158,33 @@ export async function resolveAdminMasterAccessForIdentity(
       .eq("email", email)
       .maybeSingle();
 
-    if (emailError) {
-      return {
-        ok: false,
-        status: 500,
-        message: "Erro ao validar AdminMaster.",
-      };
-    }
+    if (emailError) return { ok: false, status: 500, message: "Erro ao validar AdminMaster." };
 
     if (adminByEmail?.id) {
       adminUser = adminByEmail;
-      await supabaseAdmin
-        .from("admin_master_usuarios")
-        .update({
-          auth_user_id: identity.id,
-          ultimo_acesso_em: new Date().toISOString(),
-        })
-        .eq("id", adminByEmail.id);
+      const update: Record<string, unknown> = { ultimo_acesso_em: new Date().toISOString() };
+      if (legacyUuid) update.auth_user_id = identity.id;
+      await supabaseAdmin.from("admin_master_usuarios").update(update).eq("id", adminByEmail.id);
     }
   }
 
-  if (error) {
-    return {
-      ok: false,
-      status: 500,
-      message: "Erro ao carregar usuario AdminMaster.",
-    };
-  }
+  if (error) return { ok: false, status: 500, message: "Erro ao carregar usuario AdminMaster." };
 
   if (!adminUser && email) {
-    adminUser = await bootstrapOwnerIfAllowed({
-      authUserId: identity.id,
-      email,
-      nome,
-    });
+    adminUser = await bootstrapOwnerIfAllowed({ authUserId: identity.id, email, nome });
   }
 
   if (!adminUser) {
     return {
       ok: false,
       status: 403,
-      message:
-        "Usuario sem acesso ao AdminMaster. Cadastre este e-mail em admin_master_usuarios.",
+      message: "Usuario sem acesso ao AdminMaster. Cadastre este e-mail em admin_master_usuarios.",
     };
   }
 
   const usuario = adminUser as AdminMasterUsuarioRow;
-
   if (String(usuario.status || "").toLowerCase() !== "ativo") {
-    return {
-      ok: false,
-      status: 403,
-      message: "Usuario AdminMaster inativo.",
-    };
+    return { ok: false, status: 403, message: "Usuario AdminMaster inativo." };
   }
 
   const { data: permissoesDb, error: permissoesError } = await supabaseAdmin
@@ -223,25 +195,14 @@ export async function resolveAdminMasterAccessForIdentity(
     .eq("id_admin_master_usuario", usuario.id)
     .maybeSingle();
 
-  if (permissoesError) {
-    return {
-      ok: false,
-      status: 500,
-      message: "Erro ao carregar permissoes AdminMaster.",
-    };
-  }
+  if (permissoesError) return { ok: false, status: 500, message: "Erro ao carregar permissoes AdminMaster." };
 
   const permissions = mergeAdminMasterPermissions(
     usuario.perfil,
     permissoesDb as Record<string, unknown> | null
   );
-
   if (!permissions[permission]) {
-    return {
-      ok: false,
-      status: 403,
-      message: "Usuario sem permissao para esta area do AdminMaster.",
-    };
+    return { ok: false, status: 403, message: "Usuario sem permissao para esta area do AdminMaster." };
   }
 
   await supabaseAdmin
@@ -251,11 +212,7 @@ export async function resolveAdminMasterAccessForIdentity(
 
   return {
     ok: true,
-    authUser: {
-      id: identity.id,
-      email,
-      user_metadata: { nome },
-    },
+    authUser: { id: identity.id, email, user_metadata: { nome } },
     usuario,
     permissions,
   };
@@ -265,20 +222,11 @@ export async function getAdminMasterAccess(
   permission: AdminMasterPermissionKey = "dashboard_ver"
 ): Promise<AdminMasterAccessResult> {
   const session = await readAdminMasterSession();
-
   if (!session) {
-    return {
-      ok: false,
-      status: 401,
-      message: "Sessao expirada. Faca login novamente no Admin Master.",
-    };
+    return { ok: false, status: 401, message: "Sessao expirada. Faca login novamente no Admin Master." };
   }
-
   return resolveAdminMasterAccessForIdentity(
-    {
-      id: session.authUserId,
-      email: session.email,
-    },
+    { id: session.authUserId, email: session.email },
     permission
   );
 }
@@ -287,14 +235,9 @@ export async function requireAdminMasterUser(
   permission: AdminMasterPermissionKey = "dashboard_ver"
 ) {
   const result = await getAdminMasterAccess(permission);
-
   if (!result.ok) {
-    if (result.status === 401) {
-      redirect(ADMIN_MASTER_LOGIN_PATH);
-    }
-
+    if (result.status === 401) redirect(ADMIN_MASTER_LOGIN_PATH);
     throw new AdminMasterAuthError(result.message, result.status);
   }
-
   return result;
 }
