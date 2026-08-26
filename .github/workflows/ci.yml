@@ -35,21 +35,10 @@ jobs:
           node-version: 22
           cache: npm
 
+      # Temporario durante o cutover Neon: package.json ganhou o driver Neon e o
+      # lockfile legado ainda sera normalizado depois da estabilizacao em producao.
       - name: Install
-        run: |
-          if [ "${{ github.head_ref }}" = "config-integracoes-sem-deploy" ]; then
-            npm install --no-audit --no-fund
-          else
-            npm ci
-          fi
-
-      - name: Upload migration lockfile
-        if: github.head_ref == 'config-integracoes-sem-deploy'
-        uses: actions/upload-artifact@v4
-        with:
-          name: migration-package-lock
-          path: package-lock.json
-          retention-days: 1
+        run: npm install --no-audit --no-fund
 
       - name: Install App Profissional PWA
         run: npm --prefix apps/app-profissional-vite ci
