@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
-import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
+import { getAppCookieOptions } from "@/lib/auth/cookie-options";
 
 export const ADMIN_MASTER_SESSION_COOKIE = "admin-master-session";
 
@@ -192,7 +192,7 @@ export async function setAdminMasterSessionCookie(
   }
 ) {
   const token = await createAdminMasterSessionToken(params);
-  const cookieOptions = getSupabaseCookieOptions(params.host);
+  const cookieOptions = getAppCookieOptions(params.host);
 
   response.cookies.set(ADMIN_MASTER_SESSION_COOKIE, token, {
     ...cookieOptions,
@@ -207,7 +207,7 @@ export function clearAdminMasterSessionCookie(
   response: NextResponse,
   host?: string | null
 ) {
-  const cookieOptions = getSupabaseCookieOptions(host);
+  const cookieOptions = getAppCookieOptions(host);
 
   response.cookies.set(ADMIN_MASTER_SESSION_COOKIE, "", {
     ...cookieOptions,
