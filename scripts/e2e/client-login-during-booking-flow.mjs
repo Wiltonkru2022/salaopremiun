@@ -1,10 +1,10 @@
 import { chromium } from "playwright";
-import { createClient } from "@supabase/supabase-js";
+import { Pool } from "@neondatabase/serverless";
 import fs from "node:fs";
 import { loadLocalEnv, requireEnv } from "../lib/load-env.mjs";
 
 loadLocalEnv();
-requireEnv(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
+requireEnv(["NEON_ADMIN_DATABASE_URL"]);
 
 const accountsPath =
   process.env.E2E_TEST_ACCOUNTS_FILE || ".codex-test-accounts.local.json";
@@ -16,11 +16,7 @@ const baseUrl = (
 ).replace(/\/$/, "");
 const premium = accounts.salons.premium;
 const marker = `codex-login-booking-${Date.now()}`;
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { persistSession: false, autoRefreshToken: false } }
-);
+const pool = new Pool({ connectionString: process.env.NEON_ADMIN_DATABASE_URL });
 const report = {
   baseUrl,
   marker,
@@ -38,11 +34,34 @@ function check(name, ok, detail = "") {
 
 async function cleanup() {
   if (!createdAppointmentIds.length) return;
-  await supabase
-    .from("agendamentos")
-    .delete()
-    .eq("id_salao", premium.idSalao)
-    .in("id", createdAppointmentIds);
+  const client = await pool.connect();
+  try {
+    await client.query(
+      "delete from agendamentos where id_salao = $1 and id = any($2::uuid[])",
+      [premium.idSalao, createdAppointmentIds]
+    );
+  } finally {
+    client.release();
+  }
+}
+
+async function findLatestAppointment() {
+  const client = await pool.connect();
+  try {
+    const result = await client.query(
+      `select id, id_salao, data, hora_inicio, status, cliente_id, created_at
+         from agendamentos
+        where id_salao = $1
+          and cliente_id = $2
+          and created_at >= $3::timestamptz
+        order by created_at desc
+        limit 5`,
+      [premium.idSalao, accounts.client.idCliente, report.startedAt]
+    );
+    return result.rows?.[0] || null;
+  } finally {
+    client.release();
+  }
 }
 
 async function expectVisible(locator, name) {
@@ -167,16 +186,7 @@ async function run() {
       timeout: 30000,
     });
 
-    const { data: appointments, error } = await supabase
-      .from("agendamentos")
-      .select("id, id_salao, data, hora_inicio, status, cliente_id, created_at")
-      .eq("id_salao", premium.idSalao)
-      .eq("cliente_id", accounts.client.idCliente)
-      .gte("created_at", report.startedAt)
-      .order("created_at", { ascending: false })
-      .limit(5);
-    if (error) throw error;
-    const appointment = appointments?.[0] || null;
+    const appointment = await findLatestAppointment();
     if (appointment?.id) createdAppointmentIds.push(appointment.id);
 
     check(
@@ -192,6 +202,7 @@ async function run() {
   } finally {
     await browser.close();
     await cleanup();
+    await pool.end();
   }
 }
 
