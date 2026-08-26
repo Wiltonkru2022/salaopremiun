@@ -1,8 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { createClient } from "@/lib/supabase/server";
-import { hasAal2 } from "@/lib/auth/mfa-assurance";
-import { getAuthProviderForSurface } from "@/lib/platform/provider-config.server";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { readPainelClerkSession } from "@/lib/platform/painel-clerk-session.server";
 
 export type PainelUserContext = {
@@ -20,8 +17,8 @@ type GetPainelUserContextOptions = {
 
 const getCachedPainelUserContextByAuthUserId = unstable_cache(
   async (authUserId: string): Promise<PainelUserContext | null> => {
-    const supabaseAdmin = getSupabaseAdmin();
-    const { data, error } = await supabaseAdmin
+    const database = getDatabaseAdmin();
+    const { data, error } = await database
       .from("usuarios")
       .select("id, id_salao, nome, email, nivel, status")
       .eq("auth_user_id", authUserId)
@@ -46,7 +43,9 @@ export async function getPainelUserContextByAuthUserId(authUserId: string) {
   return getCachedPainelUserContextByAuthUserId(authUserId);
 }
 
-async function getClerkPainelUserContext(options: GetPainelUserContextOptions) {
+export async function getPainelUserContext(
+  options: GetPainelUserContextOptions = {}
+) {
   const session = await readPainelClerkSession();
   if (!session) return { user: null, usuario: null, mfaRequired: false };
 
@@ -58,6 +57,7 @@ async function getClerkPainelUserContext(options: GetPainelUserContextOptions) {
     nivel: session.nivel,
     status: session.status,
   };
+
   const isAdmin = String(usuario.nivel || "").toLowerCase() === "admin";
   if (isAdmin && !options.allowAdminAal1 && !session.mfaVerified) {
     return { user: null, usuario: null, mfaRequired: true };
@@ -72,31 +72,4 @@ async function getClerkPainelUserContext(options: GetPainelUserContextOptions) {
     usuario,
     mfaRequired: false,
   };
-}
-
-export async function getPainelUserContext(
-  options: GetPainelUserContextOptions = {}
-) {
-  if (getAuthProviderForSurface("painel") === "clerk") {
-    return getClerkPainelUserContext(options);
-  }
-
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return { user: null, usuario: null, mfaRequired: false };
-
-  const usuario = await getPainelUserContextByAuthUserId(user.id);
-  const isAdmin = String(usuario?.nivel || "").toLowerCase() === "admin";
-
-  if (isAdmin && !options.allowAdminAal1) {
-    const mfaSatisfied = await hasAal2();
-    if (!mfaSatisfied) {
-      return { user: null, usuario: null, mfaRequired: true };
-    }
-  }
-
-  return { user, usuario, mfaRequired: false };
 }
