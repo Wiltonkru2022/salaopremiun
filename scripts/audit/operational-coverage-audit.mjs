@@ -4,8 +4,36 @@ import process from "node:process";
 
 const root = process.cwd();
 const registryPath = path.join(root, "config", "operational-components.json");
-const registry = JSON.parse(fs.readFileSync(registryPath, "utf8"));
-const components = registry.components || [];
+const legacyComponentKeys = {
+  "supabase.database": "neon.database",
+  "supabase.data_api": "neon.data_api",
+  "supabase.auth": "clerk.auth",
+  "supabase.storage": "cloudinary.storage",
+  "supabase.realtime": "platform.realtime",
+};
+const normalizeComponentKey = (value) => legacyComponentKeys[value] || value;
+const rawRegistry = JSON.parse(fs.readFileSync(registryPath, "utf8"));
+const registry = {
+  ...rawRegistry,
+  version: `${rawRegistry.version}-neon`,
+  components: (rawRegistry.components || []).map((component) => ({
+    ...component,
+    componentKey: normalizeComponentKey(component.componentKey),
+    probeKey: component.probeKey
+      ?.replace(/^probe:supabase:database$/, "probe:neon:database")
+      .replace(/^probe:supabase:data-api$/, "probe:neon:data-api")
+      .replace(/^probe:supabase:auth$/, "probe:clerk:auth")
+      .replace(/^probe:supabase:storage$/, "probe:cloudinary:storage")
+      .replace(/^probe:supabase:realtime$/, "probe:platform:realtime"),
+    sourcePatterns: (component.sourcePatterns || []).map((pattern) =>
+      pattern
+        .replace("lib/supabase/**", "lib/neon/**")
+        .replace("supabase/migrations/**", "database/migrations/**")
+    ),
+    dependencies: (component.dependencies || []).map(normalizeComponentKey),
+  })),
+};
+const components = registry.components;
 
 const IGNORED_DIRS = new Set(["node_modules", ".git", ".next", "dist", "build", "coverage", ".vercel"]);
 const codeExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".json"]);
