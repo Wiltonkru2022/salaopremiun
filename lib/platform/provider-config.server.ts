@@ -49,6 +49,8 @@ export function isClerkEnabledForSurface(surface: AuthSurface) {
 export function getProviderConfig() {
   const adminMasterAuth = getAuthProviderForSurface("admin-master");
   const painelAuth = getAuthProviderForSurface("painel");
+  const neonUserReady = Boolean(process.env.NEON_DATABASE_URL);
+  const neonAdminReady = Boolean(process.env.NEON_ADMIN_DATABASE_URL);
 
   return {
     database: normalizeProvider<DatabaseProvider>(
@@ -66,7 +68,10 @@ export function getProviderConfig() {
       ["supabase", "cloudinary"],
       "supabase"
     ),
-    neonReady: Boolean(process.env.NEON_DATABASE_URL),
+    neonReady: neonUserReady,
+    neonUserReady,
+    neonAdminReady,
+    neonFullReady: neonUserReady && neonAdminReady,
     clerkReady: Boolean(
       process.env.CLERK_ISSUER_URL &&
         process.env.CLERK_JWKS_URL &&
@@ -90,8 +95,10 @@ export function getProviderConfig() {
 
 export function assertProviderReadiness() {
   const config = getProviderConfig();
-  if (config.database === "neon" && !config.neonReady) {
-    throw new Error("DATABASE_PROVIDER=neon sem NEON_DATABASE_URL.");
+  if (config.database === "neon" && !config.neonFullReady) {
+    throw new Error(
+      "DATABASE_PROVIDER=neon exige NEON_DATABASE_URL e NEON_ADMIN_DATABASE_URL."
+    );
   }
   if (
     (config.adminMasterAuth === "clerk" || config.painelAuth === "clerk") &&
