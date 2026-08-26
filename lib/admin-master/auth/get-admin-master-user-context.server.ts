@@ -7,28 +7,26 @@ export type AdminMasterUserContext = {
 } | null;
 
 const getCachedAdminMasterUserContext = unstable_cache(
-  async (authUserId: string): Promise<AdminMasterUserContext> => {
+  async (identityId: string): Promise<AdminMasterUserContext> => {
     const database = getDatabaseAdmin();
-    const { data, error } = await database
+    const identity = String(identityId || "").trim();
+    if (!identity) return null;
+
+    const query = database
       .from("admin_master_usuarios")
-      .select("id")
-      .eq("auth_user_id", authUserId)
-      .maybeSingle();
+      .select("id");
 
-    if (error || !data?.id) {
-      return null;
-    }
+    const { data, error } = identity.startsWith("user_")
+      ? await query.eq("clerk_user_id", identity).maybeSingle()
+      : await query.eq("auth_user_id", identity).maybeSingle();
 
-    return {
-      id: String(data.id),
-    };
+    if (error || !data?.id) return null;
+    return { id: String(data.id) };
   },
-  ["admin-master-user-context"],
-  {
-    revalidate: 60,
-  }
+  ["admin-master-user-context-identity-v2"],
+  { revalidate: 60 }
 );
 
-export async function getAdminMasterUserContextByAuthUserId(authUserId: string) {
-  return getCachedAdminMasterUserContext(authUserId);
+export async function getAdminMasterUserContextByAuthUserId(identityId: string) {
+  return getCachedAdminMasterUserContext(identityId);
 }
