@@ -18,6 +18,20 @@ function safeNext(value: unknown) {
   return raw;
 }
 
+function buildUsername(email: string, legacyUserId: string) {
+  const local = email.split("@")[0] || "usuario";
+  let base = local
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9_]/g, "_")
+    .replace(/_+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  if (base.length < 4) base = `user_${base || "salao"}`;
+  const suffix = legacyUserId.replace(/[^a-z0-9]/gi, "").slice(-8).toLowerCase();
+  return `${base.slice(0, 42)}_${suffix || "sp"}`.slice(0, 63);
+}
+
 function clerkHeaders() {
   const secretKey = String(process.env.CLERK_SECRET_KEY || "").trim();
   if (!secretKey) throw new Error("CLERK_SECRET_KEY nao configurada.");
@@ -39,10 +53,7 @@ async function findClerkUserByEmail(email: string): Promise<ClerkUser | null> {
     { headers: clerkHeaders(), cache: "no-store" }
   );
 
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(`Falha ao consultar Clerk (${response.status})${text ? `: ${text.slice(0, 180)}` : ""}`);
-  }
+  if (!response.ok) throw new Error("Nao foi possivel consultar a conta Clerk.");
 
   const payload = (await response.json()) as ClerkUser[] | { data?: ClerkUser[] };
   const users = Array.isArray(payload) ? payload : payload.data || [];
@@ -72,6 +83,7 @@ async function createClerkUser(params: {
     headers: clerkHeaders(),
     body: JSON.stringify({
       email_address: [params.email],
+      username: buildUsername(params.email, params.legacyUserId),
       password: params.password,
       external_id: params.legacyUserId,
       first_name: firstName,
@@ -90,7 +102,12 @@ async function createClerkUser(params: {
 
   if (!response.ok) {
     const text = await response.text().catch(() => "");
-    throw new Error(`Falha ao criar usuario Clerk (${response.status})${text ? `: ${text.slice(0, 180)}` : ""}`);
+    console.error("[painel/clerk-create-user]", response.status, text.slice(0, 500));
+    throw new Error(
+      response.status === 422
+        ? "Nao foi possivel preparar sua conta no novo login. Tente novamente em alguns segundos."
+        : "Falha ao criar sua conta no novo login."
+    );
   }
 
   return (await response.json()) as ClerkUser;
@@ -114,11 +131,7 @@ async function bindExistingClerkUser(user: ClerkUser, legacyUserId: string, idSa
     }),
   });
 
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(`Falha ao vincular usuario Clerk (${response.status})${text ? `: ${text.slice(0, 180)}` : ""}`);
-  }
-
+  if (!response.ok) throw new Error("Falha ao vincular sua conta ao novo login.");
   return (await response.json()) as ClerkUser;
 }
 
@@ -129,10 +142,7 @@ async function createSignInTicket(userId: string) {
     body: JSON.stringify({ user_id: userId, expires_in_seconds: 180 }),
   });
 
-  if (!response.ok) {
-    const text = await response.text().catch(() => "");
-    throw new Error(`Falha ao criar sessao Clerk (${response.status})${text ? `: ${text.slice(0, 180)}` : ""}`);
-  }
+  if (!response.ok) throw new Error("Falha ao iniciar sua nova sessao.");
 
   const payload = (await response.json()) as { token?: string };
   if (!payload.token) throw new Error("Clerk nao retornou ticket de sessao.");
@@ -166,11 +176,9 @@ export async function POST(request: Request) {
     const supabaseUrl = String(process.env.NEXT_PUBLIC_SUPABASE_URL || "").trim();
     const supabaseAnonKey = String(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "").trim();
     if (!supabaseUrl || !supabaseAnonKey) {
-      throw new Error("Credenciais legadas de autenticacao nao configuradas para migracao.");
+      throw new Error("Credenciais legadas indisponiveis para validar a migracao.");
     }
 
-    // O Supabase e usado somente para provar a senha antiga durante a transicao.
-    // Dados operacionais e a sessao final continuam no Neon + Clerk.
     const legacyAuth = createClient(supabaseUrl, supabaseAnonKey, {
       auth: {
         persistSession: false,
@@ -241,10 +249,7 @@ export async function POST(request: Request) {
     return NextResponse.json(
       {
         ok: false,
-        message:
-          cause instanceof Error
-            ? cause.message
-            : "Falha ao migrar acesso para Clerk.",
+        message: "Nao foi possivel concluir a migracao do acesso agora. Tente novamente.",
       },
       { status: 500 }
     );
