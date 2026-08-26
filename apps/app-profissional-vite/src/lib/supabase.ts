@@ -1,36 +1,41 @@
-import { createClient } from "@supabase/supabase-js";
+type RealtimeCallback = () => void;
 
-function requiredPublicEnv(name: string, value: string | undefined) {
-  const normalized = String(value || "").trim();
-  if (!normalized) {
-    throw new Error(`Configuracao obrigatoria ausente: ${name}`);
-  }
-  return normalized;
+type LocalChannel = {
+  on: (
+    _type: string,
+    _filter: Record<string, unknown>,
+    callback: RealtimeCallback
+  ) => LocalChannel;
+  subscribe: () => LocalChannel;
+};
+
+function createLocalChannel(): LocalChannel {
+  return {
+    on(_type, _filter, _callback) {
+      // O App Profissional nao abre conexao direta com o banco. Atualizacoes
+      // sao obtidas pelas APIs autenticadas do backend (Neon) e pelos eventos
+      // de foco/online ja existentes no app.
+      return this;
+    },
+    subscribe() {
+      return this;
+    },
+  };
 }
 
-const supabaseUrl = requiredPublicEnv(
-  "VITE_SUPABASE_URL",
-  import.meta.env.VITE_SUPABASE_URL as string | undefined
-);
-const supabasePublicKey = requiredPublicEnv(
-  "VITE_SUPABASE_PUBLISHABLE_KEY",
-  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-    import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined
-);
+export const supabaseConfigured = false;
 
-export const supabaseConfigured = true;
-
-export const supabase = createClient(supabaseUrl, supabasePublicKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storageKey: "salaopremiun.auth"
+// Compatibilidade temporaria apenas para componentes antigos que ainda chamam
+// channel/removeChannel. Nenhuma URL, chave, Auth, Realtime ou banco Supabase e
+// carregado no navegador.
+export const supabase = {
+  channel(_name: string) {
+    return createLocalChannel();
   },
-  realtime: {
-    params: { eventsPerSecond: 8 }
-  }
-});
+  async removeChannel(_channel: LocalChannel) {
+    return "ok" as const;
+  },
+};
 
 export function cpfToAuthEmail(cpf: string) {
   const digits = cpf.replace(/\D/g, "");
