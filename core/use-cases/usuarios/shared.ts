@@ -13,7 +13,7 @@ export const criarUsuarioSchema = z.object({
   idSalao: z.string().trim().min(1, "Salão não informado."),
   nome: z.string().trim().min(1, "Nome é obrigatório."),
   email: z.string().trim().min(1, "E-mail é obrigatório."),
-  senha: z.string().min(6, "A senha deve ter pelo menos 6 caracteres."),
+  senha: z.string().min(8, "A senha deve ter pelo menos 8 caracteres."),
   nivel: z.enum(NIVEIS_USUARIO),
   status: z.enum(STATUS_USUARIO),
 });
@@ -25,7 +25,14 @@ export const atualizarUsuarioSchema = z.object({
   email: z.string().trim().min(1, "E-mail é obrigatório."),
   nivel: z.enum(NIVEIS_USUARIO),
   status: z.enum(STATUS_USUARIO),
-  senha: z.string().optional().default(""),
+  senha: z
+    .string()
+    .refine(
+      (value) => value.length === 0 || value.length >= 8,
+      "A nova senha deve ter pelo menos 8 caracteres."
+    )
+    .optional()
+    .default(""),
 });
 
 export const excluirUsuarioSchema = z.object({
