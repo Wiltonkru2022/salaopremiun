@@ -1,371 +1,55 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/db/server";
-import { getDatabaseAdmin } from "@/lib/db/admin";
-import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
-import {
-  buildBackupMetadata,
-  clearBackupMetadata,
-  consumeBackupCode,
-  getRemainingBackupCodeCount,
-  isSensitiveActionLocked,
-  type SalaoPremiumMfaMetadata,
-  generateBackupCodes,
-  isBackupCodeLocked,
-} from "@/lib/auth/mfa-backup-codes";
+import { readPainelClerkSession } from "@/lib/platform/painel-clerk-session.server";
 
-type Action =
-  | "generate_backup_codes"
-  | "consume_backup_code"
-  | "disable_factor";
+export const dynamic = "force-dynamic";
 
-type RequestBody = {
-  action?: Action;
-  backupCode?: string;
-  method?: "aal2" | "backup_code";
-};
-
-const APP_METADATA_KEY = "salaopremium_mfa";
-
-async function getAuthenticatedContext() {
-  const supabase = await createClient();
-  const supabaseAdmin = getDatabaseAdmin();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError || !user) {
-    throw new Error("Sessao invalida.");
-  }
-
-  const usuario = await getPainelUserContextByAuthUserId(user.id);
-
-  if (!usuario?.id_salao) {
-    throw new Error("Nao foi possivel identificar o salao do usuario.");
-  }
-
-  if (usuario.status && usuario.status !== "ativo") {
-    throw new Error("Usuario inativo.");
-  }
-
-  const {
-    data: { session },
-  } = await supabase.auth.getSession();
-
-  const { data: authUserData, error: authUserError } =
-    await supabaseAdmin.auth.admin.getUserById(user.id);
-
-  if (authUserError || !authUserData?.user) {
-    throw new Error("Nao foi possivel carregar a conta autenticada.");
-  }
-
-  const { data: factorsData, error: factorError } =
-    await supabaseAdmin.auth.admin.mfa.listFactors({
-      userId: user.id,
-    });
-
-  if (factorError) {
-    throw new Error(factorError.message || "Erro ao carregar fatores MFA.");
-  }
-
-  const totpFactor =
-    factorsData?.factors?.find(
-      (factor) => factor.factor_type === "totp" && factor.status === "verified"
-    ) || null;
-
-  let currentLevel: "aal1" | "aal2" | null = null;
-
-  if (session?.access_token) {
-    const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel(
-      session.access_token
-    );
-    currentLevel =
-      (aalData?.currentLevel as "aal1" | "aal2" | null | undefined) ?? null;
-  }
-
-  const appMetadata = (authUserData.user.app_metadata ||
-    {}) as Record<string, unknown>;
-  const mfaMetadata =
-    (appMetadata[APP_METADATA_KEY] as SalaoPremiumMfaMetadata | undefined) ||
-    null;
-
-  return {
-    supabaseAdmin,
-    authUser: authUserData.user,
-    idSalao: usuario.id_salao,
-    currentLevel,
-    totpFactor,
-    mfaMetadata,
-  };
+function clerkMfaUrl(request: NextRequest) {
+  const next = request.nextUrl.searchParams.get("next") || "/dashboard";
+  const url = new URL("https://login.salaopremiun.com.br/login-clerk");
+  url.searchParams.set("next", next.startsWith("/") && !next.startsWith("//") ? next : "/dashboard");
+  url.searchParams.set("mfa", "1");
+  return url.toString();
 }
 
-async function persistMfaMetadata(params: {
-  authUserId: string;
-  nextMetadata: SalaoPremiumMfaMetadata;
-}) {
-  const supabaseAdmin = getDatabaseAdmin();
-  const { data, error } = await supabaseAdmin.auth.admin.getUserById(
-    params.authUserId
-  );
-
-  if (error || !data?.user) {
-    throw new Error("Nao foi possivel atualizar a conta do autenticador.");
-  }
-
-  const currentAppMetadata = (data.user.app_metadata ||
-    {}) as Record<string, unknown>;
-
-  const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
-    params.authUserId,
-    {
-      app_metadata: {
-        ...currentAppMetadata,
-        [APP_METADATA_KEY]: params.nextMetadata,
-      },
-    }
-  );
-
-  if (updateError) {
-    throw new Error(
-      updateError.message || "Nao foi possivel salvar os backup codes."
+export async function GET(request: NextRequest) {
+  const session = await readPainelClerkSession();
+  if (!session) {
+    return NextResponse.json(
+      { ok: false, error: "Sessao invalida.", redirectTo: clerkMfaUrl(request) },
+      { status: 401 }
     );
   }
-}
 
-export async function GET() {
-  try {
-    const ctx = await getAuthenticatedContext();
-
-    return NextResponse.json({
-      ok: true,
-      factorActive: Boolean(ctx.totpFactor),
-      currentLevel: ctx.currentLevel,
-      backupCodesRemaining: getRemainingBackupCodeCount(ctx.mfaMetadata),
-      backupCodesLockedUntil: ctx.mfaMetadata?.locked_until || null,
-      backupCodesGeneratedAt: ctx.mfaMetadata?.backup_codes_generated_at || null,
-      backupCodesLastUsedAt: ctx.mfaMetadata?.backup_codes_last_used_at || null,
-      sensitiveActionLockedUntil:
-        isSensitiveActionLocked(ctx.mfaMetadata)
-          ? ctx.mfaMetadata?.recovery_lock_until || null
-          : null,
-    });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Erro ao consultar MFA.";
-    const status =
-      message === "Sessao invalida."
-        ? 401
-        : message === "Usuario inativo."
-          ? 403
-          : 400;
-
-    return NextResponse.json({ ok: false, error: message }, { status });
-  }
+  return NextResponse.json({
+    ok: true,
+    provider: "clerk",
+    factorActive: session.mfaVerified,
+    currentLevel: session.mfaVerified ? "aal2" : "aal1",
+    backupCodesRemaining: 0,
+    backupCodesLockedUntil: null,
+    backupCodesGeneratedAt: null,
+    backupCodesLastUsedAt: null,
+    sensitiveActionLockedUntil: null,
+    redirectTo: session.mfaVerified ? null : clerkMfaUrl(request),
+  });
 }
 
 export async function POST(request: NextRequest) {
-  try {
-    const body = (await request.json().catch(() => ({}))) as RequestBody;
-    const ctx = await getAuthenticatedContext();
-
-    if (body.action === "generate_backup_codes") {
-      if (!ctx.totpFactor) {
-        return NextResponse.json(
-          { ok: false, error: "Nenhum autenticador ativo foi encontrado." },
-          { status: 400 }
-        );
-      }
-
-      if (ctx.currentLevel !== "aal2") {
-        return NextResponse.json(
-          {
-            ok: false,
-            error:
-              "Confirme o autenticador nesta sessao antes de gerar novos backup codes.",
-          },
-          { status: 403 }
-        );
-      }
-
-      const codes = generateBackupCodes();
-      const nextMetadata = buildBackupMetadata({
-        authUserId: ctx.authUser.id,
-        codes,
-      });
-
-      await persistMfaMetadata({
-        authUserId: ctx.authUser.id,
-        nextMetadata,
-      });
-
-      return NextResponse.json({
-        ok: true,
-        codes,
-        backupCodesRemaining: codes.length,
-      });
-    }
-
-    if (body.action === "consume_backup_code") {
-      if (!ctx.totpFactor) {
-        return NextResponse.json(
-          { ok: false, error: "Nenhum autenticador ativo foi encontrado." },
-          { status: 400 }
-        );
-      }
-
-      if (isBackupCodeLocked(ctx.mfaMetadata)) {
-        return NextResponse.json(
-          {
-            ok: false,
-            error:
-              "Backup codes temporariamente bloqueados por excesso de tentativas.",
-            lockedUntil: ctx.mfaMetadata?.locked_until || null,
-          },
-          { status: 429 }
-        );
-      }
-
-      if (!body.backupCode?.trim()) {
-        return NextResponse.json(
-          { ok: false, error: "Informe um backup code valido." },
-          { status: 400 }
-        );
-      }
-
-      const result = consumeBackupCode({
-        authUserId: ctx.authUser.id,
-        code: body.backupCode,
-        metadata: ctx.mfaMetadata,
-      });
-
-      await persistMfaMetadata({
-        authUserId: ctx.authUser.id,
-        nextMetadata: result.metadata,
-      });
-
-      if (!result.ok) {
-        return NextResponse.json(
-          {
-            ok: false,
-            error: "Backup code invalido.",
-            lockedUntil: result.metadata.locked_until || null,
-            backupCodesRemaining: getRemainingBackupCodeCount(result.metadata),
-          },
-          { status: 400 }
-        );
-      }
-
-      return NextResponse.json({
-        ok: true,
-        backupCodesRemaining: getRemainingBackupCodeCount(result.metadata),
-      });
-    }
-
-    if (body.action === "disable_factor") {
-      if (!ctx.totpFactor) {
-        return NextResponse.json(
-          { ok: false, error: "Nenhum autenticador ativo foi encontrado." },
-          { status: 400 }
-        );
-      }
-
-      if (body.method === "backup_code") {
-        if (isBackupCodeLocked(ctx.mfaMetadata)) {
-          return NextResponse.json(
-            {
-              ok: false,
-              error:
-                "Backup codes temporariamente bloqueados por excesso de tentativas.",
-              lockedUntil: ctx.mfaMetadata?.locked_until || null,
-            },
-            { status: 429 }
-          );
-        }
-
-        if (!body.backupCode?.trim()) {
-          return NextResponse.json(
-            { ok: false, error: "Informe um backup code valido." },
-            { status: 400 }
-          );
-        }
-
-        const consumeResult = consumeBackupCode({
-          authUserId: ctx.authUser.id,
-          code: body.backupCode,
-          metadata: ctx.mfaMetadata,
-        });
-
-        await persistMfaMetadata({
-          authUserId: ctx.authUser.id,
-          nextMetadata: consumeResult.metadata,
-        });
-
-        if (!consumeResult.ok) {
-          return NextResponse.json(
-            {
-              ok: false,
-              error: "Backup code invalido.",
-              lockedUntil: consumeResult.metadata.locked_until || null,
-            },
-            { status: 400 }
-          );
-        }
-      } else if (ctx.currentLevel !== "aal2") {
-        return NextResponse.json(
-          {
-            ok: false,
-            error:
-              "Confirme o autenticador nesta sessao antes de desativar a protecao.",
-          },
-          { status: 403 }
-        );
-      }
-
-      const { error: deleteError } = await ctx.supabaseAdmin.auth.admin.mfa.deleteFactor(
-        {
-          id: ctx.totpFactor.id,
-          userId: ctx.authUser.id,
-        }
-      );
-
-      if (deleteError) {
-        return NextResponse.json(
-          {
-            ok: false,
-            error:
-              deleteError.message ||
-              "Nao foi possivel desativar o autenticador.",
-          },
-          { status: 400 }
-        );
-      }
-
-      await persistMfaMetadata({
-        authUserId: ctx.authUser.id,
-        nextMetadata: clearBackupMetadata(),
-      });
-
-      return NextResponse.json({
-        ok: true,
-        requiresReauth: true,
-      });
-    }
-
+  const session = await readPainelClerkSession();
+  if (!session) {
     return NextResponse.json(
-      { ok: false, error: "Acao MFA invalida." },
-      { status: 400 }
+      { ok: false, error: "Sessao invalida.", redirectTo: clerkMfaUrl(request) },
+      { status: 401 }
     );
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Erro ao processar MFA.";
-    const status =
-      message === "Sessao invalida."
-        ? 401
-        : message === "Usuario inativo."
-          ? 403
-          : 400;
-
-    return NextResponse.json({ ok: false, error: message }, { status });
   }
+
+  return NextResponse.json(
+    {
+      ok: false,
+      provider: "clerk",
+      error: "O MFA do Painel e administrado pelo Clerk.",
+      redirectTo: clerkMfaUrl(request),
+    },
+    { status: 409 }
+  );
 }
