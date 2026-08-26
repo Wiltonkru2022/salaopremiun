@@ -1,11 +1,8 @@
-import { getBlogDatabase } from "@/lib/blog/database";
-import { getProviderConfig } from "@/lib/platform/provider-config.server";
 import {
   removeCloudinaryAssetByUrl,
   uploadBufferToCloudinary,
 } from "@/lib/platform/cloudinary.server";
 
-const BUCKET_ID = "blog-media";
 const MAX_IMAGE_SIZE = 6 * 1024 * 1024;
 const MAX_VIDEO_SIZE = 20 * 1024 * 1024;
 const ALLOWED_IMAGE_TYPES = new Set([
@@ -14,94 +11,11 @@ const ALLOWED_IMAGE_TYPES = new Set([
   "image/webp",
   "image/gif",
 ]);
-const ALLOWED_VIDEO_TYPES = new Set(["video/mp4", "video/webm", "video/quicktime"]);
-
-function getFileExtension(file: File) {
-  const byName = file.name.split(".").pop()?.toLowerCase();
-  if (byName && /^[a-z0-9]+$/.test(byName)) return byName;
-  if (file.type === "image/png") return "png";
-  if (file.type === "image/webp") return "webp";
-  if (file.type === "image/gif") return "gif";
-  if (file.type === "video/webm") return "webm";
-  if (file.type === "video/quicktime") return "mov";
-  return file.type.startsWith("video/") ? "mp4" : "jpg";
-}
-
-function getStoragePathFromPublicUrl(publicUrl: string) {
-  try {
-    const url = new URL(publicUrl);
-    const marker = `/storage/v1/object/public/${BUCKET_ID}/`;
-    const markerIndex = url.pathname.indexOf(marker);
-    if (markerIndex < 0) return null;
-
-    return decodeURIComponent(url.pathname.slice(markerIndex + marker.length));
-  } catch {
-    return null;
-  }
-}
-
-async function ensureBlogBucket() {
-  if (!process.env.BLOG_SUPABASE_SERVICE_ROLE_KEY) {
-    return;
-  }
-
-  const supabaseAdmin = getBlogDatabase();
-  const { data: bucket, error: getBucketError } =
-    await supabaseAdmin.storage.getBucket(BUCKET_ID);
-
-  if (bucket) return;
-
-  if (
-    getBucketError &&
-    /not authorized|permission|row-level security/i.test(
-      getBucketError.message || ""
-    )
-  ) {
-    return;
-  }
-
-  const { error } = await supabaseAdmin.storage.createBucket(BUCKET_ID, {
-    public: true,
-    fileSizeLimit: MAX_VIDEO_SIZE,
-    allowedMimeTypes: [...ALLOWED_IMAGE_TYPES, ...ALLOWED_VIDEO_TYPES],
-  });
-
-  if (error && !/already exists/i.test(error.message || "")) {
-    throw error;
-  }
-}
-
-async function uploadToSupabase(params: { file: File; placement: string; isVideo: boolean }) {
-  await ensureBlogBucket();
-
-  const supabaseAdmin = getBlogDatabase();
-  const safePlacement = params.placement.replace(/[^a-z0-9-]/gi, "-").toLowerCase();
-  const path = `${safePlacement}/${new Date()
-    .toISOString()
-    .slice(0, 10)}/${crypto.randomUUID()}.${getFileExtension(params.file)}`;
-
-  const { error } = await supabaseAdmin.storage
-    .from(BUCKET_ID)
-    .upload(path, params.file, {
-      cacheControl: "31536000",
-      contentType: params.file.type,
-      upsert: false,
-    });
-
-  if (error) throw error;
-
-  const { data } = supabaseAdmin.storage.from(BUCKET_ID).getPublicUrl(path);
-
-  if (!data.publicUrl) {
-    throw new Error("Nao foi possivel obter a URL publica da midia.");
-  }
-
-  return {
-    publicUrl: data.publicUrl,
-    type: params.isVideo ? "video" : "image",
-    name: params.file.name,
-  };
-}
+const ALLOWED_VIDEO_TYPES = new Set([
+  "video/mp4",
+  "video/webm",
+  "video/quicktime",
+]);
 
 export async function uploadBlogMedia(params: {
   file: File;
@@ -123,45 +37,33 @@ export async function uploadBlogMedia(params: {
     );
   }
 
-  if (getProviderConfig().media === "cloudinary") {
-    try {
-      const safePlacement = params.placement.replace(/[^a-z0-9-]/gi, "-").toLowerCase();
-      const uploaded = await uploadBufferToCloudinary({
-        buffer: Buffer.from(await params.file.arrayBuffer()),
-        mimeType: params.file.type,
-        folder: `salaopremiun/blog/${safePlacement}`,
-      });
-      if (!uploaded.secureUrl) throw new Error("Cloudinary não retornou URL segura.");
-      return {
-        publicUrl: uploaded.secureUrl,
-        type: isVideo ? "video" : "image",
-        name: params.file.name,
-      };
-    } catch (error) {
-      console.error("[blog-media] Cloudinary falhou; usando Supabase fallback", error);
-    }
+  const safePlacement = params.placement
+    .replace(/[^a-z0-9-]/gi, "-")
+    .toLowerCase();
+  const uploaded = await uploadBufferToCloudinary({
+    buffer: Buffer.from(await params.file.arrayBuffer()),
+    mimeType: params.file.type,
+    folder: `salaopremiun/blog/${safePlacement}`,
+  });
+
+  if (!uploaded.secureUrl) {
+    throw new Error("Cloudinary não retornou URL segura.");
   }
 
-  return uploadToSupabase({ file: params.file, placement: params.placement, isVideo });
+  return {
+    publicUrl: uploaded.secureUrl,
+    type: isVideo ? "video" : "image",
+    name: params.file.name,
+  };
 }
 
 export async function removeBlogMedia(publicUrl: string) {
-  if (publicUrl.includes("res.cloudinary.com")) {
-    const removed = await removeCloudinaryAssetByUrl(publicUrl);
-    if (!removed) throw new Error("URL Cloudinary inválida para remoção.");
-    return;
+  if (!publicUrl.includes("res.cloudinary.com")) {
+    throw new Error("A mídia não pertence ao provedor Cloudinary ativo.");
   }
 
-  const path = getStoragePathFromPublicUrl(publicUrl);
-
-  if (!path) {
-    throw new Error("URL de midia invalida para remocao.");
-  }
-
-  const supabaseAdmin = getBlogDatabase();
-  const { error } = await supabaseAdmin.storage.from(BUCKET_ID).remove([path]);
-
-  if (error) {
-    throw new Error(`Nao foi possivel remover a midia: ${error.message}`);
+  const removed = await removeCloudinaryAssetByUrl(publicUrl);
+  if (!removed) {
+    throw new Error("URL Cloudinary inválida para remoção.");
   }
 }
