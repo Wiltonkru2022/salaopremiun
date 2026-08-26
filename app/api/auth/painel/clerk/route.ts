@@ -20,6 +20,11 @@ function isUuid(value: unknown) {
   );
 }
 
+function buildMfaEnrollmentUrl(nextPath: string) {
+  const backToLogin = `/login-clerk?next=${encodeURIComponent(nextPath)}`;
+  return `/conta-clerk?next=${encodeURIComponent(backToLogin)}`;
+}
+
 export async function POST(request: Request) {
   if (getAuthProviderForSurface("painel") !== "clerk") {
     return NextResponse.json({ ok: false, message: "Clerk nao esta ativo no painel." }, { status: 409 });
@@ -30,14 +35,24 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, message: "Sessao Clerk ausente." }, { status: 401 });
   }
 
+  const body = (await request.json().catch(() => ({}))) as { next?: unknown };
+  const nextPath = safeNext(body.next);
+
   try {
     const identity = await verifyClerkBearerToken(token);
     if (!identity.email) {
       return NextResponse.json({ ok: false, message: "Conta Clerk sem e-mail valido." }, { status: 403 });
     }
 
-    const { data: clerkData } = await clerkAdminApi.getUserById(identity.subject);
-    const clerkExternalId = String(clerkData.user?.externalId || "").trim();
+    const { data: clerkData, error: clerkError } = await clerkAdminApi.getUserById(identity.subject);
+    if (clerkError || !clerkData.user) {
+      return NextResponse.json(
+        { ok: false, message: clerkError?.message || "Nao foi possivel carregar a conta Clerk." },
+        { status: 401 }
+      );
+    }
+
+    const clerkExternalId = String(clerkData.user.externalId || "").trim();
 
     const db = getDatabaseAdmin();
     let usuario: any = null;
@@ -84,11 +99,31 @@ export async function POST(request: Request) {
     }
 
     const isAdmin = String(usuario.nivel || "").trim().toLowerCase() === "admin";
-    if (isAdmin && identity.mfaEnrolled && !identity.mfaVerified) {
-      return NextResponse.json(
-        { ok: false, mfaRequired: true, message: "Conclua o segundo fator no Clerk para entrar como administrador." },
-        { status: 403 }
-      );
+    if (isAdmin) {
+      const accountMfaEnrolled = Boolean(clerkData.user.two_factor_enabled);
+      if (!accountMfaEnrolled) {
+        return NextResponse.json(
+          {
+            ok: false,
+            mfaRequired: true,
+            mfaEnrollmentRequired: true,
+            redirectTo: buildMfaEnrollmentUrl(nextPath),
+            message: "Cadastre a autenticação em dois fatores no Clerk antes de entrar como administrador.",
+          },
+          { status: 403 }
+        );
+      }
+      if (!identity.mfaVerified) {
+        return NextResponse.json(
+          {
+            ok: false,
+            mfaRequired: true,
+            mfaEnrollmentRequired: false,
+            message: "Conclua o segundo fator no Clerk para entrar como administrador.",
+          },
+          { status: 403 }
+        );
+      }
     }
 
     await createPainelClerkSession({
@@ -99,11 +134,10 @@ export async function POST(request: Request) {
       email: usuario.email ? String(usuario.email) : identity.email,
       nivel: usuario.nivel ? String(usuario.nivel) : null,
       status: usuario.status ? String(usuario.status) : null,
-      mfaVerified: identity.mfaVerified || !identity.mfaEnrolled,
+      mfaVerified: isAdmin ? identity.mfaVerified : identity.mfaVerified || !identity.mfaEnrolled,
     });
 
-    const body = (await request.json().catch(() => ({}))) as { next?: unknown };
-    return NextResponse.json({ ok: true, redirectTo: safeNext(body.next) });
+    return NextResponse.json({ ok: true, redirectTo: nextPath });
   } catch (cause) {
     return NextResponse.json(
       { ok: false, message: cause instanceof Error ? cause.message : "Falha ao validar Clerk." },
