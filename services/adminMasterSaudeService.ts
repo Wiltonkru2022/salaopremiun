@@ -42,8 +42,8 @@ export function createAdminMasterSaudeService() {
     async validarFuncoesObrigatorias(functionNames: readonly string[]) {
       return runAdminOperation({
         action: "admin_master_saude_validar_funcoes_obrigatorias",
-        run: async (supabaseAdmin) => {
-          const { data, error } = await supabaseAdmin.rpc(
+        run: async (databaseAdmin) => {
+          const { data, error } = await databaseAdmin.rpc(
             "fn_validar_funcoes_obrigatorias",
             {
               p_function_names: [...functionNames],
@@ -72,8 +72,8 @@ export function createAdminMasterSaudeService() {
     async validarTabelasObrigatorias(tableNames: readonly string[]) {
       return runAdminOperation({
         action: "admin_master_saude_validar_tabelas_obrigatorias",
-        run: async (supabaseAdmin) => {
-          const adminQueryClient = supabaseAdmin as unknown as {
+        run: async (databaseAdmin) => {
+          const adminQueryClient = databaseAdmin as unknown as {
             from(table: string): {
               select(
                 columns: string,
