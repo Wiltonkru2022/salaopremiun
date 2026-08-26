@@ -1,16 +1,16 @@
 import { getDatabaseAdmin } from "@/lib/db/admin";
-import type { Database } from "@/types/database.generated";
-
-type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
-type UsuarioSenhaReusoPayload =
-  Database["public"]["Tables"]["usuarios_senhas_reuso"]["Insert"];
+import {
+  createClerkUser,
+  deleteClerkUser,
+  updateClerkUser,
+} from "@/lib/platform/clerk-admin.server";
 
 export type UsuarioNivel = "admin" | "gerente" | "recepcao" | "profissional";
 export type UsuarioStatus = "ativo" | "inativo";
 
 type UsuarioRow = {
   id: string;
-  auth_user_id?: string | null;
+  clerk_user_id?: string | null;
   email?: string | null;
   nivel?: string | null;
   status?: string | null;
@@ -18,11 +18,11 @@ type UsuarioRow = {
 };
 
 export function createUsuarioService(
-  supabaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
+  database = getDatabaseAdmin()
 ) {
   return {
     async buscarPorEmail(params: { idSalao: string; email: string }) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await database
         .from("usuarios")
         .select("id")
         .eq("id_salao", params.idSalao)
@@ -39,7 +39,7 @@ export function createUsuarioService(
       email: string;
       idUsuario: string;
     }) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await database
         .from("usuarios")
         .select("id")
         .eq("id_salao", params.idSalao)
@@ -57,7 +57,7 @@ export function createUsuarioService(
       senhaHashReuso: string;
       idUsuarioExcluido?: string;
     }) {
-      let query = supabaseAdmin
+      let query = database
         .from("usuarios_senhas_reuso")
         .select("id")
         .eq("id_salao", params.idSalao)
@@ -80,23 +80,19 @@ export function createUsuarioService(
       idSalao: string;
       nivel: UsuarioNivel;
     }) {
-      const { data, error } = await supabaseAdmin.auth.admin.createUser({
+      const user = await createClerkUser({
         email: params.email,
         password: params.senha,
-        email_confirm: true,
-        user_metadata: {
-          nome: params.nome,
+        nome: params.nome,
+        publicMetadata: {
           id_salao: params.idSalao,
           nivel: params.nivel,
+          status: "ativo",
         },
       });
 
-      if (error || !data.user) {
-        throw new Error(error?.message || "Erro ao criar usuario no Auth.");
-      }
-
       return {
-        authUserId: data.user.id,
+        authUserId: user.id,
       };
     },
 
@@ -109,25 +105,34 @@ export function createUsuarioService(
       status: UsuarioStatus;
       senha?: string;
     }) {
-      const { error } = await supabaseAdmin.auth.admin.updateUserById(
-        params.authUserId,
-        {
-          email: params.email,
-          password: params.senha,
-          user_metadata: {
-            nome: params.nome,
-            id_salao: params.idSalao,
-            nivel: params.nivel,
-            status: params.status,
-          },
-        }
-      );
-
-      if (error) throw error;
+      await updateClerkUser({
+        userId: params.authUserId,
+        password: params.senha,
+        nome: params.nome,
+        publicMetadata: {
+          id_salao: params.idSalao,
+          nivel: params.nivel,
+          status: params.status,
+          email_cadastrado: params.email,
+        },
+      });
     },
 
-    deleteAuthUser(authUserId: string) {
-      return supabaseAdmin.auth.admin.deleteUser(authUserId);
+    async deleteAuthUser(authUserId: string) {
+      try {
+        await deleteClerkUser(authUserId);
+        return { data: null, error: null };
+      } catch (error) {
+        return {
+          data: null,
+          error: {
+            message:
+              error instanceof Error
+                ? error.message
+                : "Erro ao excluir usuário Clerk.",
+          },
+        };
+      }
     },
 
     async inserirUsuario(params: {
@@ -138,7 +143,7 @@ export function createUsuarioService(
       status: UsuarioStatus;
       authUserId: string;
     }) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await database
         .from("usuarios")
         .insert({
           id_salao: params.idSalao,
@@ -146,13 +151,14 @@ export function createUsuarioService(
           email: params.email,
           nivel: params.nivel,
           status: params.status,
-          auth_user_id: params.authUserId,
+          clerk_user_id: params.authUserId,
+          auth_user_id: null,
         })
-        .select("id, id_salao, nome, email, nivel, status, auth_user_id")
+        .select("id, id_salao, nome, email, nivel, status, clerk_user_id")
         .single();
 
       if (error || !data) {
-        throw new Error(error?.message || "Erro ao gravar usuario.");
+        throw new Error(error?.message || "Erro ao gravar usuario no Neon.");
       }
 
       return data;
@@ -166,7 +172,7 @@ export function createUsuarioService(
       nivel: UsuarioNivel;
       status: UsuarioStatus;
     }) {
-      const { error } = await supabaseAdmin
+      const { error } = await database
         .from("usuarios")
         .update({
           nome: params.nome,
@@ -181,9 +187,9 @@ export function createUsuarioService(
     },
 
     async buscarUsuario(params: { idUsuario: string; idSalao: string }) {
-      const { data, error } = await supabaseAdmin
+      const { data, error } = await database
         .from("usuarios")
-        .select("id, auth_user_id, email, nivel, status, nome")
+        .select("id, clerk_user_id, email, nivel, status, nome")
         .eq("id", params.idUsuario)
         .eq("id_salao", params.idSalao)
         .maybeSingle();
@@ -199,7 +205,7 @@ export function createUsuarioService(
       email: string;
       senhaHashReuso: string;
     }) {
-      const payload: UsuarioSenhaReusoPayload = {
+      const payload: Record<string, unknown> = {
         id_salao: params.idSalao,
         id_usuario: params.idUsuario,
         email: params.email,
@@ -207,10 +213,11 @@ export function createUsuarioService(
       };
 
       if (params.authUserId) {
-        payload.auth_user_id = params.authUserId;
+        payload.clerk_user_id = params.authUserId;
+        payload.auth_user_id = null;
       }
 
-      const { error } = await supabaseAdmin
+      const { error } = await database
         .from("usuarios_senhas_reuso")
         .upsert(payload, { onConflict: "id_usuario" });
 
@@ -218,7 +225,7 @@ export function createUsuarioService(
     },
 
     async contarAdminsAtivos(idSalao: string) {
-      const { count, error } = await supabaseAdmin
+      const { count, error } = await database
         .from("usuarios")
         .select("id", { count: "exact", head: true })
         .eq("id_salao", idSalao)
@@ -230,7 +237,7 @@ export function createUsuarioService(
     },
 
     async excluirPermissoes(params: { idUsuario: string; idSalao: string }) {
-      const { error } = await supabaseAdmin
+      const { error } = await database
         .from("usuarios_permissoes")
         .delete()
         .eq("id_usuario", params.idUsuario)
@@ -240,7 +247,7 @@ export function createUsuarioService(
     },
 
     async excluirUsuario(params: { idUsuario: string; idSalao: string }) {
-      const { error } = await supabaseAdmin
+      const { error } = await database
         .from("usuarios")
         .delete()
         .eq("id", params.idUsuario)
