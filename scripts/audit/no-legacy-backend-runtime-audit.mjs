@@ -19,7 +19,7 @@ const legacyProvider = ["supa", "base"].join("");
 
 const forbidden = [
   { label: "SDK legado", pattern: new RegExp(`@${legacyProvider}/`, "i") },
-  { label: "import legado", pattern: new RegExp(`[\\/](?:lib|utils)[\\/]${legacyProvider}(?:[\\/]|['\"])`, "i") },
+  { label: "import legado", pattern: new RegExp(`[\\/](?:lib|utils)[\\/]${legacyProvider}(?:[\\/]|['"])`, "i") },
   { label: "env publico legado", pattern: new RegExp(`NEXT_PUBLIC_${legacyProvider}_`, "i") },
   { label: "env Vite legado", pattern: new RegExp(`VITE_${legacyProvider}_`, "i") },
   { label: "URL legado", pattern: new RegExp(`${legacyProvider}_URL`, "i") },
