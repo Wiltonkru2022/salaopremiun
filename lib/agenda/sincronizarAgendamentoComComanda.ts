@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 import { adicionarItemComanda } from "@/lib/comandas/processar";
 import {
   buscarVinculoProfissionalServico,
@@ -24,7 +24,7 @@ type ProfissionalComandaInfo = ProfissionalComissaoSource & {
 };
 
 type SincronizarParams = {
-  supabase: SupabaseClient;
+  supabase: DatabaseClient;
   idSalao: string;
   idAgendamento: string;
   idComandaNova?: string | null;
@@ -60,7 +60,7 @@ function calcularDescontoCupomComanda(params: {
 }
 
 async function calcularDescontoCupomParaComanda(params: {
-  supabase: SupabaseClient;
+  supabase: DatabaseClient;
   idSalao: string;
   idCupom: string;
   idServico: string;
@@ -127,7 +127,7 @@ async function calcularDescontoCupomParaComanda(params: {
 }
 
 async function carregarSubtotalComanda(params: {
-  supabase: SupabaseClient;
+  supabase: DatabaseClient;
   idSalao: string;
   idComanda: string;
 }) {
@@ -145,7 +145,7 @@ async function carregarSubtotalComanda(params: {
 }
 
 async function buscarItensComboServico(params: {
-  supabase: SupabaseClient;
+  supabase: DatabaseClient;
   idSalao: string;
   idServicoCombo: string;
 }) {
@@ -187,7 +187,7 @@ async function buscarItensComboServico(params: {
 }
 
 export async function recalcularTotaisComanda(params: {
-  supabase: SupabaseClient;
+  supabase: DatabaseClient;
   idSalao: string;
   idComanda: string;
 }) {
@@ -246,7 +246,7 @@ export async function recalcularTotaisComanda(params: {
 }
 
 export async function cancelarComandaSeVazia(params: {
-  supabase: SupabaseClient;
+  supabase: DatabaseClient;
   idSalao: string;
   idComanda: string;
 }) {
@@ -304,7 +304,7 @@ export async function cancelarComandaSeVazia(params: {
 }
 
 async function removerAgendamentoDaComandaSemCancelar(params: {
-  supabase: SupabaseClient;
+  supabase: DatabaseClient;
   idSalao: string;
   idAgendamento: string;
 }) {
@@ -349,7 +349,7 @@ async function removerAgendamentoDaComandaSemCancelar(params: {
 }
 
 export async function removerAgendamentoDaComanda(params: {
-  supabase: SupabaseClient;
+  supabase: DatabaseClient;
   idSalao: string;
   idAgendamento: string;
 }) {
@@ -648,7 +648,7 @@ export async function sincronizarAgendamentoComComanda(params: SincronizarParams
 }
 
 export async function sincronizarAgendamentoComComandaNoCaixa(params: {
-  supabase: SupabaseClient;
+  supabase: DatabaseClient;
   idSalao: string;
   idAgendamento: string;
   idComandaNova: string | null;

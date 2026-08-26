@@ -9,7 +9,7 @@ import {
 } from "@/lib/payments/pix-provider";
 import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 type BillingType = "PIX" | "BOLETO";
 
@@ -129,7 +129,7 @@ async function validarSalaoAdmin() {
 }
 
 async function carregarPacote(pacoteId: string) {
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const { data, error } = await supabaseAdmin
     .from("whatsapp_pacotes")
     .select("id, nome, quantidade_creditos, preco, ativo")
@@ -157,7 +157,7 @@ async function carregarPacote(pacoteId: string) {
 }
 
 async function carregarSalao(idSalao: string) {
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const { data, error } = await supabaseAdmin
     .from("saloes")
     .select("id, nome, responsavel, email, telefone, whatsapp, cpf_cnpj")
@@ -188,7 +188,7 @@ async function carregarSalao(idSalao: string) {
 }
 
 async function buscarCompraPendente(idSalao: string, pacoteId: string) {
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const { data, error } = await supabaseAdmin
     .from("whatsapp_pacote_compras")
     .select(
@@ -257,7 +257,7 @@ export function createWhatsappPacoteCheckoutService() {
         telefone: onlyNumbers(salao.whatsapp || salao.telefone),
       });
 
-      const supabaseAdmin = getSupabaseAdmin();
+      const supabaseAdmin = getDatabaseAdmin();
       const compraId = randomUUID();
       const externalReference = `whatsapp_package:${compraId}`;
       const idempotencyKey = String(

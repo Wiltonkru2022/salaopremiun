@@ -1,4 +1,4 @@
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 import type { AdminTicketListParams } from "@/lib/support/tickets";
 
 const OPEN_STATUSES = ["aberto", "em_atendimento", "aguardando_cliente", "aguardando_tecnico"];

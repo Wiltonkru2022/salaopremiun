@@ -1,11 +1,11 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 const SOURCE = "database_posture";
 
 export async function syncOperationalSecurityPosture() {
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const [{ data, error }, { data: existing, error: existingError }] =
     await Promise.all([
       supabase.rpc("fn_operational_security_posture"),

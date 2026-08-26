@@ -1,5 +1,5 @@
 import "server-only";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import type { Json } from "@/types/database.generated";
 
 type WebhookEvent = {
@@ -40,7 +40,7 @@ export async function processMetaWhatsAppWebhook(params: {
   events: WebhookEvent[];
 }) {
   const { body, events } = params;
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
 
   if (events.length === 0) {
     const { error } = await supabaseAdmin.from("whatsapp_filas").insert({

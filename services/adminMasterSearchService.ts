@@ -3,7 +3,7 @@ import {
   type AdminMasterAccessResult,
 } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import type { AdminMasterPermissionKey } from "@/lib/admin-master/auth/adminMasterPermissions";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 
 export type AdminMasterSearchResultAction = {
   label: string;

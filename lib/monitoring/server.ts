@@ -1,5 +1,5 @@
 import { getErrorMessage } from "@/lib/get-error-message";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import type {
   MonitoringOrigin,
   MonitoringPayload,
@@ -300,7 +300,7 @@ function mapAlertSeverity(severity: MonitoringSeverity) {
 }
 
 async function upsertIncident(params: CaptureSystemEventParams, severity: MonitoringSeverity) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const chave = buildIncidentKey(params);
   const titulo = buildIncidentTitle(params);
   const descricao =
@@ -391,7 +391,7 @@ export async function captureSystemEvent(params: CaptureSystemEventParams) {
       return;
     }
 
-    const supabase = getSupabaseAdmin();
+    const supabase = getDatabaseAdmin();
     const message = normalizeText(params.message) || "Evento operacional";
     const isUserError =
       typeof params.isUserError === "boolean"
@@ -513,7 +513,7 @@ export async function registrarAcaoAutomaticaSistema(
   params: RegisterAutomationActionParams
 ) {
   try {
-    const supabase = getSupabaseAdmin();
+    const supabase = getDatabaseAdmin();
     await supabase.from("acoes_automaticas_sistema").insert({
       tipo: normalizeText(params.type) || "automacao",
       referencia: normalizeText(params.reference) || null,
@@ -537,7 +537,7 @@ export async function upsertSystemHealthCheck(params: {
   details?: Record<string, unknown>;
 }) {
   try {
-    const supabase = getSupabaseAdmin();
+    const supabase = getDatabaseAdmin();
     await supabase.from("health_checks_sistema").upsert(
       {
         chave: normalizeText(params.key),

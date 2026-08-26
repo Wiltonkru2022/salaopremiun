@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 function textValue(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
@@ -31,7 +31,7 @@ function selectedValues(formData: FormData, key: string) {
 
 export async function salvarFeatureFlagAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("feature_flags_editar");
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const id = textValue(formData, "id");
   const nome = textValue(formData, "nome");
 
@@ -74,7 +74,7 @@ export async function salvarFeatureFlagAdminMaster(formData: FormData) {
 
 export async function salvarFeatureFlagSalaoAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("feature_flags_editar");
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const idFeatureFlag = textValue(formData, "id_feature_flag");
   const idSalao = textValue(formData, "id_salao");
 

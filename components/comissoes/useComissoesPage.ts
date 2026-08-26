@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import {
   getStatusComissaoMeta,
   getStatusComissaoQueryValues,

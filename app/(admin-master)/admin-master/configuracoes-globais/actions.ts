@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import type { Json } from "@/types/database.generated";
 
 function textValue(formData: FormData, key: string) {
@@ -25,7 +25,7 @@ function parseJsonValue(raw: string): Json {
 
 export async function salvarConfiguracaoGlobalAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("operacao_reprocessar");
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const id = textValue(formData, "id");
   const chave = textValue(formData, "chave");
 

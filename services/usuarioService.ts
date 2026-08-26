@@ -1,7 +1,7 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import type { Database } from "@/types/database.generated";
 
-type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
+type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
 type UsuarioSenhaReusoPayload =
   Database["public"]["Tables"]["usuarios_senhas_reuso"]["Insert"];
 
@@ -18,7 +18,7 @@ type UsuarioRow = {
 };
 
 export function createUsuarioService(
-  supabaseAdmin: SupabaseAdminClient = getSupabaseAdmin()
+  supabaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
 ) {
   return {
     async buscarPorEmail(params: { idSalao: string; email: string }) {

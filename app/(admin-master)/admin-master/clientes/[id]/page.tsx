@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowLeft, Building2, Mail, MapPin, Phone, Smartphone, UserRound } from "lucide-react";
 import AdminMasterPageHeader, { AdminMasterMetricCard } from "@/components/admin-master/AdminMasterPageHeader";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -16,7 +16,7 @@ function formatDate(value?: string | null) {
 export default async function AdminMasterClienteDetalhePage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdminMasterUser("saloes_ver");
   const { id } = await params;
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
 
   const { data: cliente, error } = await supabase
     .from("clientes")

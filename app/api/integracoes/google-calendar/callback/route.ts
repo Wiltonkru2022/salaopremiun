@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { getGoogleCalendarEnv, isGoogleCalendarConfigured } from "@/lib/google-calendar/oauth";
 import { verifyGoogleCalendarState } from "@/lib/google-calendar/state";
 import { emitSecurityEvent } from "@/lib/security/security-events";
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
   }
 
   const expiresAt = new Date(Date.now() + Number(tokenData.expires_in || 3300) * 1000);
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { error } = await (supabase as any)
     .from("saloes_google_calendar_connections")
     .upsert(

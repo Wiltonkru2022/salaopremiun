@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getAdminMasterAccess } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const dynamic = "force-dynamic";
 
 function db() {
-  return getSupabaseAdmin() as any;
+  return getDatabaseAdmin() as any;
 }
 
 function jsonError(message: string, status = 400) {

@@ -6,7 +6,7 @@ import { syncOperationalComponentRegistry } from "@/lib/monitoring/operational-r
 import { runOperationalProbes } from "@/lib/monitoring/operational-probes.server";
 import { syncOperationalSecurityPosture } from "@/lib/monitoring/security-posture.server";
 import { sendPendingPublicStatusNotifications } from "@/lib/monitoring/status-subscriptions.server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 const CRON_NAME = "operational_health";
 
@@ -31,7 +31,7 @@ async function recordCron(
 
   if (storedInNeon) return;
 
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   await supabase.from("eventos_cron").insert({
     nome: CRON_NAME,
     status,

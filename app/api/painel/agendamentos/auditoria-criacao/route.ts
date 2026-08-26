@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { registrarCriacaoAgendamento } from "@/lib/agenda/agendamento-audit";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { requireSalaoPermission } from "@/lib/auth/require-salao-permission";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export async function POST(request: Request) {
   const { user, usuario } = await getPainelUserContext();
@@ -26,7 +26,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = getSupabaseAdmin();
+    const supabase = getDatabaseAdmin();
     const { data: agendamento, error } = await (supabase as any)
       .from("agendamentos")
       .select("id, cliente_id, created_at, origem")

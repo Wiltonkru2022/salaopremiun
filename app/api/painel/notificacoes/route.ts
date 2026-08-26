@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { loadPainelShellNotificationsCached } from "@/lib/painel/load-painel-shell-data";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ export async function GET() {
     return NextResponse.json({ error: "Acesso não autorizado." }, { status: 403 });
   }
 
-  const admin = getSupabaseAdmin();
+  const admin = getDatabaseAdmin();
   const { data: assinatura } = await admin
     .from("assinaturas")
     .select("status, vencimento_em, trial_fim_em")

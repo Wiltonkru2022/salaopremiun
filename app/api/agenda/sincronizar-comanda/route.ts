@@ -7,7 +7,7 @@ import {
 import {
   sincronizarAgendamentoComComandaNoCaixa,
 } from "@/lib/agenda/sincronizarAgendamentoComComanda";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 const payloadSchema = z.object({
   idSalao: z.string().uuid(),
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
       "comandas_criar",
     ]);
 
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getDatabaseAdmin();
     const resultado = await sincronizarAgendamentoComComandaNoCaixa({
       supabase: supabaseAdmin,
       idSalao: body.idSalao,

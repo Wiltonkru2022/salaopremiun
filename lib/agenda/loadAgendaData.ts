@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 import { addDays, subDays } from "date-fns";
 import type { Agendamento, Bloqueio, Cliente, Servico, ViewMode } from "@/types/agenda";
 import { formatFullDate, normalizeTimeString } from "@/lib/utils/agenda";
@@ -10,7 +10,7 @@ const AGENDA_VIEW_LIMIT = 320;
 export function invalidarCacheAgenda(_idSalao?: string) {}
 
 export async function loadAgendaData(params: {
-  supabase: SupabaseClient;
+  supabase: DatabaseClient;
   idSalao: string;
   selectedProfissionalId: string;
   viewMode: ViewMode;

@@ -5,7 +5,7 @@ import {
   isPendingChargeStatus,
 } from "@/lib/assinaturas/renovacao-automatica";
 import { registrarAcaoAutomaticaSistema } from "@/lib/monitoring/server";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 import type { Json } from "@/types/database.generated";
 
 const MANAGED_ALERT_TYPES = [

@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export type AdminWhatsappTarifaRow = {
   id: string;
@@ -35,7 +35,7 @@ function cents(value: unknown) {
 }
 
 export async function getAdminWhatsappCreditosData() {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
 
   const [{ data: tarifas }, { data: saldos }, { data: saloesOptions }] =
     await Promise.all([

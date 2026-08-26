@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
 import { useAssinaturaAccess } from "./useAssinaturaAccess";
 import { useAssinaturaCheckout } from "./useAssinaturaCheckout";

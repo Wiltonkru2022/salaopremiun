@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 import {
   getWebhookEventOrder,
   mapAsaasStatusToInternal,
@@ -6,7 +6,7 @@ import {
 } from "@/lib/webhooks/asaas/status";
 
 export async function criarCobrancaWebhookDeAssinaturaRecorrente(params: {
-  supabaseAdmin: SupabaseClient;
+  supabaseAdmin: DatabaseClient;
   asaasSubscriptionId: string;
   paymentId: string;
   payment: Record<string, unknown>;

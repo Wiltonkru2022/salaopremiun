@@ -1,6 +1,6 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
-type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
+type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
 
 type ProfissionalRow = {
   id: string;
@@ -17,7 +17,7 @@ type RegraServicoRow = {
 };
 
 export function createProfissionalService(
-  supabaseAdmin: SupabaseAdminClient = getSupabaseAdmin()
+  supabaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
 ) {
   return {
     async atualizarFoto(params: {

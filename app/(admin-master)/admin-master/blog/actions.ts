@@ -5,12 +5,12 @@ import { redirect } from "next/navigation";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { getBlogSupabaseAdmin } from "@/lib/blog/supabase";
 import {
-  asLooseSupabaseClient,
-  type LooseSupabaseClient,
-} from "@/lib/supabase/loose-client";
+  asLooseDbClient,
+  type LooseDbClient,
+} from "@/lib/db/loose-client";
 import { enviarNewsletterPostPublicado } from "@/services/blogNewsletterEmail";
 
-type BlogSupabaseClient = LooseSupabaseClient;
+type BlogSupabaseClient = LooseDbClient;
 
 type BlogPostStatus = "rascunho" | "publicado" | "arquivado";
 
@@ -180,7 +180,7 @@ export async function createBlogCategory(formData: FormData) {
     throw new Error("Use um nome de categoria em português, não um código interno.");
   }
 
-  const supabase = asLooseSupabaseClient(getBlogSupabaseAdmin());
+  const supabase = asLooseDbClient(getBlogSupabaseAdmin());
   const { error } = await supabase.from("blog_categorias").upsert(
     {
       nome,
@@ -239,7 +239,7 @@ export async function createBlogPost(
   const safeDescricao = descricao || "Rascunho em edição.";
   const safeConteudo = conteudo || "<p></p>";
   const now = new Date().toISOString();
-  const supabase = asLooseSupabaseClient(getBlogSupabaseAdmin());
+  const supabase = asLooseDbClient(getBlogSupabaseAdmin());
 
   try {
     const resolvedCategoryId = await resolveCategoryId(supabase, categoriaId);
@@ -332,7 +332,7 @@ export async function deleteBlogPost(formData: FormData) {
     throw new Error("Post inválido para exclusão.");
   }
 
-  const supabase = asLooseSupabaseClient(getBlogSupabaseAdmin());
+  const supabase = asLooseDbClient(getBlogSupabaseAdmin());
   const { error } = await supabase.from("blog_posts").delete().eq("id", id);
 
   if (error) {

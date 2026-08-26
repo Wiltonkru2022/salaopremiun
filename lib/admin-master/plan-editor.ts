@@ -1,8 +1,8 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import type { AdminMasterPlanEditorData } from "@/components/admin-master/AdminMasterPlanEditor";
 
 export async function getAdminMasterPlanEditorData(): Promise<AdminMasterPlanEditorData> {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const [{ data: planos }, { data: recursos }] = await Promise.all([
     supabase
       .from("planos_saas")

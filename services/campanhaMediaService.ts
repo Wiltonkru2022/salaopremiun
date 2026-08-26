@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { getProviderConfig } from "@/lib/platform/provider-config.server";
 import {
   removeCloudinaryAssetByUrl,
@@ -36,7 +36,7 @@ function validar(file: File) {
 }
 
 async function ensureBucket() {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data: bucket } = await supabase.storage.getBucket(BUCKET_ID);
   if (bucket) return;
 
@@ -51,7 +51,7 @@ async function ensureBucket() {
 
 async function uploadToSupabase(params: { idCampanha: string; file: File }) {
   await ensureBucket();
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const path = `campanhas/${params.idCampanha}/${crypto.randomUUID()}.${extension(params.file)}`;
   const { error } = await supabase.storage.from(BUCKET_ID).upload(path, params.file, {
     cacheControl: "31536000",
@@ -107,7 +107,7 @@ export async function removeCampanhaImage(publicUrl: string | null | undefined) 
     if (index < 0) return;
     const path = decodeURIComponent(url.pathname.slice(index + marker.length));
     if (!path.startsWith("campanhas/")) return;
-    const supabase = getSupabaseAdmin();
+    const supabase = getDatabaseAdmin();
     await supabase.storage.from(BUCKET_ID).remove([path]);
   } catch {
     // Não bloqueia a exclusão do registro se o arquivo já não existir.

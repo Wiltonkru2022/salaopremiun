@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 import type {
   Agendamento,
   Bloqueio,
@@ -17,7 +17,7 @@ import {
 const STATUS_SEM_CONFLITO = new Set(["cancelado", "faltou", "atendido", "expirado"]);
 
 export async function saveAgendaItem(params: {
-  supabase: SupabaseClient;
+  supabase: DatabaseClient;
   payload: Record<string, unknown>;
   idSalao: string;
   config: ConfigSalao;

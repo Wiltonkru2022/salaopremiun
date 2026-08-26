@@ -3,9 +3,9 @@ import {
   reverterEstoqueNoFluxoComanda,
 } from "@/lib/comandas/operational-flow";
 import { registrarLogSistema } from "@/lib/system-logs";
-import type { getSupabaseAdmin } from "@/lib/supabase/admin";
+import type { getDatabaseAdmin } from "@/lib/db/admin";
 
-type AdminClient = ReturnType<typeof getSupabaseAdmin>;
+type AdminClient = ReturnType<typeof getDatabaseAdmin>;
 
 type ComandaFlowModule = "caixa" | "vendas" | "comandas";
 type EstoqueMode = "apply" | "revert";

@@ -1,4 +1,4 @@
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 import type { ClienteAppSession } from "@/lib/cliente-auth.server";
 import {
   isValidCpf,

@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import {
   adicionarItemComanda,
   editarItemComanda,
@@ -10,7 +10,7 @@ import {
 import { registrarLogSistema } from "@/lib/system-logs";
 import type { ComandaPayload, ItemPayload } from "@/types/comandas";
 
-type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
+type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
 
 type LogComandaParams = {
   gravidade: "info" | "warning" | "error";
@@ -21,7 +21,7 @@ type LogComandaParams = {
 };
 
 export function createComandaService(
-  supabaseAdmin: SupabaseAdminClient = getSupabaseAdmin()
+  supabaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
 ) {
   return {
     criarPorAgendamento: (params: {

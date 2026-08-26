@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import {
   DEFAULT_SALON_TIME_ZONE,
   normalizeSalonTimeZone,
@@ -13,7 +13,7 @@ export async function getSalonTimeZone(
   const id = String(idSalao || "").trim();
   if (!id) return DEFAULT_SALON_TIME_ZONE;
 
-  const { data, error } = await (getSupabaseAdmin() as any)
+  const { data, error } = await (getDatabaseAdmin() as any)
     .from("configuracoes_salao")
     .select("fuso_horario")
     .eq("id_salao", id)

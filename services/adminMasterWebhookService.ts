@@ -16,7 +16,7 @@ import {
   isManagedAppHost,
   normalizeHost,
 } from "@/lib/proxy/domain-config";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 import type { Json } from "@/types/database.generated";
 
 export type AdminMasterWebhookReplayEvent = {

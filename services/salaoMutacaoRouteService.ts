@@ -12,7 +12,7 @@ import {
   SalaoOperationalStateError,
 } from "@/lib/saloes/operational-state";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import type { PermissionKey, UserNivel } from "@/lib/permissions";
 
 export type SalaoMutacaoConfig = {
@@ -65,7 +65,7 @@ export function createSalaoMutacaoRouteService(config: SalaoMutacaoConfig) {
     }) {
       try {
         await reportOperationalIncident({
-          supabaseAdmin: getSupabaseAdmin(),
+          supabaseAdmin: getDatabaseAdmin(),
           key: `${config.incidentKeyPrefix}:${params.acaoRaw || "desconhecida"}:${params.idSalao}`,
           module: config.module,
           title: config.title,

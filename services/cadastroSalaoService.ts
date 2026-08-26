@@ -1,6 +1,6 @@
 import { registrarLogSistema } from "@/lib/system-logs";
 import { geocodeSalonAddress } from "@/lib/saloes/geocoding";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 const TRIAL_GRATIS_DIAS = 15;
 const TRIAL_LIMITE_ILIMITADO = 999;
@@ -97,7 +97,7 @@ export function createCadastroSalaoService() {
     async verificarDuplicidade(
       payload: CadastroSalaoPayloadNormalizado
     ): Promise<CadastroDuplicidade> {
-      const supabaseAdmin = getSupabaseAdmin();
+      const supabaseAdmin = getDatabaseAdmin();
       const exists: CadastroDuplicidade = {
         email: false,
         nomeSalao: false,
@@ -165,7 +165,7 @@ export function createCadastroSalaoService() {
     },
 
     async criarUsuarioAuth(params: { email: string; senha: string; nome: string }) {
-      const supabaseAdmin = getSupabaseAdmin();
+      const supabaseAdmin = getDatabaseAdmin();
       const { data, error } = await supabaseAdmin.auth.admin.createUser({
         email: params.email,
         password: params.senha,
@@ -186,7 +186,7 @@ export function createCadastroSalaoService() {
     },
 
     async excluirUsuarioAuth(userId: string) {
-      const supabaseAdmin = getSupabaseAdmin();
+      const supabaseAdmin = getDatabaseAdmin();
       await supabaseAdmin.auth.admin.deleteUser(userId);
     },
 
@@ -194,7 +194,7 @@ export function createCadastroSalaoService() {
       authUserId: string;
       payload: CadastroSalaoPayloadNormalizado;
     }) {
-      const supabaseAdmin = getSupabaseAdmin();
+      const supabaseAdmin = getDatabaseAdmin();
       const { data, error } = await supabaseAdmin.rpc(
         "fn_cadastrar_salao_transacional",
         {
@@ -270,7 +270,7 @@ export function createCadastroSalaoService() {
     },
 
     async ativarTrialInicial(idSalao: string) {
-      const supabaseAdmin = getSupabaseAdmin();
+      const supabaseAdmin = getDatabaseAdmin();
       const agora = new Date();
       const trialFim = new Date(agora);
       trialFim.setDate(trialFim.getDate() + TRIAL_GRATIS_DIAS);

@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import { PainelListLoading } from "@/components/painel-ui";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import type { UserNivel } from "@/lib/permissions";
 import { ComissaoHelpPanel } from "@/components/comissoes/ComissaoHelpPanel";
 import {

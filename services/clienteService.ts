@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import {
   normalizarEmailCliente,
   normalizarTelefoneCliente,
@@ -10,7 +10,7 @@ import {
   parseClienteBirthDate,
 } from "@/lib/client-app/identity";
 
-type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
+type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
 
 type AppIdentityCandidate = {
   cpf?: string | null;
@@ -19,7 +19,7 @@ type AppIdentityCandidate = {
 };
 
 export function createClienteService(
-  supabaseAdmin: SupabaseAdminClient = getSupabaseAdmin()
+  supabaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
 ) {
   async function loadLinkedGlobalAccount(params: {
     idSalao: string;

@@ -13,7 +13,7 @@ import {
   upsertGoogleCalendarEvent,
 } from "@/lib/google-calendar/oauth";
 import { getSalonTimeZone } from "@/lib/salon-timezone.server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { localTimeToUtc } from "@/lib/timezones";
 
 const payloadSchema = z.object({
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
     }
 
     const period = getPeriod(body.viewMode, body.data);
-    const supabase = getSupabaseAdmin();
+    const supabase = getDatabaseAdmin();
     const { data, error } = await (supabase as any)
       .from("agendamentos")
       .select(

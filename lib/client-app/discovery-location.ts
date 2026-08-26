@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { canUsePlanFeature, isSalaoStatusOperational } from "@/lib/plans/access";
 import type { ClientAppSalonListItem } from "@/lib/client-app/queries";
 
@@ -147,7 +147,7 @@ function mapSalon(row: Record<string, unknown>): ClientAppSalonListItem {
 
 async function enrich(saloes: ClientAppSalonListItem[]) {
   if (!saloes.length) return saloes;
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const ids = saloes.map((item) => item.id);
   const supabaseUntyped = supabase as any;
 
@@ -238,7 +238,7 @@ export async function listClientAppSaloesByLocation(params: {
   const estado = String(params.estado || "").trim().slice(0, 40);
   if (!cidade || !estado) return [] as ClientAppSalonListItem[];
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data, error } = await supabase
     .from("saloes")
     .select(SALON_SELECT)
@@ -266,7 +266,7 @@ export async function listClientAppSaloesByLocation(params: {
 }
 
 export async function listClientAppLocations() {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data, error } = await supabase
     .from("saloes")
     .select("id,cidade,estado,status,app_cliente_pausado")

@@ -2,7 +2,7 @@ import "server-only";
 
 import { getOperationalHealthSnapshot } from "@/lib/monitoring/operational-snapshot.server";
 import { operationalStateLabel } from "@/lib/monitoring/operational-components";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export type PublicStatusHistoryItem = {
   id: string;
@@ -77,7 +77,7 @@ export async function getPublicStatusSnapshot() {
 }
 
 export async function getPublicStatusHistory(limit = 50): Promise<PublicStatusHistoryItem[]> {
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const { data, error } = await supabase
     .from("incidentes_sistema")
     .select("id, titulo, status, component_key, mensagem_publica, primeira_ocorrencia_em, ultima_ocorrencia_em, resolvido_em, resolution_mode, resolution_reason, operational_components(nome)")

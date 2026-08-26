@@ -3,7 +3,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 function textValue(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
@@ -29,7 +29,7 @@ function integerOrNull(formData: FormData, key: string) {
 
 export async function salvarPlanoAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("planos_editar");
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const id = textValue(formData, "id");
 
   if (!id) {
@@ -81,7 +81,7 @@ export async function salvarPlanoAdminMaster(formData: FormData) {
 
 export async function salvarRecursoPlanoAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("recursos_editar");
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const idPlano = textValue(formData, "id_plano");
   const recursoCodigo = textValue(formData, "recurso_codigo");
 

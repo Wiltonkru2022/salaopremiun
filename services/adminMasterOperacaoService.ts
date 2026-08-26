@@ -7,7 +7,7 @@ import {
 import type { AdminMasterPermissionKey } from "@/lib/admin-master/auth/adminMasterPermissions";
 import { syncAdminMasterAlerts } from "@/lib/admin-master/alerts-sync";
 import { syncAdminMasterWebhookEvents } from "@/lib/admin-master/webhooks-sync";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 
 export function createAdminMasterOperacaoService() {
   return {

@@ -2,13 +2,13 @@ import Link from "next/link";
 import { AlertTriangle, MessageSquareText, WalletCards } from "lucide-react";
 import WhatsAppSupportClient from "@/components/admin-master/WhatsAppSupportClient";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminMasterWhatsAppPage() {
   await requireAdminMasterUser("whatsapp_ver");
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const { count: recargasComFalha } = await supabase
     .from("whatsapp_creditos_recargas")
     .select("id", { count: "exact", head: true })

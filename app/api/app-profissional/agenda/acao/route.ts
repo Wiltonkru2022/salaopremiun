@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { assertCanMutatePlanFeature, PlanAccessError } from "@/lib/plans/access";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 import {
   buscarConfiguracaoAgendaProfissional,
   buscarServicoDoProfissional,

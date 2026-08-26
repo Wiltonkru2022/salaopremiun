@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export type PainelSearchResult = {
   id: string;
@@ -30,7 +30,7 @@ const buscarPainelGlobalCached = unstable_cache(
     term: string;
     permissions: PainelSearchPermissions;
   }) => {
-    const admin = getSupabaseAdmin() as any;
+    const admin = getDatabaseAdmin() as any;
     const { data, error } = await admin.rpc("fn_painel_busca_global", {
       p_id_salao: params.idSalao,
       p_term: params.term,

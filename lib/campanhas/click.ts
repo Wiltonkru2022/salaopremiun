@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { asSupabaseQueryClient } from "@/lib/supabase/query-client";
 
 type CampaignClickPayload = {
@@ -21,7 +21,7 @@ function nullableText(value: unknown, maxLength: number) {
 }
 
 export async function registrarCliqueCampanha(payload: CampaignClickPayload) {
-  const supabase = asSupabaseQueryClient(getSupabaseAdmin());
+  const supabase = asSupabaseQueryClient(getDatabaseAdmin());
   const { data: campanha } = await supabase
     .from<CampanhaRow>("cupons_salao")
     .select("id, id_salao, ativo")

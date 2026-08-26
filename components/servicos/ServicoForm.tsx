@@ -4,7 +4,7 @@ import Link from "next/link";
 import { getAssinaturaUrl } from "@/lib/site-urls";
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { parseMoneyToNumber } from "@/lib/utils/serviceMasks";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import PlanoLimiteNotice from "@/components/plans/PlanoLimiteNotice";

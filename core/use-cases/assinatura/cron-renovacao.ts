@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 import {
   AssinaturaCronServiceError,
   type AssinaturaCronService,
@@ -18,7 +18,7 @@ export async function executarCronRenovacaoAssinaturasUseCase(params: {
   authorizationHeader: string | null;
   service: AssinaturaCronService;
 }) {
-  let supabaseAdmin: SupabaseClient | null = null;
+  let supabaseAdmin: DatabaseClient | null = null;
 
   try {
     if (!params.service.validarCron(params.authorizationHeader)) {

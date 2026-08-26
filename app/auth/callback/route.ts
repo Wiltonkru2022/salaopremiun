@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import {
   buildSecurityBlockPath,
   buildSecurityVerificationPath,
@@ -147,7 +147,7 @@ export async function GET(request: NextRequest) {
     return redirectToLogin(requestUrl, "google_sessao_invalida");
   }
 
-  const admin = getSupabaseAdmin();
+  const admin = getDatabaseAdmin();
   const { data: usuarios } = await admin
     .from("usuarios")
     .select("id, id_salao, email, auth_user_id, status")

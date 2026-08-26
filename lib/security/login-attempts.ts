@@ -4,7 +4,7 @@ import {
   buildSecurityBlockPath,
   type SecurityTipoUsuario,
 } from "@/lib/security/user-security";
-import { getSupabaseAdmin, type SupabaseAdminClient } from "@/lib/supabase/admin";
+import { getDatabaseAdmin, type DatabaseAdminClient } from "@/lib/db/admin";
 
 type RecordLoginFailureParams = {
   evento?: string;
@@ -63,7 +63,7 @@ function isFuture(value: string | null | undefined) {
 }
 
 async function resolveSecurityRecipientEmail(params: {
-  supabase: SupabaseAdminClient;
+  supabase: DatabaseAdminClient;
   tipoUsuario: SecurityTipoUsuario;
   userId?: string | null;
   identidade?: string | null;
@@ -105,7 +105,7 @@ async function resolveSecurityRecipientEmail(params: {
 }
 
 async function sendTemporaryBlockEmail(params: {
-  supabase: SupabaseAdminClient;
+  supabase: DatabaseAdminClient;
   tipoUsuario: SecurityTipoUsuario;
   userId: string;
   idSalao?: string | null;
@@ -212,7 +212,7 @@ async function sendTemporaryBlockEmail(params: {
 }
 
 function buildAttemptQuery(
-  supabase: SupabaseAdminClient,
+  supabase: DatabaseAdminClient,
   params: {
     tipoUsuario: SecurityTipoUsuario;
     userId?: string | null;
@@ -240,7 +240,7 @@ function buildAttemptQuery(
 export async function recordSecurityLoginFailure(
   params: RecordLoginFailureParams
 ): Promise<RecordLoginFailureResult> {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const identidade = normalizeIdentity(params.identidade);
   const now = new Date().toISOString();
 

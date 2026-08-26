@@ -5,7 +5,7 @@ import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-con
 import { getRenovacaoAutomaticaInfo } from "@/lib/assinaturas/renovacao-automatica";
 import { buscarCobranca } from "@/lib/payments/pix-provider";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import {
   createAsaasSubscription,
   isAsaasSubscriptionNotFoundError,
@@ -102,7 +102,7 @@ function getRecurringNextDueDate(vencimentoEm?: string | null) {
 }
 
 export function createAssinaturaService() {
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
 
   return {
     async validarSalaoAdmin(idSalao: string, adminOnlyMessage: string) {
@@ -181,7 +181,7 @@ export function createAssinaturaService() {
         };
       }
 
-      const supabaseAdmin = getSupabaseAdmin();
+      const supabaseAdmin = getDatabaseAdmin();
       const { error } = await supabaseAdmin
         .from("assinaturas")
         .update({

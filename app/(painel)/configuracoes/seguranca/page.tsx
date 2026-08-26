@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { CheckCircle2, KeyRound, Loader2, ShieldCheck } from "lucide-react";
 import { PainelPageHeader } from "@/components/painel-ui";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 
 export default function SegurancaConfiguracoesPage() {
   const [supabase] = useState(() => createClient());

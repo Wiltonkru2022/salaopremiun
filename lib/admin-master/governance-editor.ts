@@ -1,6 +1,6 @@
 import type { Json } from "@/types/database.generated";
 import type { AdminMasterGovernanceEditorData } from "@/components/admin-master/AdminMasterGovernanceEditor";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { buildAdminMasterPermissionsByPerfil } from "@/lib/admin-master/auth/adminMasterPermissions";
 import { PLANO_RECURSOS_PADRAO } from "@/lib/plans/access";
 
@@ -19,7 +19,7 @@ function stringifyConfigValue(value: Json | null | undefined) {
 }
 
 export async function getAdminMasterGovernanceEditorData(): Promise<AdminMasterGovernanceEditorData> {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
 
   const [
     { data: flags },

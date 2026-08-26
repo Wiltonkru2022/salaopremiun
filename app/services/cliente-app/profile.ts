@@ -1,4 +1,4 @@
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 import { clearClienteSession, createClienteSession } from "@/lib/cliente-auth.server";
 import { getClienteAppPublicEmail, syncClienteAppLinksByIdentity } from "@/app/services/cliente-app/linking";
 import { normalizeClienteEmail, normalizeWhatsapp } from "@/lib/client-app/identity";

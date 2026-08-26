@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
 import { getAdminMasterAccess } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import {
   removeCampanhaImage,
   uploadCampanhaImage,
@@ -44,7 +44,7 @@ export async function GET() {
   const auth = await requireAccess();
   if (!auth.access) return auth.response!;
 
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const [{ data: campanhas, error: campanhasError }, { data: artes, error: artesError }] =
     await Promise.all([
       supabase
@@ -111,7 +111,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = getSupabaseAdmin() as any;
+    const supabase = getDatabaseAdmin() as any;
     const { data: campanha, error: campanhaError } = await supabase
       .from("parceria_campanhas")
       .select("id,nome")
@@ -206,7 +206,7 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const supabase = getSupabaseAdmin() as any;
+    const supabase = getDatabaseAdmin() as any;
     const { data: anterior, error: findError } = await supabase
       .from("parceria_criativos_locais")
       .select("id,imagem_url")

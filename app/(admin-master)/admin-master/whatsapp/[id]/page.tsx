@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import AdminMasterPageHeader from "@/components/admin-master/AdminMasterPageHeader";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 function dateTime(value?: string | null) {
   if (!value) return "-";
@@ -39,7 +39,7 @@ export default async function AdminMasterWhatsappDetailPage({
   const [kind, rawId] = decodeURIComponent(id).split(":");
   if (!kind || !rawId) notFound();
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const table =
     kind === "envio"
       ? "whatsapp_envios"

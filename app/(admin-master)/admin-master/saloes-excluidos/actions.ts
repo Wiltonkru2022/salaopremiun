@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import type { Json } from "@/types/database.generated";
 
 type DeletedSalonRow = {
@@ -46,7 +46,7 @@ function formText(formData: FormData, key: string) {
 }
 
 async function carregarSalaoExcluido(id: string) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data, error } = await (supabase as any)
     .from("reativar_salao")
     .select(DELETED_SALON_COLUMNS)
@@ -73,7 +73,7 @@ export async function restaurarSalaoExcluidoAdminMaster(formData: FormData) {
     throw new Error("Informe o registro que será restaurado.");
   }
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const row = await carregarSalaoExcluido(id);
   const metadata = metadataObject(row.metadata);
   const now = new Date().toISOString();
@@ -181,7 +181,7 @@ export async function manterSalaoExcluidoAdminMaster(formData: FormData) {
     throw new Error("Informe o registro que será mantido como excluído.");
   }
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const row = await carregarSalaoExcluido(id);
   const metadata = metadataObject(row.metadata);
   const now = new Date().toISOString();

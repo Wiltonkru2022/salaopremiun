@@ -4,7 +4,7 @@ import { classifyOperationalError } from "@/lib/monitoring/error-catalog";
 import { buildOperationalFingerprint } from "@/lib/monitoring/fingerprint";
 import { canAutoResolveIncident } from "@/lib/monitoring/incident-state-machine";
 import { findOperationalComponentForContext } from "@/lib/monitoring/operational-components";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 const RESOLVER_VERSION = "operational-reconciler-v2";
 const RECOVERY_WINDOW_MS = 30 * 60 * 1000;
@@ -93,7 +93,7 @@ async function writeTimeline(params: {
   publicVisible?: boolean;
   publicMessage?: string | null;
 }) {
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   await supabase.from("incident_updates").insert({
     incident_id: params.incident.id,
     status_from: params.from,
@@ -108,7 +108,7 @@ async function writeTimeline(params: {
 }
 
 async function resolveLinkedAlerts(incident: IncidentRow, fingerprint?: string | null) {
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const keys = [
     `monitoring:${incident.chave}`,
     fingerprint ? `monitoring:${fingerprint}` : null,
@@ -125,7 +125,7 @@ async function resolveLinkedAlerts(incident: IncidentRow, fingerprint?: string |
 }
 
 export async function reconcileOperationalIncidents() {
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const now = Date.now();
   const currentCommit = process.env.VERCEL_GIT_COMMIT_SHA || null;
   const currentDeployment = process.env.VERCEL_DEPLOYMENT_ID || process.env.VERCEL_URL || null;

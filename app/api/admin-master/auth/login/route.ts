@@ -4,7 +4,7 @@ import { resolveAdminMasterAccessForIdentity } from "@/lib/admin-master/auth/req
 import { setAdminMasterSessionCookie } from "@/lib/admin-master/auth/session";
 import { emitSecurityEvent } from "@/lib/security/security-events";
 import { getLoginErrorMessage } from "@/lib/supabase/auth-client-recovery";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { hasAal2 } from "@/lib/auth/mfa-assurance";
 
 type LoginRequestBody = {

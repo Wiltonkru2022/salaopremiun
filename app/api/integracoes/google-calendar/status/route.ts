@@ -3,7 +3,7 @@ import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { isGoogleCalendarConfigured } from "@/lib/google-calendar/oauth";
 import { canUsePlanFeature } from "@/lib/plans/access";
 import { emitSecurityEvent } from "@/lib/security/security-events";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +18,7 @@ export async function GET() {
   }
 
   const feature = await canUsePlanFeature(usuario.id_salao, "google_calendar");
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data, error } = await (supabase as any)
     .from("saloes_google_calendar_connections")
     .select("google_email, calendar_id, connected_at, updated_at, ativo")
@@ -60,7 +60,7 @@ export async function DELETE() {
     );
   }
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { error } = await (supabase as any)
     .from("saloes_google_calendar_connections")
     .update({

@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 
 export type ServicoComissaoSource = {
   id?: string;
@@ -76,7 +76,7 @@ function pickFirstText(...values: unknown[]) {
 }
 
 export async function buscarVinculoProfissionalServico(params: {
-  supabase: SupabaseClient;
+  supabase: DatabaseClient;
   idSalao: string;
   idProfissional: string;
   idServico: string;

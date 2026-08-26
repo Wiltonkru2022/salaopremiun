@@ -1,14 +1,14 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 import type { ComandaResumo } from "@/components/agenda/page-types";
 
 type BuscarComandasAbertasParams = {
-  supabase: SupabaseClient;
+  supabase: DatabaseClient;
   idSalao: string;
   clienteId: string;
 };
 
 type CriarComandaAgendaParams = {
-  supabase: SupabaseClient;
+  supabase: DatabaseClient;
   idSalao: string;
   clienteId: string;
 };

@@ -15,7 +15,7 @@ import AppModal from "@/components/ui/AppModal";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import PaginationControls from "@/components/ui/PaginationControls";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import type {
   ServicoProcessarErrorResponse,
   ServicoProcessarResponse,

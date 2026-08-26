@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { consultarDocumentoAutentique, criarDocumentoAutentique } from "@/lib/parcerias/autentique";
 
 function text(formData: FormData, key: string) {
@@ -12,7 +12,7 @@ function text(formData: FormData, key: string) {
 
 export async function enviarContratoAutentique(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const idContrato = text(formData, "id_contrato");
   if (!idContrato) throw new Error("Contrato não informado.");
 
@@ -67,7 +67,7 @@ export async function enviarContratoAutentique(formData: FormData) {
 
 export async function sincronizarContratoAutentique(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const idContrato = text(formData, "id_contrato");
   if (!idContrato) throw new Error("Contrato não informado.");
 

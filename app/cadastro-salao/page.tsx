@@ -3,7 +3,7 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, Loader2, Sparkles } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 
 type StepKey = "dados" | "acesso" | "endereco" | "revisao";
 const STEPS: Array<{ key: StepKey; label: string }> = [

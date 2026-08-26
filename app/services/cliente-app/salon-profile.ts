@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import {
   getClientAppSalonDetail,
   type ClientAppSalonDetail,
@@ -250,7 +250,7 @@ export async function getClientSalonProfile(
   idSalaoOrSlug: string
 ): Promise<ClientSalonProfile> {
   const base = await getClientAppSalonDetail(idSalaoOrSlug);
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
 
   const [extrasResult, configResult, serviceImagesResult, reviewsResult] =
     await Promise.all([

@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 import {
   type AssinaturaWebhookContextRow,
   type CobrancaWebhookResolvedRow,
@@ -31,7 +31,7 @@ const NON_PAID_STATUS_EVENTS = new Set([
 ]);
 
 type ProcessarWebhookAsaasParams = {
-  supabaseAdmin: SupabaseClient;
+  supabaseAdmin: DatabaseClient;
   webhookEventId: string | null;
   webhookPayload: Record<string, unknown>;
   event: string;
@@ -133,7 +133,7 @@ function avaliarEventoCobranca({
 }
 
 async function atualizarCobrancaWebhook(params: {
-  supabaseAdmin: SupabaseClient;
+  supabaseAdmin: DatabaseClient;
   cobrancaAtual: CobrancaWebhookResolvedRow;
   webhookPayload: Record<string, unknown>;
   event: string;

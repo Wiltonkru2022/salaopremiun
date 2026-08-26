@@ -1,5 +1,5 @@
 import { addDays, format, isBefore, subDays } from "date-fns";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 import { criarCobranca } from "@/lib/payments/pix-provider";
 import {
   getRenovacaoAutomaticaInfo,
@@ -34,7 +34,7 @@ type CobrancaExistenteRow = {
 export type ResultadoRenovacaoAssinatura = Record<string, unknown>;
 
 async function carregarPlanoAtivo(
-  supabaseAdmin: SupabaseClient,
+  supabaseAdmin: DatabaseClient,
   planoCodigo: string
 ) {
   const { data, error } = await supabaseAdmin
@@ -60,7 +60,7 @@ async function carregarPlanoAtivo(
 }
 
 async function carregarCobrancaPendente(
-  supabaseAdmin: SupabaseClient,
+  supabaseAdmin: DatabaseClient,
   idAssinatura: string,
   hoje: Date
 ) {
@@ -79,7 +79,7 @@ async function carregarCobrancaPendente(
 }
 
 async function registrarCobrancaAutomatica(params: {
-  supabaseAdmin: SupabaseClient;
+  supabaseAdmin: DatabaseClient;
   assinatura: AssinaturaCronRow;
   plano: PlanoSaasRow;
   formaPagamento: "PIX" | "BOLETO";
@@ -210,7 +210,7 @@ async function registrarCobrancaAutomatica(params: {
 }
 
 async function processarRenovacaoAssinatura(params: {
-  supabaseAdmin: SupabaseClient;
+  supabaseAdmin: DatabaseClient;
   assinatura: AssinaturaCronRow;
   hoje: Date;
 }) {
@@ -351,7 +351,7 @@ async function processarRenovacaoAssinatura(params: {
 }
 
 export async function executarCronRenovacaoAssinaturas(
-  supabaseAdmin: SupabaseClient,
+  supabaseAdmin: DatabaseClient,
   hoje = new Date()
 ) {
   const dataLimite = format(addDays(hoje, 3), "yyyy-MM-dd");

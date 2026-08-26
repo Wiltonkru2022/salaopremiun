@@ -1,7 +1,7 @@
 import "server-only";
 
 import { htmlEscape, sendBrevoEmail } from "@/lib/email/brevo";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export type TrialAlertType = "3d" | "1d" | "today" | "expired" | "manual";
 
@@ -174,7 +174,7 @@ function buildTrialEmailHtml(params: {
 }
 
 async function loadTrialContext(idSalao: string) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const [{ data: salao, error: salaoError }, { data: assinatura, error: assinaturaError }] =
     await Promise.all([
       (supabase as any)
@@ -248,7 +248,7 @@ export async function sendTrialAlertNow(params: SendTrialAlertParams) {
   const sentAt = new Date().toISOString();
   const marker = markerForType(type);
   if (params.markSent && marker) {
-    const { error } = await (getSupabaseAdmin() as any)
+    const { error } = await (getDatabaseAdmin() as any)
       .from("assinaturas")
       .update({ [marker]: sentAt, updated_at: sentAt })
       .eq("id_salao", params.idSalao);
@@ -275,7 +275,7 @@ function choosePendingAlert(row: TrialSubscriptionRow): TrialAlertType | null {
 }
 
 export async function processTrialAlerts(limit = 80) {
-  const { data, error } = await (getSupabaseAdmin() as any)
+  const { data, error } = await (getDatabaseAdmin() as any)
     .from("assinaturas")
     .select(
       "id_salao, trial_fim_em, email_trial_3d_sent_at, email_trial_1d_sent_at, email_trial_today_sent_at, email_trial_expired_sent_at"
@@ -334,7 +334,7 @@ export async function extendTrial(params: ExtendTrialParams) {
   const base = Math.max(Date.now(), currentEnd.getTime());
   const newEnd = new Date(base + days * DAY_MS).toISOString();
   const now = new Date().toISOString();
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
 
   const [{ error: assinaturaError }, { error: salaoError }, { error: assinaturaSalaoError }] =
     await Promise.all([

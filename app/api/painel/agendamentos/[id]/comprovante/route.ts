@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 const COMPROVANTES_BUCKET = "agendamento-comprovantes";
 
@@ -18,7 +18,7 @@ export async function GET(
     );
   }
 
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const { data, error } = await (supabaseAdmin as any)
     .from("agendamentos")
     .select("id, id_salao, sinal_comprovante_path")

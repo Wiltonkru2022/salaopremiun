@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { requireProfissionalServerContext } from "@/lib/profissional-context.server";
 import {
   buscarOuCriarConversaSuporte,

@@ -2,7 +2,7 @@ import { ACOES_CAIXA, isAcaoCaixa } from "@/lib/caixa/processar/dispatcher";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { resolveHttpStatus } from "@/lib/caixa/processar/utils";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export class CaixaRouteServiceError extends Error {
   constructor(
@@ -24,7 +24,7 @@ export function createCaixaRouteService() {
     }) {
       try {
         await reportOperationalIncident({
-          supabaseAdmin: getSupabaseAdmin(),
+          supabaseAdmin: getDatabaseAdmin(),
           key: `caixa:processar:${params.acaoRaw || "desconhecida"}:${params.idSalao}`,
           module: "caixa",
           title: "Processamento de caixa falhou",

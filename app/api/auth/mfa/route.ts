@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/db/server";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
 import {
   buildBackupMetadata,
@@ -28,7 +28,7 @@ const APP_METADATA_KEY = "salaopremium_mfa";
 
 async function getAuthenticatedContext() {
   const supabase = await createClient();
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
 
   const {
     data: { user },
@@ -104,7 +104,7 @@ async function persistMfaMetadata(params: {
   authUserId: string;
   nextMetadata: SalaoPremiumMfaMetadata;
 }) {
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const { data, error } = await supabaseAdmin.auth.admin.getUserById(
     params.authUserId
   );

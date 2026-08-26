@@ -11,7 +11,7 @@ import {
 } from "@/components/painel-ui";
 import AppModal from "@/components/ui/AppModal";
 import PaginationControls from "@/components/ui/PaginationControls";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { getWorkspaceWindowTarget } from "@/lib/painel/workspace-windows";
 
 type ComandaRow = {

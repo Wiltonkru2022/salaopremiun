@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export type SalonNotificationSettings = {
   clienteAgendamentoConfirmado: boolean;
@@ -121,7 +121,7 @@ export function normalizeSalonNotificationSettings(
 }
 
 export async function loadSalonNotificationSettings(idSalao: string) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data, error } = await (supabase as any)
     .from("configuracoes_notificacoes")
     .select(

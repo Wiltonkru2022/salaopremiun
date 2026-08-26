@@ -1,6 +1,6 @@
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
 import { getPlanoCatalogo } from "@/lib/plans/catalog";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { unstable_cache } from "next/cache";
 
 export type PlanoRecursoCodigo =
@@ -288,7 +288,7 @@ export function getPlanoRecursoLabel(recurso: string) {
 async function getPlanoAccessSnapshotUncached(
   idSalao: string
 ): Promise<PlanoAccessSnapshot> {
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
 
   const [{ data: salao }, { data: assinatura }] = await Promise.all([
     supabaseAdmin

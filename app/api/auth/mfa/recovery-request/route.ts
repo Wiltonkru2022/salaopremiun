@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import {
   buildMfaRecoveryMessage,
   buildMfaRecoverySubject,
@@ -11,7 +11,7 @@ import { createSuporteTicketService } from "@/services/suporteTicketService";
 
 export async function POST() {
   try {
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getDatabaseAdmin();
     const service = createSuporteTicketService();
     const { user, usuario } = await getPainelUserContext({ allowAdminAal1: true });
 

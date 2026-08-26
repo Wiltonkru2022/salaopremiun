@@ -14,7 +14,7 @@ import {
 import PaginationControls from "@/components/ui/PaginationControls";
 import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import { getAssinaturaUrl } from "@/lib/site-urls";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 
 type ItemExtra = {
   id: string;

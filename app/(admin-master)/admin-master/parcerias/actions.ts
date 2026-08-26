@@ -4,7 +4,7 @@ import { createHash } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { renderContratoParceria } from "@/lib/parcerias/contrato";
 import { normalizeExternalDestination } from "@/lib/parcerias/urls";
 import { removeCampanhaImage, uploadCampanhaImage } from "@/services/campanhaMediaService";
@@ -30,7 +30,7 @@ function requireDeleteConfirmation(formData: FormData) {
 }
 
 async function cleanupCampanhaImages(idCampanha: string) {
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const { data } = await supabase
     .from("parceria_criativos")
     .select("imagem_url")
@@ -42,7 +42,7 @@ async function cleanupCampanhaImages(idCampanha: string) {
 
 export async function criarParceiro(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const razaoSocial = text(formData, "razao_social");
   if (!razaoSocial) throw new Error("Informe a razão social do parceiro.");
 
@@ -79,7 +79,7 @@ export async function criarParceiro(formData: FormData) {
 
 export async function excluirParceiro(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const id = text(formData, "id_parceiro");
   if (!id) throw new Error("Empresa não informada.");
   requireDeleteConfirmation(formData);
@@ -126,7 +126,7 @@ export async function excluirParceiro(formData: FormData) {
 
 export async function criarCampanhaParceria(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const origem = text(formData, "origem") === "salao_premium" ? "salao_premium" : "parceiro";
   const idParceiro = text(formData, "id_parceiro");
   const nome = text(formData, "nome");
@@ -193,7 +193,7 @@ export async function criarCampanhaParceria(formData: FormData) {
 
 export async function atualizarCampanhaParceria(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const id = text(formData, "id_campanha");
   if (!id) throw new Error("Campanha não informada.");
   const status = text(formData, "status");
@@ -234,7 +234,7 @@ export async function atualizarCampanhaParceria(formData: FormData) {
 
 export async function excluirCampanhaParceria(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const id = text(formData, "id_campanha");
   if (!id) throw new Error("Campanha não informada.");
   requireDeleteConfirmation(formData);
@@ -265,7 +265,7 @@ export async function excluirCampanhaParceria(formData: FormData) {
 
 export async function salvarCriativoParceria(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const idCampanha = text(formData, "id_campanha");
   const titulo = text(formData, "titulo");
   if (!idCampanha || !titulo) throw new Error("Informe a campanha e o título do anúncio.");
@@ -318,7 +318,7 @@ export async function salvarCriativoParceria(formData: FormData) {
 
 export async function atualizarCriativoParceria(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const id = text(formData, "id_criativo");
   if (!id) throw new Error("Criativo não informado.");
 
@@ -384,7 +384,7 @@ export async function atualizarCriativoParceria(formData: FormData) {
 
 export async function excluirCriativoParceria(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const id = text(formData, "id_criativo");
   if (!id) throw new Error("Criativo não informado.");
   requireDeleteConfirmation(formData);
@@ -415,7 +415,7 @@ export async function excluirCriativoParceria(formData: FormData) {
 
 export async function gerarContratoParceria(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const idCampanha = text(formData, "id_campanha");
   if (!idCampanha) throw new Error("Campanha não informada.");
 
@@ -483,7 +483,7 @@ export async function carregarContratoParceriaPreview(idContrato: string) {
   await requireAdminMasterUser("comunicacao_ver");
   const id = String(idContrato || "").trim();
   if (!id) throw new Error("Contrato não informado.");
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const { data, error } = await supabase
     .from("parceria_contratos")
     .select("id,numero,conteudo_snapshot")

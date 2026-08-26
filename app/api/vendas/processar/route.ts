@@ -10,7 +10,7 @@ import {
   PlanAccessError,
   resolveVendaHttpStatus,
 } from "@/lib/vendas/processar";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 import {
   parseProcessarVendaInput,
   processarVendaUseCase,

@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import { buildLoginRedirectUrl } from "@/lib/auth/login-redirect";
-import { createClient } from "@/lib/supabase/server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/db/server";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { buildPermissoesByNivel, sanitizePermissoesDb } from "@/lib/auth/permissions";
 import { SELECT_USUARIOS_PERMISSOES } from "@/lib/db/selects";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
@@ -15,7 +15,7 @@ type PermissoesDbRow = Record<string, boolean | string | null>;
 
 const loadPainelShellContextCached = unstable_cache(
   async (authUserId: string) => {
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getDatabaseAdmin();
     const { data: usuario, error: usuarioError } = await supabaseAdmin
       .from("usuarios")
       .select("id, id_salao, nivel, status")
@@ -85,7 +85,7 @@ const loadPainelShellContextCached = unstable_cache(
 
 export const loadPainelShellNotificationsCached = unstable_cache(
   async (idSalao: string, resumoAssinatura: ReturnType<typeof getResumoAssinatura> | null) => {
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getDatabaseAdmin();
     const [{ data: agendamentosPendentes }, { data: notificacoesOperacionais }] = await Promise.all([
       (supabaseAdmin as any).from("agendamentos")
         .select("id, status, data, hora_inicio, origem, cliente_id, codigo_cupom, id_cupom_salao, desconto_cupom_valor, clientes(nome), servicos(nome)")

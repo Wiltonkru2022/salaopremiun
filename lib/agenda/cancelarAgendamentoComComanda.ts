@@ -1,13 +1,13 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 
 type Params = {
-  supabase: SupabaseClient;
+  supabase: DatabaseClient;
   idSalao: string;
   idAgendamento: string;
 };
 
 async function recalcularTotaisComanda(
-  supabase: SupabaseClient,
+  supabase: DatabaseClient,
   idSalao: string,
   idComanda: string
 ) {
@@ -60,7 +60,7 @@ async function recalcularTotaisComanda(
 }
 
 async function cancelarComandaSeVazia(
-  supabase: SupabaseClient,
+  supabase: DatabaseClient,
   idSalao: string,
   idComanda: string
 ) {

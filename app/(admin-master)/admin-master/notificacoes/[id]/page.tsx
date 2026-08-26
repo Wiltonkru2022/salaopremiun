@@ -7,7 +7,7 @@ import {
   formatSaoPauloDateTimeLocal,
   parseClientVisualNoticeConfig,
 } from "@/lib/client-app/visual-notifications";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import {
   atualizarAvisoVisualClienteAction,
   encerrarAvisoVisualClienteAction,
@@ -36,7 +36,7 @@ export default async function AdminMasterNotificacaoDetailPage({
   await requireAdminMasterUser("comunicacao_ver");
   const { id } = await params;
   const query = searchParams ? await searchParams : {};
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
 
   const [
     { data: notificacao },

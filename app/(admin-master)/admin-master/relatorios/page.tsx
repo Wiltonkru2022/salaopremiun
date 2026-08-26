@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ArrowUpRight, BarChart3, CalendarDays, CircleDollarSign, Scissors, TrendingUp, AlertTriangle } from "lucide-react";
 import AdminMasterDataTableClient from "@/components/admin-master/AdminMasterDataTableClient";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -103,7 +103,7 @@ export default async function AdminMasterRelatoriosPage({
   const currentStartMs = now - days * DAY_MS;
   const previousStartMs = now - days * 2 * DAY_MS;
   const previousStartIso = new Date(previousStartMs).toISOString();
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
 
   const [
     { data: saloesData },

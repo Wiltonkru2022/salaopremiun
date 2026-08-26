@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 import { getWebhookEventOrder } from "@/lib/webhooks/asaas/status";
 import type {
   WebhookEventoExistenteRow,
@@ -36,7 +36,7 @@ function buildWebhookIdempotencyKey(
 }
 
 async function buscarEventoWebhookExistente(
-  supabaseAdmin: SupabaseClient,
+  supabaseAdmin: DatabaseClient,
   fingerprint: string,
   idempotenciaKey: string
 ) {
@@ -66,7 +66,7 @@ async function buscarEventoWebhookExistente(
 }
 
 export async function registrarEventoWebhookAsaas(params: {
-  supabaseAdmin: SupabaseClient;
+  supabaseAdmin: DatabaseClient;
   fingerprint: string;
   body: Record<string, unknown>;
   event: string;
@@ -163,7 +163,7 @@ export async function registrarEventoWebhookAsaas(params: {
 }
 
 export async function atualizarStatusEventoWebhook(
-  supabaseAdmin: SupabaseClient,
+  supabaseAdmin: DatabaseClient,
   webhookEventId: string | null,
   statusProcessamento: "processado" | "erro",
   errorMessage?: string | null,

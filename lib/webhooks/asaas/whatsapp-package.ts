@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 
 type CompraWhatsappRow = {
   id: string;
@@ -73,7 +73,7 @@ function getPagamentoConfirmadoEm(payment: Record<string, unknown>, agoraIso: st
 }
 
 export async function processarWebhookPacoteWhatsapp(params: {
-  supabaseAdmin: SupabaseClient;
+  supabaseAdmin: DatabaseClient;
   paymentId: string;
   payment: Record<string, unknown>;
   paymentStatus: string | null;

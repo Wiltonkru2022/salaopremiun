@@ -14,7 +14,7 @@ import {
 } from "./plan-utils";
 
 type UseAssinaturaStatusParams = {
-  supabase: ReturnType<typeof import("@/lib/supabase/client").createClient>;
+  supabase: ReturnType<typeof import("@/lib/db/client").createClient>;
   planoEscolhidoManualmenteRef: React.MutableRefObject<boolean>;
   planoSelecionadoRef: React.MutableRefObject<PlanoCobravel>;
   setPlanoSelecionado: (value: PlanoCobravel) => void;

@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 function diferencaEmDias(dataAlvo: Date, dataBase: Date) {
   const alvo = new Date(
@@ -63,7 +63,7 @@ export function getStatusAssinaturaServidor(
 }
 
 export async function validarAssinaturaSalao(idSalao: string) {
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
 
   const { data: assinatura, error } = await supabaseAdmin
     .from("assinaturas")

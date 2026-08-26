@@ -4,7 +4,7 @@ import { randomUUID } from "crypto";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireClienteAppContext } from "@/lib/client-context.server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 const COMPROVANTES_BUCKET = "agendamento-comprovantes";
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -23,7 +23,7 @@ export async function enviarComprovanteSinalAction(formData: FormData) {
   const session = await requireClienteAppContext();
   const idAgendamento = String(formData.get("agendamento") || "").trim();
   const file = formData.get("comprovante");
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
 
   const { data: row } = await (supabaseAdmin as any)
     .from("agendamentos")

@@ -1,5 +1,5 @@
 // lib/auth/get-user-role.ts
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
 
 export async function getUserRole() {

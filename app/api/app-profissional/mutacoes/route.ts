@@ -10,8 +10,8 @@ import {
   assertCanMutatePlanFeature,
   PlanAccessError,
 } from "@/lib/plans/access";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
-import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
+import { runAdminOperation } from "@/lib/db/admin-ops";
+import { asLooseDbClient } from "@/lib/db/loose-client";
 
 type MutationAction =
   | "criar_agendamento"
@@ -162,7 +162,7 @@ export async function POST(request: Request) {
       actorId: context.idProfissional,
       idSalao: context.idSalao,
       run: async (supabase) => {
-        const rpc = asLooseSupabaseClient(supabase);
+        const rpc = asLooseDbClient(supabase);
 
         if (action === "criar_agendamento") {
           const targetProfissionalId = await resolveTargetProfissional({

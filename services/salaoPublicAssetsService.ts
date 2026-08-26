@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { getProviderConfig } from "@/lib/platform/provider-config.server";
 import { uploadBufferToCloudinary } from "@/lib/platform/cloudinary.server";
 
@@ -40,7 +40,7 @@ function getFileExtension(file: File) {
 }
 
 async function ensurePublicBucket() {
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const { data: bucket } = await supabaseAdmin.storage.getBucket(BUCKET_ID);
 
   if (bucket) return;
@@ -63,7 +63,7 @@ async function uploadToSupabase(params: {
 }) {
   await ensurePublicBucket();
 
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const path = `${params.idSalao}/${params.tipo}-${Date.now()}.${getFileExtension(
     params.file
   )}`;

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 const COMPROVANTES_BUCKET = "agendamento-comprovantes";
 
@@ -10,7 +10,7 @@ export async function GET(
 ) {
   const { id } = await params;
   const session = await requireProfissionalAppContext();
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
 
   let query = (supabaseAdmin as any)
     .from("agendamentos")

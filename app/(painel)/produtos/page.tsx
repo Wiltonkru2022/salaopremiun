@@ -22,7 +22,7 @@ import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapsho
 import { getErrorMessage } from "@/lib/get-error-message";
 import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import { getAssinaturaUrl } from "@/lib/site-urls";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import type {
   ProdutoProcessarErrorResponse,
   ProdutoProcessarResponse,

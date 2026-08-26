@@ -7,9 +7,9 @@ import {
   getBlogSupabasePublic,
 } from "@/lib/blog/supabase";
 import {
-  asLooseSupabaseClient,
-  type LooseSupabaseClient,
-} from "@/lib/supabase/loose-client";
+  asLooseDbClient,
+  type LooseDbClient,
+} from "@/lib/db/loose-client";
 
 type BlogDbCategory = {
   id: string;
@@ -87,8 +87,8 @@ function isSeoBlockedBlogPost(post: BlogDbPost) {
   const slug = String(post.slug || "").toLowerCase(); const title = String(post.titulo || "").toLowerCase();
   return slug.startsWith("post-teste-automatico") || slug.startsWith("teste-automatico") || title.includes("post teste automático") || title.includes("post teste automatico");
 }
-async function getBlogDatabaseUnsafe(): Promise<LooseSupabaseClient | null> { if (!canUseBlogDatabase()) return null; return asLooseSupabaseClient(getBlogSupabasePublic()); }
-async function getBlogAdminDatabaseUnsafe(): Promise<LooseSupabaseClient | null> { if (!canUseBlogSupabaseAdmin()) return null; return asLooseSupabaseClient(getBlogSupabaseAdmin()); }
+async function getBlogDatabaseUnsafe(): Promise<LooseDbClient | null> { if (!canUseBlogDatabase()) return null; return asLooseDbClient(getBlogSupabasePublic()); }
+async function getBlogAdminDatabaseUnsafe(): Promise<LooseDbClient | null> { if (!canUseBlogSupabaseAdmin()) return null; return asLooseDbClient(getBlogSupabaseAdmin()); }
 
 async function loadBlogCategories(): Promise<BlogCategory[]> {
   try { const supabase = await getBlogDatabaseUnsafe(); if (!supabase) return [];

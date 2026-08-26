@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Layers3, Plus, Scissors, Trash2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { parseMoneyToNumber } from "@/lib/utils/serviceMasks";
 import {

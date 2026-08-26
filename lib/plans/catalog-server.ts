@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import {
   PLANOS_CATALOGO,
   type PlanoCatalogo,
@@ -177,7 +177,7 @@ function getFallbackPlanos(): PlanoCatalogoPublico[] {
 
 export async function getPlanosSaasCatalogo() {
   try {
-    const supabase = getSupabaseAdmin();
+    const supabase = getDatabaseAdmin();
     const [{ data: planos, error: planosError }, { data: recursos, error: recursosError }] =
       await Promise.all([
         supabase

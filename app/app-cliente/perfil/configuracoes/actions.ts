@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireClienteAppContext } from "@/lib/client-context.server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export type ToggleClienteNotificationPreferenceResult = {
   ok: boolean;
@@ -13,7 +13,7 @@ export async function toggleClienteNotificationPreferenceAction(
   enabled: boolean
 ): Promise<ToggleClienteNotificationPreferenceResult> {
   const session = await requireClienteAppContext();
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
 
   const { error } = await (supabaseAdmin as any)
     .from("clientes_app_auth")

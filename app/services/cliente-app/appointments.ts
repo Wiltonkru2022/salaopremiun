@@ -1,4 +1,4 @@
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 import { cancelarAgendamentoComComanda } from "@/lib/agenda/cancelarAgendamentoComComanda";
 import { canSalonAppearInClientApp } from "@/lib/client-app/eligibility";
 import {

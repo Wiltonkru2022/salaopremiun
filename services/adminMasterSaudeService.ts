@@ -5,7 +5,7 @@ import {
 import type { AdminMasterPermissionKey } from "@/lib/admin-master/auth/adminMasterPermissions";
 import { REQUIRED_DATABASE_FUNCTIONS } from "@/lib/db/required-rpcs";
 import { REQUIRED_DATABASE_TABLES } from "@/lib/db/required-tables";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 
 type RoutineRow = {
   function_name: string;

@@ -4,7 +4,7 @@ import {
   requireSalaoPermission,
 } from "@/lib/auth/require-salao-permission";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +52,7 @@ export async function POST(request: Request) {
       { allowedNiveis: ["admin"] }
     );
 
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getDatabaseAdmin();
     const { data: painelAuthUsers, error: painelAuthUsersError } =
       await supabaseAdmin
         .from("usuarios")

@@ -6,7 +6,7 @@ import {
   sortClientVisualNotices,
   type ClientVisualNoticeRow,
 } from "@/lib/client-app/visual-notifications";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +31,7 @@ export async function GET() {
   const session = await getClienteSessionFromCookie();
   if (!session?.idConta) return json({ ok: false, notice: null }, 401);
 
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const now = new Date();
 
   const { data, error } = await supabase
@@ -142,7 +142,7 @@ export async function POST(request: Request) {
     return json({ ok: false, error: "Ação inválida." }, 400);
   }
 
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const { data: notice, error } = await supabase
     .from("notificacoes_globais")
     .select(

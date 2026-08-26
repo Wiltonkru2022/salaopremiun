@@ -33,7 +33,7 @@ import {
   type CaixaSessao,
 } from "@/lib/caixa/sessaoCaixa";
 import { monitorClientOperation } from "@/lib/monitoring/client";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { getErrorMessage } from "@/components/caixa/useCaixaApi";
 
 type CaixaSupabaseClient = ReturnType<typeof createClient>;

@@ -1,5 +1,5 @@
 import { addDays, isAfter } from "date-fns";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 import { atualizarStatusEventoWebhook } from "@/lib/webhooks/asaas/registry";
 import type { PlanoSaasRow } from "@/lib/webhooks/asaas/types";
 
@@ -41,7 +41,7 @@ type CardSnapshot = {
 };
 
 export async function aplicarPagamentoConfirmado(params: {
-  supabaseAdmin: SupabaseClient;
+  supabaseAdmin: DatabaseClient;
   webhookEventId: string | null;
   cobrancaAtual: CobrancaWebhookRow;
   assinatura: AssinaturaWebhookRow;
@@ -187,7 +187,7 @@ export async function aplicarPagamentoConfirmado(params: {
 }
 
 export async function aplicarStatusNaoPago(params: {
-  supabaseAdmin: SupabaseClient;
+  supabaseAdmin: DatabaseClient;
   webhookEventId: string | null;
   cobrancaAtual: CobrancaWebhookRow;
   assinatura: AssinaturaWebhookRow;

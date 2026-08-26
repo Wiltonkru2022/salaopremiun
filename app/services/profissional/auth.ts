@@ -1,5 +1,5 @@
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
-import type { SupabaseAdminClient } from "@/lib/supabase/admin";
+import { runAdminOperation } from "@/lib/db/admin-ops";
+import type { DatabaseAdminClient } from "@/lib/db/admin";
 import { canUsePlanFeature, isSalaoStatusOperational } from "@/lib/plans/access";
 import { verifyPassword } from "@/lib/profissional-auth.server";
 import { recordSecurityLoginFailure } from "@/lib/security/login-attempts";
@@ -49,7 +49,7 @@ function normalizeAuthVersion(value: unknown) {
 }
 
 async function findAcessoByProfissionalCpf(params: {
-  supabaseAdmin: SupabaseAdminClient;
+  supabaseAdmin: DatabaseAdminClient;
   cpf: string;
   senha: string;
 }): Promise<ProfissionalAcessoLoginRow | null> {
@@ -97,7 +97,7 @@ async function findAcessoByProfissionalCpf(params: {
 }
 
 async function buildProfissionalSession(params: {
-  supabaseAdmin: SupabaseAdminClient;
+  supabaseAdmin: DatabaseAdminClient;
   idProfissional: string;
   cpf: string;
   authVersion: number;

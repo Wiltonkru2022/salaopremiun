@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
 import { buscarCobranca } from "@/lib/payments/pix-provider";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { processarWebhookRecargaWhatsapp } from "@/lib/webhooks/asaas/whatsapp-credit-topup";
 
 function textValue(formData: FormData, key: string) {
@@ -23,7 +23,7 @@ function centsValue(formData: FormData, key: string) {
 
 export async function salvarWhatsappPacoteAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("whatsapp_editar");
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const id = textValue(formData, "id");
   const payload = {
     nome: textValue(formData, "nome"),
@@ -57,7 +57,7 @@ export async function salvarWhatsappPacoteAdminMaster(formData: FormData) {
 
 export async function salvarWhatsappTemplateAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("whatsapp_editar");
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const id = textValue(formData, "id");
   const payload = {
     nome: textValue(formData, "nome"),
@@ -93,7 +93,7 @@ export async function salvarWhatsappTemplateAdminMaster(formData: FormData) {
 
 export async function salvarWhatsappTarifaAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("whatsapp_editar");
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const id = textValue(formData, "id");
   const payload = {
     nome: textValue(formData, "nome"),
@@ -132,7 +132,7 @@ export async function salvarWhatsappTarifaAdminMaster(formData: FormData) {
 
 export async function ajustarWhatsappSaldoAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("whatsapp_editar");
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const idSalao = textValue(formData, "id_salao");
   const valorCentavos = centsValue(formData, "valor");
   const motivo = textValue(formData, "motivo");
@@ -176,7 +176,7 @@ async function reconciliarRecargaWhatsapp(formData: FormData, exigirPagamento: b
   const id = textValue(formData, "id");
   if (!id) throw new Error("Recarga nao informada.");
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data: recarga, error } = await (supabase as any)
     .from("whatsapp_creditos_recargas")
     .select("id, id_salao, asaas_payment_id, external_reference, status, valor_centavos")

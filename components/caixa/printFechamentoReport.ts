@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import type { CaixaSessao } from "@/lib/caixa/sessaoCaixa";
 
 type FechamentoReportParams = {

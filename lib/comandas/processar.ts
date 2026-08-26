@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import {
   buscarVinculoProfissionalServico,
   resolverRegraComissaoServico,
@@ -14,7 +14,7 @@ import type {
   ItemPayload,
 } from "@/types/comandas";
 
-type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
+type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
 
 export type ResolvedItemPayload = {
   tipoItem: string;
@@ -156,7 +156,7 @@ export function criarChaveItemAgendamento(resolved: ResolvedItemPayload) {
 }
 
 async function buscarItensComboServico(params: {
-  supabaseAdmin: SupabaseAdminClient;
+  supabaseAdmin: DatabaseAdminClient;
   idSalao: string;
   idServicoCombo: string;
 }) {
@@ -197,7 +197,7 @@ async function buscarItensComboServico(params: {
 }
 
 async function expandirItensCombo(params: {
-  supabaseAdmin: SupabaseAdminClient;
+  supabaseAdmin: DatabaseAdminClient;
   idSalao: string;
   resolved: ResolvedItemPayload;
 }) {
@@ -298,7 +298,7 @@ async function expandirItensCombo(params: {
 }
 
 async function inserirItensResolvidosNaComanda(params: {
-  supabaseAdmin: SupabaseAdminClient;
+  supabaseAdmin: DatabaseAdminClient;
   idSalao: string;
   idComanda: string;
   resolvedItems: ResolvedItemPayload[];
@@ -425,7 +425,7 @@ export function isMissingRpcFunction(error: unknown, functionName: string) {
 }
 
 export async function processarCriacaoPorAgendamento(params: {
-  supabaseAdmin: SupabaseAdminClient;
+  supabaseAdmin: DatabaseAdminClient;
   idSalao: string;
   idAgendamento: string;
 }) {
@@ -560,7 +560,7 @@ export async function processarCriacaoPorAgendamento(params: {
 }
 
 export async function salvarBaseComanda(params: {
-  supabaseAdmin: SupabaseAdminClient;
+  supabaseAdmin: DatabaseAdminClient;
   idSalao: string;
   comanda: ComandaPayload;
 }) {
@@ -594,7 +594,7 @@ export async function salvarBaseComanda(params: {
 }
 
 export async function adicionarItemComanda(params: {
-  supabaseAdmin: SupabaseAdminClient;
+  supabaseAdmin: DatabaseAdminClient;
   idSalao: string;
   comanda: ComandaPayload;
   item: ItemPayload;
@@ -636,7 +636,7 @@ export async function adicionarItemComanda(params: {
 }
 
 export async function editarItemComanda(params: {
-  supabaseAdmin: SupabaseAdminClient;
+  supabaseAdmin: DatabaseAdminClient;
   idSalao: string;
   comanda: ComandaPayload;
   item: ItemPayload;
@@ -696,7 +696,7 @@ export async function editarItemComanda(params: {
 }
 
 export async function removerItemComanda(params: {
-  supabaseAdmin: SupabaseAdminClient;
+  supabaseAdmin: DatabaseAdminClient;
   idSalao: string;
   comanda: ComandaPayload;
   item: ItemPayload;
@@ -728,7 +728,7 @@ export async function removerItemComanda(params: {
 }
 
 export async function enviarComandaParaPagamento(params: {
-  supabaseAdmin: SupabaseAdminClient;
+  supabaseAdmin: DatabaseAdminClient;
   idSalao: string;
   comanda: ComandaPayload;
 }) {
@@ -784,7 +784,7 @@ export async function enviarComandaParaPagamento(params: {
 }
 
 export async function garantirComandaBase(params: {
-  supabaseAdmin: SupabaseAdminClient;
+  supabaseAdmin: DatabaseAdminClient;
   idSalao: string;
   comanda: ComandaPayload;
 }) {
@@ -823,7 +823,7 @@ export async function garantirComandaBase(params: {
 }
 
 export async function resolverItemPayload(params: {
-  supabaseAdmin: SupabaseAdminClient;
+  supabaseAdmin: DatabaseAdminClient;
   idSalao: string;
   item: ItemPayload;
 }) {

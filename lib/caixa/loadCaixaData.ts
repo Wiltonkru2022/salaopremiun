@@ -18,7 +18,7 @@ import {
   SELECT_USUARIOS_PERMISSOES,
 } from "@/lib/db/selects";
 import type { PainelSessionSnapshot } from "@/lib/painel/session-snapshot";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 
 type CaixaSupabaseClient = ReturnType<typeof createClient>;
 

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminMasterAccess } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +13,7 @@ export async function GET() {
     );
   }
 
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const { data, error } = await supabase
     .from("parceria_campanhas")
     .select("id, locais_exibicao")

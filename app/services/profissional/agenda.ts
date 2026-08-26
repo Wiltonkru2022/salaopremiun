@@ -1,5 +1,5 @@
 import { SELECT_AGENDAMENTOS } from "@/lib/db/selects";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 import { parseDiasTrabalho, parsePausas } from "@/lib/utils/agenda";
 
 /* ---------------- TYPES ---------------- */

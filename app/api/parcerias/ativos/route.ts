@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { normalizeExternalDestination } from "@/lib/parcerias/urls";
 
 export const dynamic = "force-dynamic";
@@ -90,7 +90,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ campanha: null, campanhas: [] }, { status: 200 });
   }
 
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const now = new Date().toISOString();
   const today = now.slice(0, 10);
 
@@ -210,7 +210,7 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
-    const supabase = getSupabaseAdmin() as any;
+    const supabase = getDatabaseAdmin() as any;
     const { error } = await supabase.rpc("registrar_parceria_metrica", {
       p_id_campanha: idCampanha,
       p_local_exibicao: local.slice(0, 60),

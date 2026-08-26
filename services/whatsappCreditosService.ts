@@ -8,7 +8,7 @@ import {
   criarOuBuscarCliente,
   type BillingType,
 } from "@/lib/payments/pix-provider";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import type { Json } from "@/types/database.generated";
 
 export type WhatsAppCreditoStatus =
@@ -180,7 +180,7 @@ function resolveStatus(
 export async function getWhatsappCreditosPainelData(
   idSalao: string
 ): Promise<WhatsAppCreditosPainelData> {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
 
   const [
     resumoResult,
@@ -283,7 +283,7 @@ export async function getWhatsappCreditosPainelData(
 }
 
 async function carregarSalao(idSalao: string) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data, error } = await supabase
     .from("saloes")
     .select("id, nome, responsavel, email, telefone, whatsapp, cpf_cnpj")
@@ -329,7 +329,7 @@ export async function criarWhatsappCreditosCheckout(params: {
     throw new WhatsAppCreditosServiceError("O valor maximo por recarga e R$ 2.000,00.", 400);
   }
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
 
   const { data: existente, error: existenteError } = await supabase
     .from("whatsapp_creditos_recargas")

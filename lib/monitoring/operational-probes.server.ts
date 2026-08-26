@@ -7,7 +7,7 @@ import {
   listOperationalComponents,
   type OperationalComponentDefinition,
 } from "@/lib/monitoring/operational-components";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export type ProbeStatus = "ok" | "warning" | "critical" | "unknown";
 
@@ -60,7 +60,7 @@ async function timed(operation: () => PromiseLike<unknown> | unknown, timeoutMs:
 
 async function recordProbe(component: OperationalComponentDefinition, result: ProbeResult) {
   const probeKey = getOperationalProbeKey(component);
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const { error } = await supabase.rpc("fn_operational_record_probe", {
     p_component_key: component.componentKey,
     p_probe_key: probeKey,
@@ -83,7 +83,7 @@ async function recordProbe(component: OperationalComponentDefinition, result: Pr
 
 async function databaseProbe(table: string, timeoutMs: number): Promise<ProbeResult> {
   try {
-    const supabase = getSupabaseAdmin() as any;
+    const supabase = getDatabaseAdmin() as any;
     const { result, latencyMs } = await timed(
       () => supabase.from(table).select("id").limit(1),
       Math.max(timeoutMs, DATABASE_PROBE_TIMEOUT_MS)
@@ -118,7 +118,7 @@ async function httpProbe(path: string, timeoutMs: number): Promise<ProbeResult> 
 
 async function supabaseAuthProbe(timeoutMs: number): Promise<ProbeResult> {
   try {
-    const supabase = getSupabaseAdmin();
+    const supabase = getDatabaseAdmin();
     const { result, latencyMs } = await timed(
       () => supabase.auth.admin.listUsers({ page: 1, perPage: 1 }),
       timeoutMs
@@ -132,7 +132,7 @@ async function supabaseAuthProbe(timeoutMs: number): Promise<ProbeResult> {
 
 async function storageProbe(timeoutMs: number): Promise<ProbeResult> {
   try {
-    const supabase = getSupabaseAdmin();
+    const supabase = getDatabaseAdmin();
     const { result, latencyMs } = await timed(() => supabase.storage.listBuckets(), timeoutMs);
     if (result.error) throw result.error;
     return { status: "ok", score: 100, latencyMs, reason: "Storage respondeu à listagem administrativa read-only.", evidence: { reachable: true } };
@@ -143,7 +143,7 @@ async function storageProbe(timeoutMs: number): Promise<ProbeResult> {
 
 async function realtimeProbe(timeoutMs: number): Promise<ProbeResult> {
   const started = Date.now();
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const channel = supabase.channel(`operational-health-${Date.now()}`);
 
   return new Promise<ProbeResult>((resolve) => {
@@ -248,7 +248,7 @@ async function pushProbe(timeoutMs: number): Promise<ProbeResult> {
   if (!configured) return { status: "unknown", score: 0, latencyMs: null, reason: "VAPID não está completamente configurado.", evidence: { configured: false } };
   const started = Date.now();
   try {
-    const supabase = getSupabaseAdmin() as any;
+    const supabase = getDatabaseAdmin() as any;
     const { result, latencyMs } = await timed(
       () => supabase.from("push_delivery_log").select("status, created_at").gte("created_at", new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()).order("created_at", { ascending: false }).limit(50),
       timeoutMs
@@ -265,7 +265,7 @@ async function pushProbe(timeoutMs: number): Promise<ProbeResult> {
 
 async function webhookProbe(timeoutMs: number): Promise<ProbeResult> {
   try {
-    const supabase = getSupabaseAdmin() as any;
+    const supabase = getDatabaseAdmin() as any;
     const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
     const { result, latencyMs } = await timed(
       () => supabase.from("asaas_webhook_eventos").select("status_processamento, ultimo_recebido_em").gte("ultimo_recebido_em", since).order("ultimo_recebido_em", { ascending: false }).limit(80),
@@ -287,7 +287,7 @@ async function googleCalendarProbe(timeoutMs: number): Promise<ProbeResult> {
     return { status: "unknown", score: 0, latencyMs: null, reason: "Google Calendar não está completamente configurado.", evidence: { configured: false } };
   }
   try {
-    const supabase = getSupabaseAdmin() as any;
+    const supabase = getDatabaseAdmin() as any;
     const { result, latencyMs } = await timed(
       () => supabase.from("saloes_google_calendar_connections").select("id, expires_at").eq("ativo", true).limit(1),
       timeoutMs
@@ -305,7 +305,7 @@ async function googleCalendarProbe(timeoutMs: number): Promise<ProbeResult> {
 
 async function cronProbe(timeoutMs: number): Promise<ProbeResult> {
   try {
-    const supabase = getSupabaseAdmin() as any;
+    const supabase = getDatabaseAdmin() as any;
     const expectations = [
       { name: "operational_health", maxAgeMs: 30 * 60 * 1000 },
       { name: "limpar_observabilidade", maxAgeMs: 30 * 60 * 60 * 1000 },

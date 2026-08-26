@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 import { htmlEscape, sendBrevoEmail } from "@/lib/email/brevo";
 import type { ClienteAppSession } from "@/lib/cliente-auth.server";
 import {

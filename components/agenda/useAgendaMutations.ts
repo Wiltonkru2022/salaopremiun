@@ -62,7 +62,7 @@ function requestShellNotificationsRefresh() {
 }
 
 type UseAgendaMutationsParams = {
-  supabase: ReturnType<typeof import("@/lib/supabase/client").createClient>;
+  supabase: ReturnType<typeof import("@/lib/db/client").createClient>;
   idSalao: string;
   config: ConfigSalao | null;
   modalMode: "agendamento" | "bloqueio";

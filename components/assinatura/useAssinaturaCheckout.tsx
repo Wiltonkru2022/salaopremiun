@@ -19,7 +19,7 @@ import {
 } from "./plan-utils";
 
 type UseAssinaturaCheckoutParams = {
-  supabase: ReturnType<typeof import("@/lib/supabase/client").createClient>;
+  supabase: ReturnType<typeof import("@/lib/db/client").createClient>;
   salao: SalaoRow | null;
   checkout: CheckoutResponse | null;
   planoSelecionado: string;

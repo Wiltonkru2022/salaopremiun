@@ -1,8 +1,8 @@
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { reverterEstoqueComanda, processarEstoqueComanda } from "@/lib/estoque/comanda-stock";
-import type { getSupabaseAdmin } from "@/lib/supabase/admin";
+import type { getDatabaseAdmin } from "@/lib/db/admin";
 
-type AdminClient = ReturnType<typeof getSupabaseAdmin>;
+type AdminClient = ReturnType<typeof getDatabaseAdmin>;
 
 type EstoqueFlowParams = {
   supabaseAdmin: AdminClient;

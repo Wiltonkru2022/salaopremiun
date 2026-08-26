@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { PlanAccessError, assertCanMutatePlanFeature } from "@/lib/plans/access";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 const SPECIAL_TEMPLATES: Record<string, { nome: string; descricao: string; codigo: string }> = {
   maes: {
@@ -131,7 +131,7 @@ export async function criarCampanhaCupomAction(formData: FormData) {
     redirect("/campanhas/nova?erro=Preencha%20titulo%20e%20desconto.");
   }
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data: cupom, error } = await (supabase as any).from("cupons_salao").insert({
     id_salao: usuario.id_salao,
     codigo: `${codigo}${randomBytes(2).toString("hex").toUpperCase()}`,
@@ -231,7 +231,7 @@ export async function atualizarStatusCampanhaAction(formData: FormData) {
     redirect("/campanhas?erro=Campanha%20invalida.");
   }
 
-  await (getSupabaseAdmin() as any)
+  await (getDatabaseAdmin() as any)
     .from("cupons_salao")
     .update({
       status_campanha: status,
@@ -257,7 +257,7 @@ export async function atualizarStatusCampanhaInlineAction(input: {
     return { ok: false, error: "Campanha invalida." };
   }
 
-  const { error } = await (getSupabaseAdmin() as any)
+  const { error } = await (getDatabaseAdmin() as any)
     .from("cupons_salao")
     .update({
       status_campanha: status,
@@ -296,7 +296,7 @@ export async function atualizarCampanhaAction(formData: FormData) {
     redirect(`/campanhas/${id || ""}?erro=Preencha%20o%20nome%20da%20campanha.`);
   }
 
-  const { error } = await (getSupabaseAdmin() as any)
+  const { error } = await (getDatabaseAdmin() as any)
     .from("cupons_salao")
     .update({
       nome: titulo,
@@ -336,7 +336,7 @@ export async function adicionarClienteCampanhaAction(formData: FormData) {
     redirect(`/campanhas/${idCampanha || ""}?erro=Selecione%20um%20cliente.`);
   }
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data: cliente } = await (supabase as any)
     .from("clientes")
     .select("id")
@@ -382,7 +382,7 @@ export async function removerClienteCampanhaAction(formData: FormData) {
 
   if (!idCampanha || !idCliente) redirect("/campanhas?erro=Cliente%20invalido.");
 
-  await (getSupabaseAdmin() as any)
+  await (getDatabaseAdmin() as any)
     .from("cupom_salao_clientes")
     .delete()
     .eq("id_salao", usuario.id_salao)
@@ -402,7 +402,7 @@ export async function excluirCampanhaAction(formData: FormData) {
     redirect(`/campanhas/${idCampanha || ""}?erro=Digite%20EXCLUIR%20para%20confirmar.`);
   }
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data: campanha } = await (supabase as any)
     .from("cupons_salao")
     .select("id, id_salao")
@@ -432,7 +432,7 @@ export async function excluirCampanhaAction(formData: FormData) {
 
 export async function auditarCampanhasAction() {
   const { usuario } = await requireCampaignMutation();
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
 
   const { data: cupons } = await (supabase as any)
     .from("cupons_salao")
@@ -520,7 +520,7 @@ export async function atualizarServicosCampanhaAction(formData: FormData) {
 
   if (!idCampanha) redirect("/campanhas?erro=Campanha%20invalida.");
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { error: deleteError } = await (supabase as any)
     .from("cupom_salao_servicos")
     .delete()

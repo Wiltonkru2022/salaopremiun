@@ -1,7 +1,7 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { registrarLogSistema } from "@/lib/system-logs";
 
-type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
+type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
 
 type RegistrarMovimentacaoParams = {
   idSalao: string;
@@ -23,7 +23,7 @@ type LogEstoqueParams = {
 };
 
 export function createEstoqueService(
-  supabaseAdmin: SupabaseAdminClient = getSupabaseAdmin()
+  supabaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
 ) {
   return {
     async registrarMovimentacaoManual({

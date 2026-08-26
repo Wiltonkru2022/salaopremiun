@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export type AdminCampaignEditorRow = {
   id: string;
@@ -36,7 +36,7 @@ function toInputDateTime(value?: string | null) {
 }
 
 export async function getAdminCampaignEditorData() {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data } = await supabase
     .from("campanhas")
     .select("id, nome, tipo, publico_tipo, objetivo, status, inicio_em, fim_em, filtros_json")
@@ -67,7 +67,7 @@ export async function getAdminCampaignEditorData() {
 }
 
 export async function getAdminWhatsappEditorData() {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const [{ data: packages }, { data: templates }] = await Promise.all([
     supabase
       .from("whatsapp_pacotes")

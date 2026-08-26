@@ -10,7 +10,7 @@ import {
   assertCanMutatePlanFeature,
   PlanAccessError,
 } from "@/lib/plans/access";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import type { AcaoVenda } from "@/types/vendas";
 
 const UUID_REGEX =
@@ -68,7 +68,7 @@ export function getVendaPermissionByAcao(acao: AcaoVenda) {
 }
 
 export async function validarComandaVenda(params: {
-  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   idSalao: string;
   idComanda: string;
 }) {
@@ -92,12 +92,12 @@ export async function carregarContextoVenda(params: {
 
   return {
     membership,
-    supabaseAdmin: getSupabaseAdmin(),
+    supabaseAdmin: getDatabaseAdmin(),
   };
 }
 
 export async function obterDetalhesVenda(params: {
-  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   idComanda: string;
 }) {
   const { supabaseAdmin, idComanda } = params;
@@ -154,7 +154,7 @@ export async function obterDetalhesVenda(params: {
 }
 
 export async function reabrirVenda(params: {
-  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   idSalao: string;
   idComanda: string;
   motivo?: string | null;
@@ -207,7 +207,7 @@ export async function reabrirVenda(params: {
 }
 
 export async function excluirVenda(params: {
-  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   idSalao: string;
   idComanda: string;
   motivo?: string | null;

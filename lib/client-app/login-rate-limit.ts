@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { normalizeCpf } from "@/lib/client-app/identity";
 
 const CPF_WINDOW_MINUTES = 10;
@@ -33,7 +33,7 @@ export async function assertClienteCpfLoginAllowed(params: {
   cpf: string;
   ip?: string | null;
 }) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const identityKey = buildClienteCpfIdentityKey(params.cpf);
 
   const identityQuery = supabase

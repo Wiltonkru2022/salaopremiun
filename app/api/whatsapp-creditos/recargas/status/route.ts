@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminTenantActor } from "@/lib/auth/tenant-guard";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { expireWhatsappPixRecargas } from "@/lib/whatsapp-creditos/expire-pix";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const actor = await requireAdminTenantActor();
-    const supabase = getSupabaseAdmin() as any;
+    const supabase = getDatabaseAdmin() as any;
 
     // Ao completar 24 horas, o backend consulta o estado real no Asaas.
     // Se ainda estiver em aberto, remove a cobranca no provedor antes de

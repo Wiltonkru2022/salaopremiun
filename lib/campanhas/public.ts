@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export type CampaignPublicService = {
   id: string;
@@ -57,7 +57,7 @@ export async function loadPublicCampaign(slugOrCode: string) {
   const key = String(slugOrCode || "").trim();
   if (!key) return null;
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data: campanha } = await (supabase as any)
     .from("cupons_salao")
     .select(
@@ -163,7 +163,7 @@ export async function registerCampaignClick(params: {
   idSalao: string;
   metadata?: Record<string, unknown>;
 }) {
-  await (getSupabaseAdmin() as any).from("campanha_eventos").insert({
+  await (getDatabaseAdmin() as any).from("campanha_eventos").insert({
     id_salao: params.idSalao,
     id_cupom: params.idCampanha,
     tipo: "clique",

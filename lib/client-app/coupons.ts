@@ -1,13 +1,13 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { ensureClienteContaVinculadaAoSalao } from "@/app/services/cliente-app/auth";
 
 function normalizeToken(value: string) { return String(value || "").trim(); }
 function todayIso() { return new Date().toISOString().slice(0, 10); }
 
 async function resolveCouponToken(token: string) {
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const { data: invite } = await supabase
     .from("cupom_salao_resgates")
     .select("id,id_cupom,id_salao,id_cliente,cliente_app_conta_id,token,status")
@@ -42,7 +42,7 @@ export async function redeemClienteCoupon(params: { token: string; idConta: stri
   const idConta = String(params.idConta || "").trim();
   if (!token || !idConta) return { ok: false as const, error: "Não foi possível identificar o cupom." };
 
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const resolved = await resolveCouponToken(token);
   if (!resolved?.cupom?.id) return { ok: false as const, error: "Cupom não encontrado ou inativo." };
   const { cupom, invite, privateInvite } = resolved;
@@ -131,7 +131,7 @@ export async function loadCouponRedemptionForAccount(params: { idCupom?: string 
   const idCupom = String(params.idCupom || "").trim();
   const idConta = String(params.idConta || "").trim();
   if (!idCupom || !idConta) return null;
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const [{ data: resgate }, { count: usosCliente }] = await Promise.all([
     supabase.from("cupom_salao_resgates").select("id,status").eq("id_cupom", idCupom).eq("cliente_app_conta_id", idConta).in("status", ["resgatado", "usado"]).limit(1).maybeSingle(),
     supabase.from("cupom_salao_usos").select("id", { count: "exact", head: true }).eq("id_cupom", idCupom).eq("cliente_app_conta_id", idConta),

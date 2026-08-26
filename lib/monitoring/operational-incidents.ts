@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 import { registrarLogSistema } from "@/lib/system-logs";
 
 type OperationalAlertSeverity = "baixa" | "media" | "alta" | "critica";
@@ -12,7 +12,7 @@ type WebhookIncidentPayload = {
 };
 
 type OperationalIncidentParams = {
-  supabaseAdmin: SupabaseClient;
+  supabaseAdmin: DatabaseClient;
   key: string;
   module: string;
   title: string;

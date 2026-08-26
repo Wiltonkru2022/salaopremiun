@@ -1,5 +1,5 @@
 import { recordNeonEvent } from "@/lib/neon/observability.server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { captureSystemEvent } from "@/lib/monitoring/server";
 import type { Json } from "@/types/database.generated";
 
@@ -37,7 +37,7 @@ async function registrarFalhaObservabilidade(params: {
     params.erro instanceof Error ? params.erro.message : String(params.erro);
 
   try {
-    const supabase = getSupabaseAdmin();
+    const supabase = getDatabaseAdmin();
     await supabase.from("eventos_sistema").insert({
       modulo: "system_logs",
       tipo_evento: "log_persist_failed",
@@ -80,7 +80,7 @@ export async function registrarLogSistema(params: RegistrarLogParams) {
     });
 
     if (!persistedInNeon) {
-      const supabase = getSupabaseAdmin();
+      const supabase = getDatabaseAdmin();
       await supabase.from("logs_sistema").insert({
         gravidade,
         modulo,

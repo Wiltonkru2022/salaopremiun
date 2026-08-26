@@ -1,11 +1,11 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import type { Json } from "@/types/database.generated";
 import {
   processPendingNotificationJobs,
   queueNotificationJob,
 } from "@/lib/notification-jobs";
 
-type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
+type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
 
 type ProfissionalAcessoRow = {
   id: string;
@@ -25,7 +25,7 @@ type SalaoResumoRow = {
 };
 
 export function createProfissionalAcessoService(
-  supabaseAdmin: SupabaseAdminClient = getSupabaseAdmin()
+  supabaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
 ) {
   return {
     async buscarProfissional(idProfissional: string) {

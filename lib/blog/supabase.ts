@@ -1,13 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 import type { AnySupabaseDatabase } from "@/types/supabase";
 
-type BlogSupabaseAdminClient = ReturnType<
+type BlogDatabaseAdminClient = ReturnType<
   typeof createClient<AnySupabaseDatabase>
 >;
 
 const globalStore = globalThis as typeof globalThis & {
-  __salaopremiumBlogSupabaseAdmin?: BlogSupabaseAdminClient;
-  __salaopremiumBlogSupabasePublic?: BlogSupabaseAdminClient;
+  __salaopremiumBlogSupabaseAdmin?: BlogDatabaseAdminClient;
+  __salaopremiumBlogSupabasePublic?: BlogDatabaseAdminClient;
 };
 
 export function canUseBlogSupabasePublic() {
@@ -48,7 +48,7 @@ function getBlogServiceRoleKey() {
   return value;
 }
 
-export function getBlogSupabasePublic(): BlogSupabaseAdminClient {
+export function getBlogSupabasePublic(): BlogDatabaseAdminClient {
   if (globalStore.__salaopremiumBlogSupabasePublic) {
     return globalStore.__salaopremiumBlogSupabasePublic;
   }
@@ -73,7 +73,7 @@ export function getBlogSupabasePublic(): BlogSupabaseAdminClient {
   return globalStore.__salaopremiumBlogSupabasePublic;
 }
 
-export function getBlogSupabaseAdmin(): BlogSupabaseAdminClient {
+export function getBlogSupabaseAdmin(): BlogDatabaseAdminClient {
   if (typeof window !== "undefined") {
     throw new Error("getBlogSupabaseAdmin() nao pode ser usado no client.");
   }

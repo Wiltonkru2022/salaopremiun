@@ -1,4 +1,4 @@
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 
 export async function findSalaoUsuarioByEmail(email: string) {
   const normalizedEmail = String(email || "").trim().toLowerCase();

@@ -1,7 +1,7 @@
 import "server-only";
 
 import { buscarCobranca, excluirCobranca } from "@/lib/payments/pix-provider";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 type ExpirePixOptions = {
   idSalao?: string;
@@ -21,7 +21,7 @@ const PAYMENT_CLOSED_STATUSES = new Set([
 ]);
 
 export async function expireWhatsappPixRecargas(options: ExpirePixOptions = {}) {
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const now = new Date().toISOString();
   const limit = Math.min(Math.max(Number(options.limit || 20), 1), 100);
 

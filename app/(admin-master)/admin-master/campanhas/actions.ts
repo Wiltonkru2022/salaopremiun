@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import type { Json } from "@/types/database.generated";
 
 function textValue(formData: FormData, key: string) {
@@ -29,7 +29,7 @@ function parseFilters(value: string): Json {
 
 export async function salvarCampanhaAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const id = textValue(formData, "id");
   const nome = textValue(formData, "nome");
 

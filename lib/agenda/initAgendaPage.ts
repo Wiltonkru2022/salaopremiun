@@ -1,4 +1,4 @@
-import type { SupabaseClient, User } from "@supabase/supabase-js";
+import type { DatabaseClient, User } from "@supabase/supabase-js";
 import { buildLoginRedirectUrl } from "@/lib/auth/login-redirect";
 import type { PainelSessionSnapshot } from "@/lib/painel/session-snapshot";
 import { PERMISSIONS, type PermissionKey, type UserNivel } from "@/lib/permissions";
@@ -124,7 +124,7 @@ function getAssinaturaBloqueada(params: {
 }
 
 export async function initAgendaPage(params: {
-  supabase: SupabaseClient;
+  supabase: DatabaseClient;
   safeGetAuthUser: () => Promise<User | null>;
   sessionSnapshot?: PainelSessionSnapshot | null;
 }): Promise<{

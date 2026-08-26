@@ -7,8 +7,8 @@ import {
   parseClienteSessionRestoreToken,
   type ClienteAppSession,
 } from "@/lib/cliente-auth.server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
+import { getDatabaseAdmin } from "@/lib/db/admin";
+import { asLooseDbClient } from "@/lib/db/loose-client";
 
 async function readRestoreToken(request: Request) {
   try {
@@ -20,7 +20,7 @@ async function readRestoreToken(request: Request) {
 }
 
 async function validateSessionAgainstAccount(session: ClienteAppSession) {
-  const supabase = asLooseSupabaseClient(getSupabaseAdmin());
+  const supabase = asLooseDbClient(getDatabaseAdmin());
   const { data: account, error } = await supabase
     .from("clientes_app_auth")
     .select("id, nome, email, telefone, whatsapp, ativo, auth_version")

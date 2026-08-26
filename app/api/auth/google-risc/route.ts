@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { registrarLogSistema } from "@/lib/system-logs";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -163,7 +163,7 @@ export async function POST(req: NextRequest) {
       subject.email &&
       eventTypes.some((type) => type.includes("token-revoked"))
     ) {
-      await (getSupabaseAdmin() as any)
+      await (getDatabaseAdmin() as any)
         .from("saloes_google_calendar_connections")
         .update({
           ativo: false,

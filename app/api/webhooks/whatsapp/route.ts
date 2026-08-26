@@ -1,12 +1,12 @@
 import { createHmac, timingSafeEqual } from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 function db() {
-  return getSupabaseAdmin() as any;
+  return getDatabaseAdmin() as any;
 }
 
 function validSignature(rawBody: string, signatureHeader: string | null) {

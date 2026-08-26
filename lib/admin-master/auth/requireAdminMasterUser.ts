@@ -6,7 +6,7 @@ import {
 } from "@/lib/admin-master/auth/adminMasterPermissions";
 import { ADMIN_MASTER_LOGIN_PATH } from "@/lib/admin-master/auth/login-path";
 import { readAdminMasterSession } from "@/lib/admin-master/auth/session";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export class AdminMasterAuthError extends Error {
   status: number;
@@ -72,7 +72,7 @@ async function bootstrapOwnerIfAllowed(params: {
   const ownerEmails = getOwnerEmails();
   if (!ownerEmails.includes(params.email.toLowerCase())) return null;
 
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const payload: Record<string, unknown> = {
     email: params.email.toLowerCase(),
     nome: params.nome,
@@ -133,7 +133,7 @@ export async function resolveAdminMasterAccessForIdentity(
   identity: AdminMasterIdentity,
   permission: AdminMasterPermissionKey = "dashboard_ver"
 ): Promise<AdminMasterAccessResult> {
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const email = String(identity.email || "").trim().toLowerCase();
   const nome = String(identity.nome || "").trim() || email.split("@")[0] || "Admin Master";
   const legacyUuid = isLegacyUuid(identity.id);

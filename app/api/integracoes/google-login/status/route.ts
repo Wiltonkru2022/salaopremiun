@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { emitSecurityEvent } from "@/lib/security/security-events";
 import { findSalaoUsuarioByAuthOrEmail } from "@/lib/security/salao-user-lookup";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 
 export const dynamic = "force-dynamic";
 

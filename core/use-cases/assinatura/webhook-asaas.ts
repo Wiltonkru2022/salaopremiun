@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 import {
   AsaasWebhookServiceError,
   type AsaasWebhookBody,
@@ -21,7 +21,7 @@ export async function processarWebhookAsaasUseCase(params: {
   body: AsaasWebhookBody;
   service: AsaasWebhookService;
 }) {
-  let supabaseAdmin: SupabaseClient | null = null;
+  let supabaseAdmin: DatabaseClient | null = null;
   let webhookEventId: string | null = null;
   let webhookPayload: AsaasWebhookBody | null = null;
   let event = "";

@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { canUsePlanFeature } from "@/lib/plans/access";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { auditarCampanhasAction } from "./actions";
 import PaginationLinks from "@/components/ui/PaginationLinks";
 import { PainelPageHeader } from "@/components/painel-ui";
@@ -93,7 +93,7 @@ function throwQueryError(...results: Array<{ error?: { message?: string } | null
 }
 
 async function loadCampanhasData(idSalao: string, page: number, pageSize: number) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const hoje = new Date();
   const mesAtual = String(hoje.getMonth() + 1).padStart(2, "0");
   const limiteInativos = new Date();

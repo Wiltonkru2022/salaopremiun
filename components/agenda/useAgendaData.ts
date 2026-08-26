@@ -23,7 +23,7 @@ import type {
 const AGENDA_WORKSPACE_STATE_KEY = "salaopremium:painel:agenda:workspace:v1";
 
 type UseAgendaDataParams = {
-  supabase: ReturnType<typeof import("@/lib/supabase/client").createClient>;
+  supabase: ReturnType<typeof import("@/lib/db/client").createClient>;
   router: { replace: (href: string) => void };
   loadAgendaSeqRef: MutableRefObject<number>;
   idSalao: string;

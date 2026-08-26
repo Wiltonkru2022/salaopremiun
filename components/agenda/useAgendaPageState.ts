@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import type { ComandaResumo } from "@/components/agenda/page-types";
 import type {
   Agendamento,

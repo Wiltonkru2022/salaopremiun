@@ -7,7 +7,7 @@ import {
 import { criarCampanhaCupomAction } from "../actions";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { canUsePlanFeature } from "@/lib/plans/access";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const metadata = {
   title: "Nova campanha",
@@ -36,7 +36,7 @@ function futureDate(days: number) {
 }
 
 async function loadServicos(idSalao: string) {
-  const { data } = await (getSupabaseAdmin() as any)
+  const { data } = await (getDatabaseAdmin() as any)
     .from("servicos")
     .select("id, nome, preco, preco_padrao, ativo, app_cliente_visivel")
     .eq("id_salao", idSalao)

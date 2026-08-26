@@ -9,7 +9,7 @@ import {
   PlanAccessError,
 } from "@/lib/plans/access";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 import {
   parseProcessarComissoesInput,
   processarComissoesUseCase,

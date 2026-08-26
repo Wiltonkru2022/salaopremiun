@@ -11,7 +11,7 @@ import {
   assertProdutosModuloAtivo,
   SalaoOperationalStateError,
 } from "@/lib/saloes/operational-state";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export class EstoqueMutacaoServiceError extends Error {
   constructor(
@@ -50,7 +50,7 @@ export function createEstoqueMutacaoService() {
     }) {
       try {
         await reportOperationalIncident({
-          supabaseAdmin: getSupabaseAdmin(),
+          supabaseAdmin: getDatabaseAdmin(),
           key: `estoque:movimentacao_manual:${params.idSalao}`,
           module: "estoque",
           title: "Movimentacao manual de estoque falhou",

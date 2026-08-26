@@ -4,7 +4,7 @@ import AdminMasterDataTableClient from "@/components/admin-master/AdminMasterDat
 import AdminMasterPageHeader, { AdminMasterMetricCard } from "@/components/admin-master/AdminMasterPageHeader";
 import PaginationLinks from "@/components/ui/PaginationLinks";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 25;
@@ -84,7 +84,7 @@ export default async function AdminMasterAtividadesPage({ searchParams }: { sear
   const page = Math.max(0, Number(params.pagina || 1) - 1);
   const from = page * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
 
   let auditQuery = supabase
     .from("admin_master_auditoria")

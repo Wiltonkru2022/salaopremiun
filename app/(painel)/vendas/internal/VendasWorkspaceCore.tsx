@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PainelListLoading, PainelPageHeader } from "@/components/painel-ui";
 import PaginationControls from "@/components/ui/PaginationControls";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { useRouter } from "next/navigation";
 import {
   CalendarDays,

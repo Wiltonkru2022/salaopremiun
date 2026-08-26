@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { registrarCriacaoAgendamento } from "@/lib/agenda/agendamento-audit";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 
 function normalizeTime(value: unknown) {
   return String(value || "").trim().slice(0, 5);

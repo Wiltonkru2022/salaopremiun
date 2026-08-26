@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHash, timingSafeEqual } from "node:crypto";
 import { verifyBearerSecret } from "@/lib/auth/verify-secret";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 function sha256(value: string) {
   return createHash("sha256").update(value).digest("hex");
@@ -30,7 +30,7 @@ export async function verifyOperationalHealthSchedulerRequest(req: Request) {
   if (!token || token.length < 32) return false;
 
   try {
-    const supabase = getSupabaseAdmin() as any;
+    const supabase = getDatabaseAdmin() as any;
     const { data, error } = await supabase
       .from("operational_scheduler_auth")
       .select("token_hash")

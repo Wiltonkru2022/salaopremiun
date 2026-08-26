@@ -6,7 +6,7 @@ import {
   reprocessarRecargaWhatsappAdminMaster,
 } from "@/app/(admin-master)/admin-master/whatsapp/actions";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -37,7 +37,7 @@ function statusStyle(status: string) {
 
 export default async function AdminMasterWhatsappRecargasPage() {
   await requireAdminMasterUser("whatsapp_ver");
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const now = new Date().toISOString();
 
   await supabase

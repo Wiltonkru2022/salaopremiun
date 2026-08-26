@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CheckCircle2, ClipboardCheck, Gift, RefreshCcw, SlidersHorizontal } from "lucide-react";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import type { Json } from "@/types/database.generated";
 import {
   avaliarTrialExtraSalaoAdminMaster,
@@ -172,7 +172,7 @@ function TrialRuleForm({ rule }: { rule?: TrialRule }) {
 
 export default async function AdminMasterChecklistsPage() {
   await requireAdminMasterUser("produto_ver");
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
 
   const [{ data: checklistData }, { data: trialRulesData }, { data: scoresData }, { data: historyData }] = await Promise.all([
     (supabase as any).from("checklist_itens").select("id, codigo, nome, descricao, ativo, ordem, peso, categoria, regra_json").order("ordem", { ascending: true }),

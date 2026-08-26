@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { canUsePlanFeature } from "@/lib/plans/access";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import CampanhaStatusToggle from "@/components/campanhas/CampanhaStatusToggle";
 import {
   PainelLinkButton,
@@ -105,7 +105,7 @@ async function loadCampanhaDetalhe(
   clientesPageSize: number,
   buscaCliente: string
 ) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const usosFrom = usosPage * usosPageSize;
   const usosTo = usosFrom + usosPageSize - 1;
   const clientesFrom = clientesPage * clientesPageSize;

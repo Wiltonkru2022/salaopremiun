@@ -1,5 +1,5 @@
 import { unstable_cache } from "next/cache";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 type TimedRow = {
   data: string | null;
@@ -130,7 +130,7 @@ export async function carregarPainelDashboardResumo(
       startOfDayArg: string,
       endOfDayArg: string
     ) => {
-      const supabaseAdmin = getSupabaseAdmin();
+      const supabaseAdmin = getDatabaseAdmin();
 
       const [
         { count: agendamentosHoje, error: agHojeError },

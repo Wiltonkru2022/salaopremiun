@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export async function POST() {
   const { user, usuario } = await getPainelUserContext();
@@ -15,7 +15,7 @@ export async function POST() {
     );
   }
 
-  const admin = getSupabaseAdmin() as any;
+  const admin = getDatabaseAdmin() as any;
   const { data: salao, error: loadError } = await admin
     .from("saloes")
     .select("onboarding_concluido")

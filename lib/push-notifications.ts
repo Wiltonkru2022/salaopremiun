@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { loadSalonNotificationSettings } from "@/lib/salon-notification-settings";
 import {
   classifyPushFailure,
@@ -119,7 +119,7 @@ export async function upsertPushSubscription(params: {
   userAgent?: string | null;
 }) {
   const parsed = parseSubscription(params.subscription);
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const now = new Date().toISOString();
   const { data: existing } = await (supabase as any)
     .from("push_subscriptions")
@@ -186,7 +186,7 @@ async function isClienteAppPushEnabled(clienteAppContaId?: string | null) {
   const id = String(clienteAppContaId || "").trim();
   if (!id) return false;
 
-  const { data, error } = await (getSupabaseAdmin() as any)
+  const { data, error } = await (getDatabaseAdmin() as any)
     .from("clientes_app_auth")
     .select("notificacoes_ativas, notificacao_app_ativa")
     .eq("id", id)
@@ -219,7 +219,7 @@ async function filterClienteAppSubscriptionsByPreference(
   );
   if (!ids.length) return [];
 
-  const { data, error } = await (getSupabaseAdmin() as any)
+  const { data, error } = await (getDatabaseAdmin() as any)
     .from("clientes_app_auth")
     .select("id, notificacoes_ativas, notificacao_app_ativa")
     .in("id", ids);
@@ -266,7 +266,7 @@ async function filterProfissionalAppSubscriptionsByPreference(
   );
   if (!ids.length) return [];
 
-  const { data, error } = await (getSupabaseAdmin() as any)
+  const { data, error } = await (getDatabaseAdmin() as any)
     .from("profissionais")
     .select("id, notificacoes_ativas, notificacao_app_ativa")
     .in("id", ids);
@@ -305,7 +305,7 @@ async function isProfissionalNativePushEnabled(idProfissional?: string | null) {
   const id = String(idProfissional || "").trim();
   if (!id) return false;
 
-  const { data, error } = await (getSupabaseAdmin() as any)
+  const { data, error } = await (getDatabaseAdmin() as any)
     .from("profissionais")
     .select("id, notificacoes_ativas, notificacao_app_ativa")
     .eq("id", id)
@@ -403,7 +403,7 @@ function sleep(ms: number) {
 
 async function loadSubscriptionMetadata(row: PushSubscriptionRow) {
   try {
-    const { data } = await (getSupabaseAdmin() as any)
+    const { data } = await (getDatabaseAdmin() as any)
       .from("push_subscriptions")
       .select("audience, failure_count")
       .eq("id", row.id)
@@ -435,7 +435,7 @@ async function recordPushDelivery(params: {
   deactivateSubscription?: boolean;
 }) {
   try {
-    const supabase = getSupabaseAdmin() as any;
+    const supabase = getDatabaseAdmin() as any;
     const now = new Date().toISOString();
     const metadata = await loadSubscriptionMetadata(params.row);
 
@@ -668,7 +668,7 @@ export async function broadcastPushNotification(params: {
   url?: string | null;
   idSalao?: string | null;
 }) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const title = String(params.title || "").trim();
   const body = String(params.body || "").trim();
   if (!title || !body) throw new Error("Informe titulo e mensagem.");
@@ -729,7 +729,7 @@ export async function notifySalonAboutClientBooking(params: {
 }) {
   try {
     const settings = await loadSalonNotificationSettings(params.idSalao);
-    const supabase = getSupabaseAdmin();
+    const supabase = getDatabaseAdmin();
     const [salaoResult, profissionalResult] = await Promise.all([
       (supabase as any)
         .from("push_subscriptions")
@@ -806,7 +806,7 @@ export async function notifyClientAppointmentConfirmed(params: {
     const settings = await loadSalonNotificationSettings(params.idSalao);
     if (!settings.clienteAgendamentoConfirmado) return;
 
-    const supabase = getSupabaseAdmin();
+    const supabase = getDatabaseAdmin();
     const { data: agendamento, error: appointmentError } = await (supabase as any)
       .from("agendamentos")
       .select("id, id_salao, cliente_id, servico_id, data, hora_inicio")

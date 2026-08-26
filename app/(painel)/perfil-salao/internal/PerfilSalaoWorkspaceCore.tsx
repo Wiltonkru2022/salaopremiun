@@ -46,8 +46,8 @@ import {
   buildSalaoPublicUrl,
   normalizeSalaoSlug,
 } from "@/lib/saloes/public-link";
-import { createClient } from "@/lib/supabase/client";
-import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
+import { createClient } from "@/lib/db/client";
+import { asLooseDbClient } from "@/lib/db/loose-client";
 
 import type { PasswordForm, ModalKey, TotpFactor, MfaSnapshot, TotpSetupState, PortfolioFoto, GoogleCalendarConnectionState, GoogleLoginConnectionState, SalaoProfileRow } from "./perfil-salao-support";
 import { EMPTY_PASSWORD, EMPTY_MFA_SNAPSHOT, formatAddress, formatDateTime, formatPaymentMethods, serializePaymentMethods, parseCoordinate, buscarCoordenadasEndereco, DisplayItem, SidebarAction } from "./perfil-salao-support";
@@ -611,7 +611,7 @@ export default function PerfilSalaoPage() {
       if (error) throw error;
 
       try {
-        await asLooseSupabaseClient(supabase).rpc("refresh_client_app_marketplace_cache", {
+        await asLooseDbClient(supabase).rpc("refresh_client_app_marketplace_cache", {
           p_id_salao: idSalao,
         });
       } catch {

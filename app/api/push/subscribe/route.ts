@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { getClienteSessionFromCookie } from "@/lib/cliente-auth.server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { upsertPushSubscription, type PushAudience } from "@/lib/push-notifications";
 
 function isAudience(value: unknown): value is PushAudience {
@@ -33,7 +33,7 @@ async function getSalaoPainelContext() {
 }
 
 async function listActiveClientEndpoints(clienteAppContaId: string) {
-  const { data } = await (getSupabaseAdmin() as any)
+  const { data } = await (getDatabaseAdmin() as any)
     .from("push_subscriptions")
     .select("endpoint")
     .eq("audience", "cliente_app")
@@ -55,7 +55,7 @@ async function restorePreviouslyActiveClientEndpoints(
 ) {
   if (!endpoints.length) return;
 
-  await (getSupabaseAdmin() as any)
+  await (getDatabaseAdmin() as any)
     .from("push_subscriptions")
     .update({ ativo: true })
     .eq("audience", "cliente_app")

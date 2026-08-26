@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminTenantActor } from "@/lib/auth/tenant-guard";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 const AUTOMATION_KEYS = [
   "confirmacao_agendamento",
@@ -38,7 +38,7 @@ function normalize(row?: Record<string, unknown> | null): AutomationPreferences 
 }
 
 async function loadPreferences(idSalao: string) {
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const { data, error } = await supabase
     .from("whatsapp_automacoes_saloes")
     .select(AUTOMATION_SELECT)
@@ -92,7 +92,7 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const supabase = getSupabaseAdmin() as any;
+    const supabase = getDatabaseAdmin() as any;
     const current = await loadPreferences(actor.idSalao);
     const next = { ...current, [key]: body.enabled };
 

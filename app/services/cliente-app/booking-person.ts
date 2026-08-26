@@ -2,7 +2,7 @@ import "server-only";
 
 import { createClienteAppAppointment } from "@/app/services/cliente-app/appointments";
 import { findClienteRowsByNormalizedPhone } from "@/app/services/cliente-app/linking";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { normalizeWhatsapp } from "@/lib/client-app/identity";
 
 type BookingParams = Parameters<typeof createClienteAppAppointment>[0];
@@ -26,7 +26,7 @@ async function resolvePessoaAtendida(params: {
     return { ok: false, error: "Informe um WhatsApp válido da pessoa que será atendida." };
   }
 
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const found = await findClienteRowsByNormalizedPhone({
     supabaseAdmin,
     telefone: whatsapp,
@@ -123,7 +123,7 @@ export async function createClienteAppAppointmentForPerson(
 
   if (!result.ok || !result.idAgendamento) return result;
 
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const { error } = await (supabaseAdmin as any)
     .from("agendamentos")
     .update({

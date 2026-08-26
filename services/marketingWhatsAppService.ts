@@ -1,6 +1,6 @@
 import "server-only";
 import { randomUUID } from "node:crypto";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { assertCanMutatePlanFeature } from "@/lib/plans/access";
 import {
   sendMetaWhatsAppTemplateMessage,
@@ -112,7 +112,7 @@ function renderTemplateMessage(template: WhatsAppTemplateConfig, values: string[
 }
 
 async function findTemplateByColumn(
-  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>,
   column: string,
   value: string
 ) {
@@ -135,7 +135,7 @@ async function findTemplateByColumn(
 }
 
 async function loadWhatsAppTemplateConfig(
-  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>,
   template?: string | null
 ): Promise<WhatsAppTemplateConfig | null> {
   const name = String(template || "").trim();
@@ -180,7 +180,7 @@ export async function sendManualMarketingWhatsApp({
 }: SendManualMarketingWhatsAppParams) {
   await assertCanMutatePlanFeature(idSalao, "whatsapp");
 
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const destinoNormalizado = normalizeDestino(destino);
   const envioId = randomUUID();
   const templateConfig = await loadWhatsAppTemplateConfig(supabaseAdmin, template);

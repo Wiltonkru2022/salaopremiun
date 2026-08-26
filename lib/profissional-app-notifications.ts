@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import type { ProfissionalAppNotification } from "@/lib/profissional-app-notification-contracts";
 import type { ProfissionalServerContext } from "@/lib/profissional-context.server";
 
@@ -47,7 +47,7 @@ async function fetchPasswordNotifications(
   idSalao: string,
   idProfissional: string
 ): Promise<ProfissionalAppNotification[]> {
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const { data: tickets, error: ticketsError } = await supabaseAdmin
     .from("tickets")
     .select("id, numero, origem_contexto")
@@ -117,7 +117,7 @@ async function fetchJobNotifications(
   idSalao: string,
   idProfissional: string
 ): Promise<ProfissionalAppNotification[]> {
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const { data, error } = await (supabaseAdmin as any)
     .from("notification_jobs")
     .select("id, tipo, titulo, mensagem, status, url, enviar_em, created_at, metadata")

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { validateProfissionalAppSession } from "@/lib/profissional-context.server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export async function POST(request: Request) {
   try {
@@ -16,7 +16,7 @@ export async function POST(request: Request) {
     }
 
     const context = validation.context;
-    const supabase = getSupabaseAdmin() as any;
+    const supabase = getDatabaseAdmin() as any;
     const { data: notification, error: loadError } = await supabase
       .from("notification_jobs")
       .select("id, metadata")

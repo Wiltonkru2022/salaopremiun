@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 import {
   finalizarSuporteIAUseCase,
   FinalizarSuporteIAUseCaseError,

@@ -3,7 +3,7 @@ import {
   type AdminMasterOperationalSnapshot,
   type AdminHealthOverview,
 } from "@/lib/admin-master/operability";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 
 export type HealthTone = "green" | "amber" | "red" | "blue" | "dark";
 

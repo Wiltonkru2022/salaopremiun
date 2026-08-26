@@ -1,5 +1,5 @@
 import "server-only";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { getClienteAppPublicEmail } from "@/app/services/cliente-app/linking";
 import {
   assertSalonCanAppearInClientApp,
@@ -434,7 +434,7 @@ async function filterClientAppPlanAllowed<T extends { id: string }>(items: T[]) 
 async function listVisibleClientAppSaloesLive(search: string, limit: number) {
     const term = normalizeSearch(search);
     const pageSize = Math.min(Math.max(limit, 1), 24);
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getDatabaseAdmin();
 
     let query: any = supabaseAdmin
       .from("saloes")
@@ -511,7 +511,7 @@ export async function listNearbyClientAppSaloes(params: {
     return [] as ClientAppNearbySalonListItem[];
   }
 
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const limit = Math.min(Math.max(params.limit ?? 24, 1), 50);
   const radiusKm = Math.min(Math.max(params.radiusKm ?? 20, 1), 100);
   const search = normalizeSearch(params.search);
@@ -577,7 +577,7 @@ export async function listNearbyClientAppSaloes(params: {
 async function getClientAppSalonDetailLive(idSalao: string) {
     const salao = await assertSalonCanAppearInClientApp(idSalao);
     const resolvedSalaoId = salao.id;
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getDatabaseAdmin();
 
     const [
       profissionaisResult,
@@ -766,7 +766,7 @@ export async function listClienteAppAvailableCoupons(params: {
   if (!idConta || !idSalao) return [];
 
   try {
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getDatabaseAdmin();
 
     const { data: vinculo } = await (supabaseAdmin as any)
       .from("clientes_auth")
@@ -914,7 +914,7 @@ export async function listClienteAppCouponWallet(params: {
   if (!idConta) return [];
 
   try {
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getDatabaseAdmin();
     const { data: vinculos } = await (supabaseAdmin as any)
       .from("clientes_auth")
       .select("id_cliente, id_salao, app_ativo, saloes(id, nome, nome_fantasia)")
@@ -1038,7 +1038,7 @@ export async function listClienteAppAppointments(params: {
   limit?: number;
 }) {
   try {
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getDatabaseAdmin();
     const limit = params.limit ?? 10;
     const page = Math.max(0, params.page ?? 0);
     const from = page * limit;
@@ -1204,7 +1204,7 @@ export async function getClienteAppAppointmentForReview(params: {
 }
 
 async function listClienteAppLinkedClientIds(idConta: string) {
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const { data, error } = await supabaseAdmin
     .from("clientes_auth")
     .select("id_cliente, id_salao, saloes(nome, nome_fantasia)")
@@ -1244,7 +1244,7 @@ export async function isClienteAppSalonFavorite(params: {
   idSalao: string;
 }) {
   try {
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getDatabaseAdmin();
     const { data, error } = await (supabaseAdmin as any)
       .from("clientes_app_favoritos")
       .select("id")
@@ -1269,7 +1269,7 @@ export async function listClienteAppFavoriteSaloes(params: {
   limit?: number;
 }) {
   try {
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getDatabaseAdmin();
     const limit = Math.min(Math.max(params.limit ?? 10, 1), 24);
     const page = Math.max(params.page ?? 0, 0);
     const from = page * limit;
@@ -1315,7 +1315,7 @@ export async function listClienteAppReceipts(params: {
   limit?: number;
 }) {
   try {
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getDatabaseAdmin();
     const { clientesIds, salaoByCliente } = await listClienteAppLinkedClientIds(
       params.idConta
     );
@@ -1395,7 +1395,7 @@ export async function listClienteAppWrittenReviews(params: {
       };
     }
 
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getDatabaseAdmin();
     const limit = Math.min(Math.max(params.limit ?? 10, 1), 20);
     const page = Math.max(params.page ?? 0, 0);
     const from = page * limit;
@@ -1544,7 +1544,7 @@ export async function listClienteAppSalonReviews(params: {
   }
 
   try {
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getDatabaseAdmin();
     const limit = Math.min(Math.max(params.limit ?? 10, 1), 20);
     const page = Math.max(params.page ?? 0, 0);
     const from = page * limit;
@@ -1595,7 +1595,7 @@ export async function listClienteAppNotifications(params: {
   limit?: number;
 }) {
   try {
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getDatabaseAdmin();
     const limit = Math.min(Math.max(params.limit ?? 10, 1), 20);
     const page = Math.max(params.page ?? 0, 0);
     const from = page * limit;
@@ -1650,7 +1650,7 @@ export async function listClienteAppNotifications(params: {
 
 export async function getClienteAppProfileData(params: { idConta: string }) {
   try {
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getDatabaseAdmin();
     const [{ data: conta }, { data: vinculos }] = await Promise.all([
       (supabaseAdmin as any)
         .from("clientes_app_auth")

@@ -6,7 +6,7 @@ import {
   assertCanUsePlanFeature,
   PlanAccessError,
 } from "@/lib/plans/access";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 
 function text(value: unknown) { return String(value ?? "").trim(); }
 function number(value: unknown, fallback = 0) { const n = Number(value); return Number.isFinite(n) ? n : fallback; }

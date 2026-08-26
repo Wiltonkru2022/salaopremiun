@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminMasterAccess } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -24,7 +24,7 @@ export async function POST(
     );
   }
 
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const { data: current, error: currentError } = await supabase
     .from("notificacoes_globais")
     .select("id, titulo, status")

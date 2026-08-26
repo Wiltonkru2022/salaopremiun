@@ -1,4 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 import { criarCobrancaWebhookDeAssinaturaRecorrente } from "@/lib/webhooks/asaas/recurring-charge";
 import type { PlanoSaasRow } from "@/lib/webhooks/asaas/types";
 
@@ -53,7 +53,7 @@ export type AssinaturaWebhookContextRow = {
 };
 
 type ResolveWebhookContextParams = {
-  supabaseAdmin: SupabaseClient;
+  supabaseAdmin: DatabaseClient;
   paymentId: string;
   payment: Record<string, unknown>;
   body: Record<string, unknown>;
@@ -64,7 +64,7 @@ type ResolveWebhookContextParams = {
 };
 
 export async function carregarCobrancaWebhook(
-  supabaseAdmin: SupabaseClient,
+  supabaseAdmin: DatabaseClient,
   paymentId: string
 ) {
   const { data, error } = await supabaseAdmin
@@ -101,7 +101,7 @@ export async function carregarCobrancaWebhook(
 }
 
 export async function carregarAssinaturaWebhook(
-  supabaseAdmin: SupabaseClient,
+  supabaseAdmin: DatabaseClient,
   idAssinatura: string
 ) {
   const { data, error } = await supabaseAdmin
@@ -135,7 +135,7 @@ export async function carregarAssinaturaWebhook(
 }
 
 export async function carregarPlanoWebhook(
-  supabaseAdmin: SupabaseClient,
+  supabaseAdmin: DatabaseClient,
   idPlano: string | null | undefined
 ) {
   if (!idPlano) return null;

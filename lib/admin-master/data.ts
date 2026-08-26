@@ -4,7 +4,7 @@ import {
   type AdminMasterOperationalSnapshot,
 } from "@/lib/admin-master/operability";
 import { getPlanoAccessSnapshot } from "@/lib/plans/access";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import {
   extractWebhookSourceId,
   formatWebhookDate,
@@ -304,7 +304,7 @@ function daysUntil(value?: string | null) {
 }
 
 async function countSaloesByStatus(status: string) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const result = await supabase
     .from("saloes")
     .select("id", { count: "exact", head: true })
@@ -313,7 +313,7 @@ async function countSaloesByStatus(status: string) {
 }
 
 export async function getAdminMasterShellData(): Promise<AdminMasterShellData> {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
 
   const [{ count: alertasCriticos, error: alertasError }, { count: ticketsAbertos, error: ticketsError }, { data: auditoria }] =
     await Promise.all([
@@ -353,7 +353,7 @@ export async function getAdminMasterShellData(): Promise<AdminMasterShellData> {
 }
 
 export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardData> {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   await syncAdminMasterAlerts();
   const operational = await getAdminMasterOperationalSnapshot();
   const inicioMes = new Date();
@@ -651,7 +651,7 @@ export async function getAdminMasterDashboard(): Promise<AdminMasterDashboardDat
 }
 
 export async function getAdminMasterSaloes() {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data: saloes } = await supabase
     .from("saloes")
     .select(
@@ -738,7 +738,7 @@ export async function getAdminMasterSaloes() {
 }
 
 export async function getAdminMasterSalaoDetail(idSalao: string) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const last24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const [
     { data: salao },
@@ -890,7 +890,7 @@ export async function getAdminMasterSalaoDetail(idSalao: string) {
 }
 
 export async function getAdminMasterPlanosSection(): Promise<AdminSectionData> {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const [{ data: planos }, { data: recursos }, { data: assinaturas }, { data: saloes }] = await Promise.all([
     supabase
       .from("planos_saas")
@@ -1096,7 +1096,7 @@ export async function getAdminMasterPlanosSection(): Promise<AdminSectionData> {
 }
 
 export async function getAdminMasterRecursosSection(): Promise<AdminSectionData> {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const [{ data: planos }, { data: recursos }] = await Promise.all([
     supabase
       .from("planos_saas")
@@ -1255,7 +1255,7 @@ export async function getAdminMasterRecursosSection(): Promise<AdminSectionData>
 }
 
 async function getAdminMasterFinanceiroSection(): Promise<AdminSectionData> {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const inicioMes = new Date();
   inicioMes.setDate(1);
   inicioMes.setHours(0, 0, 0, 0);
@@ -1628,7 +1628,7 @@ function buildGenericRowAction(section: string, row: Record<string, unknown>) {
 export async function getAdminMasterSection(
   section: string
 ): Promise<AdminSectionData> {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
 
   if (section === "suporte") {
     const { items, metrics } = await listAdminTickets();

@@ -1,6 +1,6 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
-type AdminClient = ReturnType<typeof getSupabaseAdmin>;
+type AdminClient = ReturnType<typeof getDatabaseAdmin>;
 
 type ComandaItemRow = {
   id: string;

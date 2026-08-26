@@ -16,7 +16,7 @@ import {
   assertProdutosModuloAtivo,
   SalaoOperationalStateError,
 } from "@/lib/saloes/operational-state";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 import {
   parseProcessarComandaInput,
   processarComandaUseCase,

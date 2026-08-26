@@ -83,7 +83,7 @@ const rows = walk(routeRoot).map((file) => {
   const source = fs.readFileSync(file, "utf8");
   const rel = toPosix(file);
   const usesServiceRole =
-    /SUPABASE_SERVICE_ROLE_KEY|getSupabaseAdmin\(|createClient\(supabaseUrl,\s*serviceRoleKey/.test(source);
+    /SUPABASE_SERVICE_ROLE_KEY|getDatabaseAdmin\(|createClient\(supabaseUrl,\s*serviceRoleKey/.test(source);
   const guards = classify(source);
   const tenantGuard = hasTenantGuard(source);
   const publicRegistration = isPublicRegistrationRoute(rel, source);

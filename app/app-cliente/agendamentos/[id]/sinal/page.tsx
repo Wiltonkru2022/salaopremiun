@@ -5,7 +5,7 @@ import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientSignalReceiptForm from "@/components/client-app/ClientSignalReceiptForm";
 import ClientBookingDraftCleanup from "@/components/client-app/ClientBookingDraftCleanup";
 import { requireClienteAppContext } from "@/lib/client-context.server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { buildPixPayload } from "@/lib/pix/brcode";
 
 function formatCurrency(value: number) {
@@ -26,7 +26,7 @@ export default async function ClienteAgendamentoSinalPage({
   const query = searchParams ? await searchParams : undefined;
   const salaoId = Array.isArray(query?.salao) ? query.salao[0] : query?.salao;
   const session = await requireClienteAppContext();
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
 
   const { data: agendamento } = await (supabaseAdmin as any)
     .from("agendamentos")

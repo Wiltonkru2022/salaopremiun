@@ -3,10 +3,10 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireClienteAppContext } from "@/lib/client-context.server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 async function loadOwnedNotification(idConta: string, id: string) {
-  const { data, error } = await (getSupabaseAdmin() as any)
+  const { data, error } = await (getDatabaseAdmin() as any)
     .from("notification_jobs")
     .select("id, metadata")
     .eq("id", id)
@@ -32,7 +32,7 @@ export async function markClienteNotificationReadAction(formData: FormData) {
   const notification = await loadOwnedNotification(session.idConta, id);
   if (!notification) return;
 
-  await (getSupabaseAdmin() as any)
+  await (getDatabaseAdmin() as any)
     .from("notification_jobs")
     .update({
       metadata: {
@@ -72,7 +72,7 @@ export async function markClienteNotificationUnreadAction(formData: FormData) {
   const metadata = { ...(notification.metadata || {}) };
   delete metadata.cliente_lida_em;
 
-  await (getSupabaseAdmin() as any)
+  await (getDatabaseAdmin() as any)
     .from("notification_jobs")
     .update({
       metadata,
@@ -87,7 +87,7 @@ export async function markClienteNotificationUnreadAction(formData: FormData) {
 
 export async function markAllClienteNotificationsReadAction() {
   const session = await requireClienteAppContext();
-  const { data } = await (getSupabaseAdmin() as any)
+  const { data } = await (getDatabaseAdmin() as any)
     .from("notification_jobs")
     .select("id, metadata")
     .eq("cliente_app_conta_id", session.idConta)
@@ -99,7 +99,7 @@ export async function markAllClienteNotificationsReadAction() {
     ((data || []) as Array<{ id: string; metadata?: Record<string, unknown> | null }>)
       .filter((item) => !item.metadata?.cliente_lida_em)
       .map((item) =>
-        (getSupabaseAdmin() as any)
+        (getDatabaseAdmin() as any)
           .from("notification_jobs")
           .update({
             metadata: {

@@ -3,7 +3,7 @@ import { ChevronRight } from "lucide-react";
 import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientNotificationSettings from "@/components/client-app/ClientNotificationSettings";
 import { requireClienteAppContext } from "@/lib/client-context.server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const metadata = {
   title: "Configurações",
@@ -11,7 +11,7 @@ export const metadata = {
 
 export default async function ClienteProfileSettingsPage() {
   const session = await requireClienteAppContext();
-  const { data } = await (getSupabaseAdmin() as any)
+  const { data } = await (getDatabaseAdmin() as any)
     .from("clientes_app_auth")
     .select("notificacoes_ativas, notificacao_app_ativa")
     .eq("id", session.idConta)

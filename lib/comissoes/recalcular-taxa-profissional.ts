@@ -2,7 +2,7 @@ import {
   AuthzError,
   requireSalaoPermission,
 } from "@/lib/auth/require-salao-permission";
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 
 type ConfigRow = {
   repassa_taxa_cliente?: boolean | null;
@@ -110,7 +110,7 @@ export async function validarPermissaoRecalculoComissao(idSalao: string) {
 }
 
 export async function recalcularTaxaProfissional(params: {
-  supabaseAdmin: SupabaseClient;
+  supabaseAdmin: DatabaseClient;
   idSalao: string;
   idComanda: string;
 }) {

@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export type NativePushAudience = "cliente_app" | "profissional_app" | "salao_painel";
 
@@ -163,7 +163,7 @@ export async function upsertNativePushDevice(params: {
   const fcmToken = sanitizeToken(params.fcmToken);
   const now = new Date().toISOString();
 
-  const { error } = await (getSupabaseAdmin() as any)
+  const { error } = await (getDatabaseAdmin() as any)
     .from("native_push_devices")
     .upsert(
       {
@@ -197,7 +197,7 @@ export async function listNativePushDevices(params: {
   idProfissional?: string | null;
   clienteAppContaId?: string | null;
 }) {
-  let query = (getSupabaseAdmin() as any)
+  let query = (getDatabaseAdmin() as any)
     .from("native_push_devices")
     .select("id, audience, fcm_token, platform, failure_count")
     .eq("ativo", true)
@@ -264,7 +264,7 @@ async function recordNativeDelivery(params: {
   deactivateDevice?: boolean;
 }) {
   try {
-    const supabase = getSupabaseAdmin() as any;
+    const supabase = getDatabaseAdmin() as any;
     const now = new Date().toISOString();
 
     if (params.status === "enviada") {

@@ -6,8 +6,8 @@ import { CheckCircle2, ChevronRight, Globe, Loader2, Sparkles } from "lucide-rea
 import AppModal from "@/components/ui/AppModal";
 import { Field, TextInput } from "@/components/configuracoes/ui";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
-import { createClient } from "@/lib/supabase/client";
-import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
+import { createClient } from "@/lib/db/client";
+import { asLooseDbClient } from "@/lib/db/loose-client";
 
 type PublicDetailsForm = {
   instagram_url: string;
@@ -206,7 +206,7 @@ export default function PublicSalonDetailsEditor() {
       if (updateError) throw updateError;
 
       try {
-        await asLooseSupabaseClient(supabase).rpc(
+        await asLooseDbClient(supabase).rpc(
           "refresh_client_app_marketplace_cache",
           { p_id_salao: idSalao }
         );

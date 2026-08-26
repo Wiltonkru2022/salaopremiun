@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { requireSalaoPermission } from "@/lib/auth/require-salao-permission";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { getPlanoAccessSnapshot } from "@/lib/plans/access";
 import { registrarCriacaoAgendamento } from "@/lib/agenda/agendamento-audit";
 import {
@@ -76,7 +76,7 @@ async function assertMonthlyLimit(params: {
   const limite = access.limites.agendamentosMensais;
   if (limite == null) return;
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const range = getMonthRange(params.date);
   const { count, error } = await (supabase as any)
     .from("agendamentos")
@@ -172,7 +172,7 @@ export async function POST(request: Request) {
     });
     const horaFim = normalizeTime(horario.horaFim);
 
-    const supabase = getSupabaseAdmin();
+    const supabase = getDatabaseAdmin();
     const [clienteResult, conflitosResult, bloqueiosResult, currentResult, comandaResult] =
       await Promise.all([
         (supabase as any)

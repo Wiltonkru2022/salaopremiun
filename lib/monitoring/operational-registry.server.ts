@@ -5,10 +5,10 @@ import {
   listOperationalComponents,
   OPERATIONAL_REGISTRY_VERSION,
 } from "@/lib/monitoring/operational-components";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export async function syncOperationalComponentRegistry() {
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const components = listOperationalComponents();
   const keys = components.map((component) => component.componentKey);
 

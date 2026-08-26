@@ -4,7 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { cookies, headers } from "next/headers";
 import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
 import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import {
   captureSystemError,
   captureSystemEvent,
@@ -643,7 +643,7 @@ async function buscarPayloadPix(paymentId: string) {
 }
 
 async function reservarCheckoutAssinatura(params: {
-  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   idSalao: string;
   planoCodigo: string;
   billingType: BillingType;
@@ -682,7 +682,7 @@ async function reservarCheckoutAssinatura(params: {
 }
 
 async function marcarCheckoutConcluido(params: {
-  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   checkoutLockId: string | null;
   idCobranca: string;
   paymentId: string;
@@ -706,7 +706,7 @@ async function marcarCheckoutConcluido(params: {
 }
 
 async function marcarCheckoutFalho(params: {
-  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   checkoutLockId: string | null;
   paymentId?: string | null;
   errorMessage: string;
@@ -730,7 +730,7 @@ async function marcarCheckoutFalho(params: {
 }
 
 async function montarCheckoutExistente(params: {
-  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   idSalao: string;
   idCobranca: string;
   planoFallback: string;
@@ -817,7 +817,7 @@ function getCardSnapshot(payment: Record<string, unknown>) {
 }
 
 async function limparAssinaturaRecorrenteCartao(params: {
-  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   assinaturaId: string;
   asaasSubscriptionId?: string | null;
   idSalao: string;
@@ -896,14 +896,14 @@ async function criarCobranca(params: {
   body: BodyInput;
   idempotencyKey: string;
 }) {
-  let supabaseAdmin: ReturnType<typeof getSupabaseAdmin> | null = null;
+  let supabaseAdmin: ReturnType<typeof getDatabaseAdmin> | null = null;
   let checkoutLockId: string | null = null;
   let checkoutPaymentId: string | null = null;
   let monitoredBody: BodyInput | null = null;
   const startedAt = Date.now();
 
   try {
-    supabaseAdmin = getSupabaseAdmin();
+    supabaseAdmin = getDatabaseAdmin();
     const body = params.body;
     monitoredBody = body;
     const idempotencyKey = params.idempotencyKey;

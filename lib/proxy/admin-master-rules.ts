@@ -3,7 +3,7 @@ import {
   redirectToAdminMasterLogin,
   type ProxyRouteContext,
 } from "@/lib/proxy/host-rules";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 function getAdminMasterOwnerEmails() {
   return String(process.env.ADMIN_MASTER_OWNER_EMAILS || "")
@@ -23,7 +23,7 @@ export async function hasAdminMasterAccess(params: {
   }
 
   try {
-    const supabaseAdmin = getSupabaseAdmin();
+    const supabaseAdmin = getDatabaseAdmin();
 
     const { data: byAuthUserId, error: byAuthUserIdError } = await supabaseAdmin
       .from("admin_master_usuarios")

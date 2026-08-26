@@ -5,7 +5,7 @@ import {
   type ObservabilityCleanupRow,
 } from "@/lib/monitoring/retention";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import type { Json } from "@/types/database.generated";
 
 const CRON_NAME = "limpar_observabilidade";
@@ -53,7 +53,7 @@ async function recordCron(
 
   if (storedInNeon) return;
 
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   await supabaseAdmin.from("eventos_cron").insert({
     nome: CRON_NAME,
     status,
@@ -65,7 +65,7 @@ async function recordCron(
 }
 
 async function archiveOldAuditLogs() {
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const cutoff = new Date(Date.now() - AUDIT_ARCHIVE_DAYS * 24 * 60 * 60 * 1000).toISOString();
   let archived = 0;
   let batches = 0;
@@ -118,7 +118,7 @@ async function archiveOldTelemetryRows(input: {
   timestampColumn: "checked_at" | "iniciado_em";
   retentionDays: number;
 }) {
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const cutoff = new Date(Date.now() - input.retentionDays * 24 * 60 * 60 * 1000).toISOString();
   let archived = 0;
   let batches = 0;
@@ -182,7 +182,7 @@ export async function limparObservabilidade() {
     operationalProbeHistoryDays: OPERATIONAL_PROBE_HISTORY_DAYS,
   });
 
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const auditArchive = await archiveOldAuditLogs();
   const probeArchive = await archiveOldTelemetryRows({
     tableName: "operational_probe_history",
@@ -277,7 +277,7 @@ export async function registrarFalhaLimpezaObservabilidade(error: unknown) {
 
   try {
     await reportOperationalIncident({
-      supabaseAdmin: getSupabaseAdmin(),
+      supabaseAdmin: getDatabaseAdmin(),
       key: "cron:limpar-observabilidade:erro",
       module: "cron_observabilidade",
       title: "Cron de limpeza de observabilidade falhou",

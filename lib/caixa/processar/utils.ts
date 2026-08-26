@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { carregarComandaDoSalao } from "@/lib/comandas/lifecycle";
 
 const UUID_REGEX =
@@ -57,7 +57,7 @@ export function isMissingRpcFunction(error: unknown, functionName: string) {
 }
 
 export async function carregarComandaBase(params: {
-  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   idSalao: string;
   idComanda: string;
 }) {
@@ -65,7 +65,7 @@ export async function carregarComandaBase(params: {
 }
 
 export async function carregarSessaoAberta(
-  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>,
+  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>,
   idSalao: string
 ) {
   const { data: sessao, error } = await supabaseAdmin

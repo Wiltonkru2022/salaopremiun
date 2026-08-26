@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
 import { getAdminMasterUserContextByAuthUserId } from "@/lib/admin-master/auth/get-admin-master-user-context.server";
 import { classifyOperationalError } from "@/lib/monitoring/error-catalog";

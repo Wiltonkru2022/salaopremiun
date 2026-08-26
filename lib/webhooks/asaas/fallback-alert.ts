@@ -1,8 +1,8 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 
 export async function registrarFalhaWebhookFallback(params: {
-  supabaseAdmin: SupabaseClient;
+  supabaseAdmin: DatabaseClient;
   webhookPayload: Record<string, unknown>;
   event: string;
   paymentId: string;

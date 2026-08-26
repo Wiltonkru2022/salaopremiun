@@ -1,8 +1,8 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DatabaseClient } from "@/lib/db/types";
 import { verifyBearerSecret } from "@/lib/auth/verify-secret";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { executarCronRenovacaoAssinaturas } from "@/lib/assinaturas/renewal-service";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export class AssinaturaCronServiceError extends Error {
   constructor(
@@ -21,15 +21,15 @@ export function createAssinaturaCronService() {
     },
 
     criarSupabaseAdmin() {
-      return getSupabaseAdmin();
+      return getDatabaseAdmin();
     },
 
-    async executarRenovacao(supabaseAdmin: SupabaseClient) {
+    async executarRenovacao(supabaseAdmin: DatabaseClient) {
       return executarCronRenovacaoAssinaturas(supabaseAdmin);
     },
 
     async reportarFalhaCron(params: {
-      supabaseAdmin: SupabaseClient | null;
+      supabaseAdmin: DatabaseClient | null;
       error: unknown;
     }) {
       if (!params.supabaseAdmin) {

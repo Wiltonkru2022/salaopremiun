@@ -14,7 +14,7 @@ import MonitoringContextBridge from "@/components/monitoring/MonitoringContextBr
 import type { Permissoes, PlanoRecursos } from "@/components/layout/navigation";
 import type { ResumoAssinatura } from "@/lib/assinatura-utils";
 import type { ShellNotification } from "@/lib/notifications/contracts";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { monitorClientOperation } from "@/lib/monitoring/client";
 
 type Props = {

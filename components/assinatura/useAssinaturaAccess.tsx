@@ -15,7 +15,7 @@ import type {
 } from "./types";
 
 type UseAssinaturaAccessParams = {
-  supabase: ReturnType<typeof import("@/lib/supabase/client").createClient>;
+  supabase: ReturnType<typeof import("@/lib/db/client").createClient>;
 };
 
 export function useAssinaturaAccess({

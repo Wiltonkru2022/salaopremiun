@@ -1,6 +1,6 @@
 import { registrarLogSistema } from "@/lib/system-logs";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
-import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
+import { getDatabaseAdmin } from "@/lib/db/admin";
+import { asLooseDbClient } from "@/lib/db/loose-client";
 
 type CreditoRow = {
   saldo_anterior?: number | string | null;
@@ -23,8 +23,8 @@ export async function registrarCreditoManualCliente(params: {
   valor: number;
   observacao: string;
 }) {
-  const supabaseAdmin = getSupabaseAdmin();
-  const supabaseRpc = asLooseSupabaseClient(supabaseAdmin);
+  const supabaseAdmin = getDatabaseAdmin();
+  const supabaseRpc = asLooseDbClient(supabaseAdmin);
   const { data: rpcData, error: rpcError } = await supabaseRpc.rpc<
     CreditoRow | CreditoRow[] | null
   >(

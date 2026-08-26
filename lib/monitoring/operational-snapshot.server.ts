@@ -10,7 +10,7 @@ import {
   type OperationalCriticality,
   type OperationalState,
 } from "@/lib/monitoring/operational-components";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export type OperationalSnapshotComponent = {
   componentKey: string;
@@ -83,7 +83,7 @@ function isDisabledEvidence(value: unknown) {
 }
 
 export async function getOperationalHealthSnapshot() {
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const registry = listOperationalComponents();
   const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();

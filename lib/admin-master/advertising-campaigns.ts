@@ -1,5 +1,5 @@
 import type { AdminSectionData, AdminTableRow } from "@/lib/admin-master/data";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 function formatDate(value?: string | null) {
   if (!value) return "Sem limite";
@@ -26,7 +26,7 @@ function partnerName(value: unknown) {
 }
 
 export async function getAdvertisingCampaignsSection(): Promise<AdminSectionData> {
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const { data, error } = await supabase
     .from("parceria_campanhas")
     .select(

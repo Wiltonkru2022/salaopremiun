@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { requireSalaoPermission } from "@/lib/auth/require-salao-permission";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { cancelarAgendamentoComComanda } from "@/lib/agenda/cancelarAgendamentoComComanda";
 import {
   notifyAppointmentCanceled,
@@ -58,7 +58,7 @@ export async function POST(request: Request) {
       status === "cancelado" ? "agenda_excluir" : "agenda_editar"
     );
 
-    const supabase = getSupabaseAdmin();
+    const supabase = getDatabaseAdmin();
     const { data: appointment, error: loadError } = await (supabase as any)
       .from("agendamentos")
       .select(

@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { requireSalaoPermission } from "@/lib/auth/require-salao-permission";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { notifyAppointmentRescheduled } from "@/lib/notification-jobs";
 import {
   buscarConfiguracaoAgendaProfissional,
@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       );
     }
 
-    const supabase = getSupabaseAdmin();
+    const supabase = getDatabaseAdmin();
     const { data: current, error: loadError } = await (supabase as any)
       .from("agendamentos")
       .select("id, data, hora_inicio, hora_fim, profissional_id, status")

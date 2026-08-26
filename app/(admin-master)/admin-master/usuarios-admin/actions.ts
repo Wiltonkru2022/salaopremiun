@@ -7,7 +7,7 @@ import {
 } from "@/lib/admin-master/auth/adminMasterPermissions";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import type { Database } from "@/types/database.generated";
 
 type AdminMasterPermissaoInsert =
@@ -27,7 +27,7 @@ function normalizeEmail(value: string) {
 
 export async function salvarUsuarioAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("usuarios_admin_editar");
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const id = textValue(formData, "id");
   const nome = textValue(formData, "nome");
   const email = normalizeEmail(textValue(formData, "email"));

@@ -12,7 +12,7 @@ import {
   Trash2,
 } from "lucide-react";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { autentiqueConfigurado } from "@/lib/parcerias/autentique";
 import { buildPartnerWhatsAppUrl, normalizeExternalDestination } from "@/lib/parcerias/urls";
 import {
@@ -68,7 +68,7 @@ function statusClass(status: string) {
 
 export default async function AdminMasterParceriasPage() {
   await requireAdminMasterUser("comunicacao_ver");
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const autentiqueAtivo = autentiqueConfigurado();
 
   const [

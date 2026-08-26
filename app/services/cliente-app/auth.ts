@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 import {
   hashClientePassword,
   verifyClientePassword,

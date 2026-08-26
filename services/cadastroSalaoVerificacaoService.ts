@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 type SalaoExistsRow = {
   id?: string | null;
@@ -17,7 +17,7 @@ export async function verificarCadastroSalaoDuplicado({
   whatsapp,
   cpfCnpj,
 }: CadastroSalaoVerificacaoPayload) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const exists = {
     email: false,
     nomeSalao: false,

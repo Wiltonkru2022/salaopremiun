@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { assertCanMutatePlanFeature } from "@/lib/plans/access";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 
 function minutes(value: string) {
   const [hour, minute] = value.slice(0, 5).split(":").map(Number);

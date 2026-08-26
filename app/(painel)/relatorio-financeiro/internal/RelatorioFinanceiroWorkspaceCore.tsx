@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import { PainelListLoading } from "@/components/painel-ui";
 import AppModal from "@/components/ui/AppModal";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import {
   BadgeDollarSign,
   CalendarDays,

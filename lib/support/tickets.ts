@@ -1,6 +1,6 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { requireProfissionalServerContext } from "@/lib/profissional-context.server";
-import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { runAdminOperation } from "@/lib/db/admin-ops";
 import { clearBackupMetadata } from "@/lib/auth/mfa-backup-codes";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import {

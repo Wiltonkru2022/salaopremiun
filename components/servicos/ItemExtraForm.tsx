@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { maskMoneyInput, parseMoneyToNumber } from "@/lib/utils/serviceMasks";

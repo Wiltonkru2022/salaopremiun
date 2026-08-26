@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { getAuthProviderForSurface } from "@/lib/platform/provider-config.server";
 import { readPainelClerkSession } from "@/lib/platform/painel-clerk-session.server";
 

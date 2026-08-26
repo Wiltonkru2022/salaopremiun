@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { AlertCircle, ArrowLeft, LockKeyhole, RefreshCcw, ShieldCheck, Sparkles } from "lucide-react";

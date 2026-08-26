@@ -9,7 +9,7 @@ import {
   PainelPageHeader,
 } from "@/components/painel-ui";
 import PaginationControls from "@/components/ui/PaginationControls";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 
 type ProdutoEstoque = {
   id: string;

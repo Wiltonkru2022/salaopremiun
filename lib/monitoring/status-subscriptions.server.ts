@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { htmlEscape, sendBrevoEmail } from "@/lib/email/brevo";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 function subscriptionSecret() {
   return String(process.env.STATUS_SUBSCRIPTION_SECRET || process.env.CRON_SECRET || "").trim();
@@ -50,7 +50,7 @@ export async function requestStatusSubscription(rawEmail: unknown) {
   if (!email) return { ok: true, accepted: false };
   if (!subscriptionSecret()) return { ok: false, accepted: false, reason: "subscription_not_configured" };
 
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const { data: existing } = await supabase
     .from("status_subscriptions")
     .select("id, status, updated_at")
@@ -114,7 +114,7 @@ export async function requestStatusSubscription(rawEmail: unknown) {
 
 export async function confirmStatusSubscription(token: string) {
   const hash = sha256(String(token || ""));
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const { data, error } = await supabase
     .from("status_subscriptions")
     .select("id, status")
@@ -140,7 +140,7 @@ export async function confirmStatusSubscription(token: string) {
 export async function unsubscribeStatus(token: string) {
   const id = verifyUnsubscribeToken(token);
   if (!id) return false;
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const { data, error } = await supabase
     .from("status_subscriptions")
     .select("unsubscribe_token_hash")
@@ -159,7 +159,7 @@ export async function sendPendingPublicStatusNotifications() {
   if (!subscriptionSecret() || !process.env.BREVO_API_KEY) {
     return { sent: 0, skipped: true };
   }
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
   const [{ data: updates }, { data: subscriptions }] = await Promise.all([
     supabase

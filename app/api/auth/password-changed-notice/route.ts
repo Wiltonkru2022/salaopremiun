@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { htmlEscape, sendBrevoEmail } from "@/lib/email/brevo";
 import { emitSecurityEvent } from "@/lib/security/security-events";
 import { findSalaoUsuarioByAuthOrEmail } from "@/lib/security/salao-user-lookup";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ message: "Sessão não informada." }, { status: 401 });
   }
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data, error } = await supabase.auth.getUser(token);
   const email = String(data?.user?.email || "").trim().toLowerCase();
 

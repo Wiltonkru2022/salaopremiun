@@ -5,7 +5,7 @@ import AdminMasterPageHeader, { AdminMasterMetricCard } from "@/components/admin
 import AdminMasterSecurityActionButton from "@/components/admin-master/AdminMasterSecurityActionButton";
 import PaginationLinks from "@/components/ui/PaginationLinks";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 25;
@@ -71,7 +71,7 @@ export default async function AdminMasterSegurancaPage({ searchParams }: { searc
   const to = from + PAGE_SIZE - 1;
   const sinceIso = new Date(Date.now() - periodHours(params.periodo) * 60 * 60 * 1000).toISOString();
   const cleanSearch = String(params.busca || "").replace(/[,%()]/g, " ").trim().slice(0, 80);
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
 
   let eventsQuery = supabase
     .from("eventos_sistema")

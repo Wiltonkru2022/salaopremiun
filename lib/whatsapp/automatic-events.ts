@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { sendManualMarketingWhatsApp } from "@/services/marketingWhatsAppService";
 
 type AutomaticEvent =
@@ -68,7 +68,7 @@ async function isAutomationEnabled(
   idSalao: string,
   event: AutomaticPreferenceEvent
 ) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data, error } = await (supabase as any)
     .from("whatsapp_automacoes_saloes")
     .select(event)
@@ -86,7 +86,7 @@ async function isAutomationEnabled(
 }
 
 async function loadAppointmentContext(idSalao: string, idAgendamento: string) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const appointmentResult = await (supabase as any)
     .from("agendamentos")
     .select(
@@ -157,7 +157,7 @@ async function loadAppointmentContext(idSalao: string, idAgendamento: string) {
 }
 
 async function loadComandaContext(idSalao: string, idComanda: string) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data: comanda, error } = await (supabase as any)
     .from("comandas")
     .select("id, numero, id_cliente, id_agendamento_principal, total, fechada_em")
@@ -316,7 +316,7 @@ function permanentFailure(message: string) {
 }
 
 export async function processPendingAutomaticWhatsAppEvents(limit = 25) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const now = new Date().toISOString();
   const { data, error } = await (supabase as any)
     .from("whatsapp_automatic_jobs")
@@ -398,7 +398,7 @@ export async function processPendingAutomaticWhatsAppEvents(limit = 25) {
 }
 
 export async function processDueWhatsAppReminders(limit = 20) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const now = new Date().toISOString();
   const since = new Date(Date.now() - 60 * 60_000).toISOString();
   const { data, error } = await (supabase as any)

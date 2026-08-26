@@ -1,5 +1,5 @@
 import { randomUUID } from "crypto";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import {
   mobileJson,
   mobileOptions,
@@ -25,7 +25,7 @@ async function loadSignalAppointment(params: {
   idAgendamento: string;
   idConta: string;
 }) {
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const { data: agendamento } = await (supabaseAdmin as any)
     .from("agendamentos")
     .select(
@@ -128,7 +128,7 @@ export async function POST(
     return mobileJson({ ok: false, message: "Envie uma imagem ou PDF." }, { status: 400 });
   }
 
-  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseAdmin = getDatabaseAdmin();
   const extension = getExtension(file);
   const storagePath = `${agendamento.id_salao}/${id}/${Date.now()}-${randomUUID()}.${extension}`;
   const { error: uploadError } = await (supabaseAdmin as any).storage

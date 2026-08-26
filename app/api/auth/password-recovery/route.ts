@@ -7,7 +7,7 @@ import {
 } from "@/lib/security/public-rate-limit";
 import { emitSecurityEvent } from "@/lib/security/security-events";
 import { findSalaoUsuarioByEmail } from "@/lib/security/salao-user-lookup";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -76,7 +76,7 @@ export async function POST(request: Request) {
       windowMs: 15 * 60 * 1000,
     });
 
-    const supabase = getSupabaseAdmin();
+    const supabase = getDatabaseAdmin();
     const usuario = await findSalaoUsuarioByEmail(email);
 
     void emitSecurityEvent({

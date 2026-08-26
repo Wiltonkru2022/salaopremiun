@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import {
   captureSystemEvent,
   registrarAcaoAutomaticaSistema,
@@ -80,7 +80,7 @@ type AdminMasterAlertRow = {
 };
 
 async function loadAlertTicketLink(params: {
-  supabase: ReturnType<typeof getSupabaseAdmin>;
+  supabase: ReturnType<typeof getDatabaseAdmin>;
   alerta: AdminMasterAlertRow;
 }) {
   if (params.alerta.id_ticket) {
@@ -164,7 +164,7 @@ async function criarTicketPorAlertaBase(params: {
   assumir?: boolean | null;
   automatico?: boolean | null;
 }) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const now = new Date().toISOString();
   const automatico = Boolean(params.automatico);
 
@@ -368,7 +368,7 @@ export async function registrarAdminMasterAuditoria(params: {
   descricao?: string | null;
   payload?: Record<string, unknown>;
 }) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   await supabase.rpc("fn_admin_master_registrar_auditoria", {
     p_id_admin_usuario: params.idAdmin,
     p_acao: params.acao,
@@ -403,7 +403,7 @@ export async function bloquearSalaoAdminMaster(params: {
   idAdmin: string;
   motivo: string;
 }) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const now = new Date().toISOString();
 
   await supabase
@@ -433,7 +433,7 @@ export async function desbloquearSalaoAdminMaster(params: {
   idAdmin: string;
   motivo: string;
 }) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const now = new Date().toISOString();
 
   await supabase
@@ -462,7 +462,7 @@ export async function trocarPlanoSalaoAdminMaster(params: {
   planoCodigo: string;
   motivo: string;
 }) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data: plano, error: planoError } = await supabase
     .from("planos_saas")
     .select("codigo, valor_mensal, limite_usuarios, limite_profissionais")
@@ -555,7 +555,7 @@ export async function ajustarVencimentoSalaoAdminMaster(params: {
   vencimentoEm: string;
   motivo: string;
 }) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const now = new Date().toISOString();
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
@@ -620,7 +620,7 @@ export async function criarNotaSalaoAdminMaster(params: {
   titulo: string;
   nota: string;
 }) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
 
   await supabase.from("admin_master_anotacoes_salao").insert({
     id_salao: params.idSalao,
@@ -644,7 +644,7 @@ export async function resolverAlertaAdminMaster(params: {
   idAdmin: string;
   motivo?: string | null;
 }) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const now = new Date().toISOString();
   const motivo =
     normalizeText(params.motivo) || "Resolvido manualmente pelo AdminMaster.";
@@ -762,7 +762,7 @@ export async function criarTicketPorCheckoutLockAdminMaster(params: {
   mensagem?: string | null;
   assumir?: boolean | null;
 }) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const now = new Date().toISOString();
 
   const { data: lock, error: lockError } = await supabase
@@ -974,7 +974,7 @@ export async function criarTicketSalaoAdminMaster(params: {
   prioridade?: string | null;
   categoria?: string | null;
 }) {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const now = new Date().toISOString();
   const assunto = normalizeText(params.assunto);
   const mensagem = normalizeText(params.mensagem);

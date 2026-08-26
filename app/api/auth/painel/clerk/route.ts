@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { getAuthProviderForSurface } from "@/lib/platform/provider-config.server";
 import { readBearerToken, verifyClerkBearerToken } from "@/lib/platform/clerk-auth.server";
 import { createPainelClerkSession } from "@/lib/platform/painel-clerk-session.server";
@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, message: "Conta Clerk sem e-mail valido." }, { status: 403 });
     }
 
-    const db = getSupabaseAdmin();
+    const db = getDatabaseAdmin();
     const { data: usuario, error } = await db
       .from("usuarios")
       .select("id, id_salao, nome, email, nivel, status")

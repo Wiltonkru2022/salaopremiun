@@ -3,7 +3,7 @@ import {
   assertPublicRateLimit,
   getPublicRateLimitIdentity,
 } from "@/lib/security/public-rate-limit";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const { data: usuario, error } = await supabase
     .from("usuarios")
     .select("id, email, auth_user_id, status")

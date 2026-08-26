@@ -13,7 +13,7 @@ import {
   parseClientVisualNoticeConfig,
   parseSaoPauloDateTimeLocal,
 } from "@/lib/client-app/visual-notifications";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 function isTarget(value: string): value is BroadcastPushTarget {
   return ["todos", "clientes", "profissionais", "saloes"].includes(value);
@@ -136,7 +136,7 @@ export async function dispararNotificacaoAdminMasterAction(formData: FormData) {
 export async function publicarAvisoVisualClienteAction(formData: FormData) {
   const access = await requireAdminMasterUser("notificacoes_editar");
   const input = readVisualForm(formData);
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const now = new Date();
   const startsAtMs = new Date(input.startsAt).getTime();
   const status = startsAtMs > now.getTime() ? "agendada" : "publicada";
@@ -179,7 +179,7 @@ export async function atualizarAvisoVisualClienteAction(formData: FormData) {
   if (!id) visualError("Aviso inválido.");
 
   const input = readVisualForm(formData);
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const { data: current, error: currentError } = await supabase
     .from("notificacoes_globais")
     .select("id, filtros_json")
@@ -230,7 +230,7 @@ export async function encerrarAvisoVisualClienteAction(formData: FormData) {
   const id = String(formData.get("id") || "").trim();
   if (!id) visualError("Aviso inválido.");
 
-  const supabase = getSupabaseAdmin() as any;
+  const supabase = getDatabaseAdmin() as any;
   const { data: current, error: currentError } = await supabase
     .from("notificacoes_globais")
     .select("id, filtros_json")

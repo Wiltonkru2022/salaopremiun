@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { createCadastroSalaoService } from "@/services/cadastroSalaoService";
 
 const DIAS = ["segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingo"] as const;
@@ -46,7 +46,7 @@ async function requireAdmin() {
 }
 
 async function loadState(idSalao: string) {
-  const db = getSupabaseAdmin() as any;
+  const db = getDatabaseAdmin() as any;
   const [salaoR, configR, serviceR, proR, productR, linkR] = await Promise.all([
     db.from("saloes").select("id,nome,whatsapp,telefone,descricao_publica,instagram_url,logo_url,foto_capa_url,cidade,onboarding_concluido,onboarding_etapa,produtos_modulo_ativo,pix_modulo_ativo,trial_ativo,trial_inicio_em,trial_fim_em,status,plano").eq("id", idSalao).maybeSingle(),
     db.from("configuracoes_salao").select("hora_abertura,hora_fechamento,dias_funcionamento,sinal_pix_chave,sinal_pix_recebedor,sinal_pix_cidade").eq("id_salao", idSalao).maybeSingle(),
@@ -68,7 +68,7 @@ async function loadState(idSalao: string) {
 }
 
 async function saveStage(idSalao: string, stage: string) {
-  const db = getSupabaseAdmin() as any;
+  const db = getDatabaseAdmin() as any;
   const { error } = await db.from("saloes").update({ onboarding_etapa: stage, updated_at: new Date().toISOString() }).eq("id", idSalao);
   if (error) throw error;
 }
@@ -88,7 +88,7 @@ export async function POST(request: Request) {
     const auth = await requireAdmin();
     if (auth.response) return auth.response;
     const idSalao = auth.idSalao!;
-    const db = getSupabaseAdmin() as any;
+    const db = getDatabaseAdmin() as any;
     const body = (await request.json().catch(() => ({}))) as Record<string, any>;
     const action = text(body.action, 40);
     const now = new Date().toISOString();

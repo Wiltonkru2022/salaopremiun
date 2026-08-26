@@ -25,7 +25,7 @@ import {
   type CaixaMovimentacao,
   type CaixaSessao,
 } from "@/lib/caixa/sessaoCaixa";
-import { createClient } from "@/lib/supabase/client";
+import { createClient } from "@/lib/db/client";
 
 export function useCaixaPageState() {
   const supabase = useMemo(() => createClient(), []);

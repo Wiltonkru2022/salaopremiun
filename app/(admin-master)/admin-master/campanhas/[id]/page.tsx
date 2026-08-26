@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import AdminMasterPageHeader, { AdminMasterMetricCard } from "@/components/admin-master/AdminMasterPageHeader";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 function dateValue(value?: string | null) {
   if (!value) return "-";
@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 export default async function AdminMasterCampanhaDetailPage({ params }: { params: Promise<{ id: string }> }) {
   await requireAdminMasterUser("comunicacao_ver");
   const { id } = await params;
-  const { data } = await getSupabaseAdmin().from("campanhas").select("id, nome, tipo, publico_tipo, objetivo, status, inicio_em, fim_em, criada_em").eq("id", id).maybeSingle();
+  const { data } = await getDatabaseAdmin().from("campanhas").select("id, nome, tipo, publico_tipo, objetivo, status, inicio_em, fim_em, criada_em").eq("id", id).maybeSingle();
   if (!data?.id) notFound();
 
   return (

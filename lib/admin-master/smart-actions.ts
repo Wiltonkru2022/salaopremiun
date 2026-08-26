@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export type AdminMasterSmartAction = {
   priority: "Crítico" | "Importante" | "Oportunidade";
@@ -15,7 +15,7 @@ function money(value: unknown) {
 }
 
 export async function getAdminMasterSmartActions(): Promise<AdminMasterSmartAction[]> {
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const now = new Date();
   const nowIso = now.toISOString();
   const today = nowIso.slice(0, 10);

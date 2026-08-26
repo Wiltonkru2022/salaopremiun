@@ -4,7 +4,7 @@ import AdminMasterPageHeader, { AdminMasterMetricCard } from "@/components/admin
 import AdminTicketQueueClient from "@/components/admin-master/tickets/AdminTicketQueueClient";
 import PaginationLinks from "@/components/ui/PaginationLinks";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import { getAdminTicketGlobalMetrics } from "@/lib/support/admin-ticket-metrics";
 import { listAdminTickets, type AdminTicketListParams } from "@/lib/support/tickets";
 
@@ -44,7 +44,7 @@ export default async function AdminMasterTicketsPage({ searchParams }: { searchP
   const params = searchParams ? await searchParams : {};
   const page = Math.max(0, int(params.pagina, 1) - 1);
   const periodDays = params.periodo && params.periodo !== "todos" ? Math.max(1, int(params.periodo, 30)) : undefined;
-  const supabase = getSupabaseAdmin();
+  const supabase = getDatabaseAdmin();
   const filters: AdminTicketListParams = {
     search: params.busca,
     status: params.status,

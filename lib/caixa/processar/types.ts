@@ -1,4 +1,4 @@
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
 export type AcaoCaixa =
   | "abrir_caixa"
@@ -42,7 +42,7 @@ export type CaixaProcessarBody = {
 };
 
 export type CaixaProcessarContext = {
-  supabaseAdmin: ReturnType<typeof getSupabaseAdmin>;
+  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   idSalao: string;
   idUsuario: string;
 };

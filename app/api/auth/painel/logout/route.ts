@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/db/server";
 import { clearPainelClerkSession } from "@/lib/platform/painel-clerk-session.server";
 
 export const dynamic = "force-dynamic";
