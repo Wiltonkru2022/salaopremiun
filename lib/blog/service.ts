@@ -1,11 +1,11 @@
 import { unstable_cache, unstable_noStore as noStore } from "next/cache";
 import type { BlogCategory, BlogPost } from "@/lib/blog/content";
 import {
-  canUseBlogSupabaseAdmin,
-  canUseBlogSupabasePublic,
-  getBlogSupabaseAdmin,
-  getBlogSupabasePublic,
-} from "@/lib/blog/supabase";
+  canUseBlogDatabase,
+  canUseBlogDatabase,
+  getBlogDatabase,
+  getBlogDatabase,
+} from "@/lib/blog/database";
 import {
   asLooseDbClient,
   type LooseDbClient,
@@ -62,7 +62,7 @@ function createEmptyMetrics(): BlogAdminMetrics {
   };
 }
 
-function canUseBlogDatabase() { return canUseBlogSupabasePublic(); }
+function canUseBlogDatabase() { return canUseBlogDatabase(); }
 function splitBody(value: string) { return value.split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean); }
 function looksLikeHtml(value: string) { return /<\/?[a-z][\s\S]*>/i.test(value); }
 function looksLikeUuid(value?: string | null) { return Boolean(String(value || "").match(/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i)); }
@@ -87,8 +87,8 @@ function isSeoBlockedBlogPost(post: BlogDbPost) {
   const slug = String(post.slug || "").toLowerCase(); const title = String(post.titulo || "").toLowerCase();
   return slug.startsWith("post-teste-automatico") || slug.startsWith("teste-automatico") || title.includes("post teste automático") || title.includes("post teste automatico");
 }
-async function getBlogDatabaseUnsafe(): Promise<LooseDbClient | null> { if (!canUseBlogDatabase()) return null; return asLooseDbClient(getBlogSupabasePublic()); }
-async function getBlogAdminDatabaseUnsafe(): Promise<LooseDbClient | null> { if (!canUseBlogSupabaseAdmin()) return null; return asLooseDbClient(getBlogSupabaseAdmin()); }
+async function getBlogDatabaseUnsafe(): Promise<LooseDbClient | null> { if (!canUseBlogDatabase()) return null; return asLooseDbClient(getBlogDatabase()); }
+async function getBlogAdminDatabaseUnsafe(): Promise<LooseDbClient | null> { if (!canUseBlogDatabase()) return null; return asLooseDbClient(getBlogDatabase()); }
 
 async function loadBlogCategories(): Promise<BlogCategory[]> {
   try { const supabase = await getBlogDatabaseUnsafe(); if (!supabase) return [];

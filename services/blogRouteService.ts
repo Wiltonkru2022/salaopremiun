@@ -1,4 +1,4 @@
-import { getBlogSupabaseAdmin } from "@/lib/blog/supabase";
+import { getBlogDatabase } from "@/lib/blog/database";
 import { asLooseDbClient } from "@/lib/db/loose-client";
 
 type BlogCategory = {
@@ -42,7 +42,7 @@ function isUnsafeCategory(category?: BlogCategory | null) {
 }
 
 async function getDefaultCategoryId() {
-  const supabase = asLooseDbClient(getBlogSupabaseAdmin());
+  const supabase = asLooseDbClient(getBlogDatabase());
   const { data: existing, error: existingError } = await supabase
     .from("blog_categorias")
     .select("id")
@@ -72,7 +72,7 @@ async function getDefaultCategoryId() {
 }
 
 async function resolveCategoryId(value: string) {
-  const supabase = asLooseDbClient(getBlogSupabaseAdmin());
+  const supabase = asLooseDbClient(getBlogDatabase());
   const cleanValue = value.trim();
 
   if (isUuid(cleanValue)) {
@@ -106,7 +106,7 @@ async function resolveCategoryId(value: string) {
 }
 
 export async function publicarPreviewBlogPost(body: Record<string, unknown>) {
-  const supabase = asLooseDbClient(getBlogSupabaseAdmin());
+  const supabase = asLooseDbClient(getBlogDatabase());
   const title = String(body.title || "").trim();
   const slug = slugifyBlogValue(String(body.slug || title));
   const categoryId = String(body.categoryId || "").trim();
@@ -150,7 +150,7 @@ export async function cadastrarNewsletterBlog(params: {
   email: string;
   postSlug?: string | null;
 }) {
-  const supabase = getBlogSupabaseAdmin();
+  const supabase = getBlogDatabase();
   const blogSupabase = asLooseDbClient(supabase);
   const { error } = await blogSupabase.from("newsletter_subscribers").upsert(
     {
@@ -169,7 +169,7 @@ export async function registrarVisualizacaoBlog(params: {
   sessionId?: string | null;
   userAgent?: string | null;
 }) {
-  const supabase = asLooseDbClient(getBlogSupabaseAdmin());
+  const supabase = asLooseDbClient(getBlogDatabase());
 
   await supabase.from("blog_views").insert({
     post_id: params.postId,
@@ -186,7 +186,7 @@ export async function registrarVisualizacaoBlog(params: {
 }
 
 export async function listarAssinantesNewsletterBlog() {
-  const supabase = asLooseDbClient(getBlogSupabaseAdmin());
+  const supabase = asLooseDbClient(getBlogDatabase());
   const { data, error } = await supabase
     .from("newsletter_subscribers")
     .select("email")

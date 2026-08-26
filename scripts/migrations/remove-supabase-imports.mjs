@@ -6,21 +6,21 @@ const skippedDirs = new Set([".git", ".next", "node_modules", "dist", "build", "
 const textExtensions = new Set([".ts", ".tsx", ".js", ".jsx", ".mjs", ".cjs"]);
 
 const replacements = [
-  ["@/lib/supabase/admin-ops", "@/lib/db/admin-ops"],
-  ["@/lib/supabase/admin", "@/lib/db/admin"],
-  ["@/lib/supabase/loose-client", "@/lib/db/loose-client"],
-  ["@/lib/supabase/client", "@/lib/db/client"],
-  ["@/lib/supabase/server", "@/lib/db/server"],
-  ["@/lib/blog/supabase", "@/lib/blog/database"],
-  ["asLooseSupabaseClient", "asLooseDbClient"],
-  ["LooseSupabaseClient", "LooseDbClient"],
-  ["LooseSupabaseQuery", "LooseDbQuery"],
-  ["getSupabaseAdmin", "getDatabaseAdmin"],
-  ["SupabaseAdminClient", "DatabaseAdminClient"],
-  ["getBlogSupabaseAdmin", "getBlogDatabase"],
-  ["getBlogSupabasePublic", "getBlogDatabase"],
-  ["canUseBlogSupabaseAdmin", "canUseBlogDatabase"],
-  ["canUseBlogSupabasePublic", "canUseBlogDatabase"],
+  ["@/lib/db/admin-ops", "@/lib/db/admin-ops"],
+  ["@/lib/db/admin", "@/lib/db/admin"],
+  ["@/lib/db/loose-client", "@/lib/db/loose-client"],
+  ["@/lib/db/client", "@/lib/db/client"],
+  ["@/lib/db/server", "@/lib/db/server"],
+  ["@/lib/blog/database", "@/lib/blog/database"],
+  ["asLooseDbClient", "asLooseDbClient"],
+  ["LooseDbClient", "LooseDbClient"],
+  ["LooseDbQuery", "LooseDbQuery"],
+  ["getDatabaseAdmin", "getDatabaseAdmin"],
+  ["DatabaseAdminClient", "DatabaseAdminClient"],
+  ["getBlogDatabase", "getBlogDatabase"],
+  ["getBlogDatabase", "getBlogDatabase"],
+  ["canUseBlogDatabase", "canUseBlogDatabase"],
+  ["canUseBlogDatabase", "canUseBlogDatabase"],
 ];
 
 function migrateSource(filePath) {
@@ -32,7 +32,7 @@ function migrateSource(filePath) {
   }
 
   content = content.replace(
-    /import\s+type\s*\{\s*(?:SupabaseClient|DatabaseClient)\s*\}\s*from\s*["']@supabase\/supabase-js["'];?/g,
+    /import\s+type\s*\{\s*(?:DatabaseClient|DatabaseClient)\s*\}\s*from\s*["']@supabase\/supabase-js["'];?/g,
     'import type { DatabaseClient } from "@/lib/db/types";'
   );
   content = content.replace(/\bSupabaseClient\b/g, "DatabaseClient");

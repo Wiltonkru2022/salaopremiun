@@ -1,4 +1,4 @@
-import { getBlogSupabaseAdmin } from "@/lib/blog/supabase";
+import { getBlogDatabase } from "@/lib/blog/database";
 import { getProviderConfig } from "@/lib/platform/provider-config.server";
 import {
   removeCloudinaryAssetByUrl,
@@ -45,7 +45,7 @@ async function ensureBlogBucket() {
     return;
   }
 
-  const supabaseAdmin = getBlogSupabaseAdmin();
+  const supabaseAdmin = getBlogDatabase();
   const { data: bucket, error: getBucketError } =
     await supabaseAdmin.storage.getBucket(BUCKET_ID);
 
@@ -74,7 +74,7 @@ async function ensureBlogBucket() {
 async function uploadToSupabase(params: { file: File; placement: string; isVideo: boolean }) {
   await ensureBlogBucket();
 
-  const supabaseAdmin = getBlogSupabaseAdmin();
+  const supabaseAdmin = getBlogDatabase();
   const safePlacement = params.placement.replace(/[^a-z0-9-]/gi, "-").toLowerCase();
   const path = `${safePlacement}/${new Date()
     .toISOString()
@@ -158,7 +158,7 @@ export async function removeBlogMedia(publicUrl: string) {
     throw new Error("URL de midia invalida para remocao.");
   }
 
-  const supabaseAdmin = getBlogSupabaseAdmin();
+  const supabaseAdmin = getBlogDatabase();
   const { error } = await supabaseAdmin.storage.from(BUCKET_ID).remove([path]);
 
   if (error) {
