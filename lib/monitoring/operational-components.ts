@@ -110,7 +110,7 @@ function normalizeLegacyComponent(
     return {
       ...normalized,
       name: "Atualização em tempo real",
-      description: "Atualizações reativas da aplicação sem dependência de Supabase Realtime.",
+      description: "Atualizações reativas da aplicação pela infraestrutura atual da plataforma.",
       category: "Plataforma",
     };
   }
