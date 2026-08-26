@@ -12,7 +12,7 @@ function normalizeProvider<T extends string>(
   return allowed.includes(normalized) ? normalized : fallback;
 }
 
-function getConfiguredAdminAuthProvider() {
+function getLegacyAdminAuthProvider() {
   return normalizeProvider<AdminAuthProvider>(
     process.env.ADMIN_AUTH_PROVIDER,
     ["supabase", "clerk"],
@@ -21,12 +21,24 @@ function getConfiguredAdminAuthProvider() {
 }
 
 export function getAuthProviderForSurface(surface: AuthSurface) {
-  if (surface === "admin-master" || surface === "painel") {
-    return getConfiguredAdminAuthProvider();
+  if (surface === "admin-master") {
+    return normalizeProvider<AdminAuthProvider>(
+      process.env.ADMIN_MASTER_AUTH_PROVIDER,
+      ["supabase", "clerk"],
+      getLegacyAdminAuthProvider()
+    );
+  }
+
+  if (surface === "painel") {
+    return normalizeProvider<AdminAuthProvider>(
+      process.env.PAINEL_AUTH_PROVIDER,
+      ["supabase", "clerk"],
+      getLegacyAdminAuthProvider()
+    );
   }
 
   // Cliente e Profissional continuam usando os fluxos próprios existentes.
-  // Nunca devem ser migrados implicitamente quando ADMIN_AUTH_PROVIDER mudar.
+  // Nunca devem ser migrados implicitamente quando algum provider administrativo mudar.
   return "supabase" as const;
 }
 
@@ -35,7 +47,8 @@ export function isClerkEnabledForSurface(surface: AuthSurface) {
 }
 
 export function getProviderConfig() {
-  const adminAuth = getConfiguredAdminAuthProvider();
+  const adminMasterAuth = getAuthProviderForSurface("admin-master");
+  const painelAuth = getAuthProviderForSurface("painel");
 
   return {
     database: normalizeProvider<DatabaseProvider>(
@@ -43,9 +56,9 @@ export function getProviderConfig() {
       ["supabase", "neon"],
       "supabase"
     ),
-    adminAuth,
-    adminMasterAuth: getAuthProviderForSurface("admin-master"),
-    painelAuth: getAuthProviderForSurface("painel"),
+    adminAuth: getLegacyAdminAuthProvider(),
+    adminMasterAuth,
+    painelAuth,
     clienteAuth: getAuthProviderForSurface("cliente"),
     profissionalAuth: getAuthProviderForSurface("profissional"),
     media: normalizeProvider<MediaProvider>(
@@ -80,10 +93,11 @@ export function assertProviderReadiness() {
   if (config.database === "neon" && !config.neonReady) {
     throw new Error("DATABASE_PROVIDER=neon sem NEON_DATABASE_URL.");
   }
-  if (config.adminAuth === "clerk" && !config.clerkReady) {
-    throw new Error(
-      "ADMIN_AUTH_PROVIDER=clerk sem credenciais Clerk completas."
-    );
+  if (
+    (config.adminMasterAuth === "clerk" || config.painelAuth === "clerk") &&
+    !config.clerkReady
+  ) {
+    throw new Error("Clerk ativo em área administrativa sem credenciais completas.");
   }
   if (config.media === "cloudinary" && !config.cloudinaryReady) {
     throw new Error(
