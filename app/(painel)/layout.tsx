@@ -7,10 +7,7 @@ import PartnerAdSlot from "@/components/parcerias/PartnerAdSlot";
 import { loadPainelShellData } from "@/lib/painel/load-painel-shell-data";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { hasAal2 } from "@/lib/auth/mfa-assurance";
-import {
-  getRawSupabaseAdminForRollback,
-  getSupabaseAdmin,
-} from "@/lib/supabase/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import "./painel-clean.css";
 
 export const metadata: Metadata = {
@@ -32,24 +29,18 @@ async function loadOnboardingState(client: any, idSalao: string) {
 
 async function requireOnboardingConcluido() {
   const { user, usuario } = await getPainelUserContext({ allowAdminAal1: true });
-  if (!user || !usuario?.id_salao) redirect("/login?motivo=sessao_expirada");
+  if (!user || !usuario?.id_salao) {
+    redirect("https://login.salaopremiun.com.br/login-clerk?motivo=sessao_expirada&returnTo=/dashboard");
+  }
 
   if (String(usuario.nivel || "").toLowerCase() === "admin" && !(await hasAal2())) {
     redirect("/seguranca/mfa?next=/dashboard");
   }
 
-  const admin = getSupabaseAdmin() as any;
-  let result = await loadOnboardingState(admin, usuario.id_salao);
-
-  if (result.error || !result.data) {
-    console.error("[PAINEL_ONBOARDING_PRIMARY_READ_ERROR]", result.error);
-
-    // Durante a migração Neon, a cópia Supabase permanece como fonte de rollback.
-    // Só liberamos o painel se essa fonte também confirmar explicitamente o onboarding.
-    const rollbackAdmin = getRawSupabaseAdminForRollback() as any;
-    result = await loadOnboardingState(rollbackAdmin, usuario.id_salao);
-  }
-
+  // getSupabaseAdmin e apenas o nome legado do adaptador central; com
+  // DATABASE_PROVIDER=neon esta leitura vai exclusivamente para o Neon.
+  const database = getSupabaseAdmin() as any;
+  const result = await loadOnboardingState(database, usuario.id_salao);
   const data = result.data as OnboardingState | null;
   const error = result.error;
 
@@ -72,8 +63,8 @@ export default async function PainelLayout({ children }: { children: React.React
       <main className="min-h-screen bg-zinc-50 p-6">
         <div className="mx-auto max-w-xl rounded-[28px] border border-amber-200 bg-white p-6 shadow-sm">
           <h1 className="text-xl font-black text-zinc-950">Não foi possível validar seu cadastro</h1>
-          <p className="mt-2 text-sm leading-6 text-zinc-600">Por segurança, o painel só é liberado depois que o sistema confirma a conclusão da configuração inicial. Atualize a página para tentar novamente.</p>
-          <Link href="/onboarding-salao" className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-5 text-sm font-bold text-white">Ver configuração inicial</Link>
+          <p className="mt-2 text-sm leading-6 text-zinc-600">O painel não conseguiu confirmar sua configuração no banco principal. Atualize a página para tentar novamente.</p>
+          <Link href="/dashboard" className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-5 text-sm font-bold text-white">Tentar novamente</Link>
         </div>
       </main>
     );
