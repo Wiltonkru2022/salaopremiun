@@ -5,18 +5,18 @@ on:
     branches: [main, principal]
   pull_request:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-latest
 
-    env:
-      NEXT_PUBLIC_SUPABASE_URL: https://rcyoqfmduockncbztmen.supabase.co
-      NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_T_BPx7iurGWoYHJgbWEYNw_s_6VqoIf
-      NEXT_PUBLIC_SUPABASE_ANON_KEY: sb_publishable_T_BPx7iurGWoYHJgbWEYNw_s_6VqoIf
-
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
 
       - name: Upload main source snapshot
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
@@ -35,13 +35,25 @@ jobs:
           node-version: 22
           cache: npm
 
-      # Temporario durante o cutover Neon: package.json ganhou o driver Neon e o
-      # lockfile legado ainda sera normalizado depois da estabilizacao em producao.
+      - name: Normalize legacy database imports to Neon
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          node scripts/migrations/remove-supabase-imports.mjs
+          if git diff --quiet; then
+            echo "No Neon migration changes"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add -A
+            git commit -m "chore: apply Neon migration"
+            git push origin HEAD:main
+          fi
+
       - name: Install
         run: npm install --no-audit --no-fund
 
       - name: Install App Profissional PWA
-        run: npm --prefix apps/app-profissional-vite ci
+        run: npm --prefix apps/app-profissional-vite install --no-audit --no-fund
 
       - name: Guard public repository secrets
         run: node scripts/audit/public-secret-scan.mjs
