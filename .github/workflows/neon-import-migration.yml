@@ -1,0 +1,36 @@
+name: Neon import migration
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "scripts/migrations/remove-supabase-imports.mjs"
+      - ".github/workflows/neon-import-migration.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  migrate:
+    if: ${{ !contains(github.event.head_commit.message, 'chore: apply Neon migration') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Rewrite legacy imports
+        run: node scripts/migrations/remove-supabase-imports.mjs
+      - name: Commit migration
+        run: |
+          if git diff --quiet; then
+            echo "No migration changes"
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: apply Neon migration"
+          git push origin HEAD:main
