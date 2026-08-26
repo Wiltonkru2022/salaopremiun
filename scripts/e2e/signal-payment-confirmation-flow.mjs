@@ -1,10 +1,10 @@
 import { chromium } from "playwright";
-import { createClient } from "@supabase/supabase-js";
+import { Pool } from "@neondatabase/serverless";
 import fs from "node:fs";
 import { loadLocalEnv, requireEnv } from "../lib/load-env.mjs";
 
 loadLocalEnv();
-requireEnv(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
+requireEnv(["NEON_ADMIN_DATABASE_URL"]);
 
 const accounts = JSON.parse(
   fs.readFileSync(
@@ -18,11 +18,7 @@ const baseUrl = (
   "http://localhost:3000"
 ).replace(/\/$/, "");
 const premium = accounts.salons.premium;
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { persistSession: false, autoRefreshToken: false } }
-);
+const pool = new Pool({ connectionString: process.env.NEON_ADMIN_DATABASE_URL });
 const marker = `codex-signal-${Date.now()}`;
 const report = { baseUrl, marker, checks: [], ok: false };
 
@@ -42,27 +38,34 @@ function tomorrowAt(hour = 11) {
   };
 }
 
+async function query(text, values = []) {
+  const client = await pool.connect();
+  try {
+    return await client.query(text, values);
+  } finally {
+    client.release();
+  }
+}
+
 async function getIds() {
-  const [{ data: cliente }, { data: profissional }, { data: servico }] =
-    await Promise.all([
-      supabase
-        .from("clientes")
-        .select("id")
-        .eq("id_salao", premium.idSalao)
-        .eq("email", accounts.client.email)
-        .maybeSingle(),
-      supabase
-        .from("profissionais")
-        .select("id, nome, nome_exibicao")
-        .eq("id_salao", premium.idSalao)
-        .eq("cpf", premium.professionalCpf)
-        .maybeSingle(),
-      supabase
-        .from("servicos")
-        .select("id, duracao_minutos")
-        .eq("id", premium.serviceIds[0])
-        .maybeSingle(),
-    ]);
+  const [clienteResult, profissionalResult, servicoResult] = await Promise.all([
+    query(
+      "select id from clientes where id_salao = $1 and email = $2 limit 1",
+      [premium.idSalao, accounts.client.email]
+    ),
+    query(
+      "select id, nome, nome_exibicao from profissionais where id_salao = $1 and cpf = $2 limit 1",
+      [premium.idSalao, premium.professionalCpf]
+    ),
+    query(
+      "select id, duracao_minutos from servicos where id = $1 limit 1",
+      [premium.serviceIds[0]]
+    ),
+  ]);
+
+  const cliente = clienteResult.rows?.[0];
+  const profissional = profissionalResult.rows?.[0];
+  const servico = servicoResult.rows?.[0];
 
   if (!cliente?.id || !profissional?.id || !servico?.id) {
     throw new Error("Contas E2E necessárias não encontradas.");
@@ -78,56 +81,54 @@ async function getIds() {
 }
 
 async function cleanup() {
-  const { data: rows } = await supabase
-    .from("agendamentos")
-    .select("id, sinal_comprovante_path")
-    .eq("id_salao", premium.idSalao)
-    .like("observacoes", `%${marker}%`);
-
-  for (const row of rows || []) {
-    if (row.sinal_comprovante_path) {
-      await supabase.storage
-        .from("agendamento-comprovantes")
-        .remove([String(row.sinal_comprovante_path)]);
-    }
-  }
-
-  await supabase
-    .from("agendamentos")
-    .delete()
-    .eq("id_salao", premium.idSalao)
-    .like("observacoes", `%${marker}%`);
+  await query(
+    "delete from agendamentos where id_salao = $1 and observacoes like $2",
+    [premium.idSalao, `%${marker}%`]
+  );
 }
 
 async function seedAppointment(ids) {
   const slot = tomorrowAt(11);
-  const { data, error } = await supabase
-    .from("agendamentos")
-    .insert({
-      id_salao: premium.idSalao,
-      cliente_id: ids.idCliente,
-      profissional_id: ids.idProfissional,
-      servico_id: ids.idServico,
-      data: slot.data,
-      hora_inicio: slot.inicio,
-      hora_fim: slot.fim,
-      duracao_minutos: ids.duracao,
-      status: "reservado_aguardando_pagamento",
-      sinal_status: "aguardando_pagamento",
-      sinal_valor: 15.98,
-      sinal_percentual: 20,
-      sinal_pix_chave: premium.professionalCpf,
-      sinal_pix_recebedor: ids.profissionalNome,
-      sinal_pix_cidade: "Tres Lagoas",
-      sinal_confirmacao_responsavel: "profissional",
-      reserva_expira_em: new Date(Date.now() + 30 * 60 * 1000).toISOString(),
-      origem: "codex_e2e",
-      observacoes: marker,
-    })
-    .select("id")
-    .single();
-  if (error || !data?.id) throw error || new Error("Não foi possível criar a reserva E2E.");
-  return { id: data.id, data: slot.data };
+  const result = await query(
+    `insert into agendamentos (
+      id_salao, cliente_id, profissional_id, servico_id, data, hora_inicio, hora_fim,
+      duracao_minutos, status, sinal_status, sinal_valor, sinal_percentual,
+      sinal_pix_chave, sinal_pix_recebedor, sinal_pix_cidade,
+      sinal_confirmacao_responsavel, reserva_expira_em, origem, observacoes
+    ) values (
+      $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19
+    ) returning id`,
+    [
+      premium.idSalao,
+      ids.idCliente,
+      ids.idProfissional,
+      ids.idServico,
+      slot.data,
+      slot.inicio,
+      slot.fim,
+      ids.duracao,
+      "reservado_aguardando_pagamento",
+      "aguardando_pagamento",
+      15.98,
+      20,
+      premium.professionalCpf,
+      ids.profissionalNome,
+      "Tres Lagoas",
+      "profissional",
+      new Date(Date.now() + 30 * 60 * 1000).toISOString(),
+      "codex_e2e",
+      marker,
+    ]
+  );
+  const id = result.rows?.[0]?.id;
+  if (!id) throw new Error("Não foi possível criar a reserva E2E.");
+  return { id, data: slot.data };
+}
+
+async function loadAppointment(id, columns) {
+  const safeColumns = columns.join(", ");
+  const result = await query(`select ${safeColumns} from agendamentos where id = $1 limit 1`, [id]);
+  return result.rows?.[0] || null;
 }
 
 async function loginCliente(page) {
@@ -187,14 +188,13 @@ async function run() {
     });
     check("cliente envia comprovante e retorna com sucesso", true, page.url());
 
-    const { data: sent, error: sentError } = await supabase
-      .from("agendamentos")
-      .select(
-        "status, sinal_status, sinal_comprovante_path, sinal_comprovante_nome, sinal_confirmacao_responsavel"
-      )
-      .eq("id", appointment.id)
-      .maybeSingle();
-    if (sentError) throw sentError;
+    const sent = await loadAppointment(appointment.id, [
+      "status",
+      "sinal_status",
+      "sinal_comprovante_path",
+      "sinal_comprovante_nome",
+      "sinal_confirmacao_responsavel",
+    ]);
     check(
       "comprovante altera status para confirmação profissional",
       sent?.status === "aguardando_confirmacao_profissional" &&
@@ -219,14 +219,14 @@ async function run() {
     });
     check("profissional confirma o Pix", true, page.url());
 
-    const { data: confirmed, error: confirmedError } = await supabase
-      .from("agendamentos")
-      .select(
-        "status, sinal_status, sinal_confirmado_por_tipo, sinal_confirmado_por_id, sinal_confirmado_por_nome, reserva_expira_em"
-      )
-      .eq("id", appointment.id)
-      .maybeSingle();
-    if (confirmedError) throw confirmedError;
+    const confirmed = await loadAppointment(appointment.id, [
+      "status",
+      "sinal_status",
+      "sinal_confirmado_por_tipo",
+      "sinal_confirmado_por_id",
+      "sinal_confirmado_por_nome",
+      "reserva_expira_em",
+    ]);
     check(
       "confirmação do profissional fecha o sinal e a reserva",
       confirmed?.status === "confirmado" &&
@@ -242,6 +242,7 @@ async function run() {
   } finally {
     await browser.close();
     await cleanup();
+    await pool.end();
   }
 }
 
