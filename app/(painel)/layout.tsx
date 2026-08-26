@@ -7,7 +7,7 @@ import PartnerAdSlot from "@/components/parcerias/PartnerAdSlot";
 import { loadPainelShellData } from "@/lib/painel/load-painel-shell-data";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { hasAal2 } from "@/lib/auth/mfa-assurance";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import "./painel-clean.css";
 
 export const metadata: Metadata = {
@@ -37,9 +37,7 @@ async function requireOnboardingConcluido() {
     redirect("/seguranca/mfa?next=/dashboard");
   }
 
-  // getSupabaseAdmin e apenas o nome legado do adaptador central; com
-  // DATABASE_PROVIDER=neon esta leitura vai exclusivamente para o Neon.
-  const database = getSupabaseAdmin() as any;
+  const database = getDatabaseAdmin();
   const result = await loadOnboardingState(database, usuario.id_salao);
   const data = result.data as OnboardingState | null;
   const error = result.error;
