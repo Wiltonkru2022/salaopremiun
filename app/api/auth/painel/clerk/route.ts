@@ -29,8 +29,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: false, message: "Conta Clerk sem e-mail valido." }, { status: 403 });
     }
 
-    const supabase = getSupabaseAdmin();
-    const { data: usuario, error } = await supabase
+    const db = getSupabaseAdmin();
+    const { data: usuario, error } = await db
       .from("usuarios")
       .select("id, id_salao, nome, email, nivel, status")
       .ilike("email", identity.email)
@@ -45,7 +45,7 @@ export async function POST(request: Request) {
     }
 
     const isAdmin = String(usuario.nivel || "").trim().toLowerCase() === "admin";
-    if (isAdmin && !identity.mfaVerified) {
+    if (isAdmin && identity.mfaEnrolled && !identity.mfaVerified) {
       return NextResponse.json(
         { ok: false, mfaRequired: true, message: "Conclua o segundo fator no Clerk para entrar como administrador." },
         { status: 403 }
@@ -60,7 +60,7 @@ export async function POST(request: Request) {
       email: usuario.email ? String(usuario.email) : identity.email,
       nivel: usuario.nivel ? String(usuario.nivel) : null,
       status: usuario.status ? String(usuario.status) : null,
-      mfaVerified: identity.mfaVerified,
+      mfaVerified: identity.mfaVerified || !identity.mfaEnrolled,
     });
 
     const body = (await request.json().catch(() => ({}))) as { next?: unknown };
