@@ -1,6 +1,7 @@
 import { registrarLogSistema } from "@/lib/system-logs";
 import { geocodeSalonAddress } from "@/lib/saloes/geocoding";
 import { getDatabaseAdmin } from "@/lib/db/admin";
+import { createClerkUser, deleteClerkUser } from "@/lib/platform/clerk-admin.server";
 
 const TRIAL_GRATIS_DIAS = 15;
 const TRIAL_LIMITE_ILIMITADO = 999;
@@ -97,7 +98,7 @@ export function createCadastroSalaoService() {
     async verificarDuplicidade(
       payload: CadastroSalaoPayloadNormalizado
     ): Promise<CadastroDuplicidade> {
-      const supabaseAdmin = getDatabaseAdmin();
+      const database = getDatabaseAdmin();
       const exists: CadastroDuplicidade = {
         email: false,
         nomeSalao: false,
@@ -107,7 +108,7 @@ export function createCadastroSalaoService() {
       const checks: PromiseLike<void>[] = [];
 
       checks.push(
-        supabaseAdmin
+        database
           .from("saloes")
           .select("id")
           .eq("email", payload.emailNormalizado)
@@ -119,7 +120,7 @@ export function createCadastroSalaoService() {
       );
 
       checks.push(
-        supabaseAdmin
+        database
           .from("saloes")
           .select("id")
           .ilike("nome", payload.nomeSalaoNormalizado)
@@ -132,7 +133,7 @@ export function createCadastroSalaoService() {
 
       if (payload.whatsappNormalizado) {
         checks.push(
-          supabaseAdmin
+          database
             .from("saloes")
             .select("id")
             .or(
@@ -148,10 +149,12 @@ export function createCadastroSalaoService() {
 
       if (payload.cpfCnpjLimpo) {
         checks.push(
-          supabaseAdmin
+          database
             .from("saloes")
             .select("id")
-            .or(`cpf_cnpj.eq.${payload.cpfCnpjLimpo},cpf_cnpj.ilike.%${payload.cpfCnpjLimpo}%`)
+            .or(
+              `cpf_cnpj.eq.${payload.cpfCnpjLimpo},cpf_cnpj.ilike.%${payload.cpfCnpjLimpo}%`
+            )
             .limit(1)
             .maybeSingle()
             .then(({ data }: { data: { id?: string | null } | null }) => {
@@ -165,40 +168,35 @@ export function createCadastroSalaoService() {
     },
 
     async criarUsuarioAuth(params: { email: string; senha: string; nome: string }) {
-      const supabaseAdmin = getDatabaseAdmin();
-      const { data, error } = await supabaseAdmin.auth.admin.createUser({
-        email: params.email,
-        password: params.senha,
-        email_confirm: true,
-        user_metadata: {
+      try {
+        const user = await createClerkUser({
+          email: params.email,
+          password: params.senha,
           nome: params.nome,
-        },
-      });
-
-      if (error || !data.user) {
+          publicMetadata: { origem: "cadastro_salao" },
+        });
+        return { id: user.id };
+      } catch (error) {
         throw new CadastroSalaoServiceError(
-          error?.message || "Erro ao criar usuário.",
+          error instanceof Error ? error.message : "Erro ao criar usuário Clerk.",
           400
         );
       }
-
-      return data.user;
     },
 
     async excluirUsuarioAuth(userId: string) {
-      const supabaseAdmin = getDatabaseAdmin();
-      await supabaseAdmin.auth.admin.deleteUser(userId);
+      await deleteClerkUser(userId).catch(() => undefined);
     },
 
     async cadastrarSalaoTransacional(params: {
       authUserId: string;
       payload: CadastroSalaoPayloadNormalizado;
     }) {
-      const supabaseAdmin = getDatabaseAdmin();
-      const { data, error } = await supabaseAdmin.rpc(
-        "fn_cadastrar_salao_transacional",
+      const database = getDatabaseAdmin();
+      const { data, error } = await database.rpc(
+        "fn_cadastrar_salao_transacional_clerk",
         {
-          p_auth_user_id: params.authUserId,
+          p_clerk_user_id: params.authUserId,
           p_email: params.payload.emailNormalizado,
           p_nome_salao: params.payload.nomeSalaoNormalizado,
           p_responsavel: params.payload.responsavelNormalizado,
@@ -226,7 +224,7 @@ export function createCadastroSalaoService() {
       if (error || !idSalao) {
         throw new CadastroSalaoServiceError(
           error?.message ||
-            "Erro ao criar salão em transação. Verifique a migration fn_cadastrar_salao_transacional.",
+            "Erro ao criar salão no Neon com identidade Clerk.",
           400
         );
       }
@@ -241,7 +239,7 @@ export function createCadastroSalaoService() {
       }).catch(() => null);
 
       if (coordinates) {
-        const { error: coordenadasError } = await supabaseAdmin
+        const { error: coordenadasError } = await database
           .from("saloes")
           .update({
             latitude: coordinates.latitude,
@@ -270,7 +268,7 @@ export function createCadastroSalaoService() {
     },
 
     async ativarTrialInicial(idSalao: string) {
-      const supabaseAdmin = getDatabaseAdmin();
+      const database = getDatabaseAdmin();
       const agora = new Date();
       const trialFim = new Date(agora);
       trialFim.setDate(trialFim.getDate() + TRIAL_GRATIS_DIAS);
@@ -279,7 +277,7 @@ export function createCadastroSalaoService() {
       const trialFimIso = trialFim.toISOString();
       const vencimentoEm = trialFimIso.slice(0, 10);
 
-      const { error: assinaturaError } = await supabaseAdmin
+      const { error: assinaturaError } = await database
         .from("assinaturas")
         .insert({
           id_salao: idSalao,
@@ -308,7 +306,7 @@ export function createCadastroSalaoService() {
         );
       }
 
-      const { error: salaoError } = await supabaseAdmin
+      const { error: salaoError } = await database
         .from("saloes")
         .update({
           status: "teste_gratis",
@@ -355,6 +353,8 @@ export function createCadastroSalaoService() {
           status_inicial: "teste_gratis",
           trial_dias: TRIAL_GRATIS_DIAS,
           email: params.email,
+          auth_provider: "clerk",
+          database_provider: "neon",
         },
       });
     },
