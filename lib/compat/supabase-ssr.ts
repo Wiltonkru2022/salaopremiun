@@ -2,7 +2,15 @@ import { readPainelClerkSession } from "@/lib/platform/painel-clerk-session.serv
 
 // Compatibilidade temporaria para imports antigos de @supabase/ssr.
 // Nao abre conexao Supabase, nao usa URL/chave e nao faz refresh remoto.
-// A sessao administrativa e resolvida exclusivamente pelo Clerk.
+// Estes marcadores existem apenas para trechos legados que ainda validam
+// a presenca das antigas variaveis antes de chamar createServerClient().
+if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+  process.env.NEXT_PUBLIC_SUPABASE_URL = "http://clerk-neon-compat.local";
+}
+if (!process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "clerk-neon-compat";
+}
+
 export function createServerClient() {
   return {
     auth: {
