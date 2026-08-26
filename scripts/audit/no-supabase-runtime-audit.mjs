@@ -9,10 +9,10 @@ const forbidden = [
   /@supabase\//,
   /NEXT_PUBLIC_SUPABASE_/,
   /VITE_SUPABASE_/,
+  /SUPABASE_URL/,
   /SUPABASE_SERVICE_ROLE_KEY/,
   /SUPABASE_ANON_KEY/,
   /\.supabase\.co/,
-  /postgres_changes/,
 ];
 
 const violations = [];
@@ -42,4 +42,4 @@ if (violations.length) {
   process.exit(1);
 }
 
-console.log("OK: runtime sem SDK, env, host ou Realtime Supabase.");
+console.log("OK: runtime sem SDK, env ou host Supabase.");
