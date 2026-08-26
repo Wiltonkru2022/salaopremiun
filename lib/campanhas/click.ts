@@ -1,8 +1,9 @@
 import { getDatabaseAdmin } from "@/lib/db/admin";
-import { asSupabaseQueryClient } from "@/lib/supabase/query-client";
+import { asDatabaseQueryClient } from "@/lib/db/query-client";
 
 type CampaignClickPayload = {
   idCampanha: string;
+  idSalaao?: never;
   idSalao: string;
   origem?: unknown;
   slug?: unknown;
@@ -21,8 +22,8 @@ function nullableText(value: unknown, maxLength: number) {
 }
 
 export async function registrarCliqueCampanha(payload: CampaignClickPayload) {
-  const supabase = asSupabaseQueryClient(getDatabaseAdmin());
-  const { data: campanha } = await supabase
+  const database = asDatabaseQueryClient(getDatabaseAdmin());
+  const { data: campanha } = await database
     .from<CampanhaRow>("cupons_salao")
     .select("id, id_salao, ativo")
     .eq("id", payload.idCampanha)
@@ -34,7 +35,7 @@ export async function registrarCliqueCampanha(payload: CampaignClickPayload) {
     return { ok: false as const, status: 404 };
   }
 
-  await supabase.from("campanha_eventos").insert({
+  await database.from("campanha_eventos").insert({
     id_salao: payload.idSalao,
     id_cupom: payload.idCampanha,
     tipo: "clique",
