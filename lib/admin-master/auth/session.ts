@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
 import { NextResponse, type NextRequest } from "next/server";
-import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 
 export const ADMIN_MASTER_SESSION_COOKIE = "admin-master-session";
 
@@ -24,13 +23,17 @@ export type AdminMasterSession = {
   mfaVerifiedAt: number;
 };
 
+function getSessionCookieOptions(_host?: string | null) {
+  return {
+    secure: process.env.NODE_ENV === "production",
+  } as const;
+}
+
 function bytesToBase64Url(bytes: Uint8Array) {
   let binary = "";
-
   bytes.forEach((byte) => {
     binary += String.fromCharCode(byte);
   });
-
   return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 }
 
@@ -192,7 +195,7 @@ export async function setAdminMasterSessionCookie(
   }
 ) {
   const token = await createAdminMasterSessionToken(params);
-  const cookieOptions = getSupabaseCookieOptions(params.host);
+  const cookieOptions = getSessionCookieOptions(params.host);
 
   response.cookies.set(ADMIN_MASTER_SESSION_COOKIE, token, {
     ...cookieOptions,
@@ -207,7 +210,7 @@ export function clearAdminMasterSessionCookie(
   response: NextResponse,
   host?: string | null
 ) {
-  const cookieOptions = getSupabaseCookieOptions(host);
+  const cookieOptions = getSessionCookieOptions(host);
 
   response.cookies.set(ADMIN_MASTER_SESSION_COOKIE, "", {
     ...cookieOptions,
