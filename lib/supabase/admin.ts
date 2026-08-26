@@ -54,17 +54,19 @@ export function getSupabaseAdmin(): SupabaseAdminClient {
     throw new Error("getSupabaseAdmin() nao pode ser usado no client.");
   }
 
-  const raw = getRawSupabaseAdmin();
-  if (getProviderConfig().database !== "neon") {
-    return raw;
+  // Neon precisa ser realmente independente do Supabase. Antes deste corte,
+  // o cliente Supabase era criado mesmo quando DATABASE_PROVIDER=neon, o que
+  // ainda exigia URL e service-role do Supabase e derrubava login/rotas dos apps.
+  if (getProviderConfig().database === "neon") {
+    if (!globalStore.__salaopremiumSupabaseAdminCompat) {
+      globalStore.__salaopremiumSupabaseAdminCompat = createNeonSupabaseCompat(
+        null
+      ) as SupabaseAdminClient;
+    }
+    return globalStore.__salaopremiumSupabaseAdminCompat;
   }
 
-  if (!globalStore.__salaopremiumSupabaseAdminCompat) {
-    globalStore.__salaopremiumSupabaseAdminCompat = createNeonSupabaseCompat(
-      raw
-    ) as SupabaseAdminClient;
-  }
-  return globalStore.__salaopremiumSupabaseAdminCompat;
+  return getRawSupabaseAdmin();
 }
 
 export function getRawSupabaseAdminForRollback(): SupabaseAdminClient {
