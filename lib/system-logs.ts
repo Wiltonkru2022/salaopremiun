@@ -1,6 +1,3 @@
-import { recordNeonEvent } from "@/lib/neon/observability.server";
-import { getDatabaseAdmin } from "@/lib/db/admin";
-import { captureSystemEvent } from "@/lib/monitoring/server";
 import type { Json } from "@/types/database.generated";
 
 type LogSeverity = "info" | "warning" | "error";
@@ -33,12 +30,14 @@ async function registrarFalhaObservabilidade(params: {
   mensagem: string;
   detalhes: Record<string, unknown>;
 }) {
+  if (typeof window !== "undefined") return;
+  const { getDatabaseAdmin } = await import("@/lib/db/admin");
   const errorMessage =
     params.erro instanceof Error ? params.erro.message : String(params.erro);
 
   try {
-    const supabase = getDatabaseAdmin();
-    await supabase.from("eventos_sistema").insert({
+    const database = getDatabaseAdmin();
+    await database.from("eventos_sistema").insert({
       modulo: "system_logs",
       tipo_evento: "log_persist_failed",
       severidade: "error",
@@ -60,7 +59,14 @@ async function registrarFalhaObservabilidade(params: {
 }
 
 export async function registrarLogSistema(params: RegistrarLogParams) {
+  if (typeof window !== "undefined") return;
   try {
+    const [{ recordNeonEvent }, { getDatabaseAdmin }, { captureSystemEvent }] =
+      await Promise.all([
+        import("@/lib/neon/observability.server"),
+        import("@/lib/db/admin"),
+        import("@/lib/monitoring/server"),
+      ]);
     const details = sanitizeDetails(params.detalhes);
     const gravidade = normalizeText(params.gravidade) || "info";
     const modulo = normalizeText(params.modulo) || "sistema";
@@ -80,8 +86,8 @@ export async function registrarLogSistema(params: RegistrarLogParams) {
     });
 
     if (!persistedInNeon) {
-      const supabase = getDatabaseAdmin();
-      await supabase.from("logs_sistema").insert({
+      const database = getDatabaseAdmin();
+      await database.from("logs_sistema").insert({
         gravidade,
         modulo,
         id_salao: params.idSalao || null,

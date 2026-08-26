@@ -266,7 +266,7 @@ export async function listEligibleSalonIdsByEmail(email: string) {
   }
 
   const ids = Array.from(
-    new Set(
+    new Set<string>(
       data
         .map((item) => String(item.id_salao || "").trim())
         .filter(Boolean)

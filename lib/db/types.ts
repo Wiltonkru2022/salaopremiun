@@ -1,4 +1,6 @@
-export type DatabaseClient = any;
+import type { DatabaseAdminClient } from "@/lib/db/admin";
+
+export type DatabaseClient = DatabaseAdminClient;
 
 export type DatabaseResult<T = unknown> = {
   data: T;

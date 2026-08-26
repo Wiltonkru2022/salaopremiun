@@ -1,7 +1,7 @@
 import type { PoolClient } from "@neondatabase/serverless";
 
 export type PainelDbFilter = {
-  op: "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "like" | "ilike" | "is" | "in" | "contains" | "or";
+  op: "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "like" | "ilike" | "is" | "in" | "contains" | "not" | "or";
   column?: string;
   value?: unknown;
 };
@@ -168,6 +168,15 @@ function buildSimpleClause(
       if (value === true) return `${col} IS TRUE`;
       if (value === false) return `${col} IS FALSE`;
       throw new Error("Filtro IS invalido.");
+    case "not": {
+      const input = value as { operator?: string; value?: unknown };
+      if (input.operator === "is" && input.value === null) return `${col} IS NOT NULL`;
+      if (input.operator === "eq") {
+        values.push(input.value);
+        return `${col} <> $${values.length}`;
+      }
+      throw new Error("Filtro NOT invalido.");
+    }
     case "in": {
       const list = Array.isArray(value) ? value : [];
       if (!list.length) return "FALSE";

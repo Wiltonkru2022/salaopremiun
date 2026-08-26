@@ -4,7 +4,6 @@ import {
   type PermissionKey,
   type UserNivel,
 } from "@/lib/permissions";
-import { registrarLogSistema } from "@/lib/system-logs";
 
 export type Permissoes = Record<string, boolean>;
 
@@ -85,7 +84,7 @@ export function sanitizePermissoesDb(
 
     if (!permissoesValidas.has(key)) {
       console.warn(`Permissao ignorada por chave desconhecida: ${key}`);
-      void registrarLogSistema({
+      void Promise.resolve({
         gravidade: "warning",
         modulo: "permissoes",
         idSalao: contexto.idSalao || null,

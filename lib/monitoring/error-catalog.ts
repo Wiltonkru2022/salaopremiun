@@ -131,7 +131,7 @@ export const ERROR_CATALOG: ErrorCatalogRule[] = [
     category: "configuration",
     severity: "critica",
     symptom: "Operações server-side que exigem cliente administrativo do Supabase não podem executar.",
-    probableCauses: ["SUPABASE_SERVICE_ROLE_KEY não configurada no ambiente do deployment."],
+    probableCauses: ["Credencial administrativa do provedor de dados não configurada no deployment."],
     evidenceNeeded: ["Deployment afetado.", "Configuração presente true/false, sem registrar o valor."],
     componentKey: "supabase.data_api",
     owner: "Infra/Backend",

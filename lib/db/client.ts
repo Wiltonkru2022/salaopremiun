@@ -1,5 +1,33 @@
 "use client";
 
+import type {
+  NeonQueryBuilder,
+  NeonQueryResult,
+} from "@/lib/neon/query-client.server";
+
+type BrowserAuthClient = {
+  admin: any;
+  getUser(): Promise<{
+    data: { user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } | null };
+    error: null;
+  }>;
+  getSession(): Promise<any>;
+  signOut(options?: unknown): Promise<any>;
+  onAuthStateChange(...args: any[]): any;
+  [key: string]: any;
+};
+
+type BrowserDatabaseClient = {
+  from<T = any>(table: string): NeonQueryBuilder<T>;
+  rpc<T = any>(fn: string, args?: Record<string, unknown>): Promise<NeonQueryResult<T>>;
+  auth: BrowserAuthClient;
+  storage: any;
+  channel(name: string): ReturnType<typeof createNoopRealtimeChannel>;
+  removeChannel(channel: unknown): Promise<string>;
+  removeAllChannels(): Promise<unknown[]>;
+  getChannels(): unknown[];
+};
+
 type RemoteFilter = { op: string; column?: string; value?: unknown };
 type RemoteOrder = { column: string; ascending?: boolean; nullsFirst?: boolean };
 type RemoteMutation =
@@ -203,6 +231,7 @@ async function readSession() {
 
 function createAuthProxy() {
   return {
+    admin: undefined as any,
     async getUser() {
       const user = await readSession();
       return { data: { user }, error: null };
@@ -263,7 +292,7 @@ function createNoopRealtimeChannel() {
   return channel;
 }
 
-export function createClient(): any {
+export function createClient(): BrowserDatabaseClient {
   if (browserClient) return browserClient;
   const auth = createAuthProxy();
   browserClient = new Proxy({} as Record<string, unknown>, {
@@ -281,5 +310,5 @@ export function createClient(): any {
       return undefined;
     },
   });
-  return browserClient;
+  return browserClient as BrowserDatabaseClient;
 }

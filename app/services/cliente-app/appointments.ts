@@ -401,7 +401,9 @@ async function loadBookingMultiContext(params: {
     )
   );
 
-  const contexts = [];
+  const contexts: Array<
+    Extract<Awaited<ReturnType<typeof loadBookingBaseContext>>, { ok: true }>
+  > = [];
   for (const idServico of idsServicos) {
     const context = await loadBookingBaseContext({
       supabaseAdmin: params.supabaseAdmin,
