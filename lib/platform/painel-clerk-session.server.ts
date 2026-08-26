@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { cookies } from "next/headers";
 import { SignJWT, jwtVerify } from "jose";
 
-export const PAINEL_CLERK_COOKIE = "sp_painel_clerk";
+export const PAINEL_CLERK_COOKIE = "sp-painel-auth-token";
 
 type PainelClerkSession = {
   clerkSubject: string;
