@@ -1,6 +1,6 @@
 import { resolvePublicMediaUrl } from "./media";
 
-// Legacy adapter kept only until all UI imports are renamed. No external backend SDK is used.
+// Adaptador local de mídia. Não conecta a nenhum serviço externo de banco/auth.
 export const supabase = {
   storage: {
     from(_bucket?: string) {
