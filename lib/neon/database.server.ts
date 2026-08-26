@@ -1,4 +1,5 @@
 import { Pool, type PoolClient } from "@neondatabase/serverless";
+import { resolveNeonRuntimeUrl } from "@/lib/neon/runtime-url.server";
 
 export type NeonAppIdentity = {
   email: string;
@@ -25,7 +26,7 @@ let pool: Pool | null = null;
 let configuredUrl = "";
 
 function databaseUrl() {
-  const url = String(process.env.NEON_DATABASE_URL || "").trim();
+  const url = resolveNeonRuntimeUrl(process.env.NEON_DATABASE_URL);
   if (!url) throw new Error("NEON_DATABASE_URL nao configurada.");
   return url;
 }
@@ -78,7 +79,7 @@ async function setTransactionContext(
 }
 
 export function isNeonDatabaseConfigured() {
-  return Boolean(String(process.env.NEON_DATABASE_URL || "").trim());
+  return Boolean(resolveNeonRuntimeUrl(process.env.NEON_DATABASE_URL));
 }
 
 export async function withNeonRls<T>(
