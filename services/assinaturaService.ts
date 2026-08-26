@@ -1,10 +1,8 @@
 import { addDays, format, isBefore } from "date-fns";
-import { createServerClient } from "@supabase/ssr";
-import { cookies, headers } from "next/headers";
-import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
+import { headers } from "next/headers";
+import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getRenovacaoAutomaticaInfo } from "@/lib/assinaturas/renovacao-automatica";
 import { buscarCobranca } from "@/lib/payments/pix-provider";
-import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
 import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   createAsaasSubscription,
@@ -44,33 +42,6 @@ const PLANO_TRIAL_PADRAO: PlanoTrialRow = {
   ativo: true,
 };
 
-async function getSupabaseServer() {
-  const cookieStore = await cookies();
-  const headersList = await headers();
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL nao configurada.");
-  }
-
-  if (!supabaseAnonKey) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY nao configurada.");
-  }
-
-  const cookieOptions = getSupabaseCookieOptions(headersList.get("host"));
-
-  return createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookieOptions,
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll() {},
-    },
-  });
-}
-
 async function getRemoteIp() {
   const requestHeaders = await headers();
   const forwardedFor = requestHeaders.get("x-forwarded-for");
@@ -106,24 +77,17 @@ export function createAssinaturaService() {
 
   return {
     async validarSalaoAdmin(idSalao: string, adminOnlyMessage: string) {
-      const supabase = await getSupabaseServer();
+      const { usuario, mfaRequired } = await getPainelUserContext();
 
-      const {
-        data: { user },
-        error: authError,
-      } = await supabase.auth.getUser();
-
-      if (authError) {
-        throw new AssinaturaServiceError("Erro ao validar usuario autenticado.", 401);
+      if (mfaRequired) {
+        throw new AssinaturaServiceError("Confirme o MFA para continuar.", 403);
       }
 
-      if (!user) {
+      if (!usuario) {
         throw new AssinaturaServiceError("Usuario nao autenticado.", 401);
       }
 
-      const usuario = await getPainelUserContextByAuthUserId(user.id);
-
-      if (!usuario?.id_salao) {
+      if (!usuario.id_salao) {
         throw new AssinaturaServiceError("Usuario sem salao vinculado.", 403);
       }
 
