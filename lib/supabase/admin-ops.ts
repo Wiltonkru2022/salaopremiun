@@ -1,7 +1,7 @@
 import "server-only";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 
-type AdminClient = ReturnType<typeof getSupabaseAdmin>;
+type AdminClient = ReturnType<typeof getDatabaseAdmin>;
 
 type AdminOperationParams<T> = {
   action: string;
@@ -10,18 +10,15 @@ type AdminOperationParams<T> = {
   run: (client: AdminClient) => Promise<T>;
 };
 
+/** Compatibilidade de caminho legado. Todas as operacoes usam Neon. */
 export async function runAdminOperation<T>({
   action,
   actorId,
   idSalao,
   run,
 }: AdminOperationParams<T>): Promise<T> {
-  if (!action?.trim()) {
-    throw new Error("Acao administrativa nao informada.");
-  }
-
-  const client = getSupabaseAdmin();
-
+  if (!action?.trim()) throw new Error("Acao administrativa nao informada.");
+  const client = getDatabaseAdmin();
   try {
     return await run(client);
   } catch (error) {
