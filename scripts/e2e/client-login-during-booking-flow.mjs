@@ -1,10 +1,10 @@
 import { chromium } from "playwright";
-import { createClient } from "@supabase/supabase-js";
+import { neon } from "@neondatabase/serverless";
 import fs from "node:fs";
 import { loadLocalEnv, requireEnv } from "../lib/load-env.mjs";
 
 loadLocalEnv();
-requireEnv(["NEXT_PUBLIC_SUPABASE_URL", "SUPABASE_SERVICE_ROLE_KEY"]);
+requireEnv(["NEON_ADMIN_DATABASE_URL"]);
 
 const accountsPath =
   process.env.E2E_TEST_ACCOUNTS_FILE || ".codex-test-accounts.local.json";
@@ -16,11 +16,7 @@ const baseUrl = (
 ).replace(/\/$/, "");
 const premium = accounts.salons.premium;
 const marker = `codex-login-booking-${Date.now()}`;
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY,
-  { auth: { persistSession: false, autoRefreshToken: false } }
-);
+const sql = neon(process.env.NEON_ADMIN_DATABASE_URL);
 const report = {
   baseUrl,
   marker,
@@ -38,11 +34,11 @@ function check(name, ok, detail = "") {
 
 async function cleanup() {
   if (!createdAppointmentIds.length) return;
-  await supabase
-    .from("agendamentos")
-    .delete()
-    .eq("id_salao", premium.idSalao)
-    .in("id", createdAppointmentIds);
+  await sql`
+    delete from public.agendamentos
+    where id_salao = ${premium.idSalao}
+      and id = any(${createdAppointmentIds}::uuid[])
+  `;
 }
 
 async function expectVisible(locator, name) {
@@ -80,15 +76,11 @@ async function run() {
       )
     );
 
-    const professional = page.getByRole("button", {
-      name: /Pro PREMIUM E2E/i,
-    });
+    const professional = page.getByRole("button", { name: /Pro PREMIUM E2E/i });
     await expectVisible(professional, "profissional disponível sem login");
     await professional.click();
 
-    const service = page.getByRole("button", {
-      name: /Corte PREMIUM E2E/i,
-    });
+    const service = page.getByRole("button", { name: /Corte PREMIUM E2E/i });
     await expectVisible(service, "serviço disponível sem login");
     await service.click();
     await page.getByRole("button", { name: /^Continuar$/ }).click();
@@ -110,18 +102,9 @@ async function run() {
     await availableTime.click();
     await page.getByRole("button", { name: /^Continuar$/ }).click();
 
-    await expectVisible(
-      page.getByText("Resumo do agendamento", { exact: true }),
-      "resumo aberto sem login"
-    );
-    await expectVisible(
-      page.getByText("Pro PREMIUM E2E", { exact: true }),
-      "resumo preserva profissional antes do login"
-    );
-    await expectVisible(
-      page.getByText("Corte PREMIUM E2E", { exact: true }),
-      "resumo preserva serviço antes do login"
-    );
+    await expectVisible(page.getByText("Resumo do agendamento", { exact: true }), "resumo aberto sem login");
+    await expectVisible(page.getByText("Pro PREMIUM E2E", { exact: true }), "resumo preserva profissional antes do login");
+    await expectVisible(page.getByText("Corte PREMIUM E2E", { exact: true }), "resumo preserva serviço antes do login");
 
     await page.getByRole("link", { name: /Entrar para confirmar/i }).click();
     await page.waitForURL(/\/app-cliente\/login\?/, { timeout: 30000 });
@@ -130,36 +113,17 @@ async function run() {
     await page.locator('[name="email"]').fill(accounts.client.email);
     await page.locator('[name="senha"]').fill(accounts.password);
     await page.getByRole("button", { name: /^Entrar$/ }).click();
-    await page.waitForURL(/\/app-cliente\/salao\/.+\/reserva/, {
-      timeout: 30000,
-    });
-    check(
-      "login retorna para reserva",
-      /\/app-cliente\/salao\/.+\/reserva/.test(page.url())
-    );
+    await page.waitForURL(/\/app-cliente\/salao\/.+\/reserva/, { timeout: 30000 });
+    check("login retorna para reserva", /\/app-cliente\/salao\/.+\/reserva/.test(page.url()));
     check(
       "sessão criada após login",
-      (await context.cookies()).some(
-        (cookie) => cookie.name === "sp_cliente_session"
-      )
+      (await context.cookies()).some((cookie) => cookie.name === "sp_cliente_session")
     );
 
-    await expectVisible(
-      page.getByText("Resumo do agendamento", { exact: true }),
-      "resumo restaurado após login"
-    );
-    await expectVisible(
-      page.getByText("Pro PREMIUM E2E", { exact: true }),
-      "profissional preservado após login"
-    );
-    await expectVisible(
-      page.getByText("Corte PREMIUM E2E", { exact: true }),
-      "serviço preservado após login"
-    );
-    await expectVisible(
-      page.getByText(selectedTime, { exact: true }),
-      "horário preservado após login"
-    );
+    await expectVisible(page.getByText("Resumo do agendamento", { exact: true }), "resumo restaurado após login");
+    await expectVisible(page.getByText("Pro PREMIUM E2E", { exact: true }), "profissional preservado após login");
+    await expectVisible(page.getByText("Corte PREMIUM E2E", { exact: true }), "serviço preservado após login");
+    await expectVisible(page.getByText(selectedTime, { exact: true }), "horário preservado após login");
     check("data selecionada continua no resumo", Boolean(selectedDay));
 
     await page.getByRole("button", { name: /Confirmar agendamento/i }).click();
@@ -167,16 +131,16 @@ async function run() {
       timeout: 30000,
     });
 
-    const { data: appointments, error } = await supabase
-      .from("agendamentos")
-      .select("id, id_salao, data, hora_inicio, status, cliente_id, created_at")
-      .eq("id_salao", premium.idSalao)
-      .eq("cliente_id", accounts.client.idCliente)
-      .gte("created_at", report.startedAt)
-      .order("created_at", { ascending: false })
-      .limit(5);
-    if (error) throw error;
-    const appointment = appointments?.[0] || null;
+    const appointments = await sql`
+      select id, id_salao, data, hora_inicio, status, cliente_id, created_at
+      from public.agendamentos
+      where id_salao = ${premium.idSalao}
+        and cliente_id = ${accounts.client.idCliente}
+        and created_at >= ${report.startedAt}::timestamptz
+      order by created_at desc
+      limit 5
+    `;
+    const appointment = appointments[0] || null;
     if (appointment?.id) createdAppointmentIds.push(appointment.id);
 
     check(
