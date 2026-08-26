@@ -3,7 +3,6 @@
 import { Suspense, useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowRight, Check, Loader2, Sparkles } from "lucide-react";
-import { createClient } from "@/lib/db/client";
 
 type StepKey = "dados" | "acesso" | "endereco" | "revisao";
 const STEPS: Array<{ key: StepKey; label: string }> = [
@@ -82,7 +81,7 @@ function CadastroSalao() {
       }
     }
     if (step === "acesso") {
-      if (!form.email.includes("@") || form.senha.length < 6) return "Informe um e-mail válido e uma senha com pelo menos 6 caracteres.";
+      if (!form.email.includes("@") || form.senha.length < 8) return "Informe um e-mail válido e uma senha com pelo menos 8 caracteres.";
     }
     if (step === "endereco") {
       if (digits(form.cep).length !== 8 || !form.endereco.trim() || !form.numero.trim() || !form.bairro.trim() || !form.cidade.trim() || form.estado.trim().length !== 2) {
@@ -132,21 +131,16 @@ function CadastroSalao() {
       const data = await response.json().catch(() => ({}));
       if (!response.ok) throw new Error(data.error || data.message || "Não foi possível criar o salão.");
 
-      const supabase = createClient();
-      const { error: loginError } = await supabase.auth.signInWithPassword({
+      const params = new URLSearchParams({
         email: form.email.trim().toLowerCase(),
-        password: form.senha,
+        criado: "1",
+        returnTo: "/onboarding-salao",
       });
-      if (loginError) {
-        const params = new URLSearchParams({ email: form.email.trim(), criado: "1", returnTo: "/onboarding-salao" });
-        window.location.assign(`https://login.salaopremiun.com.br/login?${params.toString()}`);
-        return;
-      }
-
-      const host = window.location.hostname.endsWith("salaopremiun.com.br")
-        ? "https://painel.salaopremiun.com.br/onboarding-salao"
-        : "/onboarding-salao";
-      window.location.assign(host);
+      const loginPath = `/login-clerk?${params.toString()}`;
+      const target = window.location.hostname.endsWith("salaopremiun.com.br")
+        ? `https://login.salaopremiun.com.br${loginPath}`
+        : loginPath;
+      window.location.assign(target);
     } catch (error) {
       setErro(error instanceof Error ? error.message : "Erro ao criar cadastro.");
     } finally {
