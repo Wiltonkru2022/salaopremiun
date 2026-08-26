@@ -3,7 +3,6 @@ import { asDatabaseQueryClient } from "@/lib/db/query-client";
 
 type CampaignClickPayload = {
   idCampanha: string;
-  idSalaao?: never;
   idSalao: string;
   origem?: unknown;
   slug?: unknown;
