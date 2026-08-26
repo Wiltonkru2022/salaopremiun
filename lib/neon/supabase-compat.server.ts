@@ -3,7 +3,6 @@ import {
   executePainelNeonQuery,
   executePainelNeonRpc,
   type PainelDbFilter,
-  type PainelDbMutation,
   type PainelDbOrder,
   type PainelDbQuery,
 } from "@/lib/neon/painel-query.server";
