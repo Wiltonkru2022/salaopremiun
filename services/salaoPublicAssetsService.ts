@@ -1,8 +1,5 @@
-import { getDatabaseAdmin } from "@/lib/db/admin";
-import { getProviderConfig } from "@/lib/platform/provider-config.server";
 import { uploadBufferToCloudinary } from "@/lib/platform/cloudinary.server";
 
-const BUCKET_ID = "salao-publico";
 const MAX_FILE_SIZE = 5 * 1024 * 1024;
 const ALLOWED_MIME_TYPES = new Set([
   "image/jpeg",
@@ -30,62 +27,6 @@ export function validarSalaoPublicAsset(file: File, tipo: string) {
   }
 }
 
-function getFileExtension(file: File) {
-  const byName = file.name.split(".").pop()?.toLowerCase();
-  if (byName && /^[a-z0-9]+$/.test(byName)) return byName;
-  if (file.type === "image/png") return "png";
-  if (file.type === "image/webp") return "webp";
-  if (file.type === "image/gif") return "gif";
-  return "jpg";
-}
-
-async function ensurePublicBucket() {
-  const supabaseAdmin = getDatabaseAdmin();
-  const { data: bucket } = await supabaseAdmin.storage.getBucket(BUCKET_ID);
-
-  if (bucket) return;
-
-  const { error } = await supabaseAdmin.storage.createBucket(BUCKET_ID, {
-    public: true,
-    fileSizeLimit: MAX_FILE_SIZE,
-    allowedMimeTypes: [...ALLOWED_MIME_TYPES],
-  });
-
-  if (error && !/already exists/i.test(error.message || "")) {
-    throw error;
-  }
-}
-
-async function uploadToSupabase(params: {
-  idSalao: string;
-  tipo: string;
-  file: File;
-}) {
-  await ensurePublicBucket();
-
-  const supabaseAdmin = getDatabaseAdmin();
-  const path = `${params.idSalao}/${params.tipo}-${Date.now()}.${getFileExtension(
-    params.file
-  )}`;
-  const { error } = await supabaseAdmin.storage
-    .from(BUCKET_ID)
-    .upload(path, params.file, {
-      cacheControl: "31536000",
-      contentType: params.file.type,
-      upsert: true,
-    });
-
-  if (error) throw error;
-
-  const { data } = supabaseAdmin.storage.from(BUCKET_ID).getPublicUrl(path);
-
-  if (!data.publicUrl) {
-    throw new Error("Nao foi possivel obter a URL publica da imagem.");
-  }
-
-  return data.publicUrl;
-}
-
 export async function uploadSalaoPublicAsset(params: {
   idSalao: string;
   tipo: string;
@@ -93,19 +34,15 @@ export async function uploadSalaoPublicAsset(params: {
 }) {
   validarSalaoPublicAsset(params.file, params.tipo);
 
-  if (getProviderConfig().media === "cloudinary") {
-    try {
-      const uploaded = await uploadBufferToCloudinary({
-        buffer: Buffer.from(await params.file.arrayBuffer()),
-        mimeType: params.file.type,
-        folder: `salaopremiun/saloes/${params.idSalao}/${params.tipo}`,
-      });
-      if (!uploaded.secureUrl) throw new Error("Cloudinary não retornou URL segura.");
-      return uploaded.secureUrl;
-    } catch (error) {
-      console.error("[salao-assets] Cloudinary falhou; usando Supabase fallback", error);
-    }
+  const uploaded = await uploadBufferToCloudinary({
+    buffer: Buffer.from(await params.file.arrayBuffer()),
+    mimeType: params.file.type,
+    folder: `salaopremiun/saloes/${params.idSalao}/${params.tipo}`,
+  });
+
+  if (!uploaded.secureUrl) {
+    throw new Error("Cloudinary nao retornou URL segura.");
   }
 
-  return uploadToSupabase(params);
+  return uploaded.secureUrl;
 }
