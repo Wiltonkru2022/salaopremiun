@@ -33,19 +33,31 @@ export async function uploadBufferToCloudinary(params: {
   const signature = crypto.createHash("sha1").update(`${signatureBase}${apiSecret}`).digest("hex");
 
   const form = new FormData();
-  form.set("file", new Blob([params.buffer], { type: params.mimeType }));
+  // Cloudinary aceita Data URI diretamente; isso evita a incompatibilidade Buffer/Blob
+  // entre os tipos DOM e Node.js usados no build da Vercel.
+  form.set("file", `data:${params.mimeType};base64,${params.buffer.toString("base64")}`);
   form.set("api_key", apiKey);
   form.set("timestamp", String(timestamp));
   form.set("folder", params.folder);
   form.set("signature", signature);
   if (params.publicId) form.set("public_id", params.publicId);
 
-  const response = await fetch(`https://api.cloudinary.com/v1_1/${encodeURIComponent(cloudName)}/auto/upload`, {
-    method: "POST",
-    body: form,
-  });
+  const response = await fetch(
+    `https://api.cloudinary.com/v1_1/${encodeURIComponent(cloudName)}/auto/upload`,
+    {
+      method: "POST",
+      body: form,
+    }
+  );
   const payload = (await response.json().catch(() => ({}))) as Record<string, unknown>;
-  if (!response.ok) throw new Error(String((payload.error as { message?: string } | undefined)?.message || "Falha no upload Cloudinary."));
+  if (!response.ok) {
+    throw new Error(
+      String(
+        (payload.error as { message?: string } | undefined)?.message ||
+          "Falha no upload Cloudinary."
+      )
+    );
+  }
   return {
     publicId: String(payload.public_id || ""),
     secureUrl: String(payload.secure_url || ""),
