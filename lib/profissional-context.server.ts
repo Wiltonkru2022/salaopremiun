@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { canUsePlanFeature, isSalaoStatusOperational } from "@/lib/plans/access";
-import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getDatabaseAdmin } from "@/lib/db/admin";
 import {
   getProfissionalSessionFromCookie,
 } from "@/lib/profissional-auth.server";
@@ -29,9 +29,9 @@ async function loadProfissionalServerContext(): Promise<ProfissionalServerContex
     throw new Error("UNAUTHORIZED");
   }
 
-  const supabaseAdmin = getSupabaseAdmin();
+  const database = getDatabaseAdmin();
   const [{ data: profissional, error: profissionalError }, acessoResult] = await Promise.all([
-    supabaseAdmin
+    database
       .from("profissionais")
       .select(
         "id, id_salao, nome, nome_exibicao, email, ativo, tipo_profissional, nivel_acesso, pode_usar_sistema"
@@ -39,7 +39,7 @@ async function loadProfissionalServerContext(): Promise<ProfissionalServerContex
       .eq("id", session.idProfissional)
       .eq("id_salao", session.idSalao)
       .maybeSingle(),
-    (supabaseAdmin as any)
+    database
       .from("profissionais_acessos")
       .select("id, auth_version, ativo")
       .eq("id_profissional", session.idProfissional)
@@ -74,7 +74,7 @@ async function loadProfissionalServerContext(): Promise<ProfissionalServerContex
     throw new Error("UNAUTHORIZED");
   }
 
-  const { data: salao, error: salaoError } = await supabaseAdmin
+  const { data: salao, error: salaoError } = await database
     .from("saloes")
     .select("id, status")
     .eq("id", session.idSalao)
