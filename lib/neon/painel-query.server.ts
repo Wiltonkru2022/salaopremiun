@@ -105,12 +105,12 @@ function parseSelect(value?: string) {
   const relations: RelationSpec[] = [];
   for (const part of splitTopLevel(raw)) {
     const relation = part.match(
-      /^(?:(?<alias>[A-Za-z_][A-Za-z0-9_]*):)?(?<table>[A-Za-z_][A-Za-z0-9_]*)(?:![A-Za-z_][A-Za-z0-9_]*)?\s*\((?<columns>.*)\)$/s
+      /^(?:([A-Za-z_][A-Za-z0-9_]*):)?([A-Za-z_][A-Za-z0-9_]*)(?:![A-Za-z_][A-Za-z0-9_]*)?\s*\(([\s\S]*)\)$/
     );
-    if (relation?.groups) {
-      const table = relation.groups.table;
-      const alias = relation.groups.alias || table;
-      const columns = splitTopLevel(relation.groups.columns || "*");
+    if (relation) {
+      const table = relation[2];
+      const alias = relation[1] || table;
+      const columns = splitTopLevel(relation[3] || "*");
       if (!columns.length || columns.some((column) => column.includes("("))) {
         throw new Error("Relacao aninhada nao suportada no proxy Neon.");
       }
