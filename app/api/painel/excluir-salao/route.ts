@@ -5,6 +5,7 @@ import {
 } from "@/lib/auth/require-salao-permission";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getDatabaseAdmin } from "@/lib/db/admin";
+import { deleteClerkUser } from "@/lib/platform/clerk-admin.server";
 
 export const dynamic = "force-dynamic";
 
@@ -13,7 +14,7 @@ type ExcluirSalaoPayload = {
   motivo?: string;
 };
 
-type SupabaseRpcError = {
+type DatabaseRpcError = {
   code?: string;
   message?: string;
   details?: string | null;
@@ -21,7 +22,7 @@ type SupabaseRpcError = {
 };
 
 type PainelAuthUserRow = {
-  auth_user_id?: string | null;
+  clerk_user_id?: string | null;
   email?: string | null;
 };
 
@@ -52,13 +53,13 @@ export async function POST(request: Request) {
       { allowedNiveis: ["admin"] }
     );
 
-    const supabaseAdmin = getDatabaseAdmin();
+    const databaseAdmin = getDatabaseAdmin();
     const { data: painelAuthUsers, error: painelAuthUsersError } =
-      await supabaseAdmin
+      await databaseAdmin
         .from("usuarios")
-        .select("auth_user_id, email")
+        .select("clerk_user_id, email")
         .eq("id_salao", membership.usuario.id_salao)
-        .not("auth_user_id", "is", null);
+        .not("clerk_user_id", "is", null);
 
     if (painelAuthUsersError) {
       return NextResponse.json(
@@ -75,15 +76,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const authUsersToDelete = Array.from(
+    const clerkUsersToDelete = Array.from(
       new Set(
         ((painelAuthUsers || []) as PainelAuthUserRow[])
-          .map((row) => String(row.auth_user_id || "").trim())
+          .map((row) => String(row.clerk_user_id || "").trim())
           .filter(Boolean)
       )
     );
 
-    const { data, error } = await (supabaseAdmin as any).rpc(
+    const { data, error } = await (databaseAdmin as any).rpc(
       "excluir_salao_definitivo",
       {
         p_id_salao: membership.usuario.id_salao,
@@ -94,7 +95,7 @@ export async function POST(request: Request) {
     );
 
     if (error) {
-      const rpcError = error as SupabaseRpcError;
+      const rpcError = error as DatabaseRpcError;
       const debugId = crypto.randomUUID();
       console.error("Erro ao excluir salao definitivamente:", {
         debugId,
@@ -114,7 +115,7 @@ export async function POST(request: Request) {
           debugId,
           debug: {
             code: rpcError.code || null,
-            message: rpcError.message || "Erro sem mensagem do Supabase.",
+            message: rpcError.message || "Erro sem mensagem do Neon.",
             details: rpcError.details || null,
             hint: rpcError.hint || null,
           },
@@ -124,20 +125,27 @@ export async function POST(request: Request) {
     }
 
     const authDeleteResults = await Promise.all(
-      authUsersToDelete.map(async (authUserId) => {
-        const result = await supabaseAdmin.auth.admin.deleteUser(authUserId);
-        return {
-          authUserId,
-          ok: !result.error,
-          error: result.error?.message || null,
-        };
+      clerkUsersToDelete.map(async (clerkUserId) => {
+        try {
+          await deleteClerkUser(clerkUserId);
+          return { clerkUserId, ok: true, error: null };
+        } catch (cause) {
+          return {
+            clerkUserId,
+            ok: false,
+            error:
+              cause instanceof Error
+                ? cause.message
+                : "Erro ao excluir usuário Clerk.",
+          };
+        }
       })
     );
 
     const authDeleteErrors = authDeleteResults.filter((item) => !item.ok);
 
     if (authDeleteErrors.length) {
-      console.error("Salao excluido, mas alguns usuarios Auth nao foram apagados:", {
+      console.error("Salao excluido, mas alguns usuarios Clerk nao foram apagados:", {
         idSalao: membership.usuario.id_salao,
         authDeleteErrors,
       });
@@ -146,6 +154,8 @@ export async function POST(request: Request) {
     return NextResponse.json({
       ok: true,
       resultado: data,
+      authProvider: "clerk",
+      databaseProvider: "neon",
       authUsuariosApagados: authDeleteResults.filter((item) => item.ok).length,
       authUsuariosComErro: authDeleteErrors,
     });
