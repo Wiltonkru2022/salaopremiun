@@ -1,36 +1,53 @@
-import { createClient } from "@supabase/supabase-js";
+type RealtimeChannel = {
+  on: (...args: unknown[]) => RealtimeChannel;
+  subscribe: (callback?: (status: string) => void) => RealtimeChannel;
+  unsubscribe: () => Promise<string>;
+};
 
-function requiredPublicEnv(name: string, value: string | undefined) {
-  const normalized = String(value || "").trim();
-  if (!normalized) {
-    throw new Error(`Configuracao obrigatoria ausente: ${name}`);
-  }
-  return normalized;
+function createNoopChannel(): RealtimeChannel {
+  const channel: RealtimeChannel = {
+    on() {
+      return channel;
+    },
+    subscribe(callback) {
+      callback?.("SUBSCRIBED");
+      return channel;
+    },
+    async unsubscribe() {
+      return "ok";
+    },
+  };
+  return channel;
 }
-
-const supabaseUrl = requiredPublicEnv(
-  "VITE_SUPABASE_URL",
-  import.meta.env.VITE_SUPABASE_URL as string | undefined
-);
-const supabasePublicKey = requiredPublicEnv(
-  "VITE_SUPABASE_PUBLISHABLE_KEY",
-  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-    import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined
-);
 
 export const supabaseConfigured = true;
 
-export const supabase = createClient(supabaseUrl, supabasePublicKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storageKey: "salaopremiun.auth"
+// Nome mantido somente para compatibilidade de imports antigos.
+// O App Profissional usa APIs server-side com sessão interna + Neon.
+// Não existe conexão com Supabase Auth, Database ou Realtime neste módulo.
+export const supabase = {
+  channel() {
+    return createNoopChannel();
   },
-  realtime: {
-    params: { eventsPerSecond: 8 }
-  }
-});
+  async removeChannel(channel: RealtimeChannel) {
+    await channel.unsubscribe();
+    return "ok";
+  },
+  storage: {
+    from() {
+      return {
+        getPublicUrl(path: string) {
+          const value = String(path || "").trim();
+          return {
+            data: {
+              publicUrl: /^https:\/\//i.test(value) ? value : "",
+            },
+          };
+        },
+      };
+    },
+  },
+};
 
 export function cpfToAuthEmail(cpf: string) {
   const digits = cpf.replace(/\D/g, "");
