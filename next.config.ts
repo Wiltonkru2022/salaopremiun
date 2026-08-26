@@ -41,6 +41,7 @@ function buildCsp() {
     );
   }
 
+  const clerkSources = ["https://*.clerk.accounts.dev", "https://*.clerk.com"];
   const connectSrc = [
     "'self'",
     ...managedHosts.map((host) => `https://${host}`),
@@ -51,6 +52,7 @@ function buildCsp() {
       ? [`https://${blogSupabaseHostname}`, `wss://${blogSupabaseHostname}`]
       : []),
     `https://${cloudinaryHostname}`,
+    ...clerkSources,
     "https://viacep.com.br",
     "https://vitals.vercel-insights.com",
     "https://*.vercel-insights.com",
@@ -70,6 +72,7 @@ function buildCsp() {
     ...(supabaseHostname ? [`https://${supabaseHostname}`] : []),
     ...(blogSupabaseHostname ? [`https://${blogSupabaseHostname}`] : []),
     `https://${cloudinaryHostname}`,
+    ...clerkSources,
     "https://*.googleusercontent.com",
     "https://*.gstatic.com",
     "https://images.unsplash.com",
@@ -78,6 +81,7 @@ function buildCsp() {
   const frameAncestors = ["'self'"];
   const frameSrc = [
     "'self'",
+    ...clerkSources,
     "https://www.google.com",
     "https://maps.google.com",
   ];
@@ -89,13 +93,19 @@ function buildCsp() {
     ...(blogSupabaseHostname ? [`https://${blogSupabaseHostname}`] : []),
     `https://${cloudinaryHostname}`,
   ];
+  const scriptSrc = [
+    "'self'",
+    "'unsafe-inline'",
+    ...(isDevelopment ? ["'unsafe-eval'"] : []),
+    ...clerkSources,
+  ];
   return [
     "default-src 'self'",
     "base-uri 'self'",
     `form-action ${formAction.join(" ")}`,
     `frame-ancestors ${frameAncestors.join(" ")}`,
     "object-src 'none'",
-    `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
+    `script-src ${scriptSrc.join(" ")}`,
     "style-src 'self' 'unsafe-inline'",
     `img-src ${imgSrc.join(" ")}`,
     "font-src 'self' data:",
@@ -111,47 +121,19 @@ function buildCsp() {
 }
 
 const securityHeaders = [
-  {
-    key: "Content-Security-Policy",
-    value: buildCsp(),
-  },
-  {
-    key: "X-DNS-Prefetch-Control",
-    value: "on",
-  },
-  {
-    key: "Strict-Transport-Security",
-    value: "max-age=63072000; includeSubDomains; preload",
-  },
-  {
-    key: "X-Frame-Options",
-    value: "SAMEORIGIN",
-  },
-  {
-    key: "X-Content-Type-Options",
-    value: "nosniff",
-  },
-  {
-    key: "Referrer-Policy",
-    value: "strict-origin-when-cross-origin",
-  },
+  { key: "Content-Security-Policy", value: buildCsp() },
+  { key: "X-DNS-Prefetch-Control", value: "on" },
+  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
+  { key: "X-Frame-Options", value: "SAMEORIGIN" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
   {
     key: "Permissions-Policy",
-    value:
-      "camera=(), microphone=(), geolocation=(self), payment=(), browsing-topics=()",
+    value: "camera=(), microphone=(), geolocation=(self), payment=(), browsing-topics=()",
   },
-  {
-    key: "X-Permitted-Cross-Domain-Policies",
-    value: "none",
-  },
-  {
-    key: "Cross-Origin-Opener-Policy",
-    value: "same-origin",
-  },
-  {
-    key: "Cross-Origin-Resource-Policy",
-    value: "same-site",
-  },
+  { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
+  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  { key: "Cross-Origin-Resource-Policy", value: "same-site" },
 ];
 
 const nextConfig: NextConfig = {
@@ -159,17 +141,9 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   compress: true,
   productionBrowserSourceMaps: false,
-  compiler: {
-    removeConsole: true,
-  },
-  experimental: {
-    serverActions: {
-      bodySizeLimit: "25mb",
-    },
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
+  compiler: { removeConsole: true },
+  experimental: { serverActions: { bodySizeLimit: "25mb" } },
+  typescript: { ignoreBuildErrors: true },
   allowedDevOrigins: [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -179,85 +153,50 @@ const nextConfig: NextConfig = {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
       ...(supabaseHostname
-        ? [
-            {
-              protocol: "https" as const,
-              hostname: supabaseHostname,
-              pathname: "/storage/v1/object/public/**",
-            },
-          ]
+        ? [{ protocol: "https" as const, hostname: supabaseHostname, pathname: "/storage/v1/object/public/**" }]
         : []),
       ...(blogSupabaseHostname
-        ? [
-            {
-              protocol: "https" as const,
-              hostname: blogSupabaseHostname,
-              pathname: "/storage/v1/object/public/**",
-            },
-          ]
+        ? [{ protocol: "https" as const, hostname: blogSupabaseHostname, pathname: "/storage/v1/object/public/**" }]
         : []),
-      {
-        protocol: "https",
-        hostname: cloudinaryHostname,
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "images.unsplash.com",
-        pathname: "/**",
-      },
-      {
-        protocol: "https",
-        hostname: "images.pexels.com",
-        pathname: "/**",
-      },
+      { protocol: "https", hostname: cloudinaryHostname, pathname: "/**" },
+      { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
+      { protocol: "https", hostname: "images.pexels.com", pathname: "/**" },
     ],
+  },
+  async redirects() {
+    if (String(process.env.PAINEL_AUTH_PROVIDER || "supabase").trim().toLowerCase() !== "clerk") {
+      return [];
+    }
+    return [
+      {
+        source: "/login",
+        destination: "/login-clerk",
+        permanent: false,
+      },
+    ];
   },
   async headers() {
     return [
-      {
-        source: "/:path*",
-        headers: securityHeaders,
-      },
+      { source: "/:path*", headers: securityHeaders },
       {
         source: "/api/:path*",
-        headers: [
-          ...securityHeaders,
-          {
-            key: "Cache-Control",
-            value: "no-store, max-age=0",
-          },
-        ],
+        headers: [...securityHeaders, { key: "Cache-Control", value: "no-store, max-age=0" }],
       },
       {
         source: "/app-profissional/:path*",
-        headers: [
-          ...securityHeaders,
-          {
-            key: "X-Robots-Tag",
-            value: "noindex, nofollow",
-          },
-        ],
+        headers: [...securityHeaders, { key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
       {
         source: "/admin-master/:path*",
-        headers: [
-          ...securityHeaders,
-          {
-            key: "X-Robots-Tag",
-            value: "noindex, nofollow",
-          },
-        ],
+        headers: [...securityHeaders, { key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
       {
         source: "/login/:path*",
-        headers: [
-          ...securityHeaders,
-          {
-            key: "X-Robots-Tag",
-            value: "noindex, nofollow",
-          },
-        ],
+        headers: [...securityHeaders, { key: "X-Robots-Tag", value: "noindex, nofollow" }],
+      },
+      {
+        source: "/login-clerk/:path*",
+        headers: [...securityHeaders, { key: "X-Robots-Tag", value: "noindex, nofollow" }],
       },
     ];
   },
