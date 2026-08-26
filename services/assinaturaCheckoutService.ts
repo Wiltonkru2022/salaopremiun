@@ -1,9 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { addDays, format, isAfter } from "date-fns";
-import { createServerClient } from "@supabase/ssr";
-import { cookies, headers } from "next/headers";
-import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
-import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
+import { headers } from "next/headers";
+import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getDatabaseAdmin } from "@/lib/db/admin";
 import {
   captureSystemError,
@@ -100,6 +98,7 @@ export function createAssinaturaCheckoutService() {
 export type AssinaturaCheckoutService = ReturnType<
   typeof createAssinaturaCheckoutService
 >;
+
 function responseJson<T>(body: T, init?: { status?: number }) {
   return {
     status: init?.status ?? 200,
@@ -107,54 +106,12 @@ function responseJson<T>(body: T, init?: { status?: number }) {
   };
 }
 
-async function getSupabaseServer() {
-  const cookieStore = await cookies();
-  const headersList = await headers();
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-  if (!supabaseUrl) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_URL não configurada.");
-  }
-
-  if (!supabaseAnonKey) {
-    throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY não configurada.");
-  }
-
-  const cookieOptions = getSupabaseCookieOptions(headersList.get("host"));
-
-  return createServerClient(supabaseUrl, supabaseAnonKey, {
-    cookieOptions,
-    cookies: {
-      getAll() {
-        return cookieStore.getAll();
-      },
-      setAll() {
-        // route handler não precisa gravar cookie aqui
-      },
-    },
-  });
-}
-
 async function validarSalaoDoUsuario(idSalao: string) {
-  const supabase = await getSupabaseServer();
-
-  const {
-    data: { user },
-    error: authError,
-  } = await supabase.auth.getUser();
-
-  if (authError) {
-    throw new AssinaturaCheckoutServiceError("Erro ao validar usuário autenticado.", 401);
-  }
+  const { user, usuario } = await getPainelUserContext({ allowAdminAal1: true });
 
   if (!user) {
     throw new AssinaturaCheckoutServiceError("Usuário não autenticado.", 401);
   }
-
-  const usuario = await getPainelUserContextByAuthUserId(user.id);
-
 
   if (!usuario?.id_salao) {
     throw new AssinaturaCheckoutServiceError("Usuário sem salão vinculado.", 403);
@@ -169,7 +126,10 @@ async function validarSalaoDoUsuario(idSalao: string) {
   }
 
   if (String(usuario.nivel || "").toLowerCase() !== "admin") {
-    throw new AssinaturaCheckoutServiceError("Somente administrador pode gerenciar assinatura.", 403);
+    throw new AssinaturaCheckoutServiceError(
+      "Somente administrador pode gerenciar assinatura.",
+      403
+    );
   }
 
   return { user };
@@ -203,71 +163,34 @@ function onlyNumbers(value?: string | null) {
 
 function normalizeBrazilPhoneDigits(value?: string | null) {
   let digits = onlyNumbers(value);
-
   if ((digits.length === 12 || digits.length === 13) && digits.startsWith("55")) {
     digits = digits.slice(2);
   }
-
   return digits;
 }
 
 function isInvalidBrazilPhoneDigits(digits: string) {
-  if (!digits) return true;
-
-  if (!/^\d+$/.test(digits)) {
-    return true;
-  }
-
-  if (digits.length !== 10 && digits.length !== 11) {
-    return true;
-  }
-
+  if (!digits || !/^\d+$/.test(digits)) return true;
+  if (digits.length !== 10 && digits.length !== 11) return true;
   const ddd = digits.slice(0, 2);
   const subscriber = digits.slice(2);
-
-  if (ddd.startsWith("0") || subscriber.length < 8) {
-    return true;
-  }
-
-  if (/^(\d)\1+$/.test(digits) || /^(\d)\1+$/.test(subscriber)) {
-    return true;
-  }
-
-  if (subscriber === "99999999" || subscriber === "999999999") {
-    return true;
-  }
-
-  return false;
+  if (ddd.startsWith("0") || subscriber.length < 8) return true;
+  if (/^(\d)\1+$/.test(digits) || /^(\d)\1+$/.test(subscriber)) return true;
+  return subscriber === "99999999" || subscriber === "999999999";
 }
 
 function getAsaasPhonePayload(value?: string | null) {
   const digits = normalizeBrazilPhoneDigits(value);
-
   if (isInvalidBrazilPhoneDigits(digits)) {
-    return {
-      phone: undefined,
-      mobilePhone: undefined,
-    };
+    return { phone: undefined, mobilePhone: undefined };
   }
-
   if (digits.length === 11) {
-    return {
-      phone: undefined,
-      mobilePhone: digits,
-    };
+    return { phone: undefined, mobilePhone: digits };
   }
-
   if (digits.length === 10) {
-    return {
-      phone: digits,
-      mobilePhone: undefined,
-    };
+    return { phone: digits, mobilePhone: undefined };
   }
-
-  return {
-    phone: undefined,
-    mobilePhone: undefined,
-  };
+  return { phone: undefined, mobilePhone: undefined };
 }
 
 function isEmailValido(email?: string | null) {
@@ -301,22 +224,14 @@ function calcularVencimentoAssinaturaPaga(assinatura?: {
 
   if (assinatura?.vencimento_em) {
     const vencimentoAtual = new Date(`${assinatura.vencimento_em}T23:59:59`);
-
-    if (
-      !Number.isNaN(vencimentoAtual.getTime()) &&
-      isAfter(vencimentoAtual, baseDate)
-    ) {
+    if (!Number.isNaN(vencimentoAtual.getTime()) && isAfter(vencimentoAtual, baseDate)) {
       baseDate = vencimentoAtual;
     }
   }
 
   if (assinatura?.trial_fim_em) {
     const trialFimAtual = new Date(assinatura.trial_fim_em);
-
-    if (
-      !Number.isNaN(trialFimAtual.getTime()) &&
-      isAfter(trialFimAtual, baseDate)
-    ) {
+    if (!Number.isNaN(trialFimAtual.getTime()) && isAfter(trialFimAtual, baseDate)) {
       baseDate = trialFimAtual;
     }
   }
@@ -329,7 +244,6 @@ function normalizarIdempotencyKey(value?: string | null) {
     .trim()
     .replace(/[^\w:.-]/g, "")
     .slice(0, 160);
-
   return normalized || randomUUID();
 }
 
@@ -373,11 +287,9 @@ function normalizarPlanoCobranca(value?: string | null) {
 
 function getPlanoOrdem(plano?: string | null) {
   const codigo = String(plano || "").toLowerCase();
-
   if (codigo === "basico") return 1;
   if (codigo === "pro") return 2;
   if (codigo === "premium") return 3;
-
   return 0;
 }
 
@@ -387,50 +299,31 @@ function getTipoMovimento(
 ): TipoMovimentoAssinatura {
   const origem = String(planoOrigem || "").toLowerCase();
   const destino = String(planoDestino || "").toLowerCase();
-
-  if (!origem || origem === destino) {
-    return "renovacao";
-  }
-
+  if (!origem || origem === destino) return "renovacao";
   const ordemOrigem = getPlanoOrdem(origem);
   const ordemDestino = getPlanoOrdem(destino);
-
-  if (ordemDestino > ordemOrigem) {
-    return "upgrade";
-  }
-
-  if (ordemDestino < ordemOrigem) {
-    return "downgrade";
-  }
-
+  if (ordemDestino > ordemOrigem) return "upgrade";
+  if (ordemDestino < ordemOrigem) return "downgrade";
   return "renovacao";
 }
 
 async function getRemoteIp() {
   const requestHeaders = await headers();
-
   const forwardedFor = requestHeaders.get("x-forwarded-for");
   if (forwardedFor) {
     const ip = forwardedFor.split(",")[0]?.trim();
     if (ip) return ip;
   }
-
   const realIp = requestHeaders.get("x-real-ip");
   if (realIp) return realIp.trim();
-
   const cfConnectingIp = requestHeaders.get("cf-connecting-ip");
   if (cfConnectingIp) return cfConnectingIp.trim();
-
   return "127.0.0.1";
 }
 
 async function parseJsonSafe(response: Response) {
   const rawText = await response.text();
-
-  if (!rawText) {
-    return {};
-  }
-
+  if (!rawText) return {};
   try {
     return JSON.parse(rawText);
   } catch {
@@ -448,8 +341,7 @@ async function buscarOuCriarCustomerAsaas(params: {
   complemento?: string;
 }) {
   const baseUrl = getAsaasBaseUrl();
-  const headers = getAsaasHeaders();
-
+  const asaasHeaders = getAsaasHeaders();
   const cpfCnpj = onlyNumbers(params.cpfCnpj);
   const email = String(params.email || "").trim().toLowerCase();
   const telefonePayload = getAsaasPhonePayload(params.telefone);
@@ -457,22 +349,15 @@ async function buscarOuCriarCustomerAsaas(params: {
   if (cpfCnpj) {
     const buscaPorCpf = await fetch(
       `${baseUrl}/customers?cpfCnpj=${encodeURIComponent(cpfCnpj)}`,
-      {
-        method: "GET",
-        headers,
-        cache: "no-store",
-      }
+      { method: "GET", headers: asaasHeaders, cache: "no-store" }
     );
-
     const buscaPorCpfJson = await parseJsonSafe(buscaPorCpf);
-
     if (!buscaPorCpf.ok) {
       throw new Error(
-        (buscaPorCpfJson as { errors?: Array<{ description?: string }> })
-          ?.errors?.[0]?.description || "Erro ao buscar customer no Asaas."
+        (buscaPorCpfJson as { errors?: Array<{ description?: string }> })?.errors?.[0]
+          ?.description || "Erro ao buscar customer no Asaas."
       );
     }
-
     if (
       Array.isArray((buscaPorCpfJson as { data?: unknown[] })?.data) &&
       (buscaPorCpfJson as { data: unknown[] }).data.length > 0
@@ -484,23 +369,15 @@ async function buscarOuCriarCustomerAsaas(params: {
   if (email) {
     const buscaPorEmail = await fetch(
       `${baseUrl}/customers?email=${encodeURIComponent(email)}`,
-      {
-        method: "GET",
-        headers,
-        cache: "no-store",
-      }
+      { method: "GET", headers: asaasHeaders, cache: "no-store" }
     );
-
     const buscaPorEmailJson = await parseJsonSafe(buscaPorEmail);
-
     if (!buscaPorEmail.ok) {
       throw new Error(
-        (buscaPorEmailJson as { errors?: Array<{ description?: string }> })
-          ?.errors?.[0]?.description ||
-          "Erro ao buscar customer por e-mail no Asaas."
+        (buscaPorEmailJson as { errors?: Array<{ description?: string }> })?.errors?.[0]
+          ?.description || "Erro ao buscar customer por e-mail no Asaas."
       );
     }
-
     if (
       Array.isArray((buscaPorEmailJson as { data?: unknown[] })?.data) &&
       (buscaPorEmailJson as { data: unknown[] }).data.length > 0
@@ -523,19 +400,16 @@ async function buscarOuCriarCustomerAsaas(params: {
 
   const createRes = await fetch(`${baseUrl}/customers`, {
     method: "POST",
-    headers,
+    headers: asaasHeaders,
     body: JSON.stringify(payload),
   });
-
   const createJson = await parseJsonSafe(createRes);
-
   if (!createRes.ok) {
     throw new Error(
       (createJson as { errors?: Array<{ description?: string }> })?.errors?.[0]
         ?.description || "Erro ao criar customer no Asaas."
     );
   }
-
   return createJson as Record<string, unknown>;
 }
 
@@ -557,13 +431,9 @@ async function criarCobrancaAsaas(params: {
   };
 }) {
   const baseUrl = getAsaasBaseUrl();
-  const headers = getAsaasHeaders();
-  const holderPhonePayload = getAsaasPhonePayload(
-    params.creditCardHolderInfo?.phone
-  );
-
+  const asaasHeaders = getAsaasHeaders();
+  const holderPhonePayload = getAsaasPhonePayload(params.creditCardHolderInfo?.phone);
   const billingType = mapBillingType(params.billingType);
-
   const payload: Record<string, unknown> = {
     customer: params.customer,
     billingType,
@@ -580,7 +450,6 @@ async function criarCobrancaAsaas(params: {
     if (!params.creditCard || !params.creditCardHolderInfo) {
       throw new Error("Dados do cartão não enviados.");
     }
-
     payload.creditCard = {
       holderName: params.creditCard.holderName,
       number: onlyNumbers(params.creditCard.number),
@@ -588,62 +457,52 @@ async function criarCobrancaAsaas(params: {
       expiryYear: onlyNumbers(params.creditCard.expiryYear),
       ccv: onlyNumbers(params.creditCard.ccv),
     };
-
     payload.creditCardHolderInfo = {
       name: params.creditCardHolderInfo.name,
       email: params.creditCardHolderInfo.email,
       cpfCnpj: onlyNumbers(params.creditCardHolderInfo.cpfCnpj),
       postalCode: onlyNumbers(params.creditCardHolderInfo.postalCode),
       addressNumber: params.creditCardHolderInfo.addressNumber,
-      phone:
-        holderPhonePayload.mobilePhone || holderPhonePayload.phone || undefined,
+      phone: holderPhonePayload.mobilePhone || holderPhonePayload.phone || undefined,
     };
-
     payload.remoteIp = params.remoteIp || "127.0.0.1";
   }
 
   const response = await fetch(`${baseUrl}/payments`, {
     method: "POST",
-    headers,
+    headers: asaasHeaders,
     body: JSON.stringify(payload),
   });
-
   const json = await parseJsonSafe(response);
-
   if (!response.ok) {
     throw new Error(
       (json as { errors?: Array<{ description?: string }> })?.errors?.[0]
         ?.description || "Erro ao criar cobrança no Asaas."
     );
   }
-
   return json as Record<string, unknown>;
 }
 
 async function buscarPayloadPix(paymentId: string) {
   const baseUrl = getAsaasBaseUrl();
-  const headers = getAsaasHeaders();
-
+  const asaasHeaders = getAsaasHeaders();
   const response = await fetch(`${baseUrl}/payments/${paymentId}/pixQrCode`, {
     method: "GET",
-    headers,
+    headers: asaasHeaders,
     cache: "no-store",
   });
-
   const json = await parseJsonSafe(response);
-
   if (!response.ok) {
     throw new Error(
       (json as { errors?: Array<{ description?: string }> })?.errors?.[0]
         ?.description || "Erro ao buscar QR Code PIX."
     );
   }
-
   return json as Record<string, unknown>;
 }
 
 async function reservarCheckoutAssinatura(params: {
-  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
+  databaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   idSalao: string;
   planoCodigo: string;
   billingType: BillingType;
@@ -651,7 +510,7 @@ async function reservarCheckoutAssinatura(params: {
   idempotencyKey: string;
   payload: Record<string, unknown>;
 }) {
-  const { data, error } = await params.supabaseAdmin.rpc(
+  const { data, error } = await params.databaseAdmin.rpc(
     "fn_assinatura_reservar_checkout",
     {
       p_id_salao: params.idSalao,
@@ -662,35 +521,33 @@ async function reservarCheckoutAssinatura(params: {
       p_payload: params.payload as Json,
     }
   );
-
   if (error) {
     throw new AssinaturaCheckoutServiceError(
       error.message || "Erro ao reservar checkout da assinatura.",
       500
     );
   }
-
   const reserva = Array.isArray(data)
     ? (data[0] as CheckoutReservaRow | undefined)
     : (data as CheckoutReservaRow | null);
-
   if (!reserva) {
-    throw new AssinaturaCheckoutServiceError("Erro ao reservar checkout da assinatura.", 500);
+    throw new AssinaturaCheckoutServiceError(
+      "Erro ao reservar checkout da assinatura.",
+      500
+    );
   }
-
   return reserva;
 }
 
 async function marcarCheckoutConcluido(params: {
-  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
+  databaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   checkoutLockId: string | null;
   idCobranca: string;
   paymentId: string;
   response: CheckoutResponsePayload;
 }) {
   if (!params.checkoutLockId) return;
-
-  const { error } = await params.supabaseAdmin.rpc(
+  const { error } = await params.databaseAdmin.rpc(
     "fn_assinatura_concluir_checkout",
     {
       p_checkout_lock_id: params.checkoutLockId,
@@ -699,22 +556,18 @@ async function marcarCheckoutConcluido(params: {
       p_response_json: params.response,
     }
   );
-
-  if (error) {
-    console.error("Erro ao concluir lock de checkout:", error);
-  }
+  if (error) console.error("Erro ao concluir lock de checkout:", error);
 }
 
 async function marcarCheckoutFalho(params: {
-  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
+  databaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   checkoutLockId: string | null;
   paymentId?: string | null;
   errorMessage: string;
   response?: Record<string, unknown>;
 }) {
   if (!params.checkoutLockId) return;
-
-  const { error } = await params.supabaseAdmin.rpc(
+  const { error } = await params.databaseAdmin.rpc(
     "fn_assinatura_falhar_checkout",
     {
       p_checkout_lock_id: params.checkoutLockId,
@@ -723,20 +576,17 @@ async function marcarCheckoutFalho(params: {
       p_response_json: (params.response || {}) as Json,
     }
   );
-
-  if (error) {
-    console.error("Erro ao marcar checkout como falho:", error);
-  }
+  if (error) console.error("Erro ao marcar checkout como falho:", error);
 }
 
 async function montarCheckoutExistente(params: {
-  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
+  databaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   idSalao: string;
   idCobranca: string;
   planoFallback: string;
   reason: string;
 }) {
-  const { data, error } = await params.supabaseAdmin
+  const { data, error } = await params.databaseAdmin
     .from("assinaturas_cobrancas")
     .select(`
       id,
@@ -807,7 +657,6 @@ function getCardSnapshot(payment: Record<string, unknown>) {
   const token = String(creditCard?.creditCardToken || "").trim() || null;
   const brand = String(creditCard?.creditCardBrand || "").trim() || null;
   const last4 = String(creditCard?.creditCardNumber || "").trim() || null;
-
   return {
     token,
     brand,
@@ -817,7 +666,7 @@ function getCardSnapshot(payment: Record<string, unknown>) {
 }
 
 async function limparAssinaturaRecorrenteCartao(params: {
-  supabaseAdmin: ReturnType<typeof getDatabaseAdmin>;
+  databaseAdmin: ReturnType<typeof getDatabaseAdmin>;
   assinaturaId: string;
   asaasSubscriptionId?: string | null;
   idSalao: string;
@@ -845,8 +694,7 @@ async function limparAssinaturaRecorrenteCartao(params: {
             reason: params.reason,
           },
           incidentKey: `assinatura_recorrente_cleanup:${params.assinaturaId}`,
-          incidentTitle:
-            "Falha ao remover assinatura recorrente do cartao no Asaas",
+          incidentTitle: "Falha ao remover assinatura recorrente do cartao no Asaas",
           suggestedAction:
             "Revisar a assinatura recorrente no Asaas antes de concluir a troca da forma de pagamento.",
           automationAvailable: false,
@@ -856,7 +704,7 @@ async function limparAssinaturaRecorrenteCartao(params: {
     }
   }
 
-  const { error: cleanupError } = await params.supabaseAdmin
+  const { error: cleanupError } = await params.databaseAdmin
     .from("assinaturas")
     .update({
       asaas_subscription_id: null,
@@ -880,8 +728,7 @@ async function limparAssinaturaRecorrenteCartao(params: {
         reason: params.reason,
       },
       incidentKey: `assinatura_recorrente_cleanup_local:${params.assinaturaId}`,
-      incidentTitle:
-        "Falha ao limpar assinatura recorrente do cartao no sistema",
+      incidentTitle: "Falha ao limpar assinatura recorrente do cartao no sistema",
       suggestedAction:
         "Revisar o registro local da assinatura recorrente antes da proxima renovacao.",
       automationAvailable: false,
@@ -896,14 +743,14 @@ async function criarCobranca(params: {
   body: BodyInput;
   idempotencyKey: string;
 }) {
-  let supabaseAdmin: ReturnType<typeof getDatabaseAdmin> | null = null;
+  let databaseAdmin: ReturnType<typeof getDatabaseAdmin> | null = null;
   let checkoutLockId: string | null = null;
   let checkoutPaymentId: string | null = null;
   let monitoredBody: BodyInput | null = null;
   const startedAt = Date.now();
 
   try {
-    supabaseAdmin = getDatabaseAdmin();
+    databaseAdmin = getDatabaseAdmin();
     const body = params.body;
     monitoredBody = body;
     const idempotencyKey = params.idempotencyKey;
@@ -913,10 +760,7 @@ async function criarCobranca(params: {
     const billingType = body.billingType;
 
     if (!idSalao) {
-      return responseJson(
-        { error: "idSalao é obrigatório." },
-        { status: 400 }
-      );
+      return responseJson({ error: "idSalao é obrigatório." }, { status: 400 });
     }
 
     const acesso = await validarSalaoDoUsuario(idSalao);
@@ -926,29 +770,19 @@ async function criarCobranca(params: {
     }
 
     if (!["PIX", "BOLETO", "CREDIT_CARD"].includes(String(billingType))) {
-      return responseJson(
-        { error: "Forma de pagamento inválida." },
-        { status: 400 }
-      );
+      return responseJson({ error: "Forma de pagamento inválida." }, { status: 400 });
     }
 
     if (!body.responsavelNome?.trim()) {
-      return responseJson(
-        { error: "Nome do responsável é obrigatório." },
-        { status: 400 }
-      );
+      return responseJson({ error: "Nome do responsável é obrigatório." }, { status: 400 });
     }
 
     if (!isEmailValido(body.responsavelEmail)) {
-      return responseJson(
-        { error: "E-mail do responsável inválido." },
-        { status: 400 }
-      );
+      return responseJson({ error: "E-mail do responsável inválido." }, { status: 400 });
     }
 
     if (billingType === "CREDIT_CARD") {
       const cc = body.creditCard;
-
       if (
         !cc?.holderName?.trim() ||
         !cc?.number?.trim() ||
@@ -956,14 +790,11 @@ async function criarCobranca(params: {
         !cc?.expiryYear?.trim() ||
         !cc?.ccv?.trim()
       ) {
-        return responseJson(
-          { error: "Preencha todos os dados do cartão." },
-          { status: 400 }
-        );
+        return responseJson({ error: "Preencha todos os dados do cartão." }, { status: 400 });
       }
     }
 
-    const { data: salaoData, error: salaoError } = await supabaseAdmin
+    const { data: salaoData, error: salaoError } = await databaseAdmin
       .from("saloes")
       .select("id, nome, email, telefone, cpf_cnpj, cep, numero, complemento")
       .eq("id", idSalao)
@@ -977,14 +808,11 @@ async function criarCobranca(params: {
     }
 
     if (!salaoData?.id) {
-      return responseJson(
-        { error: "Salão não encontrado." },
-        { status: 404 }
-      );
+      return responseJson({ error: "Salão não encontrado." }, { status: 404 });
     }
 
     const { data: assinaturaExistenteFull, error: assinaturaExistenteFullError } =
-      await supabaseAdmin
+      await databaseAdmin
         .from("assinaturas")
         .select(
           "id, plano, vencimento_em, trial_fim_em, renovacao_automatica, asaas_subscription_id"
@@ -1007,7 +835,7 @@ async function criarCobranca(params: {
     const planoDestino = planoCodigo;
     const tipoMovimento = getTipoMovimento(planoOrigem, planoDestino);
 
-    const { data: planoData, error: planoError } = await supabaseAdmin
+    const { data: planoData, error: planoError } = await databaseAdmin
       .from("planos_saas")
       .select(`
         id,
@@ -1031,7 +859,6 @@ async function criarCobranca(params: {
     }
 
     const plano = planoData as PlanoSaasRow | null;
-
     if (!plano?.id) {
       return responseJson(
         { error: "Plano não encontrado ou inativo." },
@@ -1042,16 +869,12 @@ async function criarCobranca(params: {
     const valor = Number(plano.valor_mensal || 0);
     const limiteUsuarios = Number(plano.limite_usuarios || 0);
     const limiteProfissionais = Number(plano.limite_profissionais || 0);
-
     if (valor <= 0) {
-      return responseJson(
-        { error: "Valor do plano inválido." },
-        { status: 400 }
-      );
+      return responseJson({ error: "Valor do plano inválido." }, { status: 400 });
     }
 
     const reservaCheckout = await reservarCheckoutAssinatura({
-      supabaseAdmin,
+      databaseAdmin,
       idSalao,
       planoCodigo,
       billingType,
@@ -1060,6 +883,7 @@ async function criarCobranca(params: {
       payload: {
         origem: "checkout_manual",
         id_usuario_auth: acesso.user.id,
+        auth_provider: "clerk",
         plano_origem: planoOrigem,
         plano_destino: planoDestino,
         tipo_movimento: tipoMovimento,
@@ -1072,7 +896,7 @@ async function criarCobranca(params: {
     if (!reservaCheckout.should_process) {
       if (reservaCheckout.existing_cobranca_id) {
         const checkoutExistente = await montarCheckoutExistente({
-          supabaseAdmin,
+          databaseAdmin,
           idSalao,
           idCobranca: reservaCheckout.existing_cobranca_id,
           planoFallback: planoCodigo,
@@ -1155,7 +979,6 @@ async function criarCobranca(params: {
     });
 
     const customerId = String(customer.id || "").trim();
-
     if (!customerId) {
       throw new AssinaturaCheckoutServiceError(
         "Nao foi possivel identificar o customer no Asaas.",
@@ -1164,8 +987,7 @@ async function criarCobranca(params: {
     }
 
     const dueDate = format(addDays(new Date(), 1), "yyyy-MM-dd");
-    const remoteIp =
-      billingType === "CREDIT_CARD" ? await getRemoteIp() : undefined;
+    const remoteIp = billingType === "CREDIT_CARD" ? await getRemoteIp() : undefined;
 
     const payment = await criarCobrancaAsaas({
       customer: customerId,
@@ -1182,19 +1004,16 @@ async function criarCobranca(params: {
           ? {
               name: body.responsavelNome.trim(),
               email: body.responsavelEmail.trim().toLowerCase(),
-              cpfCnpj:
-                body.responsavelCpfCnpj || salaoData.cpf_cnpj || undefined,
+              cpfCnpj: body.responsavelCpfCnpj || salaoData.cpf_cnpj || undefined,
               postalCode: body.cep || salaoData.cep || undefined,
               addressNumber: body.numero || salaoData.numero || undefined,
-              phone:
-                body.responsavelTelefone || salaoData.telefone || undefined,
+              phone: body.responsavelTelefone || salaoData.telefone || undefined,
             }
           : undefined,
     });
 
     const paymentId = String(payment.id || "").trim();
     checkoutPaymentId = paymentId || null;
-
     if (!paymentId) {
       throw new AssinaturaCheckoutServiceError(
         "Nao foi possivel identificar a cobranca criada no Asaas.",
@@ -1221,10 +1040,7 @@ async function criarCobranca(params: {
           entity: "assinatura_cobranca",
           entityId: paymentId,
           error,
-          details: {
-            billingType,
-            plano: planoCodigo,
-          },
+          details: { billingType, plano: planoCodigo },
           incidentKey: `assinatura_pix:${paymentId}`,
           incidentTitle: "Falha ao recuperar QR Code Pix",
           suggestedAction: "Reprocessar a captura do QR Code Pix da cobranca.",
@@ -1240,12 +1056,10 @@ async function criarCobranca(params: {
       : dueDate;
     const pagoEm = pagamentoConfirmado ? new Date().toISOString() : null;
     const cardSnapshot = getCardSnapshot(payment);
-    const webhookEventOrderInicial = getWebhookEventOrderFromAsaasStatus(
-      payment.status
-    );
+    const webhookEventOrderInicial = getWebhookEventOrderFromAsaasStatus(payment.status);
 
     const { data: assinaturaExistente, error: assinaturaBuscaError } =
-      await supabaseAdmin
+      await databaseAdmin
         .from("assinaturas")
         .select("id")
         .eq("id_salao", idSalao)
@@ -1262,7 +1076,6 @@ async function criarCobranca(params: {
 
     if (assinaturaExistente?.id) {
       assinaturaId = assinaturaExistente.id;
-
       const assinaturaUpdate: Record<string, unknown> = {
         asaas_customer_id: customerId,
         asaas_payment_id: paymentId,
@@ -1279,19 +1092,17 @@ async function criarCobranca(params: {
         forma_pagamento_atual: billingType,
         id_cobranca_atual: null,
         gateway: "asaas",
-        referencia_atual:
-          String(payment.invoiceNumber || "").trim() || paymentId,
+        referencia_atual: String(payment.invoiceNumber || "").trim() || paymentId,
       };
 
       if (cardSnapshot.token) {
         assinaturaUpdate.asaas_credit_card_token = cardSnapshot.token;
         assinaturaUpdate.asaas_credit_card_brand = cardSnapshot.brand;
         assinaturaUpdate.asaas_credit_card_last4 = cardSnapshot.last4;
-        assinaturaUpdate.asaas_credit_card_tokenized_at =
-          cardSnapshot.tokenizedAt;
+        assinaturaUpdate.asaas_credit_card_tokenized_at = cardSnapshot.tokenizedAt;
       }
 
-      const { error: updateAssinaturaError } = await supabaseAdmin
+      const { error: updateAssinaturaError } = await databaseAdmin
         .from("assinaturas")
         .update(assinaturaUpdate)
         .eq("id", assinaturaId)
@@ -1321,20 +1132,18 @@ async function criarCobranca(params: {
         forma_pagamento_atual: billingType,
         id_cobranca_atual: null,
         gateway: "asaas",
-        referencia_atual:
-          String(payment.invoiceNumber || "").trim() || paymentId,
+        referencia_atual: String(payment.invoiceNumber || "").trim() || paymentId,
       };
 
       if (cardSnapshot.token) {
         assinaturaInsert.asaas_credit_card_token = cardSnapshot.token;
         assinaturaInsert.asaas_credit_card_brand = cardSnapshot.brand;
         assinaturaInsert.asaas_credit_card_last4 = cardSnapshot.last4;
-        assinaturaInsert.asaas_credit_card_tokenized_at =
-          cardSnapshot.tokenizedAt;
+        assinaturaInsert.asaas_credit_card_tokenized_at = cardSnapshot.tokenizedAt;
       }
 
       const { data: novaAssinatura, error: insertAssinaturaError } =
-        await supabaseAdmin
+        await databaseAdmin
           .from("assinaturas")
           .insert(assinaturaInsert)
           .select("id")
@@ -1351,7 +1160,7 @@ async function criarCobranca(params: {
     }
 
     const { data: cobrancaInserida, error: cobrancaInsertError } =
-      await supabaseAdmin
+      await databaseAdmin
         .from("assinaturas_cobrancas")
         .insert({
           id_salao: idSalao,
@@ -1395,6 +1204,8 @@ async function criarCobranca(params: {
             plano_destino: planoDestino,
             tipo_movimento: tipoMovimento,
             gerada_automaticamente: false,
+            database_provider: "neon",
+            auth_provider: "clerk",
           },
         })
         .select("id")
@@ -1402,17 +1213,14 @@ async function criarCobranca(params: {
 
     if (cobrancaInsertError || !cobrancaInserida?.id) {
       throw new AssinaturaCheckoutServiceError(
-        cobrancaInsertError?.message ||
-          "Erro ao criar registro da cobranca.",
+        cobrancaInsertError?.message || "Erro ao criar registro da cobranca.",
         500
       );
     }
 
-    const { error: updateAssinaturaComCobrancaError } = await supabaseAdmin
+    const { error: updateAssinaturaComCobrancaError } = await databaseAdmin
       .from("assinaturas")
-      .update({
-        id_cobranca_atual: cobrancaInserida.id,
-      })
+      .update({ id_cobranca_atual: cobrancaInserida.id })
       .eq("id", assinaturaId)
       .eq("id_salao", idSalao);
 
@@ -1424,7 +1232,7 @@ async function criarCobranca(params: {
       );
     }
 
-    const { error: salaoUpdateError } = await supabaseAdmin
+    const { error: salaoUpdateError } = await databaseAdmin
       .from("saloes")
       .update({
         plano: plano.codigo,
@@ -1453,9 +1261,12 @@ async function criarCobranca(params: {
       body.nomeSalao || salaoData.nome || "SalaoPremium"
     }`;
 
-    if (assinaturaRecorrenteAtual && (billingType !== "CREDIT_CARD" || !assinaturaAutoRenovacao)) {
+    if (
+      assinaturaRecorrenteAtual &&
+      (billingType !== "CREDIT_CARD" || !assinaturaAutoRenovacao)
+    ) {
       await limparAssinaturaRecorrenteCartao({
-        supabaseAdmin,
+        databaseAdmin,
         assinaturaId,
         asaasSubscriptionId: assinaturaRecorrenteAtual,
         idSalao,
@@ -1476,7 +1287,7 @@ async function criarCobranca(params: {
     ) {
       if (assinaturaRecorrenteAtual) {
         await limparAssinaturaRecorrenteCartao({
-          supabaseAdmin,
+          databaseAdmin,
           assinaturaId,
           asaasSubscriptionId: assinaturaRecorrenteAtual,
           idSalao,
@@ -1497,8 +1308,7 @@ async function criarCobranca(params: {
           creditCardHolderInfo: {
             name: body.responsavelNome.trim(),
             email: body.responsavelEmail.trim().toLowerCase(),
-            cpfCnpj:
-              body.responsavelCpfCnpj || salaoData.cpf_cnpj || undefined,
+            cpfCnpj: body.responsavelCpfCnpj || salaoData.cpf_cnpj || undefined,
             postalCode: body.cep || salaoData.cep || undefined,
             addressNumber: body.numero || salaoData.numero || undefined,
             phone: body.responsavelTelefone || salaoData.telefone || undefined,
@@ -1507,9 +1317,8 @@ async function criarCobranca(params: {
         });
 
         const subscriptionId = String(recurring.id || "").trim();
-
         if (subscriptionId) {
-          await supabaseAdmin
+          await databaseAdmin
             .from("assinaturas")
             .update({
               asaas_subscription_id: subscriptionId,
@@ -1529,14 +1338,9 @@ async function criarCobranca(params: {
           entity: "assinatura",
           entityId: assinaturaId,
           error,
-          details: {
-            billingType,
-            plano: plano.codigo,
-            paymentId,
-          },
+          details: { billingType, plano: plano.codigo, paymentId },
           incidentKey: `assinatura_recorrente_provision:${assinaturaId}`,
-          incidentTitle:
-            "Falha ao provisionar recorrencia do cartao apos checkout",
+          incidentTitle: "Falha ao provisionar recorrencia do cartao apos checkout",
           suggestedAction:
             "Desativar e reativar a renovacao automatica para reprovisionar a assinatura recorrente no Asaas.",
           automationAvailable: false,
@@ -1560,7 +1364,7 @@ async function criarCobranca(params: {
     } satisfies CheckoutResponsePayload;
 
     await marcarCheckoutConcluido({
-      supabaseAdmin,
+      databaseAdmin,
       checkoutLockId,
       idCobranca: cobrancaInserida.id,
       paymentId,
@@ -1607,25 +1411,18 @@ async function criarCobranca(params: {
       executed: true,
       success: true,
       log: "Checkout de assinatura concluido com sucesso.",
-      details: {
-        idSalao,
-        billingType,
-        plano: plano.codigo,
-        paymentId,
-      },
+      details: { idSalao, billingType, plano: plano.codigo, paymentId },
     });
 
     return responseJson(checkoutResponse);
   } catch (error: unknown) {
-    if (supabaseAdmin && checkoutLockId) {
+    if (databaseAdmin && checkoutLockId) {
       await marcarCheckoutFalho({
-        supabaseAdmin,
+        databaseAdmin,
         checkoutLockId,
         paymentId: checkoutPaymentId,
         errorMessage:
-          error instanceof Error
-            ? error.message
-            : "Erro interno ao criar cobranca.",
+          error instanceof Error ? error.message : "Erro interno ao criar cobranca.",
       });
     }
 
@@ -1646,7 +1443,8 @@ async function criarCobranca(params: {
       },
       incidentKey: `assinatura_checkout:${monitoredBody?.idSalao || "unknown"}`,
       incidentTitle: "Falha no checkout de assinatura",
-      suggestedAction: "Revisar validacoes, integracao Asaas e vinculos locais da cobranca.",
+      suggestedAction:
+        "Revisar validacoes, integracao Asaas e vinculos locais da cobranca.",
       automationAvailable: false,
     });
     await upsertSystemHealthCheck({
@@ -1658,20 +1456,17 @@ async function criarCobranca(params: {
         billingType: monitoredBody?.billingType || null,
         plano: monitoredBody?.plano || null,
         erro:
-          error instanceof Error
-            ? error.message
-            : "Erro interno ao criar cobranca.",
+          error instanceof Error ? error.message : "Erro interno ao criar cobranca.",
       },
     });
     await registrarAcaoAutomaticaSistema({
       type: "checkout_assinatura",
-      reference: checkoutLockId || checkoutPaymentId || monitoredBody?.idSalao || null,
+      reference:
+        checkoutLockId || checkoutPaymentId || monitoredBody?.idSalao || null,
       executed: true,
       success: false,
       log:
-        error instanceof Error
-          ? error.message
-          : "Erro interno ao criar cobranca.",
+        error instanceof Error ? error.message : "Erro interno ao criar cobranca.",
       details: {
         idSalao: monitoredBody?.idSalao || null,
         billingType: monitoredBody?.billingType || null,
@@ -1681,22 +1476,15 @@ async function criarCobranca(params: {
     });
 
     if (error instanceof AssinaturaCheckoutServiceError) {
-      return responseJson(
-        { error: error.message },
-        { status: error.status }
-      );
+      return responseJson({ error: error.message }, { status: error.status });
     }
 
     return responseJson(
       {
         error:
-          error instanceof Error
-            ? error.message
-            : "Erro interno ao criar cobrança.",
+          error instanceof Error ? error.message : "Erro interno ao criar cobrança.",
       },
       { status: 500 }
     );
   }
 }
-
-
