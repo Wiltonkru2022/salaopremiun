@@ -53,7 +53,7 @@ function classifySurface(file, content) {
   if (/asaas|payment|pagamento|checkout|assinatura/.test(rel) || /asaas|billing|payment/i.test(content)) return "payments";
   if (/auth|login|session|senha|password/.test(rel) || /auth\.|session|verifyPassword/i.test(content)) return "auth";
   if (rel.startsWith("app/api/")) return "api";
-  if (/supabase|migration|rpc|\.from\(/i.test(content) && !rel.startsWith("app/")) return "database";
+  if (/neon|database\/migrations|rpc|\.from\(/i.test(content) && !rel.startsWith("app/")) return "database";
   if (/integrac|google-calendar|brevo|whatsapp|push|vapid/.test(rel)) return "integrations";
   if (rel.startsWith("app/")) return "frontend";
   return "backend";
@@ -89,7 +89,7 @@ function inferredDomainKeys(file, content, route) {
   if (/google-calendar|google_calendar/.test(haystack)) keys.add("integration.google_calendar");
   if (/cron|eventos_cron/.test(haystack)) keys.add("automation.cron");
   if (/admin-master/.test(haystack)) keys.add("admin.master");
-  if (/supabase|\.from\(|\.rpc\(/.test(haystack)) keys.add("supabase.database");
+  if (/neon|database\/migrations|\.from\(|\.rpc\(/.test(haystack)) keys.add("neon.database");
 
   return [...keys];
 }
