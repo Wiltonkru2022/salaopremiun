@@ -1,4 +1,4 @@
-// Ponte de compatibilidade de midia; nao acessa banco, Auth ou Realtime.
+// Compatibilidade temporaria de midia; sem SDK, Auth, banco ou Realtime Supabase.
 function resolvePublicMediaUrl(path: string) {
   const value = String(path || "").trim();
   if (!value) return "";
@@ -9,7 +9,7 @@ function resolvePublicMediaUrl(path: string) {
 }
 export const supabase = {
   storage: {
-    from() {
+    from(_bucket?: string) {
       return { getPublicUrl(path: string) { return { data: { publicUrl: resolvePublicMediaUrl(path) } }; } };
     },
   },
