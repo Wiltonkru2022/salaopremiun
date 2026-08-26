@@ -1,36 +1,79 @@
-import { createClient } from "@supabase/supabase-js";
+type RealtimeCallback = () => void;
 
-function requiredPublicEnv(name: string, value: string | undefined) {
-  const normalized = String(value || "").trim();
-  if (!normalized) {
-    throw new Error(`Configuracao obrigatoria ausente: ${name}`);
-  }
-  return normalized;
+type LocalChannel = {
+  on: (
+    _type: string,
+    _filter: Record<string, unknown>,
+    callback: RealtimeCallback
+  ) => LocalChannel;
+  subscribe: () => LocalChannel;
+  __dispose: () => void;
+};
+
+function createLocalChannel(): LocalChannel {
+  const callbacks = new Set<RealtimeCallback>();
+  let timer: ReturnType<typeof setInterval> | null = null;
+
+  const channel: LocalChannel = {
+    on(_type, _filter, callback) {
+      callbacks.add(callback);
+      return channel;
+    },
+    subscribe() {
+      if (!timer && typeof window !== "undefined") {
+        timer = setInterval(() => {
+          if (document.visibilityState === "hidden" || !navigator.onLine) return;
+          callbacks.forEach((callback) => {
+            try {
+              callback();
+            } catch {
+              // Uma atualização com falha não interrompe as demais.
+            }
+          });
+        }, 30000);
+      }
+      return channel;
+    },
+    __dispose() {
+      if (timer) clearInterval(timer);
+      timer = null;
+      callbacks.clear();
+    },
+  };
+
+  return channel;
 }
 
-const supabaseUrl = requiredPublicEnv(
-  "VITE_SUPABASE_URL",
-  import.meta.env.VITE_SUPABASE_URL as string | undefined
-);
-const supabasePublicKey = requiredPublicEnv(
-  "VITE_SUPABASE_PUBLISHABLE_KEY",
-  (import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
-    import.meta.env.VITE_SUPABASE_ANON_KEY) as string | undefined
-);
+export const supabaseConfigured = false;
 
-export const supabaseConfigured = true;
-
-export const supabase = createClient(supabaseUrl, supabasePublicKey, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storageKey: "salaopremiun.auth"
+/**
+ * Compatibilidade de interface para componentes antigos do App Profissional.
+ * Não cria cliente, conexão, Auth ou Realtime Supabase. Dados e mutações
+ * passam exclusivamente pelas APIs autenticadas do backend sobre Neon.
+ */
+export const supabase = {
+  channel(_name: string) {
+    return createLocalChannel();
   },
-  realtime: {
-    params: { eventsPerSecond: 8 }
-  }
-});
+  async removeChannel(channel: LocalChannel) {
+    channel.__dispose();
+    return "ok" as const;
+  },
+  storage: {
+    from(bucket: string) {
+      return {
+        getPublicUrl(path: string) {
+          const params = new URLSearchParams({ bucket, path });
+          return {
+            data: {
+              publicUrl: `/api/app-profissional/media/public?${params.toString()}`,
+            },
+          };
+        },
+      };
+    },
+  },
+};
 
 export function cpfToAuthEmail(cpf: string) {
   const digits = cpf.replace(/\D/g, "");
