@@ -48,27 +48,20 @@ export default [
     },
 
     rules: {
-      // IMPORTANTE: não travar dev em integrações Supabase/RPC ainda sem tipos gerados
+      // O adaptador de banco ainda preserva contratos dinamicos de consultas/RPCs.
       "@typescript-eslint/no-explicit-any": "off",
 
-      // hooks funcionando corretamente
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
 
-      // evitar lixo
       "@typescript-eslint/no-unused-vars": [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^(_|inicio30Dias$)" },
       ],
 
-      // ESLint 10: manter o lint compativel com o codigo legado ate refatorar esses fluxos
       "no-useless-assignment": "off",
       "preserve-caught-error": "off",
-
-      // evitar erro com {}
       "@typescript-eslint/no-empty-object-type": "off",
-
-      // permitir comentários vazios em catch
       "no-empty": ["error", { allowEmptyCatch: true }],
     },
   },
