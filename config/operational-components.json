@@ -147,13 +147,13 @@
       "dependencies": ["database.database"]
     },
     {
-      "componentKey": "database.realtime",
-      "name": "Neon Realtime",
-      "description": "Realtime utilizado por agenda, caixa e PWAs.",
+      "componentKey": "database.periodic_sync",
+      "name": "Sincronização periódica Neon",
+      "description": "Atualização periódica da agenda, caixa e PWAs pelo gateway Neon.",
       "category": "Neon",
       "surface": "client",
       "criticality": "high",
-      "owner": "Backend/Realtime",
+      "owner": "Backend/Sincronizacao",
       "publicVisible": true,
       "monitoringMode": "telemetry",
       "probeType": "telemetry",
@@ -161,7 +161,7 @@
       "freshnessTtlSeconds": 7200,
       "timeoutMs": 5000,
       "sourcePatterns": ["**/*.tsx", "**/*.ts"],
-      "contentSignals": [".channel("],
+      "contentSignals": ["setInterval("],
       "dependencies": ["database.database"]
     },
     {

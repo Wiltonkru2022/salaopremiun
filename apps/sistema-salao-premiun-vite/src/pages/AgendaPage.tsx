@@ -138,14 +138,8 @@ export function AgendaPage({ session }: { session: AppSession }) {
   }, [idSalao, date, viewMode]);
 
   useEffect(() => {
-    const channel = database
-      .channel(`sistema-agenda-${idSalao}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "agendamentos", filter: `id_salao=eq.${idSalao}` }, () => void loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "agenda_bloqueios", filter: `id_salao=eq.${idSalao}` }, () => void loadAll())
-      .subscribe();
-    return () => {
-      void database.removeChannel(channel);
-    };
+    const refreshTimer = window.setInterval(() => void loadAll(), 15_000);
+    return () => window.clearInterval(refreshTimer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idSalao, date, viewMode]);
 

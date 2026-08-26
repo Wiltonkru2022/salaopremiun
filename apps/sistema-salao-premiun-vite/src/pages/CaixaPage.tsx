@@ -129,15 +129,11 @@ export function CaixaPage({ session }: { session: AppSession }) {
   }, [selected?.id]);
 
   useEffect(() => {
-    const channel = database
-      .channel(`sistema-caixa-${idSalao}`)
-      .on("postgres_changes", { event: "*", schema: "public", table: "comandas", filter: `id_salao=eq.${idSalao}` }, () => void loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "comanda_itens", filter: `id_salao=eq.${idSalao}` }, () => selected?.id ? void loadComanda(selected.id) : void loadAll())
-      .on("postgres_changes", { event: "*", schema: "public", table: "comanda_pagamentos", filter: `id_salao=eq.${idSalao}` }, () => selected?.id ? void loadComanda(selected.id) : void loadAll())
-      .subscribe();
-    return () => {
-      void database.removeChannel(channel);
-    };
+    const refreshTimer = window.setInterval(() => {
+      if (selected?.id) void loadComanda(selected.id);
+      else void loadAll();
+    }, 15_000);
+    return () => window.clearInterval(refreshTimer);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [idSalao, selected?.id]);
 

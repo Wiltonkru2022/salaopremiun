@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
-import { clerkAdminCompat } from "@/lib/platform/clerk-admin.server";
+import { clerkAdminApi } from "@/lib/platform/clerk-admin-api.server";
 import {
   buildMfaRecoveryMessage,
   buildMfaRecoverySubject,
@@ -22,7 +22,7 @@ export async function POST() {
     }
 
     const { data: factorsData, error: factorError } =
-      await clerkAdminCompat.mfa.listFactors({
+      await clerkAdminApi.mfa.listFactors({
         userId: user.id,
       });
 

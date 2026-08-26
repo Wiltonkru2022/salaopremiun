@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getDatabaseAdmin } from "@/lib/db/admin";
 import { normalizeExternalDestination } from "@/lib/parcerias/urls";
+import { assertPublicRateLimit, getPublicRateLimitIdentity } from "@/lib/security/public-rate-limit";
 
 export const dynamic = "force-dynamic";
 
@@ -75,6 +76,11 @@ function asCampaign(campanha: any, local: string) {
 }
 
 export async function GET(request: NextRequest) {
+  assertPublicRateLimit({
+    key: getPublicRateLimitIdentity(request, "parcerias-ativos-lista"),
+    limit: 180,
+    windowMs: 5 * 60 * 1000,
+  });
   const idSalao = request.nextUrl.searchParams.get("idSalao");
   const publico = request.nextUrl.searchParams.get("publico") || "salao";
   const local = request.nextUrl.searchParams.get("local") || "dashboard";
@@ -210,6 +216,11 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
+    assertPublicRateLimit({
+      key: getPublicRateLimitIdentity(request, `parcerias-metrica:${idCampanha}`),
+      limit: 90,
+      windowMs: 5 * 60 * 1000,
+    });
     const database = getDatabaseAdmin() as any;
     const { error } = await database.rpc("registrar_parceria_metrica", {
       p_id_campanha: idCampanha,

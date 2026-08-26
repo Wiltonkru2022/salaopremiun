@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { listClientAppSaloesByLocation } from "@/lib/client-app/discovery-location";
 
+// Rota publica somente leitura usada para listar saloes publicados por localidade.
+
 export async function GET(request: Request) {
   const url = new URL(request.url);
   const cidade = String(url.searchParams.get("cidade") || "").trim();

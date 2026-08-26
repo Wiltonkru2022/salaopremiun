@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+// Rota publica de compatibilidade: o login efetivo acontece diretamente no Clerk.
+
 export async function POST() {
   return NextResponse.json(
     {

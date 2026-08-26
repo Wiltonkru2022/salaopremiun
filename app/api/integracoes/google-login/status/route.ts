@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { emitSecurityEvent } from "@/lib/security/security-events";
 import { findSalaoUsuarioByAuthOrEmail } from "@/lib/security/salao-user-lookup";
 import { readPainelClerkSession } from "@/lib/platform/painel-clerk-session.server";
-import { clerkAdminCompat } from "@/lib/platform/clerk-admin.server";
+import { clerkAdminApi } from "@/lib/platform/clerk-admin-api.server";
 
 export const dynamic = "force-dynamic";
 
@@ -15,7 +15,7 @@ export async function GET() {
     );
   }
 
-  const { data, error } = await clerkAdminCompat.getUserById(session.clerkSubject);
+  const { data, error } = await clerkAdminApi.getUserById(session.clerkSubject);
 
   if (error) {
     return NextResponse.json(
@@ -51,7 +51,7 @@ export async function DELETE() {
     );
   }
 
-  const { data, error } = await clerkAdminCompat.getUserById(session.clerkSubject);
+  const { data, error } = await clerkAdminApi.getUserById(session.clerkSubject);
 
   if (error) {
     return NextResponse.json(
@@ -89,7 +89,7 @@ export async function DELETE() {
     );
   }
 
-  const { error: unlinkError } = await clerkAdminCompat.unlinkExternalAccount(
+  const { error: unlinkError } = await clerkAdminApi.unlinkExternalAccount(
     session.clerkSubject,
     googleIdentity.provider
   );

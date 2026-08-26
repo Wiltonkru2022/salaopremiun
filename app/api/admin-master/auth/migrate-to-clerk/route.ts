@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+// Rota publica encerrada: preservada apenas para responder 410 a clientes antigos.
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 

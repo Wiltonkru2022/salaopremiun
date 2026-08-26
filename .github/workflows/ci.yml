@@ -51,8 +51,8 @@ jobs:
         run: npm run audit:operational-coverage
       - name: Audit painel PT-BR
         run: node scripts/audit/painel-ui-text-audit.mjs --check
-      - name: Audit no Supabase runtime
-        run: npm run audit:no-supabase-runtime
+      - name: Audit no legacy backend runtime
+        run: npm run audit:no-legacy-backend-runtime
       - name: Audit dependencies
         continue-on-error: true
         run: npm run audit

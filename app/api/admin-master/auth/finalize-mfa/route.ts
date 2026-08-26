@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+// Rota publica de compatibilidade: nao altera estado e orienta o uso do Clerk.
+
 export async function POST() {
   return NextResponse.json(
     {

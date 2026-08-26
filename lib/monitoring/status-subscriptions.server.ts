@@ -161,10 +161,10 @@ export async function sendPendingPublicStatusNotifications() {
   }
   const database = getDatabaseAdmin() as any;
   const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-  const [{ data: updates }, { data: subscriptions }] = await Promise.all([
+  const [{ data: rawUpdates }, { data: subscriptions }] = await Promise.all([
     database
       .from("incident_updates")
-      .select("id, incident_id, status_to, public_message, created_at, incidentes_sistema(titulo, mensagem_publica, operational_components(nome))")
+      .select("id, incident_id, status_to, public_message, created_at")
       .eq("public_visible", true)
       .not("public_message", "is", null)
       .gte("created_at", since)
@@ -176,6 +176,41 @@ export async function sendPendingPublicStatusNotifications() {
       .eq("status", "active")
       .limit(200),
   ]);
+
+  const incidentIds = Array.from(
+    new Set((rawUpdates || []).map((update: any) => update.incident_id).filter(Boolean))
+  );
+  const { data: incidents } = incidentIds.length
+    ? await database
+        .from("incidentes_sistema")
+        .select("id, titulo, mensagem_publica, component_key")
+        .in("id", incidentIds)
+    : { data: [] };
+  const componentKeys = Array.from(
+    new Set((incidents || []).map((incident: any) => incident.component_key).filter(Boolean))
+  );
+  const { data: components } = componentKeys.length
+    ? await database
+        .from("operational_components")
+        .select("component_key, nome")
+        .in("component_key", componentKeys)
+    : { data: [] };
+  const componentByKey = new Map(
+    (components || []).map((component: any) => [component.component_key, component])
+  );
+  const incidentById = new Map(
+    (incidents || []).map((incident: any) => [
+      incident.id,
+      {
+        ...incident,
+        operational_components: componentByKey.get(incident.component_key) || null,
+      },
+    ])
+  );
+  const updates = (rawUpdates || []).map((update: any) => ({
+    ...update,
+    incidentes_sistema: incidentById.get(update.incident_id) || null,
+  }));
 
   let sent = 0;
   for (const update of updates || []) {

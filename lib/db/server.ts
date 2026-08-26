@@ -2,15 +2,6 @@ import "server-only";
 import { getDatabaseAdmin } from "@/lib/db/admin";
 import { readPainelClerkSession } from "@/lib/platform/painel-clerk-session.server";
 
-function unsupportedAuthOperation(name: string) {
-  return async () => ({
-    data: null,
-    error: {
-      message: `${name} foi removido. O acesso administrativo usa Clerk.`,
-    },
-  });
-}
-
 export async function createClient(): Promise<any> {
   const database = getDatabaseAdmin();
   const auth = {
@@ -51,11 +42,6 @@ export async function createClient(): Promise<any> {
         error: null,
       };
     },
-    signInWithPassword: unsupportedAuthOperation("Login por senha legado"),
-    signInWithOAuth: unsupportedAuthOperation("OAuth legado"),
-    resetPasswordForEmail: unsupportedAuthOperation("Reset de senha legado"),
-    updateUser: unsupportedAuthOperation("Atualizacao de usuario legada"),
-    signOut: unsupportedAuthOperation("Logout legado"),
   };
 
   return new Proxy(database as any, {

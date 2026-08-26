@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDatabaseAdmin } from "@/lib/db/admin";
-import { clerkAdminCompat } from "@/lib/platform/clerk-admin.server";
+import { clerkAdminApi } from "@/lib/platform/clerk-admin-api.server";
 import { readPainelClerkSession } from "@/lib/platform/painel-clerk-session.server";
 import {
   buildBackupMetadata,
@@ -42,14 +42,14 @@ async function getAuthenticatedContext() {
 
   const admin = getDatabaseAdmin();
   const { data: authUserData, error: authUserError } =
-    await clerkAdminCompat.getUserById(session.clerkSubject);
+    await clerkAdminApi.getUserById(session.clerkSubject);
 
   if (authUserError || !authUserData?.user) {
     throw new Error("Nao foi possivel carregar a conta Clerk autenticada.");
   }
 
   const { data: factorsData, error: factorError } =
-    await clerkAdminCompat.mfa.listFactors({
+    await clerkAdminApi.mfa.listFactors({
       userId: session.clerkSubject,
     });
 
@@ -63,7 +63,7 @@ async function getAuthenticatedContext() {
     ) || null;
 
   const currentLevel: "aal1" | "aal2" = session.mfaVerified ? "aal2" : "aal1";
-  const appMetadata = (authUserData.user.app_metadata ||
+  const appMetadata = (authUserData.user.privateMetadata ||
     {}) as Record<string, unknown>;
   const mfaMetadata =
     (appMetadata[APP_METADATA_KEY] as SalaoPremiumMfaMetadata | undefined) ||
@@ -84,19 +84,19 @@ async function persistMfaMetadata(params: {
   authUserId: string;
   nextMetadata: SalaoPremiumMfaMetadata;
 }) {
-  const { data, error } = await clerkAdminCompat.getUserById(params.authUserId);
+  const { data, error } = await clerkAdminApi.getUserById(params.authUserId);
 
   if (error || !data?.user) {
     throw new Error("Nao foi possivel atualizar a conta do autenticador Clerk.");
   }
 
-  const currentAppMetadata = (data.user.app_metadata ||
+  const currentAppMetadata = (data.user.privateMetadata ||
     {}) as Record<string, unknown>;
 
-  const { error: updateError } = await clerkAdminCompat.updateUserById(
+  const { error: updateError } = await clerkAdminApi.updateUserById(
     params.authUserId,
     {
-      app_metadata: {
+      privateMetadata: {
         ...currentAppMetadata,
         [APP_METADATA_KEY]: params.nextMetadata,
       },
@@ -300,7 +300,7 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      const { error: deleteError } = await clerkAdminCompat.mfa.deleteFactor({
+      const { error: deleteError } = await clerkAdminApi.mfa.deleteFactor({
         id: ctx.totpFactor.id,
         userId: ctx.clerkSubject,
       });

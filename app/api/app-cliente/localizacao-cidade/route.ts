@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+// Rota publica somente leitura para geocodificacao da localizacao autorizada pelo cliente.
+
 const UF_BY_NAME: Record<string, string> = {
   acre: "AC",
   alagoas: "AL",

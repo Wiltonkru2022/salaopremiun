@@ -2,7 +2,9 @@
   "name": "salaopremium",
   "version": "0.1.0",
   "private": true,
-  "engines": { "node": "22.x" },
+  "engines": {
+    "node": "22.x"
+  },
   "scripts": {
     "// desenvolvimento": "Rotina leve para codar e testar tela/fluxo",
     "dev": "next dev",
@@ -27,7 +29,7 @@
     "// CI": "Validacao deterministica para pull request",
     "ci:lint": "npm run lint",
     "ci:typecheck": "npm run typecheck:ci",
-    "ci:audit": "npm run audit:security && npm run audit:no-legacy-backend-runtime && npm run audit:service-role && npm run audit:admin-actions && npm run audit:admin-client-inventory && npm run audit:admin-surface && npm run audit:api-guards && npm run audit:critical-routes && npm run audit:no-wildcard-select && npm run audit:database-contract && npm run audit:architecture-boundaries && npm run audit:operational-coverage",
+    "ci:audit": "npm run audit:security && npm run audit:no-legacy-backend-runtime && npm run audit:admin-database-access && npm run audit:admin-actions && npm run audit:admin-client-inventory && npm run audit:admin-surface && npm run audit:api-guards && npm run audit:critical-routes && npm run audit:no-wildcard-select && npm run audit:database-contract && npm run audit:architecture-boundaries && npm run audit:operational-coverage",
     "ci:build": "npm run build",
     "ci:validate": "npm run ci:lint && npm run ci:typecheck && npm run ci:audit && npm run test:operational && npm run ci:build",
     "// release": "Validacao pesada antes de promover producao",
@@ -40,7 +42,7 @@
     "audit": "npm run audit:security",
     "audit:security": "npm audit --audit-level=moderate",
     "audit:no-legacy-backend-runtime": "node scripts/audit/no-legacy-backend-runtime-audit.mjs",
-    "audit:service-role": "node scripts/audit/service-role-audit.mjs",
+    "audit:admin-database-access": "node scripts/audit/admin-database-access-audit.mjs",
     "audit:admin-actions": "node scripts/audit/admin-master-actions-audit.mjs",
     "audit:api-guards": "node scripts/audit/api-guard-audit.mjs",
     "audit:no-wildcard-select": "node scripts/audit/no-wildcard-select-audit.mjs",
@@ -64,7 +66,7 @@
     "e2e:status": "node scripts/e2e/status-page-health-flow.mjs",
     "validate": "npm run ci:validate",
     "validate:release": "npm run release:validate",
-    "launch:validate": "npm run lint && npm run typecheck && npm run audit:no-legacy-backend-runtime && npm run db:audit && npm run audit:service-role && npm run audit:admin-actions && npm run audit:admin-client-inventory && npm run audit:admin-surface && npm run audit:api-guards && npm run audit:critical-routes && npm run audit:no-wildcard-select && npm run audit:architecture-boundaries && npm run audit:operational-coverage && npm run audit:launch-readiness && npm run test:operational && npm run build"
+    "launch:validate": "npm run lint && npm run typecheck && npm run audit:no-legacy-backend-runtime && npm run db:audit && npm run audit:admin-database-access && npm run audit:admin-actions && npm run audit:admin-client-inventory && npm run audit:admin-surface && npm run audit:api-guards && npm run audit:critical-routes && npm run audit:no-wildcard-select && npm run audit:architecture-boundaries && npm run audit:operational-coverage && npm run audit:launch-readiness && npm run test:operational && npm run build"
   },
   "dependencies": {
     "@capacitor/core": "^8.5.0",
@@ -95,6 +97,7 @@
     "@eslint/js": "^10.0.1",
     "@tailwindcss/postcss": "^4",
     "@tailwindcss/typography": "^0.5.19",
+    "@testing-library/dom": "^10.4.1",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^20",
@@ -113,5 +116,7 @@
     "typescript": "^5",
     "vitest": "^4.1.10"
   },
-  "overrides": { "postcss": "8.5.12" }
+  "overrides": {
+    "postcss": "8.5.12"
+  }
 }

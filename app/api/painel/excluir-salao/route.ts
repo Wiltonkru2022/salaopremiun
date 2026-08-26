@@ -5,7 +5,7 @@ import {
 } from "@/lib/auth/require-salao-permission";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getDatabaseAdmin } from "@/lib/db/admin";
-import { clerkAdminCompat } from "@/lib/platform/clerk-admin.server";
+import { clerkAdminApi } from "@/lib/platform/clerk-admin-api.server";
 
 export const dynamic = "force-dynamic";
 
@@ -126,7 +126,7 @@ export async function POST(request: Request) {
 
     const authDeleteResults = await Promise.all(
       authUsersToDelete.map(async (authUserId) => {
-        const result = await clerkAdminCompat.deleteUser(authUserId);
+        const result = await clerkAdminApi.deleteUser(authUserId);
         return {
           authUserId,
           ok: !result.error,

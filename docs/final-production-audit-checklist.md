@@ -8,7 +8,7 @@ Checklist final antes de promover um release do SalãoPremium.
 - [ ] `npm run typecheck`
 - [ ] `npm run typecheck:professional`
 - [ ] `npm run audit:database-contract`
-- [ ] `npm run audit:service-role`
+- [ ] `npm run audit:admin-database-access`
 - [ ] `npm run audit:admin-actions`
 - [ ] `npm run audit:admin-client-inventory`
 - [ ] `npm run audit:admin-surface`

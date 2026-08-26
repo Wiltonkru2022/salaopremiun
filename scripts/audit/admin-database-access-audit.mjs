@@ -11,9 +11,12 @@ const GUARDRULES = [
   ["salao_admin", /requireAdminSalao/],
   ["profissional_session", /getProfissionalSessionFromCookie|getProfissionalTicketContext|requireProfissionalSession|requireProfissionalAppContext|validateProfissionalAppSession/],
   ["mobile_client_access", /requireMobileClientAccess/],
+  ["client_session", /getClienteSessionFromCookie|parseClienteSessionRestoreToken/],
+  ["clerk_session", /readPainelClerkSession|verifyClerkBearerToken/],
+  ["tenant_actor", /requireAdminTenantActor/],
   [
     "webhook_secret",
-    /validarTokenWebhook|ASAAS_WEBHOOK_TOKEN|verifyHeaderSecret|isMetaWebhookSignatureValid|getMetaWhatsAppAppSecret|isMetaWebhookVerifyRequest/,
+    /validarTokenWebhook|ASAAS_WEBHOOK_TOKEN|verifyHeaderSecret|validSignature|x-hub-signature-256|isMetaWebhookSignatureValid|getMetaWhatsAppAppSecret|isMetaWebhookVerifyRequest/,
   ],
   ["google_risc_jwt", /validateSecurityEventToken|GOOGLE_RISC_CLIENT_IDS|RISC_CONFIGURATION_URL/],
   ["oauth_state", /verifyGoogleCalendarState|createGoogleCalendarState/],
@@ -82,29 +85,29 @@ function isPublicRegistrationRoute(rel, source) {
 const rows = walk(routeRoot).map((file) => {
   const source = fs.readFileSync(file, "utf8");
   const rel = toPosix(file);
-  const usesServiceRole =
+  const usesAdminDatabaseAccess =
     /NEON_ADMIN_DATABASE_URL|getDatabaseAdmin\(|getNeonDatabaseClient\(/.test(source);
   const guards = classify(source);
   const tenantGuard = hasTenantGuard(source);
   const publicRegistration = isPublicRegistrationRoute(rel, source);
   const critical = CRITICAL_PREFIXES.some((prefix) => rel.startsWith(prefix));
   const risk =
-    usesServiceRole && guards.length === 0 && !publicRegistration
+    usesAdminDatabaseAccess && guards.length === 0 && !publicRegistration
       ? "high"
-      : usesServiceRole &&
+      : usesAdminDatabaseAccess &&
           critical &&
           !tenantGuard &&
           !publicRegistration &&
           !hasPublicAbuseGuard(guards)
         ? "medium"
-        : usesServiceRole
+        : usesAdminDatabaseAccess
           ? "review"
           : "low";
 
   return {
     route: routeFromFile(file),
     file: rel,
-    usesServiceRole,
+    usesAdminDatabaseAccess,
     guards: guards.join(",") || "-",
     tenantGuard,
     publicRegistration,
@@ -118,11 +121,11 @@ const mediumRisk = rows.filter((row) => row.risk === "medium");
 
 console.table(
   rows
-    .filter((row) => row.usesServiceRole || row.critical)
+    .filter((row) => row.usesAdminDatabaseAccess || row.critical)
     .map((row) => ({
       risk: row.risk,
       route: row.route,
-      service_role: row.usesServiceRole,
+      admin_database_access: row.usesAdminDatabaseAccess,
       guards: row.guards,
       tenant: row.tenantGuard,
     }))
@@ -136,7 +139,7 @@ if (highRisk.length || mediumRisk.length) {
         highRisk,
         mediumRisk,
         recommendation:
-          "Revise rotas service_role sem guard claro antes de liberar venda em escala.",
+          "Revise rotas admin_database_access sem guard claro antes de liberar venda em escala.",
       },
       null,
       2

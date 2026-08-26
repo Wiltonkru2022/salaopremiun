@@ -117,8 +117,8 @@ function createBuilder<T = unknown>(table: string): NeonQueryBuilder<T> {
       state.mutation = { kind: "update", payload } as PainelDbMutation;
       return builder;
     },
-    delete(_options?: { count?: string }) {
-      state.mutation = { kind: "delete" } as PainelDbMutation;
+    delete(options?: { count?: string }) {
+      state.mutation = { kind: "delete", options } as PainelDbMutation;
       return builder;
     },
     upsert(

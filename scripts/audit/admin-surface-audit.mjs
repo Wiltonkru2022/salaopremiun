@@ -14,7 +14,7 @@ const CODE_EXTENSIONS = new Set([
 const SEARCH_TERMS = [
   "getDatabaseAdmin(",
   "NEON_ADMIN_DATABASE_URL",
-  "service_role",
+  "admin_database_access",
   "runAdminOperation(",
 ];
 
@@ -95,7 +95,7 @@ for (const item of report) {
     if (hit.term === "runAdminOperation(") runAdminCount += 1;
     if (
       hit.term === "NEON_ADMIN_DATABASE_URL" ||
-      hit.term === "service_role"
+      hit.term === "admin_database_access"
     ) {
       envKeyCount += 1;
     }

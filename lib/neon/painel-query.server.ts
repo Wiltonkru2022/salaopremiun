@@ -15,7 +15,7 @@ export type PainelDbOrder = {
 export type PainelDbMutation =
   | { kind: "insert"; payload: unknown }
   | { kind: "update"; payload: unknown }
-  | { kind: "delete" }
+  | { kind: "delete"; options?: { count?: string } }
   | {
       kind: "upsert";
       payload: unknown;
@@ -49,11 +49,19 @@ type RelationSpec = {
 };
 
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const COLUMN_PATH = /^([A-Za-z_][A-Za-z0-9_]*)(?:->>([A-Za-z_][A-Za-z0-9_]*))?$/;
 const SIMPLE_SELECT = /^[A-Za-z0-9_.*,\s:!()]+$/;
 
 function quoteIdent(value: string) {
   if (!IDENT.test(value)) throw new Error(`Identificador SQL invalido: ${value}`);
   return `"${value}"`;
+}
+
+function renderColumn(value: string, prefix = "") {
+  const match = value.match(COLUMN_PATH);
+  if (!match) throw new Error(`Coluna SQL invalida: ${value}`);
+  const base = `${prefix}${quoteIdent(match[1])}`;
+  return match[2] ? `${base}->>'${match[2]}'` : base;
 }
 
 function splitTopLevel(value: string) {
@@ -134,7 +142,7 @@ function buildSimpleClause(
   values: unknown[],
   prefix = ""
 ) {
-  const col = `${prefix}${quoteIdent(column)}`;
+  const col = renderColumn(column, prefix);
   switch (op) {
     case "eq":
       values.push(value);
@@ -191,14 +199,35 @@ function buildSimpleClause(
   }
 }
 
+function buildOrEntry(entry: string, values: unknown[], prefix: string) {
+  const match = entry.trim().match(
+    /^([A-Za-z_][A-Za-z0-9_]*(?:->>[A-Za-z_][A-Za-z0-9_]*)?)\.(eq|neq|gt|gte|lt|lte|like|ilike|is|not\.is|not\.eq)\.(.+)$/
+  );
+  if (!match) throw new Error(`Filtro OR nao suportado: ${entry}`);
+  const [, column, op, rawValue] = match;
+  if (op.startsWith("not.")) {
+    return buildSimpleClause(
+      "not",
+      column,
+      { operator: op.slice(4), value: parseOrValue(rawValue) },
+      values,
+      prefix
+    );
+  }
+  return buildSimpleClause(op, column, parseOrValue(rawValue), values, prefix);
+}
+
 function buildOrClause(raw: unknown, values: unknown[], prefix = "") {
   const text = String(raw || "").trim();
   if (!text) throw new Error("Filtro OR vazio.");
-  const clauses = text.split(",").map((entry) => {
-    const match = entry.trim().match(/^([A-Za-z_][A-Za-z0-9_]*)\.(eq|neq|gt|gte|lt|lte|like|ilike|is)\.(.+)$/);
-    if (!match) throw new Error(`Filtro OR nao suportado: ${entry}`);
-    const [, column, op, rawValue] = match;
-    return buildSimpleClause(op, column, parseOrValue(rawValue), values, prefix);
+  const clauses = splitTopLevel(text).map((entry) => {
+    const grouped = entry.match(/^and\(([\s\S]*)\)$/);
+    if (!grouped) return buildOrEntry(entry, values, prefix);
+    const andClauses = splitTopLevel(grouped[1]).map((item) =>
+      buildOrEntry(item, values, prefix)
+    );
+    if (!andClauses.length) throw new Error("Grupo AND vazio no filtro OR.");
+    return `(${andClauses.join(" AND ")})`;
   });
   return `(${clauses.join(" OR ")})`;
 }
@@ -292,6 +321,15 @@ export async function executePainelNeonQuery(
       return { data: null, error: null, count: Number(result.rows[0]?.count || 0), status: 200, statusText: "OK" };
     }
 
+    let exactCount: number | null = null;
+    if (query.selectOptions?.count === "exact") {
+      const countResult = await client.query(
+        `SELECT count(*)::int AS count FROM ${table}${hasRelations ? " src" : ""}${where}`,
+        values
+      );
+      exactCount = Number(countResult.rows[0]?.count || 0);
+    }
+
     let selectSql = renderBaseColumns(parsedSelect.base, hasRelations ? "src" : "");
     if (hasRelations) {
       const relationSelects: string[] = [];
@@ -361,7 +399,7 @@ export async function executePainelNeonQuery(
       }
       data = result.rows[0] || null;
     }
-    return { data, error: null, count: null, status: 200, statusText: "OK" };
+    return { data, error: null, count: exactCount, status: 200, statusText: "OK" };
   }
 
   const selectColumns = parsedSelect.base.includes("*")
@@ -432,7 +470,11 @@ export async function executePainelNeonQuery(
   return {
     data,
     error: null,
-    count: null,
+    count:
+      query.mutation.kind === "delete" &&
+      query.mutation.options?.count === "exact"
+        ? result.rowCount
+        : null,
     status: query.mutation.kind === "insert" ? 201 : 200,
     statusText: "OK",
   };

@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getAuthProviderForSurface } from "@/lib/platform/provider-config.server";
 
+// Rota publica somente leitura: informa qual provedor deve abrir a tela de login.
+
 export async function GET() {
   return NextResponse.json(
     {

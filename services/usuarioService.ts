@@ -1,5 +1,5 @@
 import { getDatabaseAdmin } from "@/lib/db/admin";
-import { clerkAdminCompat } from "@/lib/platform/clerk-admin.server";
+import { clerkAdminApi } from "@/lib/platform/clerk-admin-api.server";
 import type { Database } from "@/types/database.generated";
 
 type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
@@ -81,11 +81,11 @@ export function createUsuarioService(
       idSalao: string;
       nivel: UsuarioNivel;
     }) {
-      const { data, error } = await clerkAdminCompat.createUser({
+      const { data, error } = await clerkAdminApi.createUser({
         email: params.email,
         password: params.senha,
-        email_confirm: true,
-        user_metadata: {
+
+        publicMetadata: {
           nome: params.nome,
           id_salao: params.idSalao,
           nivel: params.nivel,
@@ -110,12 +110,12 @@ export function createUsuarioService(
       status: UsuarioStatus;
       senha?: string;
     }) {
-      const { error } = await clerkAdminCompat.updateUserById(
+      const { error } = await clerkAdminApi.updateUserById(
         params.authUserId,
         {
           email: params.email,
           password: params.senha,
-          user_metadata: {
+          publicMetadata: {
             nome: params.nome,
             id_salao: params.idSalao,
             nivel: params.nivel,
@@ -128,7 +128,7 @@ export function createUsuarioService(
     },
 
     deleteAuthUser(authUserId: string) {
-      return clerkAdminCompat.deleteUser(authUserId);
+      return clerkAdminApi.deleteUser(authUserId);
     },
 
     async inserirUsuario(params: {

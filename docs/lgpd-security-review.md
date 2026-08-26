@@ -66,7 +66,7 @@ A antiga UI de editor de imagens, assets e endpoint Pexels foram removidos. A mi
 
 ## Critério de aceite
 
-- `npm run audit:service-role` passa;
+- `npm run audit:admin-database-access` passa;
 - `npm run audit:api-guards` passa;
 - teste multi-tenant bloqueia cruzamento;
 - logs não contêm segredo/senha;

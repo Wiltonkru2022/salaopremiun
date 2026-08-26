@@ -174,20 +174,6 @@ function createRemoteBuilder(table: string) {
   return builder;
 }
 
-function createNoopRealtimeChannel() {
-  const channel: any = {
-    on() {
-      return channel;
-    },
-    subscribe(callback?: (status: string) => void) {
-      callback?.("SUBSCRIBED");
-      return channel;
-    },
-    unsubscribe: async () => "ok",
-  };
-  return channel;
-}
-
 export const database: any = new Proxy({} as Record<string, unknown>, {
   get(_target, property) {
     if (property === "from") return (table: string) => createRemoteBuilder(table);
@@ -195,10 +181,6 @@ export const database: any = new Proxy({} as Record<string, unknown>, {
       return (fn: string, args?: Record<string, unknown>) =>
         remoteRequest({ kind: "rpc", fn, args: args || {} });
     }
-    if (property === "channel") return () => createNoopRealtimeChannel();
-    if (property === "removeChannel") return async () => "ok";
-    if (property === "removeAllChannels") return async () => [];
-    if (property === "getChannels") return () => [];
     return undefined;
   },
 });

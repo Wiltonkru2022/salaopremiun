@@ -341,23 +341,8 @@ export default function CaixaPage() {
       }
     };
 
-    const channel = database
-      .channel(`caixa-comandas-${idSalao}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "comandas",
-          filter: `id_salao=eq.${idSalao}`,
-        },
-        refreshFila
-      )
-      .subscribe();
-
-    return () => {
-      void database.removeChannel(channel);
-    };
+    const refreshTimer = window.setInterval(refreshFila, 15_000);
+    return () => window.clearInterval(refreshTimer);
   }, [
     acessoCarregado,
     idSalao,

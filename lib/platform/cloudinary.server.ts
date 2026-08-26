@@ -17,6 +17,41 @@ function getConfig() {
   return { cloudName, apiKey, apiSecret };
 }
 
+function cleanPathSegment(value: string) {
+  return value.trim().replace(/[^a-zA-Z0-9._-]+/g, "-").replace(/-+/g, "-").replace(/^-|-$/g, "") || "asset";
+}
+
+export function getCloudinaryPublicUrl(collection: string, path: string) {
+  const value = String(path || "").trim();
+  if (/^https:\/\/res\.cloudinary\.com\//i.test(value)) return value;
+  const normalized = value.replace(/^\/+/, "").replace(/\\/g, "/");
+  const parts = normalized.split("/").filter(Boolean);
+  const fileName = parts.pop() || "asset";
+  const safePath = ["salaopremiun", "storage", cleanPathSegment(collection), ...parts.map(cleanPathSegment), cleanPathSegment(fileName)]
+    .map(encodeURIComponent)
+    .join("/");
+  return `https://res.cloudinary.com/${encodeURIComponent(getConfig().cloudName)}/image/upload/${safePath}`;
+}
+
+export async function uploadCloudinaryFile(params: {
+  collection: string;
+  path: string;
+  bytes: Buffer | Uint8Array;
+  mimeType: string;
+}) {
+  const normalized = params.path.replace(/^\/+/, "").replace(/\\/g, "/");
+  const parts = normalized.split("/").filter(Boolean);
+  const fileName = parts.pop() || "asset";
+  const extension = fileName.match(/\.([a-zA-Z0-9]{1,12})$/)?.[1] || "";
+  const baseName = extension ? fileName.slice(0, -(extension.length + 1)) : fileName;
+  return uploadBufferToCloudinary({
+    buffer: Buffer.from(params.bytes),
+    mimeType: params.mimeType,
+    folder: ["salaopremiun", "storage", cleanPathSegment(params.collection), ...parts.map(cleanPathSegment)].join("/"),
+    publicId: cleanPathSegment(baseName),
+  });
+}
+
 function signParams(params: Record<string, string | number>, apiSecret: string) {
   const signatureBase = Object.entries(params)
     .sort(([a], [b]) => a.localeCompare(b))

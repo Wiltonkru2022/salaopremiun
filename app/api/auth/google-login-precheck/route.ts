@@ -4,7 +4,7 @@ import {
   getPublicRateLimitIdentity,
 } from "@/lib/security/public-rate-limit";
 import { getDatabaseAdmin } from "@/lib/db/admin";
-import { clerkAdminCompat } from "@/lib/platform/clerk-admin.server";
+import { clerkAdminApi } from "@/lib/platform/clerk-admin-api.server";
 
 export const dynamic = "force-dynamic";
 
@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { data: authUser, error: authError } =
-    await clerkAdminCompat.getUserById(usuario.auth_user_id);
+    await clerkAdminApi.getUserById(usuario.auth_user_id);
 
   if (authError || !authUser?.user) {
     return NextResponse.json(

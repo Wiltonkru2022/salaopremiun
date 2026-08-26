@@ -1,7 +1,7 @@
 import { registrarLogSistema } from "@/lib/system-logs";
 import { geocodeSalonAddress } from "@/lib/saloes/geocoding";
 import { getDatabaseAdmin } from "@/lib/db/admin";
-import { clerkAdminCompat } from "@/lib/platform/clerk-admin.server";
+import { clerkAdminApi } from "@/lib/platform/clerk-admin-api.server";
 
 const TRIAL_GRATIS_DIAS = 15;
 const TRIAL_LIMITE_ILIMITADO = 999;
@@ -166,11 +166,11 @@ export function createCadastroSalaoService() {
     },
 
     async criarUsuarioAuth(params: { email: string; senha: string; nome: string }) {
-      const { data, error } = await clerkAdminCompat.createUser({
+      const { data, error } = await clerkAdminApi.createUser({
         email: params.email,
         password: params.senha,
-        email_confirm: true,
-        user_metadata: {
+
+        publicMetadata: {
           nome: params.nome,
         },
       });
@@ -186,7 +186,7 @@ export function createCadastroSalaoService() {
     },
 
     async excluirUsuarioAuth(userId: string) {
-      await clerkAdminCompat.deleteUser(userId);
+      await clerkAdminApi.deleteUser(userId);
     },
 
     async cadastrarSalaoTransacional(params: {

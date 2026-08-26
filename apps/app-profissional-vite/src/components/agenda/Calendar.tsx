@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { addMinutes, durationLabel, monthLabel, parseISODate, toISODate } from "../../lib/date";
-import { database } from "../../lib/database";
+import { resolvePublicMediaUrl } from "../../lib/media";
 import type { Agendamento, Cliente, Profissional, ProfissionalResumo, Servico } from "../../types/database";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
@@ -155,8 +155,7 @@ export function Calendar({
   }
   function openComprovante(item: Agendamento) {
     if (!item.sinal_comprovante_path) return;
-    const { data } = database.storage.from("agendamento-comprovantes").getPublicUrl(item.sinal_comprovante_path);
-    window.open(data.publicUrl, "_blank", "noopener,noreferrer");
+    window.open(resolvePublicMediaUrl(item.sinal_comprovante_path), "_blank", "noopener,noreferrer");
   }
   function openReschedule(item: Agendamento) {
     setActionError(null); setRescheduleItem(item); setRescheduleDate(item.data || selectedDate); setRescheduleHour(item.hora_inicio.slice(0, 5));

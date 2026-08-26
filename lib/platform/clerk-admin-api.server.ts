@@ -35,11 +35,11 @@ type ClerkRawUser = {
   two_factor_enabled?: boolean;
 };
 
-type CompatUser = {
+type ClerkAdminUser = {
   id: string;
   email: string | null;
-  user_metadata: Record<string, unknown>;
-  app_metadata: Record<string, unknown>;
+  publicMetadata: Record<string, unknown>;
+  privateMetadata: Record<string, unknown>;
   identities: Array<{ id: string; provider: string; identity_data: { email: string | null } }>;
   totp_enabled: boolean;
   backup_code_enabled: boolean;
@@ -102,7 +102,7 @@ function normalizeProvider(provider: unknown) {
     .replace(/^oauth_/, "");
 }
 
-function toCompatUser(user: ClerkRawUser): CompatUser {
+function toClerkAdminUser(user: ClerkRawUser): ClerkAdminUser {
   const id = String(user.id || "").trim();
   if (!id) throw new Error("Clerk retornou usuario sem ID.");
 
@@ -114,14 +114,14 @@ function toCompatUser(user: ClerkRawUser): CompatUser {
   return {
     id,
     email,
-    user_metadata: {
+    publicMetadata: {
       ...(user.public_metadata || {}),
       nome:
         (user.public_metadata || {}).nome ||
         [user.first_name, user.last_name].filter(Boolean).join(" ").trim() ||
         undefined,
     },
-    app_metadata: { ...(user.private_metadata || {}) },
+    privateMetadata: { ...(user.private_metadata || {}) },
     identities: (user.external_accounts || [])
       .map((account) => ({
         id: String(account.id || ""),
@@ -185,13 +185,13 @@ function resultError(error: unknown) {
   };
 }
 
-export const clerkAdminCompat = {
+export const clerkAdminApi = {
   async createUser(params: {
     email?: string;
     password?: string;
-    email_confirm?: boolean;
-    user_metadata?: Record<string, unknown>;
-    app_metadata?: Record<string, unknown>;
+    
+    publicMetadata?: Record<string, unknown>;
+    privateMetadata?: Record<string, unknown>;
   }) {
     try {
       const email = String(params.email || "").trim().toLowerCase();
@@ -201,19 +201,19 @@ export const clerkAdminCompat = {
         throw new Error("A senha deve ter pelo menos 8 caracteres para o Clerk.");
       }
 
-      const names = splitName(params.user_metadata?.nome);
+      const names = splitName(params.publicMetadata?.nome);
       const raw = await clerkRequest<ClerkRawUser>("/users", {
         method: "POST",
         body: JSON.stringify({
           email_address: [email],
           password,
           ...names,
-          public_metadata: params.user_metadata || {},
-          private_metadata: params.app_metadata || {},
+          public_metadata: params.publicMetadata || {},
+          private_metadata: params.privateMetadata || {},
         }),
       });
 
-      return { data: { user: toCompatUser(raw) }, error: null };
+      return { data: { user: toClerkAdminUser(raw) }, error: null };
     } catch (error) {
       return { data: { user: null }, error: resultError(error) };
     }
@@ -222,7 +222,7 @@ export const clerkAdminCompat = {
   async getUserById(userId: string) {
     try {
       const raw = await fetchRawUser(userId);
-      return { data: { user: toCompatUser(raw) }, error: null };
+      return { data: { user: toClerkAdminUser(raw) }, error: null };
     } catch (error) {
       return { data: { user: null }, error: resultError(error) };
     }
@@ -233,8 +233,8 @@ export const clerkAdminCompat = {
     params: {
       email?: string;
       password?: string;
-      user_metadata?: Record<string, unknown>;
-      app_metadata?: Record<string, unknown>;
+      publicMetadata?: Record<string, unknown>;
+      privateMetadata?: Record<string, unknown>;
     }
   ) {
     try {
@@ -250,7 +250,7 @@ export const clerkAdminCompat = {
         updatePayload.password = params.password;
       }
 
-      const names = splitName(params.user_metadata?.nome);
+      const names = splitName(params.publicMetadata?.nome);
       if (names.first_name) updatePayload.first_name = names.first_name;
       if (names.last_name) updatePayload.last_name = names.last_name;
 
@@ -261,21 +261,21 @@ export const clerkAdminCompat = {
         });
       }
 
-      if (params.user_metadata || params.app_metadata) {
+      if (params.publicMetadata || params.privateMetadata) {
         await clerkRequest(`/users/${encodeURIComponent(userId)}/metadata`, {
           method: "PATCH",
           body: JSON.stringify({
-            ...(params.user_metadata
-              ? { public_metadata: params.user_metadata }
+            ...(params.publicMetadata
+              ? { public_metadata: params.publicMetadata }
               : {}),
-            ...(params.app_metadata
-              ? { private_metadata: params.app_metadata }
+            ...(params.privateMetadata
+              ? { private_metadata: params.privateMetadata }
               : {}),
           }),
         });
       }
 
-      return { data: { user: toCompatUser(await fetchRawUser(userId)) }, error: null };
+      return { data: { user: toClerkAdminUser(await fetchRawUser(userId)) }, error: null };
     } catch (error) {
       return { data: { user: null }, error: resultError(error) };
     }
@@ -305,7 +305,7 @@ export const clerkAdminCompat = {
       );
       const rows = Array.isArray(payload) ? payload : payload?.data || [];
       return {
-        data: { users: rows.map(toCompatUser) },
+        data: { users: rows.map(toClerkAdminUser) },
         error: null,
       };
     } catch (error) {

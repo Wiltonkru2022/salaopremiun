@@ -56,7 +56,7 @@ Use antes de liberar venda/uso real em produção.
 - [ ] backup/restore conhecido;
 - [ ] RLS multi-tenant revisada;
 - [ ] `npm run audit:database-contract` passa;
-- [ ] `npm run audit:service-role` passa.
+- [ ] `npm run audit:admin-database-access` passa.
 
 ## 6. Asaas
 

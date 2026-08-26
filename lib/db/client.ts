@@ -6,26 +6,18 @@ import type {
 } from "@/lib/neon/query-client.server";
 
 type BrowserAuthClient = {
-  admin: any;
   getUser(): Promise<{
     data: { user: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } | null };
     error: null;
   }>;
   getSession(): Promise<any>;
   signOut(options?: unknown): Promise<any>;
-  onAuthStateChange(...args: any[]): any;
-  [key: string]: any;
 };
 
 type BrowserDatabaseClient = {
   from<T = any>(table: string): NeonQueryBuilder<T>;
   rpc<T = any>(fn: string, args?: Record<string, unknown>): Promise<NeonQueryResult<T>>;
   auth: BrowserAuthClient;
-  storage: any;
-  channel(name: string): ReturnType<typeof createNoopRealtimeChannel>;
-  removeChannel(channel: unknown): Promise<string>;
-  removeAllChannels(): Promise<unknown[]>;
-  getChannels(): unknown[];
 };
 
 type RemoteFilter = { op: string; column?: string; value?: unknown };
@@ -33,7 +25,7 @@ type RemoteOrder = { column: string; ascending?: boolean; nullsFirst?: boolean }
 type RemoteMutation =
   | { kind: "insert"; payload: unknown }
   | { kind: "update"; payload: unknown }
-  | { kind: "delete" }
+  | { kind: "delete"; options?: { count?: string } }
   | { kind: "upsert"; payload: unknown; options?: Record<string, unknown> };
 
 type RemoteState = {
@@ -70,7 +62,23 @@ async function remoteRequest(body: unknown) {
       body: JSON.stringify(body),
     });
     const payload = (await response.json().catch(() => null)) as any;
-    if (payload && typeof payload === "object") return payload;
+    if (payload && typeof payload === "object") {
+      if (!response.ok && !payload.error) {
+        return {
+          ...payload,
+          data: payload.data ?? null,
+          error: { message: `Falha HTTP ${response.status} ao acessar o Neon.` },
+          count: payload.count ?? null,
+          status: response.status,
+          statusText: response.statusText,
+        };
+      }
+      return {
+        ...payload,
+        status: payload.status ?? response.status,
+        statusText: payload.statusText ?? response.statusText,
+      };
+    }
     return {
       data: null,
       error: { message: `Falha HTTP ${response.status} ao acessar o Neon.` },
@@ -109,8 +117,8 @@ function createRemoteBuilder(table: string) {
       state.mutation = { kind: "update", payload };
       return builder;
     },
-    delete() {
-      state.mutation = { kind: "delete" };
+    delete(options?: { count?: string }) {
+      state.mutation = { kind: "delete", options };
       return builder;
     },
     upsert(payload: unknown, options?: Record<string, unknown>) {
@@ -159,6 +167,10 @@ function createRemoteBuilder(table: string) {
     },
     contains(column: string, value: unknown) {
       state.filters.push({ op: "contains", column, value });
+      return builder;
+    },
+    not(column: string, operator: string, value: unknown) {
+      state.filters.push({ op: "not", column, value: { operator, value } });
       return builder;
     },
     or(value: string) {
@@ -231,7 +243,6 @@ async function readSession() {
 
 function createAuthProxy() {
   return {
-    admin: undefined as any,
     async getUser() {
       const user = await readSession();
       return { data: { user }, error: null };
@@ -272,24 +283,7 @@ function createAuthProxy() {
         };
       }
     },
-    onAuthStateChange() {
-      return { data: { subscription: { unsubscribe() {} } } };
-    },
   };
-}
-
-function createNoopRealtimeChannel() {
-  const channel: any = {
-    on() {
-      return channel;
-    },
-    subscribe(callback?: (status: string) => void) {
-      callback?.("SUBSCRIBED");
-      return channel;
-    },
-    unsubscribe: async () => "ok",
-  };
-  return channel;
 }
 
 export function createClient(): BrowserDatabaseClient {
@@ -303,10 +297,6 @@ export function createClient(): BrowserDatabaseClient {
           remoteRequest({ kind: "rpc", fn, args: args || {} });
       }
       if (property === "auth") return auth;
-      if (property === "channel") return () => createNoopRealtimeChannel();
-      if (property === "removeChannel") return async () => "ok";
-      if (property === "removeAllChannels") return async () => [];
-      if (property === "getChannels") return () => [];
       return undefined;
     },
   });

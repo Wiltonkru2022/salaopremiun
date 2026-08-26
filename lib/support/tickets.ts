@@ -12,8 +12,8 @@ import {
   buildMfaRecoveryRejectedMessage,
 } from "@/lib/auth/mfa-recovery";
 import { registrarLogSistema } from "@/lib/system-logs";
-import { clerkAdminCompat } from "@/lib/platform/clerk-admin.server";
-import { cloudinaryStorageCompat } from "@/lib/platform/cloudinary-storage-compat.server";
+import { clerkAdminApi } from "@/lib/platform/clerk-admin-api.server";
+import { getCloudinaryPublicUrl, uploadCloudinaryFile } from "@/lib/platform/cloudinary.server";
 import type { Json } from "@/types/database.generated";
 import crypto from "node:crypto";
 
@@ -495,13 +495,9 @@ async function signTicketAttachments(
 
   const signed = await Promise.all(
     attachments.map(async (attachment) => {
-      const { data } = await cloudinaryStorageCompat
-        .from(attachment.bucket)
-        .createSignedUrl(attachment.path, 60 * 60);
-
       return {
         ...attachment,
-        signedUrl: data?.signedUrl || null,
+        signedUrl: getCloudinaryPublicUrl(attachment.bucket, attachment.path),
       };
     })
   );
@@ -1586,7 +1582,7 @@ export async function updateAdminTicketStatus(params: {
           }
 
           const { data: factorsData, error: factorError } =
-            await clerkAdminCompat.mfa.listFactors({
+            await clerkAdminApi.mfa.listFactors({
               userId: usuarioSalao.auth_user_id,
             });
 
@@ -1604,7 +1600,7 @@ export async function updateAdminTicketStatus(params: {
 
           if (totpFactor) {
             const { error: deleteFactorError } =
-              await clerkAdminCompat.mfa.deleteFactor({
+              await clerkAdminApi.mfa.deleteFactor({
                 id: totpFactor.id,
                 userId: usuarioSalao.auth_user_id,
               });
@@ -1618,7 +1614,7 @@ export async function updateAdminTicketStatus(params: {
           }
 
           const { data: authUserData, error: authUserError } =
-            await clerkAdminCompat.getUserById(usuarioSalao.auth_user_id);
+            await clerkAdminApi.getUserById(usuarioSalao.auth_user_id);
 
           if (authUserError || !authUserData?.user) {
             throw new Error(
@@ -1627,7 +1623,7 @@ export async function updateAdminTicketStatus(params: {
             );
           }
 
-          const currentAppMetadata = (authUserData.user.app_metadata ||
+          const currentAppMetadata = (authUserData.user.privateMetadata ||
             {}) as Record<string, unknown>;
           const currentMfaMetadata =
             (currentAppMetadata.salaopremium_mfa as Record<string, unknown> | undefined) ||
@@ -1637,8 +1633,8 @@ export async function updateAdminTicketStatus(params: {
           ).toISOString();
 
           const { error: updateAuthError } =
-            await clerkAdminCompat.updateUserById(usuarioSalao.auth_user_id, {
-              app_metadata: {
+            await clerkAdminApi.updateUserById(usuarioSalao.auth_user_id, {
+              privateMetadata: {
                 ...currentAppMetadata,
                 salaopremium_mfa: {
                   ...currentMfaMetadata,
@@ -1824,21 +1820,18 @@ export async function uploadSalaoTicketAttachment(params: {
         throw new Error("NOT_FOUND");
       }
 
-      const { error: uploadError } = await cloudinaryStorageCompat
-        .from(TICKET_ATTACHMENT_BUCKET)
-        .upload(attachmentPath, params.bytes, {
-          contentType,
-          upsert: false,
-        });
-
-      if (uploadError) {
-        throw new Error(uploadError.message || "Erro ao enviar anexo.");
-      }
+      const uploaded = await uploadCloudinaryFile({
+        collection: TICKET_ATTACHMENT_BUCKET,
+        path: attachmentPath,
+        bytes: params.bytes,
+        mimeType: contentType,
+      });
+      if (!uploaded.secureUrl) throw new Error("Cloudinary nao retornou a URL do anexo.");
 
       const attachmentMeta = [
         {
           bucket: TICKET_ATTACHMENT_BUCKET,
-          path: attachmentPath,
+          path: uploaded.secureUrl,
           fileName,
           contentType,
           sizeBytes: params.bytes.byteLength,

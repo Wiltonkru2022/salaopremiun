@@ -96,7 +96,7 @@ npm run lint
 npm run typecheck
 npm run typecheck:professional
 npm run audit:database-contract
-npm run audit:service-role
+npm run audit:admin-database-access
 npm run audit:api-guards
 npm run audit:critical-routes
 npm run audit:architecture-boundaries
