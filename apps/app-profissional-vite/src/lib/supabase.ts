@@ -7,32 +7,54 @@ type LocalChannel = {
     callback: RealtimeCallback
   ) => LocalChannel;
   subscribe: () => LocalChannel;
+  __dispose: () => void;
 };
 
 function createLocalChannel(): LocalChannel {
-  return {
-    on(_type, _filter, _callback) {
-      // O App Profissional nao abre conexao direta com o banco. Atualizacoes
-      // sao obtidas pelas APIs autenticadas do backend (Neon) e pelos eventos
-      // de foco/online ja existentes no app.
-      return this;
+  const callbacks = new Set<RealtimeCallback>();
+  let timer: ReturnType<typeof setInterval> | null = null;
+
+  const channel: LocalChannel = {
+    on(_type, _filter, callback) {
+      callbacks.add(callback);
+      return channel;
     },
     subscribe() {
-      return this;
+      if (!timer && typeof window !== "undefined") {
+        timer = setInterval(() => {
+          if (document.visibilityState === "hidden" || !navigator.onLine) return;
+          callbacks.forEach((callback) => {
+            try {
+              callback();
+            } catch {
+              // Uma atualização com falha não interrompe as demais.
+            }
+          });
+        }, 30000);
+      }
+      return channel;
+    },
+    __dispose() {
+      if (timer) clearInterval(timer);
+      timer = null;
+      callbacks.clear();
     },
   };
+
+  return channel;
 }
 
 export const supabaseConfigured = false;
 
-// Compatibilidade temporaria apenas para componentes antigos que ainda chamam
-// channel/removeChannel/storage. Nenhuma URL, chave, Auth, Realtime ou banco
-// Supabase e carregado no navegador.
+// Compatibilidade temporária para componentes antigos. Não abre conexão,
+// autenticação, realtime ou consulta direta no Supabase. Toda sincronização
+// ocorre pelas APIs autenticadas do backend, que consultam o Neon.
 export const supabase = {
   channel(_name: string) {
     return createLocalChannel();
   },
-  async removeChannel(_channel: LocalChannel) {
+  async removeChannel(channel: LocalChannel) {
+    channel.__dispose();
     return "ok" as const;
   },
   storage: {
