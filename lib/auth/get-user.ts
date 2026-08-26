@@ -1,10 +1,6 @@
-import { createClient } from "../../lib/supabase/server";
+import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 
 export async function getUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  return user;
+  const context = await getPainelUserContext({ allowAdminAal1: true });
+  return context.user;
 }
