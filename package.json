@@ -31,7 +31,7 @@
     "ci:typecheck": "npm run typecheck:ci",
     "ci:audit": "npm run audit:security && npm run audit:no-legacy-backend-runtime && npm run audit:admin-database-access && npm run audit:admin-actions && npm run audit:admin-client-inventory && npm run audit:admin-surface && npm run audit:api-guards && npm run audit:critical-routes && npm run audit:no-wildcard-select && npm run audit:database-contract && npm run audit:architecture-boundaries && npm run audit:operational-coverage",
     "ci:build": "npm run build",
-    "ci:validate": "npm run ci:lint && npm run ci:typecheck && npm run ci:audit && npm run test:operational && npm run ci:build",
+    "ci:validate": "npm run ci:lint && npm run ci:typecheck && npm run ci:build && npm run ci:audit && npm run test:operational",
     "// release": "Validacao pesada antes de promover producao",
     "release:validate": "npm run ci:validate && npm run e2e:proxy && npm run e2e:sales",
     "release:smoke": "npm run e2e:proxy && npm run e2e:sales",
