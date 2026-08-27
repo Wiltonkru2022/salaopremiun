@@ -47,6 +47,10 @@ const professionalAppDir = "apps/app-profissional-vite";
 // em public/ e é servido diretamente pelo app cliente.
 await run(nodeBin, [prepareClientHeroScript]);
 
+// Reconstrua o vídeo estático do hero antes do Next build. O arquivo final fica
+// em public/ e é servido diretamente pelo app cliente.
+await run(nodeBin, [prepareClientHeroScript]);
+
 // O app profissional e um Vite/PWA independente servido a partir de
 // public/app-profissional. Dados e autenticacao passam pelas APIs do produto;
 // o bundle nao recebe credenciais de banco.
