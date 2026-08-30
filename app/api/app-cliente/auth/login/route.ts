@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { loginClienteAppByCpfNascimento } from "@/app/services/cliente-app/auth";
+import { loginClienteCpfNascimentoDirect } from "@/lib/client-app/client-login.server";
 import { assertClienteCpfLoginAllowed } from "@/lib/client-app/login-rate-limit";
 import { safeAppClienteNext } from "@/lib/client-app/safe-next";
 import { setClienteSessionOnResponse } from "@/lib/cliente-auth.server";
@@ -26,38 +26,27 @@ export async function POST(request: NextRequest) {
   let body: Record<string, unknown>;
 
   try {
-    body = (await request.json()) as Record<
-      string,
-      unknown
-    >;
+    body = (await request.json()) as Record<string, unknown>;
   } catch {
     return NextResponse.json(
-      {
-        ok: false,
-        error: "Requisição inválida.",
-      },
+      { ok: false, error: "Requisição inválida." },
       { status: 400 }
     );
   }
 
   const cpf = String(body.cpf || "");
-  const dataNascimento = String(
-    body.dataNascimento || ""
-  );
-  const idSalao =
-    String(body.salao || "").trim() || null;
+  const dataNascimento = String(body.dataNascimento || "");
+  const idSalao = String(body.salao || "").trim() || null;
   const next = safeAppClienteNext(
     body.next == null ? null : String(body.next)
   );
-
   const metadata = requestMetadata(request);
 
   try {
-    const limit =
-      await assertClienteCpfLoginAllowed({
-        cpf,
-        ip: metadata.ip,
-      });
+    const limit = await assertClienteCpfLoginAllowed({
+      cpf,
+      ip: metadata.ip,
+    });
 
     if (!limit.allowed) {
       return NextResponse.json(
@@ -69,7 +58,8 @@ export async function POST(request: NextRequest) {
         { status: 429 }
       );
     }
-  } catch {
+  } catch (error) {
+    console.error("[CLIENTE_LOGIN_RATE_LIMIT]", error);
     return NextResponse.json(
       {
         ok: false,
@@ -80,38 +70,46 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const result =
-    await loginClienteAppByCpfNascimento({
+  try {
+    const result = await loginClienteCpfNascimentoDirect({
       cpf,
       dataNascimento,
       idSalao,
-      ...metadata,
+      userAgent: metadata.userAgent,
     });
 
-  if (!result.ok) {
+    if (!result.ok) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: result.error,
+          redirectTo: result.redirectTo || null,
+        },
+        { status: 401 }
+      );
+    }
+
+    const response = NextResponse.json({
+      ok: true,
+      next,
+    });
+
+    setClienteSessionOnResponse(
+      request,
+      response,
+      result.session
+    );
+
+    return response;
+  } catch (error) {
+    console.error("[CLIENTE_LOGIN_FATAL]", error);
     return NextResponse.json(
       {
         ok: false,
         error:
-          result.error ||
-          "Não foi possível validar os dados informados.",
-        redirectTo:
-          result.redirectTo || null,
+          "Não foi possível entrar agora. Tente novamente em alguns instantes.",
       },
-      { status: 401 }
+      { status: 500 }
     );
   }
-
-  const response = NextResponse.json({
-    ok: true,
-    next,
-  });
-
-  setClienteSessionOnResponse(
-    request,
-    response,
-    result.session
-  );
-
-  return response;
 }
