@@ -15,6 +15,13 @@ const AUDIT_ARCHIVE_DAYS = 30;
 const ARCHIVE_BATCH = 500;
 const ARCHIVE_MAX_BATCHES = 10;
 
+const TELEMETRY_SELECT_COLUMNS = {
+  operational_probe_history:
+    "id,component_key,status,message,latency_ms,evidence_json,checked_at,deployment_id,commit_sha,probe_version",
+  eventos_cron:
+    "id,nome,status,resumo,payload_json,erro_texto,iniciado_em,finalizado_em,duracao_ms,criado_em",
+} as const;
+
 type AuditArchiveRow = {
   id: string;
   id_salao: string | null;
@@ -126,7 +133,7 @@ async function archiveOldTelemetryRows(input: {
   for (let batch = 0; batch < ARCHIVE_MAX_BATCHES; batch += 1) {
     const { data, error } = await (databaseAdmin as any)
       .from(input.tableName)
-      .select("*")
+      .select(TELEMETRY_SELECT_COLUMNS[input.tableName])
       .lt(input.timestampColumn, cutoff)
       .order(input.timestampColumn, { ascending: true })
       .limit(ARCHIVE_BATCH);
