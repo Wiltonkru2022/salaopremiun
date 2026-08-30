@@ -120,6 +120,8 @@ export function ClerkAdminSignIn({
 }) {
   const clerkRef = useRef<ClerkLike | null>(null);
   const exchangedTokenRef = useRef<string | null>(null);
+  const exchangeInFlightRef = useRef(false);
+  const authenticationCompletedRef = useRef(false);
 
   const [ready, setReady] = useState(false);
   const [identifier, setIdentifier] = useState("");
@@ -136,14 +138,16 @@ export function ClerkAdminSignIn({
   const [firstAccessMessage, setFirstAccessMessage] = useState("");
 
   async function exchangeSession(session?: ClerkSessionLike | null) {
-    if (!session) return;
+    if (!session || authenticationCompletedRef.current || exchangeInFlightRef.current) return;
+
+    exchangeInFlightRef.current = true;
     setStatus("Validando acesso administrativo...");
     setError("");
 
     try {
       const token = await session.getToken();
       if (!token) throw new Error("A autenticação não retornou uma sessão válida.");
-      if (exchangedTokenRef.current === token) return;
+      if (authenticationCompletedRef.current || exchangedTokenRef.current === token) return;
       exchangedTokenRef.current = token;
 
       const response = await fetch(exchangeEndpoint, {
@@ -156,20 +160,29 @@ export function ClerkAdminSignIn({
       const payload = (await response.json().catch(() => null)) as ExchangePayload | null;
 
       if (payload?.mfaEnrollmentRequired && payload.redirectTo) {
+        authenticationCompletedRef.current = true;
         window.location.assign(payload.redirectTo);
         return;
       }
+
       if (!response.ok || !payload?.ok) {
         exchangedTokenRef.current = null;
         throw new Error(payload?.message || "Não foi possível liberar seu acesso.");
       }
 
+      // Marca como concluído antes de navegar. O setActive() do Clerk pode
+      // disparar listener mais de uma vez; sem esta trava o primeiro POST 200
+      // era seguido por novos POSTs 401 e a tela mostrava erro mesmo após sucesso.
+      authenticationCompletedRef.current = true;
       setStatus("Acesso confirmado. Abrindo o sistema...");
       onAuthenticated(payload.redirectTo || nextPath);
     } catch (cause) {
+      if (authenticationCompletedRef.current) return;
       exchangedTokenRef.current = null;
       setError(cause instanceof Error ? cause.message : "Falha ao validar sua sessão.");
       setStatus("");
+    } finally {
+      exchangeInFlightRef.current = false;
     }
   }
 
@@ -204,13 +217,17 @@ export function ClerkAdminSignIn({
       setReady(true);
       setStatus("");
       if (clerk.addListener) {
-        unsubscribe = clerk.addListener(({ session }) => void exchangeSession(session || null));
+        unsubscribe = clerk.addListener(({ session }) => {
+          if (!authenticationCompletedRef.current) void exchangeSession(session || null);
+        });
       }
-      if (clerk.session && motivo !== "logout") await exchangeSession(clerk.session);
+      if (clerk.session && motivo !== "logout" && !authenticationCompletedRef.current) {
+        await exchangeSession(clerk.session);
+      }
     }
 
     void setup().catch((cause) => {
-      if (cancelled) return;
+      if (cancelled || authenticationCompletedRef.current) return;
       setError(cause instanceof Error ? cause.message : "Falha ao iniciar autenticação.");
       setStatus("");
     });
@@ -251,6 +268,8 @@ export function ClerkAdminSignIn({
 
   async function finishSignIn(attempt: ClerkSignInAttempt) {
     if (attempt.status === "complete" && attempt.createdSessionId && clerkRef.current) {
+      authenticationCompletedRef.current = false;
+      exchangedTokenRef.current = null;
       await clerkRef.current.setActive({ session: attempt.createdSessionId });
       setStatus("Acesso confirmado. Abrindo o sistema...");
       return;
@@ -276,6 +295,8 @@ export function ClerkAdminSignIn({
     const signIn = clerkRef.current?.client?.signIn;
     if (!ready || !signIn || submitting) return;
 
+    authenticationCompletedRef.current = false;
+    exchangedTokenRef.current = null;
     setSubmitting(true);
     setError("");
     setStatus("Confirmando seu acesso...");
@@ -298,6 +319,8 @@ export function ClerkAdminSignIn({
     const signIn = clerkRef.current?.client?.signIn;
     if (!ready || !signIn || submitting) return;
 
+    authenticationCompletedRef.current = false;
+    exchangedTokenRef.current = null;
     setSubmitting(true);
     setError("");
     setStatus("Verificando o código...");
