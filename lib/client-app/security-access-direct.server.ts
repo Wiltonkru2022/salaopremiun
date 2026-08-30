@@ -30,6 +30,12 @@ function normalize(value: unknown) {
   return String(value || "").trim().toLowerCase();
 }
 
+function isExpired(value: string | null | undefined) {
+  if (!value) return false;
+  const timestamp = Date.parse(value);
+  return Number.isFinite(timestamp) && timestamp <= Date.now();
+}
+
 function message(status: string, motivo?: string | null) {
   const custom = String(motivo || "").trim();
   if (custom) return custom;
@@ -47,6 +53,22 @@ function message(status: string, motivo?: string | null) {
     return "Sua conta está em análise no momento.";
   }
   return "Acesso bloqueado por segurança.";
+}
+
+async function clearTemporaryBlock(userId: string) {
+  await queryNeonDirect(
+    `update public.user_security_status
+        set status = 'ativo',
+            motivo = null,
+            risco_atual = null,
+            bloqueado_ate = null,
+            verificacao_necessaria = false,
+            atualizado_em = now()
+      where user_id::text = $1::text
+        and tipo_usuario::text = 'cliente'
+        and status::text = 'bloqueado_temporario'`,
+    [userId]
+  );
 }
 
 export async function getClienteSecurityDecisionDirect(params: {
@@ -90,9 +112,19 @@ export async function getClienteSecurityDecisionDirect(params: {
       : Promise.resolve({ rows: [] as SalaoSecurityRow[] } as any),
   ]);
 
-  const user = userResult.rows[0] || null;
+  let user = userResult.rows[0] || null;
   const salao = salaoResult.rows[0] || null;
-  const userStatus = normalize(user?.status);
+  let userStatus = normalize(user?.status);
+
+  const temporaryBlockCanClear =
+    userStatus === "bloqueado_temporario" &&
+    (isExpired(user?.bloqueado_ate) || process.env.NODE_ENV === "development");
+
+  if (temporaryBlockCanClear) {
+    await clearTemporaryBlock(userId);
+    user = null;
+    userStatus = "ativo";
+  }
 
   if (
     userStatus === "verificacao_necessaria" ||
@@ -110,11 +142,7 @@ export async function getClienteSecurityDecisionDirect(params: {
     };
   }
 
-  if (
-    ["bloqueado_temporario", "bloqueado", "em_analise"].includes(
-      userStatus
-    )
-  ) {
+  if (["bloqueado_temporario", "bloqueado", "em_analise"].includes(userStatus)) {
     const error = message(userStatus, user?.motivo);
     return {
       allowed: false,
