@@ -1,11 +1,9 @@
 import { NextResponse } from "next/server";
 import { sanitizeAdminMasterNextPath } from "@/lib/admin-master/auth/login-path";
 import { authenticateAdminMasterPassword } from "@/lib/admin-master/auth/password-login.server";
-import { resolveAdminMasterAccessForIdentity } from "@/lib/admin-master/auth/requireAdminMasterUser";
+import { resolveAdminMasterPasswordAccess } from "@/lib/admin-master/auth/password-access-neon.server";
 import { setAdminMasterSessionCookie } from "@/lib/admin-master/auth/session";
-import { getDatabaseAdmin } from "@/lib/db/admin";
 import { clerkAdminApi } from "@/lib/platform/clerk-admin-api.server";
-import { emitSecurityEvent } from "@/lib/security/security-events";
 
 type RequestBody = {
   email?: string;
@@ -15,16 +13,12 @@ type RequestBody = {
 
 function isUuid(value: unknown) {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
-    String(value || "").trim()
+    String(value || "").trim(),
   );
 }
 
 function getRequestHost(request: Request) {
   return request.headers.get("x-forwarded-host")?.split(",")[0] || request.headers.get("host");
-}
-
-function getClientIp(request: Request) {
-  return request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || null;
 }
 
 function safeStatus(error: unknown) {
@@ -42,83 +36,47 @@ export async function POST(request: Request) {
   const nextPath = sanitizeAdminMasterNextPath(body?.next) || "/admin-master";
 
   try {
+    // 1) Autentica senha diretamente no backend do Clerk.
     const identity = await authenticateAdminMasterPassword({ email, password });
 
-    let stableAuthId = String(identity.externalId || "").trim();
+    // 2) Valida cadastro/permissão diretamente no Neon com SQL tipado.
+    // Não passa pelo adapter Supabase-like, eliminando o erro PostgreSQL 42P18.
+    const access = await resolveAdminMasterPasswordAccess({
+      email: identity.email,
+      clerkUserId: identity.clerkUserId,
+      externalId: identity.externalId,
+      nome: identity.nome,
+    });
 
-    if (!isUuid(stableAuthId)) {
-      const db = getDatabaseAdmin();
-      const { data: adminByEmail, error: adminLookupError } = await db
-        .from("admin_master_usuarios")
-        .select("auth_user_id")
-        .eq("email", identity.email)
-        .maybeSingle();
-
-      if (adminLookupError) {
-        throw new Error("Não foi possível validar o cadastro administrativo.");
-      }
-
-      const legacyAuthId = String(adminByEmail?.auth_user_id || "").trim();
-      if (isUuid(legacyAuthId)) {
-        stableAuthId = legacyAuthId;
-        await clerkAdminApi
-          .updateUserById(identity.clerkUserId, { externalId: legacyAuthId })
-          .catch(() => undefined);
-      }
+    // 3) Se o Neon possui o UUID legado e o Clerk ainda não, sincroniza external_id.
+    if (
+      isUuid(access.authUserId) &&
+      String(identity.externalId || "").trim() !== access.authUserId
+    ) {
+      await clerkAdminApi
+        .updateUserById(identity.clerkUserId, { externalId: access.authUserId })
+        .catch(() => undefined);
     }
 
-    if (!stableAuthId) stableAuthId = identity.clerkUserId;
-
-    const access = await resolveAdminMasterAccessForIdentity(
-      {
-        id: stableAuthId,
-        email: identity.email,
-        nome: identity.nome,
-      },
-      "dashboard_ver"
-    );
-
-    if (!access.ok) {
-      return NextResponse.json(
-        { ok: false, message: access.message },
-        { status: access.status, headers: { "Cache-Control": "no-store" } }
-      );
-    }
-
+    // 4) Cria a sessão própria do Admin Master.
     const response = NextResponse.json(
       {
         ok: true,
         redirectTo: nextPath,
         usuario: {
-          id: access.usuario.id,
-          nome: access.usuario.nome,
-          perfil: access.usuario.perfil,
+          id: access.id,
+          nome: access.nome,
+          perfil: access.perfil,
         },
       },
-      { status: 200, headers: { "Cache-Control": "no-store" } }
+      { status: 200, headers: { "Cache-Control": "no-store" } },
     );
 
     await setAdminMasterSessionCookie(response, {
-      authUserId: stableAuthId,
-      email: identity.email,
+      authUserId: access.authUserId,
+      email: access.email,
       host: getRequestHost(request),
       mfaVerifiedAt: 0,
-    });
-
-    void emitSecurityEvent({
-      evento: "admin_master_login_sucesso",
-      tipoUsuario: "salao",
-      userId: stableAuthId,
-      risco: "baixo",
-      ip: getClientIp(request),
-      userAgent: request.headers.get("user-agent") || null,
-      origem: "admin-master-password",
-      route: "/admin-master/login",
-      detalhes: {
-        email: identity.email,
-        provider: "clerk-backend-password",
-        mfa: "nao_exigido",
-      },
     });
 
     return response;
@@ -131,21 +89,9 @@ export async function POST(request: Request) {
           ? error.message
           : "Não foi possível concluir o login do Admin Master.";
 
-    void emitSecurityEvent({
-      evento: "admin_master_login_falha",
-      tipoUsuario: "salao",
-      userId: null,
-      risco: status === 401 ? "medio" : "baixo",
-      ip: getClientIp(request),
-      userAgent: request.headers.get("user-agent") || null,
-      origem: "admin-master-password",
-      route: "/admin-master/login",
-      detalhes: { email, status },
-    });
-
     return NextResponse.json(
       { ok: false, message },
-      { status, headers: { "Cache-Control": "no-store" } }
+      { status, headers: { "Cache-Control": "no-store" } },
     );
   }
 }
