@@ -16,6 +16,7 @@ const CRITICAL_DIRS = [
   "app/api/webhooks",
 ];
 const ALLOWED_PUBLIC_HINTS = [
+  "publicroute",
   "webhook",
   "cron",
   "motivo publico",
@@ -53,6 +54,8 @@ const GUARD_HINTS = [
   "resolveAdminMasterAccessForIdentity(",
   "assertPublicRateLimit(",
   "validateSecurityEventToken(",
+  "verifyClerkBearerToken(",
+  "readPainelClerkSession(",
   "auth.getUser(",
 ];
 
