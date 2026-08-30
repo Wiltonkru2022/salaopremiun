@@ -21,6 +21,12 @@ jobs:
           cache: npm
       - name: Install
         run: npm install --no-audit --no-fund
+      - name: Capture refreshed lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: refreshed-package-lock
+          path: package-lock.json
+          if-no-files-found: error
       - name: Install App Profissional PWA
         run: npm --prefix apps/app-profissional-vite install --no-audit --no-fund
       - name: Install legacy salon launcher
