@@ -311,7 +311,6 @@ export default function ContaClerkPage() {
             <div>
               <div className="flex justify-center rounded-3xl border border-zinc-200 bg-white p-5">
                 {qrCode ? (
-                  // eslint-disable-next-line @next/next/no-img-element
                   <img
                     src={qrCode}
                     alt="QR Code para configurar o autenticador"
