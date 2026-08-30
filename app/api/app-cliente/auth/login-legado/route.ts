@@ -5,6 +5,8 @@ import { setClienteSessionOnResponse } from "@/lib/cliente-auth.server";
 
 export const dynamic = "force-dynamic";
 
+// publicRoute: login legado precisa ser publico; valida credenciais no serviço de autenticação antes de criar sessão.
+
 export async function POST(request: NextRequest) {
   let body: Record<string, unknown>;
 
