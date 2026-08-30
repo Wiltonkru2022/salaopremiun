@@ -48,21 +48,28 @@ function safeReturnPath(value: string | null) {
   return raw;
 }
 
+function isAdminMasterSecurityFlow(returnPath: string) {
+  return (
+    returnPath === "/admin-master" ||
+    returnPath.startsWith("/admin-master/") ||
+    returnPath.startsWith("/admin-master/login")
+  );
+}
+
 export default function ContaClerkPage() {
   const hostRef = useRef<HTMLDivElement>(null);
   const clerkRef = useRef<ClerkLike | null>(null);
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
-  const [mfaRequired, setMfaRequired] = useState(false);
+  const [showSecurityProfile, setShowSecurityProfile] = useState(false);
   const [returnHref, setReturnHref] = useState("/dashboard");
 
   useEffect(() => {
-    const requestedReturn = new URLSearchParams(
-      window.location.search
-    ).get("next");
-
+    const requestedReturn = new URLSearchParams(window.location.search).get("next");
     const safeReturn = safeReturnPath(requestedReturn);
+    const adminMasterSecurityFlow = isAdminMasterSecurityFlow(safeReturn);
+
     setReturnHref(safeReturn);
 
     let active = true;
@@ -108,9 +115,17 @@ export default function ContaClerkPage() {
 
         clerkRef.current = clerk;
 
-        const session =
-          clerk.session ?? clerk.client?.activeSessions?.[0] ?? null;
+        // O backend do Admin Master envia o usuário para /conta quando detecta
+        // MFA ausente. Não dependemos de session.tasks nesse fluxo, porque o
+        // Clerk pode não expor setup-mfa como task e isso causava o loop
+        // /conta -> /admin-master/login -> /conta.
+        if (adminMasterSecurityFlow) {
+          setShowSecurityProfile(true);
+          setLoading(false);
+          return;
+        }
 
+        const session = clerk.session ?? clerk.client?.activeSessions?.[0] ?? null;
         const tasks = Array.isArray(session?.tasks) ? session.tasks : [];
         const hasSetupMfaTask = tasks.some(
           (task) =>
@@ -123,7 +138,7 @@ export default function ContaClerkPage() {
           return;
         }
 
-        setMfaRequired(true);
+        setShowSecurityProfile(true);
         setLoading(false);
       } catch (cause) {
         if (!active) return;
@@ -145,7 +160,7 @@ export default function ContaClerkPage() {
   }, []);
 
   useEffect(() => {
-    if (!mfaRequired) return;
+    if (!showSecurityProfile) return;
 
     const clerk = clerkRef.current;
     const profileHost = hostRef.current;
@@ -164,7 +179,7 @@ export default function ContaClerkPage() {
     return () => {
       clerk.unmountUserProfile?.(profileHost);
     };
-  }, [mfaRequired]);
+  }, [showSecurityProfile]);
 
   if (loading) {
     return (
@@ -174,10 +189,6 @@ export default function ContaClerkPage() {
         </p>
       </main>
     );
-  }
-
-  if (!mfaRequired && !error) {
-    return null;
   }
 
   return (
@@ -190,11 +201,11 @@ export default function ContaClerkPage() {
             </p>
 
             <h1 className="mt-1 text-2xl font-black text-zinc-950">
-              Segurança da conta
+              Configure a verificação em duas etapas
             </h1>
 
             <p className="mt-1 text-sm text-zinc-600">
-              A autenticação em dois fatores é necessária para concluir este acesso.
+              Ative o segundo fator abaixo. Depois de concluir, use o botão Voltar para entrar novamente no Admin Master.
             </p>
           </div>
 
@@ -202,7 +213,7 @@ export default function ContaClerkPage() {
             href={returnHref}
             className="rounded-xl bg-zinc-950 px-4 py-2.5 text-sm font-bold text-white"
           >
-            Voltar
+            Voltar para o login
           </a>
         </div>
 
@@ -212,7 +223,7 @@ export default function ContaClerkPage() {
           </p>
         ) : null}
 
-        {mfaRequired ? (
+        {showSecurityProfile ? (
           <div ref={hostRef} className="mt-6 min-h-[640px]" />
         ) : null}
       </div>
