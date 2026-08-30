@@ -1,8 +1,8 @@
 import {
   criarTicketPorAlertaAdminMaster,
   registrarAdminMasterAuditoria,
-  resolverAlertaAdminMaster,
 } from "@/lib/admin-master/actions";
+import { resolverAlertaAdminMasterDireto } from "@/lib/admin-master/alert-resolver-neon.server";
 import {
   getAdminMasterAccess,
   type AdminMasterAccessResult,
@@ -22,8 +22,8 @@ export function createAdminMasterAlertaService() {
       return syncAdminMasterAlerts();
     },
 
-    resolverAlerta(params: Parameters<typeof resolverAlertaAdminMaster>[0]) {
-      return resolverAlertaAdminMaster(params);
+    resolverAlerta(params: Parameters<typeof resolverAlertaAdminMasterDireto>[0]) {
+      return resolverAlertaAdminMasterDireto(params);
     },
 
     criarTicketPorAlerta(
