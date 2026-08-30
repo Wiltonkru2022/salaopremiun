@@ -115,7 +115,7 @@ export async function POST(request: Request) {
           debugId,
           debug: {
             code: rpcError.code || null,
-            message: rpcError.message || "Erro sem mensagem do Neon.",
+            message: "Não foi possível excluir os dados do salão.",
             details: rpcError.details || null,
             hint: rpcError.hint || null,
           },

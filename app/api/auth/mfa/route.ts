@@ -45,7 +45,7 @@ async function getAuthenticatedContext() {
     await clerkAdminApi.getUserById(session.clerkSubject);
 
   if (authUserError || !authUserData?.user) {
-    throw new Error("Nao foi possivel carregar a conta Clerk autenticada.");
+    throw new Error("Não foi possível carregar a conta autenticada.");
   }
 
   const { data: factorsData, error: factorError } =
@@ -54,7 +54,7 @@ async function getAuthenticatedContext() {
     });
 
   if (factorError) {
-    throw new Error(factorError.message || "Erro ao carregar fatores MFA do Clerk.");
+    throw new Error("Não foi possível carregar a verificação em duas etapas.");
   }
 
   const totpFactor =
@@ -87,7 +87,7 @@ async function persistMfaMetadata(params: {
   const { data, error } = await clerkAdminApi.getUserById(params.authUserId);
 
   if (error || !data?.user) {
-    throw new Error("Nao foi possivel atualizar a conta do autenticador Clerk.");
+    throw new Error("Não foi possível atualizar o autenticador da conta.");
   }
 
   const currentAppMetadata = (data.user.privateMetadata ||
@@ -105,7 +105,7 @@ async function persistMfaMetadata(params: {
 
   if (updateError) {
     throw new Error(
-      updateError.message || "Nao foi possivel salvar os backup codes no Clerk."
+      "Não foi possível salvar os códigos de recuperação."
     );
   }
 }
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
     if (body.action === "generate_backup_codes") {
       if (!ctx.totpFactor) {
         return NextResponse.json(
-          { ok: false, error: "Nenhum autenticador Clerk ativo foi encontrado." },
+          { ok: false, error: "Nenhum autenticador ativo foi encontrado." },
           { status: 400 }
         );
       }
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
           {
             ok: false,
             error:
-              "Confirme o autenticador no Clerk nesta sessao antes de gerar novos backup codes.",
+              "Confirme o autenticador nesta sessão antes de gerar novos códigos de recuperação.",
           },
           { status: 403 }
         );
@@ -187,7 +187,7 @@ export async function POST(request: NextRequest) {
     if (body.action === "consume_backup_code") {
       if (!ctx.totpFactor) {
         return NextResponse.json(
-          { ok: false, error: "Nenhum autenticador Clerk ativo foi encontrado." },
+          { ok: false, error: "Nenhum autenticador ativo foi encontrado." },
           { status: 400 }
         );
       }
@@ -243,7 +243,7 @@ export async function POST(request: NextRequest) {
     if (body.action === "disable_factor") {
       if (!ctx.totpFactor) {
         return NextResponse.json(
-          { ok: false, error: "Nenhum autenticador Clerk ativo foi encontrado." },
+          { ok: false, error: "Nenhum autenticador ativo foi encontrado." },
           { status: 400 }
         );
       }
@@ -294,7 +294,7 @@ export async function POST(request: NextRequest) {
           {
             ok: false,
             error:
-              "Confirme o autenticador no Clerk nesta sessao antes de desativar a protecao.",
+              "Confirme o autenticador nesta sessão antes de desativar a proteção.",
           },
           { status: 403 }
         );
@@ -311,7 +311,7 @@ export async function POST(request: NextRequest) {
             ok: false,
             error:
               deleteError.message ||
-              "Nao foi possivel desativar o autenticador no Clerk.",
+              "Não foi possível desativar o autenticador.",
           },
           { status: 400 }
         );

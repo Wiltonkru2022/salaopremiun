@@ -1,4 +1,4 @@
-import type { PoolClient } from "@neondatabase/serverless";
+﻿import type { PoolClient } from "@neondatabase/serverless";
 
 export type PainelDbFilter = {
   op: "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "like" | "ilike" | "is" | "in" | "contains" | "not" | "or";
@@ -247,7 +247,7 @@ async function primaryKeyColumns(client: PoolClient, table: string) {
     `select a.attname as column_name
        from pg_index i
        join pg_attribute a on a.attrelid = i.indrelid and a.attnum = any(i.indkey)
-      where i.indrelid = format('public.%I', $1)::regclass
+      where i.indrelid = format('public.%I', $1::text)::regclass
         and i.indisprimary
       order by array_position(i.indkey, a.attnum)`,
     [table]
@@ -273,7 +273,7 @@ async function findRelation(client: PoolClient, sourceTable: string, relationTab
            join pg_attribute a_src on a_src.attrelid = c.conrelid and a_src.attnum = c.conkey[1]
            join pg_attribute a_rel on a_rel.attrelid = c.confrelid and a_rel.attnum = c.confkey[1]
           where c.contype = 'f' and nsrc.nspname = 'public'
-            and src.relname = $1 and rel.relname = $2
+            and src.relname = $1::text and rel.relname = $2::text
          union all
          select a_src.attname as source_column,
                 a_rel.attname as relation_column,
@@ -285,7 +285,7 @@ async function findRelation(client: PoolClient, sourceTable: string, relationTab
            join pg_attribute a_rel on a_rel.attrelid = c.conrelid and a_rel.attnum = c.conkey[1]
            join pg_attribute a_src on a_src.attrelid = c.confrelid and a_src.attnum = c.confkey[1]
           where c.contype = 'f' and nrel.nspname = 'public'
-            and src.relname = $1 and rel.relname = $2
+            and src.relname = $1::text and rel.relname = $2::text
        ) relations
       limit 1`,
     [sourceTable, relationTable]
@@ -503,3 +503,5 @@ export async function executePainelNeonRpc(client: PoolClient, request: PainelDb
   }
   return { data, error: null, count: null, status: 200, statusText: "OK" };
 }
+
+

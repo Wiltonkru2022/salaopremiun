@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import Header from "@/components/layout/Header";
 import { PainelSessionProvider } from "@/components/layout/PainelSessionProvider";
@@ -52,7 +52,8 @@ type Props = {
 };
 
 const FULL_SCREEN_PAINEL_PATHS = new Set(["/agenda", "/caixa"]);
-const SHELL_NOTIFICATIONS_REFRESH_EVENT = "salaopremium:shell-notifications:refresh";
+const SHELL_NOTIFICATIONS_REFRESH_EVENT =
+  "salaopremium:shell-notifications:refresh";
 
 function getSafePainelReturnTo(value: string | null) {
   if (!value || !value.startsWith("/") || value.startsWith("//")) return null;
@@ -83,44 +84,72 @@ export default function AppShell({
 }: Props) {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [contentScrolled, setContentScrolled] = useState(false);
-  const [shellNotifications, setShellNotifications] = useState(notifications);
-  const router = useRouter();
+  const [shellNotifications, setShellNotifications] =
+    useState(notifications);
+
   const pathname = usePathname();
   const searchParams = useSearchParams();
+
   const storageScope = [idSalao, idUsuario].filter(Boolean).join(":");
   const notificationStorageKey = storageScope || undefined;
   const hideShellChrome = FULL_SCREEN_PAINEL_PATHS.has(pathname);
-  const fullScreenBackHref = getSafePainelReturnTo(searchParams.get("returnTo")) || (pathname === "/caixa" ? "/agenda" : "/dashboard");
-  const fullScreenBackLabel = fullScreenBackHref.startsWith("/agenda") ? "Voltar para agenda" : "Voltar para o painel";
-  const criticalNotificationsCount = shellNotifications.filter((notification) => notification.critical).length;
-  const sessionSnapshot = idSalao && idUsuario
-    ? {
-        idSalao,
-        idUsuario,
-        userName: userName || "",
-        userEmail: userEmail || "",
-        nivel,
-        permissoes,
-        planoRecursos,
-        salaoNome,
-        salaoResponsavel,
-        salaoLogoUrl,
-        planoCodigo,
-        planoNome,
-        planoLimites,
-        planoUso,
-        assinaturaStatus,
-        produtosModuloAtivo,
-      }
-    : null;
 
-  useEffect(() => setShellNotifications(notifications), [notifications]);
+  const fullScreenBackHref =
+    getSafePainelReturnTo(searchParams.get("returnTo")) ||
+    (pathname === "/caixa" ? "/agenda" : "/dashboard");
+
+  const fullScreenBackLabel = fullScreenBackHref.startsWith("/agenda")
+    ? "Voltar para agenda"
+    : "Voltar para o painel";
+
+  const criticalNotificationsCount = shellNotifications.filter(
+    (notification) => notification.critical
+  ).length;
+
+  const sessionSnapshot =
+    idSalao && idUsuario
+      ? {
+          idSalao,
+          idUsuario,
+          userName: userName || "",
+          userEmail: userEmail || "",
+          nivel,
+          permissoes,
+          planoRecursos,
+          salaoNome,
+          salaoResponsavel,
+          salaoLogoUrl,
+          planoCodigo,
+          planoNome,
+          planoLimites,
+          planoUso,
+          assinaturaStatus,
+          produtosModuloAtivo,
+        }
+      : null;
+
+  useEffect(
+    () => setShellNotifications(notifications),
+    [notifications]
+  );
 
   const refreshShellNotifications = useCallback(async () => {
     try {
-      const response = await fetch("/api/shell-notifications", { cache: "no-store", credentials: "same-origin" });
-      const payload = (await response.json().catch(() => null)) as { notifications?: ShellNotification[] } | null;
-      if (response.ok && Array.isArray(payload?.notifications)) setShellNotifications(payload.notifications);
+      const response = await fetch("/api/shell-notifications", {
+        cache: "no-store",
+        credentials: "same-origin",
+      });
+
+      const payload = (await response.json().catch(() => null)) as
+        | { notifications?: ShellNotification[] }
+        | null;
+
+      if (
+        response.ok &&
+        Array.isArray(payload?.notifications)
+      ) {
+        setShellNotifications(payload.notifications);
+      }
     } catch {
       // Notificacoes nao interrompem o painel em oscilacao de rede.
     }
@@ -128,31 +157,75 @@ export default function AppShell({
 
   useEffect(() => {
     function refreshWhenVisible() {
-      if (document.visibilityState === "visible") void refreshShellNotifications();
+      if (document.visibilityState === "visible") {
+        void refreshShellNotifications();
+      }
     }
+
     window.addEventListener("focus", refreshWhenVisible);
-    window.addEventListener("visibilitychange", refreshWhenVisible);
-    window.addEventListener(SHELL_NOTIFICATIONS_REFRESH_EVENT, refreshWhenVisible);
-    const intervalId = window.setInterval(refreshWhenVisible, 30000);
+    window.addEventListener(
+      "visibilitychange",
+      refreshWhenVisible
+    );
+    window.addEventListener(
+      SHELL_NOTIFICATIONS_REFRESH_EVENT,
+      refreshWhenVisible
+    );
+
+    const intervalId = window.setInterval(
+      refreshWhenVisible,
+      30000
+    );
+
     return () => {
       window.removeEventListener("focus", refreshWhenVisible);
-      window.removeEventListener("visibilitychange", refreshWhenVisible);
-      window.removeEventListener(SHELL_NOTIFICATIONS_REFRESH_EVENT, refreshWhenVisible);
+      window.removeEventListener(
+        "visibilitychange",
+        refreshWhenVisible
+      );
+      window.removeEventListener(
+        SHELL_NOTIFICATIONS_REFRESH_EVENT,
+        refreshWhenVisible
+      );
       window.clearInterval(intervalId);
     };
   }, [refreshShellNotifications]);
 
   async function handleLogout() {
     await monitorClientOperation(
-      { module: "auth", action: "logout", screen: "painel_shell", successMessage: "Logout executado com sucesso.", errorMessage: "Falha ao encerrar sessão." },
+      {
+        module: "auth",
+        action: "logout",
+        screen: "painel_shell",
+        successMessage: "Logout executado com sucesso.",
+        errorMessage: "Falha ao encerrar sessão.",
+      },
       async () => {
         const database = createClient();
+
         try {
           await database.auth.signOut({ scope: "local" });
         } finally {
-          try { window.localStorage.removeItem(PAINEL_SESSION_STORAGE_KEY); } catch {}
+          try {
+            window.localStorage.removeItem(
+              PAINEL_SESSION_STORAGE_KEY
+            );
+          } catch {
+            // Navegadores privados podem bloquear storage.
+          }
+
+          try {
+            window.sessionStorage.removeItem(
+              PAINEL_SESSION_STORAGE_KEY
+            );
+          } catch {
+            // Navegadores privados podem bloquear storage.
+          }
         }
-        router.replace("/login?motivo=logout");
+
+        // Logout precisa de navegacao completa para evitar que
+        // estado/cache antigo do App Router mantenha o painel vivo.
+        window.location.replace("/login?motivo=logout");
       }
     );
   }
@@ -161,11 +234,25 @@ export default function AppShell({
     <PainelSessionProvider value={sessionSnapshot}>
       <PainelDesktopGuard>
         <div className="painel-density min-h-screen bg-zinc-50 text-[var(--app-ink)]">
-          <MonitoringContextBridge actorType="usuario_salao" surface="painel" idSalao={idSalao || null} idUsuario={idUsuario || null} />
+          <MonitoringContextBridge
+            actorType="usuario_salao"
+            surface="painel"
+            idSalao={idSalao || null}
+            idUsuario={idUsuario || null}
+          />
+
           <PainelPwaRuntime />
+
           {hideShellChrome ? (
             <main className="relative min-h-screen bg-zinc-50">
-              <Link href={fullScreenBackHref} className="fixed left-3 top-3 z-[360] inline-flex h-8 items-center gap-1.5 rounded-full border border-zinc-200 bg-white/95 px-3 text-[11px] font-bold text-zinc-700 shadow-[0_12px_30px_rgba(15,23,42,0.12)] backdrop-blur transition hover:border-zinc-300 hover:bg-white"><ArrowLeft size={14} />{fullScreenBackLabel}</Link>
+              <Link
+                href={fullScreenBackHref}
+                className="fixed left-3 top-3 z-[360] inline-flex h-8 items-center gap-1.5 rounded-full border border-zinc-200 bg-white/95 px-3 text-[11px] font-bold text-zinc-700 shadow-[0_12px_30px_rgba(15,23,42,0.12)] backdrop-blur transition hover:border-zinc-300 hover:bg-white"
+              >
+                <ArrowLeft size={14} />
+                {fullScreenBackLabel}
+              </Link>
+
               <div className="min-w-0">{children}</div>
             </main>
           ) : (
@@ -179,12 +266,17 @@ export default function AppShell({
                 salaoLogoUrl={salaoLogoUrl}
                 planoNome={planoNome}
                 resumoAssinatura={resumoAssinatura}
-                canSeeAssinatura={Boolean(permissoes?.assinatura_ver)}
-                criticalNotificationsCount={criticalNotificationsCount}
+                canSeeAssinatura={Boolean(
+                  permissoes?.assinatura_ver
+                )}
+                criticalNotificationsCount={
+                  criticalNotificationsCount
+                }
                 mobileOpen={mobileSidebarOpen}
                 onClose={() => setMobileSidebarOpen(false)}
                 produtosModuloAtivo={produtosModuloAtivo}
               />
+
               <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
                 <div className="fixed left-0 right-0 top-0 z-30 bg-white lg:left-[214px]">
                   <Header
@@ -197,19 +289,48 @@ export default function AppShell({
                     planoNome={planoNome}
                     assinaturaStatus={assinaturaStatus}
                     resumoAssinatura={resumoAssinatura}
-                    canSeePerfilSalao={Boolean(permissoes?.perfil_salao_ver)}
-                    canSeeConfiguracoes={Boolean(permissoes?.configuracoes_ver)}
-                    canSeeAssinatura={Boolean(permissoes?.assinatura_ver)}
-                    criticalNotificationsCount={criticalNotificationsCount}
+                    canSeePerfilSalao={Boolean(
+                      permissoes?.perfil_salao_ver
+                    )}
+                    canSeeConfiguracoes={Boolean(
+                      permissoes?.configuracoes_ver
+                    )}
+                    canSeeAssinatura={Boolean(
+                      permissoes?.assinatura_ver
+                    )}
+                    criticalNotificationsCount={
+                      criticalNotificationsCount
+                    }
                     notifications={shellNotifications}
-                    notificationStorageKey={notificationStorageKey}
+                    notificationStorageKey={
+                      notificationStorageKey
+                    }
                     scrolled={contentScrolled}
-                    onOpenSidebar={() => setMobileSidebarOpen(true)}
+                    onOpenSidebar={() =>
+                      setMobileSidebarOpen(true)
+                    }
                     onLogout={handleLogout}
                   />
                 </div>
-                <main className="scroll-premium min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-zinc-50 px-1.5 pb-1.5 pt-[4.1rem] md:px-2 lg:px-2.5 lg:pt-[4.25rem]" onScroll={(event) => { const nextScrolled = event.currentTarget.scrollTop > 12; setContentScrolled((current) => current === nextScrolled ? current : nextScrolled); }}>
-                  <div className="min-h-[calc(100dvh-4.1rem)] bg-zinc-50 p-1 md:p-1.5"><div className="min-w-0">{children}</div></div>
+
+                <main
+                  className="scroll-premium min-h-0 min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-zinc-50 px-1.5 pb-1.5 pt-[4.1rem] md:px-2 lg:px-2.5 lg:pt-[4.25rem]"
+                  onScroll={(event) => {
+                    const nextScrolled =
+                      event.currentTarget.scrollTop > 12;
+
+                    setContentScrolled((current) =>
+                      current === nextScrolled
+                        ? current
+                        : nextScrolled
+                    );
+                  }}
+                >
+                  <div className="min-h-[calc(100dvh-4.1rem)] bg-zinc-50 p-1 md:p-1.5">
+                    <div className="min-w-0">
+                      {children}
+                    </div>
+                  </div>
                 </main>
               </div>
             </div>

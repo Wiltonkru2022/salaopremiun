@@ -65,7 +65,9 @@ export async function getPainelUserContext(
 
   return {
     user: {
-      id: session.clerkSubject,
+      // `user.id` preserva o contrato historico (UUID de auth). O subject
+      // Clerk `user_...` fica somente em session.clerkSubject.
+      id: session.authUserId,
       email: session.email,
       user_metadata: { nome: session.nome },
     },

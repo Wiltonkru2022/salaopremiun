@@ -1,9 +1,6 @@
-const VERIFIED_NEON_RUNTIME_HOST =
-  "ep-proud-unit-aya64n85-pooler.c-5.us-east-2.aws.neon.tech";
-
 function configuredRuntimeHost() {
   const value = String(process.env.NEON_RUNTIME_HOST || "").trim();
-  if (!value) return VERIFIED_NEON_RUNTIME_HOST;
+  if (!value) return "";
   return value
     .replace(/^https?:\/\//i, "")
     .replace(/^postgres(?:ql)?:\/\//i, "")
@@ -20,11 +17,11 @@ export function resolveNeonRuntimeUrl(rawValue: string | undefined) {
     if (!/\.neon\.tech$/i.test(url.hostname)) return raw;
 
     const runtimeHost = configuredRuntimeHost();
-    if (!runtimeHost || !/\.neon\.tech$/i.test(runtimeHost)) {
+    if (runtimeHost && !/\.neon\.tech$/i.test(runtimeHost)) {
       throw new Error("NEON_RUNTIME_HOST invalido.");
     }
 
-    url.hostname = runtimeHost;
+    if (runtimeHost) url.hostname = runtimeHost;
     return url.toString();
   } catch (cause) {
     if (cause instanceof Error && cause.message === "NEON_RUNTIME_HOST invalido.") {

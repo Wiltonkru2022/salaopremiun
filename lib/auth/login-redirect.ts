@@ -16,7 +16,7 @@ export function buildLoginRedirectUrl(
   motivo: string,
   options?: { returnTo?: string | null; context?: string | null }
 ) {
-  const url = new URL(`https://${getLoginHost()}/login-clerk`);
+  const url = new URL(`https://${getLoginHost()}/login`);
   url.searchParams.set("motivo", motivo);
 
   const returnTo = sanitizeLoginReturnTo(options?.returnTo);

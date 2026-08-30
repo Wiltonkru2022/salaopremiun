@@ -1,29 +1,37 @@
 import Link from "next/link";
+import {
+  getAppClienteUrl,
+  getAppProfissionalUrl,
+  getAssinaturaUrl,
+  getCadastroUrl,
+  getPainelUrl,
+  getRootUrl,
+} from "@/lib/site-urls";
 
 const atalhos = [
   {
     label: "Ir para o site",
-    href: "https://salaopremiun.com.br",
+    href: getRootUrl(),
   },
   {
     label: "Painel do salão",
-    href: "https://painel.salaopremiun.com.br/dashboard",
+    href: getPainelUrl("/dashboard"),
   },
   {
     label: "App cliente",
-    href: "https://app.salaopremiun.com.br/app-cliente",
+    href: getAppClienteUrl("/app-cliente"),
   },
   {
     label: "App profissional",
-    href: "https://app.salaopremiun.com.br/app-profissional/inicio",
+    href: getAppProfissionalUrl("/app-profissional/inicio"),
   },
   {
     label: "Cadastro do salão",
-    href: "https://cadastro.salaopremiun.com.br/cadastro-salao",
+    href: getCadastroUrl(),
   },
   {
     label: "Assinatura",
-    href: "https://assinatura.salaopremiun.com.br/assinatura",
+    href: getAssinaturaUrl(),
   },
 ];
 

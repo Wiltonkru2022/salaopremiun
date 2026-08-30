@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
+import { getLoginUrl } from "@/lib/site-urls";
 
 export default function AtualizarSenhaPage() {
-  redirect("https://login.salaopremiun.com.br/login-clerk?motivo=recuperar_senha");
+  redirect(getLoginUrl("/login?motivo=recuperar_senha"));
 }

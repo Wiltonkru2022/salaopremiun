@@ -32,7 +32,7 @@ function genericResponse() {
     {
       ok: true,
       message:
-        "Se este e-mail pertencer a um Admin Master ativo ainda nao migrado, o Clerk enviara um convite seguro para concluir o primeiro acesso.",
+        "Se este e-mail pertencer a uma conta administrativa ativa que precise de atualização, você receberá um convite seguro para concluir o primeiro acesso.",
     },
     { status: 200, headers: { "Cache-Control": "no-store" } }
   );

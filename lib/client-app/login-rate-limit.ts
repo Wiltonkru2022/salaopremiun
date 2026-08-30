@@ -22,6 +22,7 @@ export function buildClienteCpfIdentityKey(cpfInput: string) {
     .createHmac("sha256", identitySecret())
     .update(cpf)
     .digest("hex");
+
   return `cpf:${digest}`;
 }
 
@@ -33,6 +34,27 @@ export async function assertClienteCpfLoginAllowed(params: {
   cpf: string;
   ip?: string | null;
 }) {
+  /*
+   * Ambiente LOCAL:
+   * durante desenvolvimento não bloqueia o programador por tentativas
+   * anteriores, loops de sessão ou testes repetidos.
+   *
+   * Isso NÃO afeta produção, porque NODE_ENV será "production".
+   */
+  if (process.env.NODE_ENV === "development") {
+    console.log("[CLIENTE_LOGIN_RATE_LIMIT:DEV_BYPASS]", {
+      cpfFinal: normalizeCpf(params.cpf).slice(-4),
+      ip: params.ip || null,
+    });
+
+    return {
+      allowed: true,
+      attemptsByCpf: 0,
+      attemptsByIp: 0,
+      retryAfterSeconds: 0,
+    };
+  }
+
   const database = getDatabaseAdmin();
   const identityKey = buildClienteCpfIdentityKey(params.cpf);
 
@@ -44,6 +66,7 @@ export async function assertClienteCpfLoginAllowed(params: {
     .gte("criado_em", since(CPF_WINDOW_MINUTES));
 
   const ip = String(params.ip || "").trim();
+
   const ipQuery = ip
     ? database
         .from("security_login_attempts")
@@ -58,21 +81,27 @@ export async function assertClienteCpfLoginAllowed(params: {
     ipQuery || Promise.resolve({ count: 0, error: null }),
   ]);
 
-  if (identityResult.error) throw identityResult.error;
-  if (ipResult.error) throw ipResult.error;
+  if (identityResult.error) {
+    throw identityResult.error;
+  }
+
+  if (ipResult.error) {
+    throw ipResult.error;
+  }
 
   const attemptsByCpf = Number(identityResult.count || 0);
   const attemptsByIp = Number(ipResult.count || 0);
 
+  const allowed =
+    attemptsByCpf < CPF_MAX_ATTEMPTS &&
+    attemptsByIp < IP_MAX_ATTEMPTS;
+
   return {
-    allowed:
-      attemptsByCpf < CPF_MAX_ATTEMPTS &&
-      attemptsByIp < IP_MAX_ATTEMPTS,
+    allowed,
     attemptsByCpf,
     attemptsByIp,
-    retryAfterSeconds:
-      attemptsByCpf >= CPF_MAX_ATTEMPTS || attemptsByIp >= IP_MAX_ATTEMPTS
-        ? CPF_WINDOW_MINUTES * 60
-        : 0,
+    retryAfterSeconds: allowed
+      ? 0
+      : CPF_WINDOW_MINUTES * 60,
   };
 }

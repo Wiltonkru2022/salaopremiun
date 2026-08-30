@@ -5,13 +5,15 @@ import {
 } from "@/lib/security/public-rate-limit";
 import { emitSecurityEvent } from "@/lib/security/security-events";
 import { findSalaoUsuarioByEmail } from "@/lib/security/salao-user-lookup";
+import { getLoginUrl } from "@/lib/site-urls";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 export const publicRoute = "rota publica: encaminha recuperacao de senha para o Clerk com limite por IP.";
 
-const CLERK_RECOVERY_URL =
-  "https://login.salaopremiun.com.br/login-clerk?motivo=recuperar_senha";
+const CLERK_RECOVERY_URL = getLoginUrl(
+  "/login?motivo=recuperar_senha"
+);
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);

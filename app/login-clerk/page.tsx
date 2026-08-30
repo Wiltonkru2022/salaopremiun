@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Sparkles } from "lucide-react";
 import { ClerkAdminSignIn } from "@/components/auth/ClerkAdminSignIn";
 import { getLoginRedirectNotice } from "@/lib/auth/login-redirect";
+import { getPainelUrl } from "@/lib/site-urls";
 
 export default function PainelClerkLoginPage() {
   return (
@@ -24,9 +25,9 @@ function PainelClerkLoginContent() {
   const notice = getLoginRedirectNotice(search);
 
   const onAuthenticated = useCallback((redirectTo: string) => {
-    const root = String(process.env.NEXT_PUBLIC_APP_URL || "https://salaopremiun.com.br").replace(/\/$/, "");
-    const painelHost = root.includes("salaopremiun.com.br") ? "https://painel.salaopremiun.com.br" : root;
-    window.location.replace(`${painelHost}${redirectTo.startsWith("/") ? redirectTo : "/dashboard?boot=1"}`);
+    window.location.replace(
+      getPainelUrl(redirectTo.startsWith("/") ? redirectTo : "/dashboard?boot=1")
+    );
   }, []);
 
   return (
@@ -49,7 +50,7 @@ function PainelClerkLoginContent() {
             <div className="max-w-lg">
               <div className="inline-flex rounded-full border border-white/15 bg-white/10 px-3 py-1.5 text-xs font-black uppercase tracking-[0.2em] text-white/75">Acesso seguro</div>
               <h1 className="mt-7 text-[3.2rem] font-black leading-[0.95] tracking-[-0.05em] xl:text-[4.2rem]">Menos peso na rotina, mais controle no seu negócio.</h1>
-              <p className="mt-5 max-w-md text-base leading-7 text-white/78">Agenda, clientes, equipe, vendas e gestão protegidos por autenticação moderna e MFA.</p>
+              <p className="mt-5 max-w-md text-base leading-7 text-white/78">Agenda, clientes, equipe, vendas e gestão reunidos em um acesso seguro.</p>
             </div>
             <div className="grid max-w-xl gap-3 sm:grid-cols-3">
               {['Agenda protegida','Equipe conectada','Dados seguros'].map((label) => <div key={label} className="rounded-2xl border border-white/10 bg-white/5 p-4 text-sm font-semibold text-white/80">{label}</div>)}
@@ -62,7 +63,7 @@ function PainelClerkLoginContent() {
             <div className="mb-6">
               <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">SalãoPremium</p>
               <h2 className="mt-2 text-3xl font-black tracking-[-0.04em]">Entrar no painel</h2>
-              <p className="mt-2 text-sm font-semibold text-zinc-500">Seu login continua com a cara do Salão Premium. O Clerk fica por trás cuidando de sessão e MFA.</p>
+              <p className="mt-2 text-sm font-semibold text-zinc-500">Entre com seu e-mail e senha para acessar a gestão do seu salão.</p>
             </div>
 
             {notice ? (

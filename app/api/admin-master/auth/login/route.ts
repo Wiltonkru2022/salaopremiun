@@ -7,8 +7,8 @@ export async function POST() {
     {
       ok: false,
       provider: "clerk",
-      redirectTo: "/admin-master/clerk-login",
-      message: "O Admin Master agora usa autenticação Clerk. Entre pela tela segura do Clerk.",
+      redirectTo: "/admin-master/login",
+      message: "Continue pela tela segura de acesso do SalãoPremium.",
     },
     { status: 410, headers: { "Cache-Control": "no-store" } }
   );

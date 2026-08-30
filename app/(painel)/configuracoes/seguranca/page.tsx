@@ -4,6 +4,11 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { KeyRound, Loader2, ShieldCheck } from "lucide-react";
 import { PainelPageHeader } from "@/components/painel-ui";
+import { getLoginUrl } from "@/lib/site-urls";
+
+const PASSWORD_RECOVERY_URL = getLoginUrl(
+  "/login?motivo=recuperar_senha&next=%2Fconfiguracoes%2Fseguranca"
+);
 
 type MfaStatus = {
   ok?: boolean;
@@ -49,7 +54,7 @@ export default function SegurancaConfiguracoesPage() {
       <PainelPageHeader
         eyebrow="Configurações"
         title="Segurança da conta"
-        description="Senha e verificação em 2 etapas são protegidas pelo Clerk; os dados do salão permanecem no Neon."
+        description="Gerencie sua senha e a verificação em duas etapas para manter sua conta protegida."
       />
 
       <section className="grid gap-4 lg:grid-cols-2">
@@ -66,13 +71,13 @@ export default function SegurancaConfiguracoesPage() {
           </div>
           <h2 className="mt-5 text-xl font-black tracking-[-0.03em] text-zinc-950">Verificação em 2 etapas</h2>
           <p className="mt-2 text-sm leading-6 text-zinc-600">
-            O autenticador e o segundo fator são gerenciados pelo Clerk. O SalãoPremium apenas consome o estado verificado da sessão.
+            Adicione uma confirmação extra ao entrar para aumentar a segurança da sua conta.
           </p>
           <Link
             href="/seguranca/mfa?next=/configuracoes/seguranca"
             className="mt-5 inline-flex h-11 items-center justify-center rounded-2xl bg-zinc-950 px-5 text-sm font-bold text-white"
           >
-            {mfaAtivo ? "Gerenciar no Clerk" : "Configurar no Clerk"}
+            {mfaAtivo ? "Gerenciar proteção" : "Configurar proteção"}
           </Link>
         </div>
 
@@ -82,10 +87,10 @@ export default function SegurancaConfiguracoesPage() {
           </div>
           <h2 className="mt-5 text-xl font-black tracking-[-0.03em] text-zinc-950">Senha da conta</h2>
           <p className="mt-2 text-sm leading-6 text-zinc-600">
-            A senha não é mais atualizada pelo banco. A troca e a recuperação ficam no fluxo seguro do Clerk.
+            Altere sua senha ou recupere o acesso de forma segura.
           </p>
           <a
-            href="https://login.salaopremiun.com.br/login-clerk?motivo=recuperar_senha&next=%2Fconfiguracoes%2Fseguranca"
+            href={PASSWORD_RECOVERY_URL}
             className="mt-5 inline-flex h-11 items-center justify-center gap-2 rounded-2xl bg-zinc-950 px-5 text-sm font-bold text-white"
           >
             <KeyRound size={17} />

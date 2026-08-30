@@ -920,7 +920,17 @@ export default function AgendaPage() {
       id: item.id,
       clientName: item.cliente?.nome || "Cliente sem nome",
       serviceName: item.servico?.nome || "Serviço",
-      dateLabel: format(new Date(`${item.data}T12:00:00`), "dd/MM"),
+      dateLabel: (() => {
+        const rawDate = String(item.data ?? "").trim();
+        const normalizedDate = rawDate.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? rawDate;
+        const parsedDate = /^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)
+          ? new Date(`${normalizedDate}T12:00:00`)
+          : new Date(normalizedDate);
+
+        return Number.isNaN(parsedDate.getTime())
+          ? "--/--"
+          : format(parsedDate, "dd/MM");
+      })(),
       timeLabel: `${normalizeTimeString(item.hora_inicio)} - ${normalizeTimeString(
         item.hora_fim
       )}`,

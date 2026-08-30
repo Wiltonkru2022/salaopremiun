@@ -1,10 +1,15 @@
 import Link from "next/link";
+import {
+  getAppClienteUrl,
+  getAppProfissionalUrl,
+  getCadastroUrl,
+  getLoginUrl,
+} from "@/lib/site-urls";
 
-const LOGIN_SALAO_URL = "https://login.salaopremiun.com.br/login";
-const CADASTRO_SALAO_URL = "https://cadastro.salaopremiun.com.br/cadastro-salao";
-const APP_CLIENTE_URL = "https://app.salaopremiun.com.br/app-cliente/login";
-const APP_PROFISSIONAL_URL =
-  "https://app.salaopremiun.com.br/app-profissional/login";
+const LOGIN_SALAO_URL = getLoginUrl();
+const CADASTRO_SALAO_URL = getCadastroUrl();
+const APP_CLIENTE_URL = getAppClienteUrl();
+const APP_PROFISSIONAL_URL = getAppProfissionalUrl();
 
 export default function SiteFooter() {
   return (

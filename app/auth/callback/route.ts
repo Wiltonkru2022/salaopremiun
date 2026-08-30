@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { getLoginUrl } from "@/lib/site-urls";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ function safeNext(value: string | null) {
 
 export async function GET(request: NextRequest) {
   const next = safeNext(request.nextUrl.searchParams.get("next"));
-  const login = new URL("https://login.salaopremiun.com.br/login-clerk");
+  const login = new URL(getLoginUrl("/login"));
   login.searchParams.set("returnTo", next);
   login.searchParams.set("motivo", "oauth_legado_removido");
   return NextResponse.redirect(login, 307);

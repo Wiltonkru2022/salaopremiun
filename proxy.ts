@@ -237,6 +237,34 @@ export async function proxy(request: NextRequest) {
     return NextResponse.next();
   }
 
+  // Em desenvolvimento todas as superficies compartilham localhost. A
+  // separacao por subdominios continua sendo aplicada normalmente em producao.
+  if (isLocalDevHost(ctx.host)) {
+    if (ctx.rotaAppProfissional) return rewriteToNovoAppProfissional(request);
+
+    if (ctx.rotaAdminMasterProtegida && !hasAdminMasterSessionCookie(request)) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/admin-master/login";
+      loginUrl.searchParams.set(
+        "next",
+        `${ctx.pathnameNormalizado}${request.nextUrl.search}`
+      );
+      return NextResponse.redirect(loginUrl);
+    }
+
+    if (ctx.rotaPainel && !hasPainelAuthCookie(request)) {
+      const loginUrl = request.nextUrl.clone();
+      loginUrl.pathname = "/login";
+      loginUrl.searchParams.set(
+        "returnTo",
+        `${ctx.pathnameNormalizado}${request.nextUrl.search}`
+      );
+      return NextResponse.redirect(loginUrl);
+    }
+
+    return NextResponse.next({ request });
+  }
+
   if (!ctx.isBlogHost && isBlogRoute(ctx.pathnameNormalizado)) {
     return redirectToHost(request, DOMINIO_BLOG, removeBlogPrefix(ctx.pathnameNormalizado));
   }

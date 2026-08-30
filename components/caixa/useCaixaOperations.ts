@@ -142,7 +142,7 @@ export function useCaixaOperations({
   const exigirCaixaAberto = useCallback(() => {
     if (!caixaSchemaReady) {
       setErroTela(
-        "Aplique a migration de caixa operacional no Neon antes de vender."
+        "O caixa ainda não está pronto para registrar vendas. Procure o suporte."
       );
       return false;
     }

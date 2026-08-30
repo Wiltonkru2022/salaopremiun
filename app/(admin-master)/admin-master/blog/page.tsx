@@ -253,7 +253,7 @@ export default async function AdminMasterBlogPage() {
             </h3>
             <p className="mx-auto mt-2 max-w-2xl text-sm leading-6 text-slate-600">
               Quando a conexao do blog estiver ativa neste ambiente, os posts
-              do projeto Neon separado aparecem aqui.
+              da área de conteúdo aparecem aqui.
             </p>
           </div>
         ) : null}

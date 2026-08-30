@@ -143,8 +143,18 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
-        source: "/login",
-        destination: "/login-clerk",
+        source: "/login-clerk",
+        destination: "/login",
+        permanent: false,
+      },
+      {
+        source: "/admin-master/clerk-login",
+        destination: "/admin-master/login",
+        permanent: false,
+      },
+      {
+        source: "/conta-clerk",
+        destination: "/conta",
         permanent: false,
       },
     ];

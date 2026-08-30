@@ -71,8 +71,8 @@ export function getClerkMigrationRedirect(surface: "painel" | "admin-master") {
   const loginHost = process.env.APP_LOGIN_HOST?.trim() || `login.${rootDomain}`;
   const path =
     surface === "admin-master"
-      ? "/admin-master/clerk-login?migracao=1"
-      : "/login-clerk?migracao=1";
+      ? "/admin-master/login?migracao=1"
+      : "/login?migracao=1";
 
   if (process.env.NODE_ENV === "production") return `https://${loginHost}${path}`;
 

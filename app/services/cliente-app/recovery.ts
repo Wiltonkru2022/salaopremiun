@@ -44,6 +44,51 @@ const OTP_TTL_MS = 10 * 60 * 1000;
 const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
 const OTP_MAX_ATTEMPTS = 5;
 
+
+function formatCpfForLegacyStorage(value: string) {
+  const cpf = normalizeCpf(value);
+  if (cpf.length !== 11) return cpf;
+  return `${cpf.slice(0, 3)}.${cpf.slice(3, 6)}.${cpf.slice(6, 9)}-${cpf.slice(9)}`;
+}
+
+function normalizeStoredBirthDate(value: unknown) {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+
+  const isoPrefix = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoPrefix) return isoPrefix[1];
+
+  return parseClienteBirthDate(raw) || "";
+}
+
+async function findRecoveryAccountByCpf(databaseAdmin: any, cpfInput: string) {
+  const cpf = normalizeCpf(cpfInput);
+  if (!cpf) return null;
+
+  const exact = await databaseAdmin
+    .from("clientes_app_auth")
+    .select("id, data_nascimento, ativo")
+    .eq("cpf", cpf)
+    .limit(1)
+    .maybeSingle();
+
+  if (!exact.error && exact.data?.id) return exact.data;
+
+  const legacyCpf = formatCpfForLegacyStorage(cpf);
+  if (!legacyCpf || legacyCpf === cpf) return null;
+
+  const legacy = await databaseAdmin
+    .from("clientes_app_auth")
+    .select("id, data_nascimento, ativo")
+    .eq("cpf", legacyCpf)
+    .limit(1)
+    .maybeSingle();
+
+  if (legacy.error || !legacy.data?.id) return null;
+  return legacy.data;
+}
+
+
 function secret() {
   const value =
     process.env.CLIENT_APP_RECOVERY_SECRET ||
@@ -390,13 +435,12 @@ export async function startClienteRecoveryByIdentity(params: {
     action: "cliente_app_recovery_identity_start",
     actorId: `cpf:${hmac(cpf)}`,
     run: async (databaseAdmin): Promise<IdentityStartResult> => {
-      const { data: account } = await databaseAdmin
-        .from("clientes_app_auth")
-        .select("id, data_nascimento, ativo")
-        .eq("cpf", cpf)
-        .limit(1)
-        .maybeSingle();
-      if (!account?.id || account.ativo === false || String(account.data_nascimento || "") !== birth) {
+      const account = await findRecoveryAccountByCpf(databaseAdmin, cpf);
+      if (
+        !account?.id ||
+        account.ativo === false ||
+        normalizeStoredBirthDate(account.data_nascimento) !== birth
+      ) {
         return { ok: false, error: "Não foi possível validar os dados informados." };
       }
       return {

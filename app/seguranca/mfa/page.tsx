@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { getLoginUrl } from "@/lib/site-urls";
 
 function safeNext(value: string | string[] | undefined) {
   const raw = Array.isArray(value) ? value[0] : value;
@@ -14,8 +15,6 @@ export default async function MfaPage({
   const params = await searchParams;
   const next = safeNext(params.next);
   const adminMaster = params.mode === "admin-master";
-  const path = adminMaster ? "/admin-master/clerk-login" : "/login-clerk";
-  redirect(
-    `https://login.salaopremiun.com.br${path}?next=${encodeURIComponent(next)}`
-  );
+  const path = adminMaster ? "/admin-master/login" : "/login";
+  redirect(getLoginUrl(`${path}?next=${encodeURIComponent(next)}`));
 }

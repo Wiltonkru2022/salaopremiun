@@ -7,6 +7,7 @@ export const PAINEL_CLERK_COOKIE = "sp-painel-auth-token";
 type PainelClerkSession = {
   clerkSubject: string;
   userId: string;
+  authUserId: string;
   idSalao: string;
   nome: string | null;
   email: string | null;
@@ -35,6 +36,7 @@ export async function createPainelClerkSession(payload: PainelClerkSession) {
   const token = await new SignJWT({
     clerkSubject: payload.clerkSubject,
     userId: payload.userId,
+    authUserId: payload.authUserId,
     idSalao: payload.idSalao,
     nome: payload.nome,
     email: payload.email,
@@ -71,12 +73,16 @@ export async function readPainelClerkSession(): Promise<PainelClerkSession | nul
       audience: "salaopremium-painel",
     });
     const userId = String(payload.userId || "").trim();
+    const authUserId = String(payload.authUserId || "").trim();
     const idSalao = String(payload.idSalao || "").trim();
     const clerkSubject = String(payload.clerkSubject || "").trim();
-    if (!userId || !idSalao || !clerkSubject) return null;
+    // Cookies antigos, criados antes da separacao Clerk x UUID interno, sao
+    // invalidados de forma segura para evitar enviar `user_...` a colunas UUID.
+    if (!userId || !authUserId || !idSalao || !clerkSubject) return null;
     return {
       clerkSubject,
       userId,
+      authUserId,
       idSalao,
       nome: typeof payload.nome === "string" ? payload.nome : null,
       email: typeof payload.email === "string" ? payload.email : null,

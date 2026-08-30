@@ -6,8 +6,8 @@ export async function POST() {
   return NextResponse.json(
     {
       ok: false,
-      redirectTo: "/admin-master/clerk-login",
-      message: "A confirmacao de MFA agora e concluida diretamente no Clerk.",
+      redirectTo: "/admin-master/login",
+      message: "Conclua a verificação em duas etapas na tela segura de acesso.",
     },
     { status: 409, headers: { "Cache-Control": "no-store" } }
   );

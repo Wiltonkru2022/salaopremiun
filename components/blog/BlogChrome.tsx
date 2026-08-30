@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { ArrowUpRight, BookOpen, Sparkles } from "lucide-react";
-import { DOMINIO_RAIZ } from "@/lib/proxy/domain-config";
+import { getCadastroUrl, getRootUrl } from "@/lib/site-urls";
 
-const CADASTRO_SALAO_URL = "https://cadastro.salaopremiun.com.br/cadastro-salao";
+const CADASTRO_SALAO_URL = getCadastroUrl();
+const SITE_URL = getRootUrl();
 
 export function BlogHeader() {
   return (
@@ -24,7 +25,7 @@ export function BlogHeader() {
 
         <div className="flex items-center gap-2">
           <Link
-            href={`https://${DOMINIO_RAIZ}`}
+            href={SITE_URL}
             className="hidden rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-bold text-zinc-800 shadow-sm transition hover:border-zinc-950 sm:inline-flex"
           >
             Site principal
@@ -57,7 +58,7 @@ export function BlogFooter() {
           </p>
         </div>
         <Link
-          href={`https://${DOMINIO_RAIZ}`}
+          href={SITE_URL}
           className="inline-flex justify-center rounded-full border border-white/15 px-5 py-2.5 text-sm font-black text-zinc-100 transition hover:bg-white/10"
         >
           Voltar ao SalãoPremium

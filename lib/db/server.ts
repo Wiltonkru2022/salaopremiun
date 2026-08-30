@@ -11,7 +11,9 @@ export async function createClient(): Promise<any> {
         data: {
           user: session
             ? {
-                id: session.clerkSubject,
+                // Compatibilidade com o antigo Supabase Auth: o restante do
+                // sistema espera que auth.getUser().user.id seja UUID.
+                id: session.authUserId,
                 email: session.email,
                 user_metadata: { nome: session.nome },
               }
@@ -24,7 +26,7 @@ export async function createClient(): Promise<any> {
       const session = await readPainelClerkSession();
       const user = session
         ? {
-            id: session.clerkSubject,
+            id: session.authUserId,
             email: session.email,
             user_metadata: { nome: session.nome },
           }

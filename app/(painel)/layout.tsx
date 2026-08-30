@@ -8,6 +8,7 @@ import { loadPainelShellData } from "@/lib/painel/load-painel-shell-data";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { hasAal2 } from "@/lib/auth/mfa-assurance";
 import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getLoginUrl } from "@/lib/site-urls";
 import "./painel-clean.css";
 
 export const metadata: Metadata = {
@@ -30,7 +31,7 @@ async function loadOnboardingState(client: any, idSalao: string) {
 async function requireOnboardingConcluido() {
   const { user, usuario } = await getPainelUserContext({ allowAdminAal1: true });
   if (!user || !usuario?.id_salao) {
-    redirect("https://login.salaopremiun.com.br/login-clerk?motivo=sessao_expirada&returnTo=/dashboard");
+    redirect(getLoginUrl("/login?motivo=sessao_expirada&returnTo=/dashboard"));
   }
 
   if (String(usuario.nivel || "").toLowerCase() === "admin" && !(await hasAal2())) {

@@ -205,7 +205,7 @@ export default function CaixaSessaoPanel({
         <div className="flex items-start gap-3">
           <AlertTriangle className="mt-0.5 shrink-0" size={20} />
           <div>
-            <div className="font-bold">Caixa operacional aguardando Neon</div>
+            <div className="font-bold">Caixa operacional ainda não configurado</div>
             <p className="mt-1 text-sm leading-6">
               {schemaError ||
                 "Aplique a migration de caixa operacional para liberar abertura, fechamento, sangria, suprimento e vale profissional."}

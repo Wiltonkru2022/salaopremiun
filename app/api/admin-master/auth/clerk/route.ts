@@ -25,18 +25,18 @@ function isUuid(value: unknown) {
 }
 
 function buildMfaEnrollmentUrl(nextPath: string) {
-  const backToLogin = `/admin-master/clerk-login?next=${encodeURIComponent(nextPath)}`;
-  return `/conta-clerk?next=${encodeURIComponent(backToLogin)}`;
+  const backToLogin = `/admin-master/login?next=${encodeURIComponent(nextPath)}`;
+  return `/conta?next=${encodeURIComponent(backToLogin)}`;
 }
 
 export async function POST(request: Request) {
   if (getAuthProviderForSurface("admin-master") !== "clerk") {
-    return NextResponse.json({ ok: false, message: "Clerk ainda não está ativo para o Admin Master." }, { status: 409, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, message: "O acesso administrativo está temporariamente indisponível." }, { status: 409, headers: { "Cache-Control": "no-store" } });
   }
 
   const token = readBearerToken(request);
   if (!token) {
-    return NextResponse.json({ ok: false, message: "Sessão Clerk não informada." }, { status: 401, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json({ ok: false, message: "Não foi possível confirmar sua sessão." }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }
 
   const body = (await request.json().catch(() => null)) as RequestBody | null;
@@ -46,13 +46,13 @@ export async function POST(request: Request) {
     const identity = await verifyClerkBearerToken(token);
     const email = String(identity.email || "").trim().toLowerCase();
     if (!email) {
-      return NextResponse.json({ ok: false, message: "Sua conta Clerk não possui e-mail principal válido." }, { status: 403, headers: { "Cache-Control": "no-store" } });
+      return NextResponse.json({ ok: false, message: "Sua conta não possui um e-mail principal válido." }, { status: 403, headers: { "Cache-Control": "no-store" } });
     }
 
     const { data: clerkData, error: clerkError } = await clerkAdminApi.getUserById(identity.subject);
     if (clerkError || !clerkData.user) {
       return NextResponse.json(
-        { ok: false, message: clerkError?.message || "Não foi possível carregar sua conta Clerk." },
+        { ok: false, message: "Não foi possível carregar sua conta." },
         { status: 401, headers: { "Cache-Control": "no-store" } }
       );
     }
@@ -82,8 +82,8 @@ export async function POST(request: Request) {
           mfaEnrollmentRequired: enrollmentRequired,
           redirectTo: enrollmentRequired ? buildMfaEnrollmentUrl(nextPath) : undefined,
           message: enrollmentRequired
-            ? "Cadastre a autenticação em dois fatores no Clerk antes de entrar no Admin Master."
-            : "Conclua a autenticação em dois fatores no Clerk para entrar no Admin Master.",
+            ? "Ative a verificação em duas etapas antes de continuar."
+            : "Conclua a verificação em duas etapas para continuar.",
         },
         { status: 403, headers: { "Cache-Control": "no-store" } }
       );
@@ -152,10 +152,10 @@ export async function POST(request: Request) {
     });
 
     return response;
-  } catch (error) {
+  } catch {
     return NextResponse.json({
       ok: false,
-      message: error instanceof Error ? error.message : "Não foi possível validar sua sessão Clerk.",
+      message: "Não foi possível validar seu acesso.",
     }, { status: 401, headers: { "Cache-Control": "no-store" } });
   }
 }

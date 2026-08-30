@@ -880,7 +880,7 @@ export default function PerfilSalaoPage() {
       setErro("");
       setMsg("");
 
-      window.location.assign("/conta-clerk?returnTo=/perfil-salao");
+      window.location.assign("/conta?returnTo=/perfil-salao");
     } catch (error) {
       setErro(
         error instanceof Error
@@ -951,8 +951,8 @@ export default function PerfilSalaoPage() {
     }
 
     void code;
-    window.location.assign("/conta-clerk?returnTo=/perfil-salao");
-    throw new Error("Confirme o autenticador na central segura do Clerk.");
+    window.location.assign("/conta?returnTo=/perfil-salao");
+    throw new Error("Confirme o autenticador na área de segurança da sua conta.");
   }
 
   async function validarSegundoFatorParaSenha() {
@@ -1004,7 +1004,7 @@ export default function PerfilSalaoPage() {
       const podeSeguir = await validarSegundoFatorParaSenha();
       if (!podeSeguir) return;
 
-      window.location.assign("/conta-clerk?returnTo=/perfil-salao");
+      window.location.assign("/conta?returnTo=/perfil-salao");
     } catch (error: unknown) {
       setErro(error instanceof Error ? error.message : "Erro ao trocar senha.");
     } finally {
@@ -1019,7 +1019,7 @@ export default function PerfilSalaoPage() {
       setMsg("");
       setRevealedBackupCodes([]);
 
-      window.location.assign("/conta-clerk?returnTo=/perfil-salao");
+      window.location.assign("/conta?returnTo=/perfil-salao");
     } catch (error: unknown) {
       setErro(
         error instanceof Error
@@ -2258,7 +2258,7 @@ export default function PerfilSalaoPage() {
         open={activeModal === "senha"}
         onClose={() => setActiveModal(null)}
         title="Trocar senha da conta"
-        description="A senha da conta administradora e atualizada no Neon Auth."
+        description="A senha da conta administradora é atualizada na área segura da conta."
         eyebrow="Seguranca"
         maxWidthClassName="max-w-xl"
         footer={

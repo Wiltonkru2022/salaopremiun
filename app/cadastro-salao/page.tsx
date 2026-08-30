@@ -136,7 +136,7 @@ function CadastroSalao() {
         criado: "1",
         returnTo: "/onboarding-salao",
       });
-      const loginPath = `/login-clerk?${params.toString()}`;
+      const loginPath = `/login?${params.toString()}`;
       const target = window.location.hostname.endsWith("salaopremiun.com.br")
         ? `https://login.salaopremiun.com.br${loginPath}`
         : loginPath;

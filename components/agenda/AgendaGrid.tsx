@@ -63,6 +63,23 @@ type Props = {
   isExpanded?: boolean;
 };
 
+
+function normalizeAgendaDate(value: unknown): string {
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+
+  // Neon/Postgres pode devolver DATE puro ("YYYY-MM-DD")
+  // ou timestamp ISO ("YYYY-MM-DDTHH:mm:ss...").
+  // Para a grade, a comparação deve sempre usar apenas a data civil.
+  const isoDate = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoDate) return isoDate[1];
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return raw;
+
+  return formatFullDate(parsed);
+}
+
 type PositionedEvent = {
   item: Agendamento;
   leftPercent: number;
@@ -565,7 +582,7 @@ export default function AgendaGrid({
                     {formatDayLabel(day)}
                   </div>
                   <div className="mt-0.5 text-[9px] text-zinc-500">
-                    {agendamentos.filter((item) => item.data === formatFullDate(day)).length}{" "}
+                    {agendamentos.filter((item) => normalizeAgendaDate(item.data) === formatFullDate(day)).length}{" "}
                     atendimento(s)
                   </div>
                 </div>
@@ -600,13 +617,13 @@ export default function AgendaGrid({
 
           {days.map((day) => {
             const dayStr = formatFullDate(day);
-            const dayAgendamentos = agendamentos.filter((a) => a.data === dayStr);
+            const dayAgendamentos = agendamentos.filter((a) => normalizeAgendaDate(a.data) === dayStr);
             const sortedDayAgendamentos = [...dayAgendamentos].sort(
               (a, b) => timeToMinutes(a.hora_inicio) - timeToMinutes(b.hora_inicio)
             );
 
             const baseBloqueios = bloqueios.filter(
-              (b) => b.data === dayStr && b.profissional_id === selectedProfessional?.id
+              (b) => normalizeAgendaDate(b.data) === dayStr && b.profissional_id === selectedProfessional?.id
             );
 
             const dayBloqueios = mergeBloqueios(baseBloqueios, []);
@@ -731,7 +748,7 @@ export default function AgendaGrid({
                     operationalSignals={operationalSignals.get(item.id)}
                     onResizeEnd={onResizeEvent}
                     onMoveEnd={(ag, move) => {
-                      const currentBaseDate = new Date(`${ag.data}T12:00:00`);
+                      const currentBaseDate = new Date(`${normalizeAgendaDate(ag.data)}T12:00:00`);
                       const newDate = formatFullDate(
                         addDays(currentBaseDate, move.dayDelta)
                       );
