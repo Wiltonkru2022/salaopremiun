@@ -1,33 +1,28 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import QRCode from "qrcode";
 
-type ClerkTask = {
-  key?: string;
-  type?: string;
+type TOTPResource = {
+  secret?: string;
+  uri?: string;
+  backupCodes?: string[];
 };
 
-type ClerkSession = {
-  tasks?: ClerkTask[];
+type ClerkUserLike = {
+  totpEnabled?: boolean;
+  createTOTP?: () => Promise<TOTPResource>;
+  verifyTOTP?: (params: { code: string }) => Promise<TOTPResource>;
 };
 
 type ClerkLike = {
-  load: (options?: Record<string, unknown>) => Promise<void>;
-  session?: ClerkSession | null;
-  client?: {
-    activeSessions?: ClerkSession[];
-  };
-  mountUserProfile?: (
-    element: HTMLDivElement,
-    options?: Record<string, unknown>
-  ) => void;
-  unmountUserProfile?: (element: HTMLDivElement) => void;
+  load: () => Promise<void>;
+  user?: ClerkUserLike | null;
 };
 
 type ClerkWindow = Window &
   typeof globalThis & {
     Clerk?: ClerkLike;
-    __internal_ClerkUICtor?: unknown;
   };
 
 function getClerkDomain(key: string) {
@@ -43,88 +38,64 @@ function safeReturnPath(value: string | null) {
   const raw = String(value || "").trim();
 
   if (!raw.startsWith("/") || raw.startsWith("//")) {
-    return "/dashboard";
+    return "/admin-master/login?next=%2Fadmin-master";
   }
 
   return raw;
 }
 
-function isAdminMasterSecurityFlow(returnPath: string) {
-  return (
-    returnPath === "/admin-master" ||
-    returnPath.startsWith("/admin-master/") ||
-    returnPath.startsWith("/admin-master/login")
-  );
-}
+function readableError(cause: unknown) {
+  const value = cause as {
+    errors?: Array<{
+      code?: string;
+      message?: string;
+      longMessage?: string;
+    }>;
+  };
 
-function loadScript(src: string, attributes?: Record<string, string>) {
-  return new Promise<void>((resolve, reject) => {
-    const existing = document.querySelector<HTMLScriptElement>(
-      `script[src="${src}"]`
-    );
+  const first = value?.errors?.[0];
+  const raw = `${first?.code || ""} ${first?.message || ""} ${
+    first?.longMessage || ""
+  }`.toLowerCase();
 
-    if (existing) {
-      if (existing.dataset.loaded === "true") {
-        resolve();
-        return;
-      }
+  if (raw.includes("verification") || raw.includes("code")) {
+    return "Código inválido ou expirado. Gere um código novo no aplicativo autenticador e tente novamente.";
+  }
 
-      existing.addEventListener("load", () => resolve(), { once: true });
-      existing.addEventListener(
-        "error",
-        () => reject(new Error(`Falha ao carregar ${src}.`)),
-        { once: true }
-      );
-      return;
-    }
+  if (raw.includes("reverification") || raw.includes("verification_required")) {
+    return "O Clerk pediu uma nova confirmação da sua identidade. Volte ao login, entre novamente e retorne para configurar a verificação em duas etapas.";
+  }
 
-    const script = document.createElement("script");
-    script.async = true;
-    script.crossOrigin = "anonymous";
-    script.src = src;
+  if (cause instanceof Error && process.env.NODE_ENV === "development") {
+    return cause.message;
+  }
 
-    Object.entries(attributes || {}).forEach(([key, value]) => {
-      script.setAttribute(key, value);
-    });
-
-    script.addEventListener(
-      "load",
-      () => {
-        script.dataset.loaded = "true";
-        resolve();
-      },
-      { once: true }
-    );
-
-    script.addEventListener(
-      "error",
-      () => reject(new Error(`Falha ao carregar ${src}.`)),
-      { once: true }
-    );
-
-    document.head.appendChild(script);
-  });
+  return "Não foi possível concluir a configuração agora. Tente novamente.";
 }
 
 export default function ContaClerkPage() {
-  const hostRef = useRef<HTMLDivElement>(null);
-  const clerkRef = useRef<ClerkLike | null>(null);
-
-  const [error, setError] = useState("");
+  const [user, setUser] = useState<ClerkUserLike | null>(null);
+  const [returnHref, setReturnHref] = useState(
+    "/admin-master/login?next=%2Fadmin-master"
+  );
   const [loading, setLoading] = useState(true);
-  const [showSecurityProfile, setShowSecurityProfile] = useState(false);
-  const [returnHref, setReturnHref] = useState("/dashboard");
+  const [creating, setCreating] = useState(false);
+  const [verifying, setVerifying] = useState(false);
+  const [error, setError] = useState("");
+  const [secret, setSecret] = useState("");
+  const [uri, setUri] = useState("");
+  const [qrCode, setQrCode] = useState("");
+  const [code, setCode] = useState("");
+  const [backupCodes, setBackupCodes] = useState<string[]>([]);
+  const [complete, setComplete] = useState(false);
 
   useEffect(() => {
     const requestedReturn = new URLSearchParams(window.location.search).get("next");
-    const safeReturn = safeReturnPath(requestedReturn);
-    const adminMasterSecurityFlow = isAdminMasterSecurityFlow(safeReturn);
-
-    setReturnHref(safeReturn);
+    setReturnHref(safeReturnPath(requestedReturn));
 
     let active = true;
 
-    async function verifySecurity() {
+    async function setup() {
       try {
         const key = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
 
@@ -132,164 +103,261 @@ export default function ContaClerkPage() {
           throw new Error("O acesso seguro não está configurado.");
         }
 
-        const domain = getClerkDomain(key);
         const clerkWindow = window as ClerkWindow;
 
-        // ClerkJS 6 separa o SDK principal do pacote de UI. Como esta tela
-        // usa mountUserProfile(), precisamos carregar explicitamente @clerk/ui
-        // antes de inicializar o Clerk com os componentes visuais.
-        if (!clerkWindow.__internal_ClerkUICtor) {
-          await loadScript(
-            `https://${domain}/npm/@clerk/ui@1/dist/ui.browser.js`
-          );
-        }
-
         if (!clerkWindow.Clerk) {
-          await loadScript(
-            `https://${domain}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`,
-            { "data-clerk-publishable-key": key }
-          );
+          await new Promise<void>((resolve, reject) => {
+            const script = document.createElement("script");
+            script.async = true;
+            script.crossOrigin = "anonymous";
+            script.dataset.clerkPublishableKey = key;
+            script.src =
+              `https://${getClerkDomain(key)}` +
+              `/npm/@clerk/clerk-js@6/dist/clerk.browser.js`;
+            script.onload = () => resolve();
+            script.onerror = () =>
+              reject(new Error("Não foi possível carregar a autenticação."));
+            document.head.appendChild(script);
+          });
         }
 
         const clerk = (window as ClerkWindow).Clerk;
-        const ClerkUI = (window as ClerkWindow).__internal_ClerkUICtor;
 
         if (!clerk) {
           throw new Error("O sistema de autenticação não foi carregado.");
         }
 
-        if (!ClerkUI) {
-          throw new Error("Os componentes visuais de segurança não foram carregados.");
-        }
-
-        await clerk.load({
-          ui: { ClerkUI },
-        });
+        await clerk.load();
 
         if (!active) return;
 
-        clerkRef.current = clerk;
+        const currentUser = clerk.user || null;
 
-        // O backend do Admin Master envia o usuário para /conta quando detecta
-        // MFA ausente. Não dependemos de session.tasks nesse fluxo, porque o
-        // Clerk pode não expor setup-mfa como task e isso causava o loop
-        // /conta -> /admin-master/login -> /conta.
-        if (adminMasterSecurityFlow) {
-          setShowSecurityProfile(true);
-          setLoading(false);
+        if (!currentUser) {
+          window.location.replace(
+            "/admin-master/login?next=%2Fadmin-master"
+          );
           return;
         }
 
-        const session = clerk.session ?? clerk.client?.activeSessions?.[0] ?? null;
-        const tasks = Array.isArray(session?.tasks) ? session.tasks : [];
-        const hasSetupMfaTask = tasks.some(
-          (task) =>
-            task?.key === "setup-mfa" ||
-            task?.type === "setup-mfa"
-        );
+        setUser(currentUser);
 
-        if (!hasSetupMfaTask) {
-          window.location.replace(safeReturn);
-          return;
+        if (currentUser.totpEnabled) {
+          setComplete(true);
         }
-
-        setShowSecurityProfile(true);
-        setLoading(false);
       } catch (cause) {
         if (!active) return;
-
-        setLoading(false);
-        setError(
-          cause instanceof Error
-            ? cause.message
-            : "Não foi possível verificar a segurança da conta."
-        );
+        setError(readableError(cause));
+      } finally {
+        if (active) setLoading(false);
       }
     }
 
-    void verifySecurity();
+    void setup();
 
     return () => {
       active = false;
     };
   }, []);
 
-  useEffect(() => {
-    if (!showSecurityProfile) return;
+  async function createTotp() {
+    if (!user?.createTOTP || creating) return;
 
-    const clerk = clerkRef.current;
-    const profileHost = hostRef.current;
-
-    if (!clerk || !profileHost) return;
-
-    if (!clerk.mountUserProfile) {
-      setError("A área de segurança da conta não está disponível.");
-      return;
-    }
+    setCreating(true);
+    setError("");
 
     try {
-      clerk.mountUserProfile(profileHost, {
-        routing: "hash",
-      });
+      const result = await user.createTOTP();
+      const nextSecret = String(result.secret || "");
+      const nextUri = String(result.uri || "");
+
+      if (!nextSecret || !nextUri) {
+        throw new Error("O Clerk não retornou os dados necessários para configurar o autenticador.");
+      }
+
+      setSecret(nextSecret);
+      setUri(nextUri);
+      setQrCode(await QRCode.toDataURL(nextUri, { width: 260, margin: 1 }));
     } catch (cause) {
-      setError(
-        cause instanceof Error
-          ? cause.message
-          : "Não foi possível abrir a área de segurança da conta."
-      );
+      setError(readableError(cause));
+    } finally {
+      setCreating(false);
+    }
+  }
+
+  async function verifyTotp(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    if (!user?.verifyTOTP || verifying) return;
+
+    const normalizedCode = code.replace(/\D/g, "").slice(0, 6);
+
+    if (normalizedCode.length !== 6) {
+      setError("Digite os 6 números mostrados no aplicativo autenticador.");
       return;
     }
 
-    return () => {
-      clerk.unmountUserProfile?.(profileHost);
-    };
-  }, [showSecurityProfile]);
+    setVerifying(true);
+    setError("");
+
+    try {
+      const result = await user.verifyTOTP({ code: normalizedCode });
+      const codes = Array.isArray(result.backupCodes)
+        ? result.backupCodes.filter(Boolean)
+        : [];
+
+      setBackupCodes(codes);
+      setComplete(true);
+      setSecret("");
+      setUri("");
+      setQrCode("");
+      setCode("");
+    } catch (cause) {
+      setError(readableError(cause));
+    } finally {
+      setVerifying(false);
+    }
+  }
 
   if (loading) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-zinc-50">
-        <p className="text-sm font-semibold text-zinc-600">
-          Verificando segurança da conta...
-        </p>
+      <main className="flex min-h-screen items-center justify-center bg-zinc-50 px-4">
+        <div className="rounded-3xl border border-zinc-200 bg-white px-8 py-7 text-center shadow-sm">
+          <p className="text-sm font-bold text-zinc-700">
+            Preparando a segurança do Admin Master...
+          </p>
+        </div>
       </main>
     );
   }
 
   return (
-    <main className="min-h-screen bg-zinc-50 px-4 py-8">
-      <div className="mx-auto max-w-5xl">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.16em] text-zinc-400">
-              Segurança da conta
-            </p>
-
-            <h1 className="mt-1 text-2xl font-black text-zinc-950">
-              Configure a verificação em duas etapas
-            </h1>
-
-            <p className="mt-1 text-sm text-zinc-600">
-              Ative o segundo fator abaixo. Depois de concluir, use o botão Voltar para entrar novamente no Admin Master.
-            </p>
-          </div>
-
-          <a
-            href={returnHref}
-            className="rounded-xl bg-zinc-950 px-4 py-2.5 text-sm font-bold text-white"
-          >
-            Voltar para o login
-          </a>
+    <main className="min-h-screen bg-zinc-50 px-4 py-10">
+      <div className="mx-auto max-w-2xl">
+        <div className="mb-6">
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">
+            Segurança do Admin Master
+          </p>
+          <h1 className="mt-2 text-3xl font-black tracking-tight text-zinc-950">
+            Verificação em duas etapas
+          </h1>
+          <p className="mt-2 text-sm leading-6 text-zinc-600">
+            Use Google Authenticator, Microsoft Authenticator, Authy ou outro aplicativo compatível com TOTP.
+          </p>
         </div>
 
-        {error ? (
-          <p className="mt-6 rounded-xl bg-red-50 p-4 text-red-700">
-            {error}
-          </p>
-        ) : null}
+        <section className="rounded-3xl border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
+          {error ? (
+            <div className="mb-6 rounded-2xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700">
+              {error}
+            </div>
+          ) : null}
 
-        {showSecurityProfile ? (
-          <div ref={hostRef} className="mt-6 min-h-[640px]" />
-        ) : null}
+          {complete ? (
+            <div>
+              <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
+                <p className="text-lg font-black text-emerald-900">
+                  Verificação em duas etapas ativada
+                </p>
+                <p className="mt-1 text-sm leading-6 text-emerald-800">
+                  Sua conta administrativa agora está protegida com autenticador.
+                </p>
+              </div>
+
+              {backupCodes.length ? (
+                <div className="mt-6">
+                  <h2 className="text-base font-black text-zinc-950">
+                    Guarde seus códigos de recuperação
+                  </h2>
+                  <p className="mt-1 text-sm text-zinc-600">
+                    Salve estes códigos em local seguro. Cada código deve ser usado apenas uma vez.
+                  </p>
+                  <div className="mt-4 grid gap-2 rounded-2xl bg-zinc-100 p-4 font-mono text-sm sm:grid-cols-2">
+                    {backupCodes.map((backupCode) => (
+                      <span key={backupCode}>{backupCode}</span>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
+              <a
+                href={returnHref}
+                className="mt-7 inline-flex w-full items-center justify-center rounded-2xl bg-zinc-950 px-5 py-3.5 text-sm font-black text-white"
+              >
+                Continuar para o Admin Master
+              </a>
+            </div>
+          ) : !uri ? (
+            <div>
+              <div className="rounded-2xl bg-zinc-100 p-5">
+                <p className="font-black text-zinc-950">Como funciona</p>
+                <ol className="mt-3 space-y-2 text-sm leading-6 text-zinc-700">
+                  <li>1. Clique em configurar autenticador.</li>
+                  <li>2. Escaneie o QR Code no seu aplicativo.</li>
+                  <li>3. Digite o código de 6 números para confirmar.</li>
+                </ol>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => void createTotp()}
+                disabled={creating}
+                className="mt-6 w-full rounded-2xl bg-zinc-950 px-5 py-3.5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {creating ? "Gerando código seguro..." : "Configurar autenticador"}
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div className="flex justify-center rounded-3xl border border-zinc-200 bg-white p-5">
+                {qrCode ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={qrCode}
+                    alt="QR Code para configurar o autenticador"
+                    width={260}
+                    height={260}
+                    className="h-[260px] w-[260px]"
+                  />
+                ) : null}
+              </div>
+
+              <div className="mt-5 rounded-2xl bg-zinc-100 p-4">
+                <p className="text-xs font-black uppercase tracking-wide text-zinc-500">
+                  Não consegue escanear?
+                </p>
+                <p className="mt-2 break-all font-mono text-sm font-bold text-zinc-900">
+                  {secret}
+                </p>
+              </div>
+
+              <form onSubmit={verifyTotp} className="mt-6">
+                <label htmlFor="totp-code" className="text-sm font-black text-zinc-950">
+                  Código do autenticador
+                </label>
+                <input
+                  id="totp-code"
+                  inputMode="numeric"
+                  autoComplete="one-time-code"
+                  value={code}
+                  onChange={(event) =>
+                    setCode(event.target.value.replace(/\D/g, "").slice(0, 6))
+                  }
+                  placeholder="000000"
+                  className="mt-2 w-full rounded-2xl border border-zinc-300 bg-white px-4 py-3.5 text-center text-2xl font-black tracking-[0.35em] text-zinc-950 outline-none focus:border-zinc-950"
+                />
+
+                <button
+                  type="submit"
+                  disabled={verifying || code.length !== 6}
+                  className="mt-4 w-full rounded-2xl bg-zinc-950 px-5 py-3.5 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-60"
+                >
+                  {verifying ? "Confirmando..." : "Ativar verificação em duas etapas"}
+                </button>
+              </form>
+            </div>
+          )}
+        </section>
       </div>
     </main>
   );
