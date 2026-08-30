@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 type TabKey = "servicos" | "avaliacoes" | "portfolio" | "detalhes";
 type ClientSalonSectionTabsProps = {
@@ -49,39 +49,42 @@ export default function ClientSalonSectionTabs({
   const [activeKey, setActiveKey] = useState<TabKey>(initialKey);
   const [missingPanel, setMissingPanel] = useState<TabKey | null>(null);
 
-  function applyTab(key: TabKey, updateUrl = true) {
-    const { services, professionals, reviews, portfolio, about } = getProfileSections();
-    const all = [services, professionals, reviews, portfolio, about].filter(Boolean) as HTMLElement[];
+  const applyTab = useCallback(
+    (key: TabKey, updateUrl = true) => {
+      const { services, professionals, reviews, portfolio, about } = getProfileSections();
+      const all = [services, professionals, reviews, portfolio, about].filter(Boolean) as HTMLElement[];
 
-    all.forEach((section) => {
-      section.style.display = "none";
-    });
+      all.forEach((section) => {
+        section.style.display = "none";
+      });
 
-    let found = false;
-    if (key === "servicos") {
-      if (services) {
-        services.style.display = "";
+      let found = false;
+      if (key === "servicos") {
+        if (services) {
+          services.style.display = "";
+          found = true;
+        }
+        if (professionals) professionals.style.display = "";
+      } else if (key === "avaliacoes" && reviews) {
+        reviews.style.display = "";
+        found = true;
+      } else if (key === "portfolio" && portfolio) {
+        portfolio.style.display = "";
+        found = true;
+      } else if (key === "detalhes" && about) {
+        about.style.display = "";
         found = true;
       }
-      if (professionals) professionals.style.display = "";
-    } else if (key === "avaliacoes" && reviews) {
-      reviews.style.display = "";
-      found = true;
-    } else if (key === "portfolio" && portfolio) {
-      portfolio.style.display = "";
-      found = true;
-    } else if (key === "detalhes" && about) {
-      about.style.display = "";
-      found = true;
-    }
 
-    setActiveKey(key);
-    setMissingPanel(found ? null : key);
+      setActiveKey(key);
+      setMissingPanel(found ? null : key);
 
-    if (updateUrl) {
-      window.history.replaceState(window.history.state, "", `${basePath}?aba=${key}`);
-    }
-  }
+      if (updateUrl) {
+        window.history.replaceState(window.history.state, "", `${basePath}?aba=${key}`);
+      }
+    },
+    [basePath],
+  );
 
   useEffect(() => {
     if (!isMainProfile) return;
@@ -118,7 +121,7 @@ export default function ClientSalonSectionTabs({
 
     document.addEventListener("click", interceptInternalProfileNavigation, true);
     return () => document.removeEventListener("click", interceptInternalProfileNavigation, true);
-  }, [basePath, initialKey, isMainProfile]);
+  }, [applyTab, basePath, initialKey, isMainProfile]);
 
   return (
     <>
