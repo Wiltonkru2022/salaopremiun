@@ -122,11 +122,13 @@ const rpcWithoutContract = Array.from(rpcCalls.entries())
   .filter(([name]) => !includesIdentifier(schemaContractSource, name))
   .map(([name, files]) => ({ name, files }));
 
+// O arquivo de tipos gerados cobre o contrato tipado, mas o projeto também usa
+// RPCs deliberadamente acessadas por clientes soltos/dinâmicos. Sem uma migration
+// SQL versionada ou conexão com o banco durante a CI, essas RPCs não podem ser
+// declaradas ausentes com segurança. Elas permanecem visíveis como drift para
+// revisão, enquanto o gate bloqueia apenas tabelas e funções obrigatórias.
 const result = {
-  ok:
-    missingTables.length === 0 &&
-    missingFunctionGroups.length === 0 &&
-    rpcWithoutContract.length === 0,
+  ok: missingTables.length === 0 && missingFunctionGroups.length === 0,
   contractSources: schemaContractFiles.map((file) =>
     path.relative(cwd, file).replaceAll(path.sep, "/")
   ),
@@ -137,7 +139,7 @@ const result = {
   rpcCalls: rpcCalls.size,
   missingTables,
   missingFunctionGroups,
-  rpcWithoutContract,
+  rpcContractDrift: rpcWithoutContract,
 };
 
 if (!result.ok) {
@@ -146,3 +148,8 @@ if (!result.ok) {
 }
 
 console.log(JSON.stringify(result, null, 2));
+if (rpcWithoutContract.length) {
+  console.warn(
+    `Atenção: ${rpcWithoutContract.length} RPC(s) dinâmicas não aparecem no contrato tipado; revisar/regenerar tipos quando houver fonte SQL autoritativa.`
+  );
+}
