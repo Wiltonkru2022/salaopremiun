@@ -1,4 +1,4 @@
-﻿import type { PoolClient } from "@neondatabase/serverless";
+import type { PoolClient } from "@neondatabase/serverless";
 
 export type PainelDbFilter = {
   op: "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "like" | "ilike" | "is" | "in" | "contains" | "not" | "or";
@@ -55,6 +55,11 @@ const SIMPLE_SELECT = /^[A-Za-z0-9_.*,\s:!()]+$/;
 function quoteIdent(value: string) {
   if (!IDENT.test(value)) throw new Error(`Identificador SQL invalido: ${value}`);
   return `"${value}"`;
+}
+
+function assertIdent(value: string) {
+  if (!IDENT.test(value)) throw new Error(`Identificador SQL invalido: ${value}`);
+  return value;
 }
 
 function renderColumn(value: string, prefix = "") {
@@ -243,19 +248,22 @@ function buildWhere(filters: PainelDbFilter[], values: unknown[], prefix = "") {
 }
 
 async function primaryKeyColumns(client: PoolClient, table: string) {
+  const safeTable = assertIdent(table);
+  const regclass = `public.${quoteIdent(safeTable)}`;
   const result = await client.query<{ column_name: string }>(
     `select a.attname as column_name
        from pg_index i
        join pg_attribute a on a.attrelid = i.indrelid and a.attnum = any(i.indkey)
-      where i.indrelid = format('public.%I', $1::text)::regclass
+      where i.indrelid = '${regclass}'::regclass
         and i.indisprimary
-      order by array_position(i.indkey, a.attnum)`,
-    [table]
+      order by array_position(i.indkey, a.attnum)`
   );
   return result.rows.map((row) => row.column_name);
 }
 
 async function findRelation(client: PoolClient, sourceTable: string, relationTable: string) {
+  const source = assertIdent(sourceTable);
+  const relation = assertIdent(relationTable);
   const result = await client.query<{
     source_column: string;
     relation_column: string;
@@ -273,7 +281,7 @@ async function findRelation(client: PoolClient, sourceTable: string, relationTab
            join pg_attribute a_src on a_src.attrelid = c.conrelid and a_src.attnum = c.conkey[1]
            join pg_attribute a_rel on a_rel.attrelid = c.confrelid and a_rel.attnum = c.confkey[1]
           where c.contype = 'f' and nsrc.nspname = 'public'
-            and src.relname = $1::text and rel.relname = $2::text
+            and src.relname = '${source}' and rel.relname = '${relation}'
          union all
          select a_src.attname as source_column,
                 a_rel.attname as relation_column,
@@ -285,10 +293,9 @@ async function findRelation(client: PoolClient, sourceTable: string, relationTab
            join pg_attribute a_rel on a_rel.attrelid = c.conrelid and a_rel.attnum = c.conkey[1]
            join pg_attribute a_src on a_src.attrelid = c.confrelid and a_src.attnum = c.confkey[1]
           where c.contype = 'f' and nrel.nspname = 'public'
-            and src.relname = $1::text and rel.relname = $2::text
+            and src.relname = '${source}' and rel.relname = '${relation}'
        ) relations
-      limit 1`,
-    [sourceTable, relationTable]
+      limit 1`
   );
   return result.rows[0] || null;
 }
@@ -302,10 +309,7 @@ function normalizeMutationRows(payload: unknown) {
   return objects;
 }
 
-export async function executePainelNeonQuery(
-  client: PoolClient,
-  query: PainelDbQuery
-) {
+export async function executePainelNeonQuery(client: PoolClient, query: PainelDbQuery) {
   if (!IDENT.test(query.table)) throw new Error("Tabela invalida.");
   const filters = query.filters || [];
   const orders = query.orders || [];
@@ -340,9 +344,7 @@ export async function executePainelNeonQuery(
           ? "r.*"
           : relation.columns.map((column) => `r.${quoteIdent(column)}`).join(", ");
         const condition =
-          link.direction === "forward"
-            ? `r.${quoteIdent(link.relation_column)} = src.${quoteIdent(link.source_column)}`
-            : `r.${quoteIdent(link.relation_column)} = src.${quoteIdent(link.source_column)}`;
+          `r.${quoteIdent(link.relation_column)} = src.${quoteIdent(link.source_column)}`;
         relationSelects.push(
           `(SELECT to_jsonb(rel_row) FROM (SELECT ${relationColumns} FROM public.${quoteIdent(
             relation.table
@@ -503,5 +505,3 @@ export async function executePainelNeonRpc(client: PoolClient, request: PainelDb
   }
   return { data, error: null, count: null, status: 200, statusText: "OK" };
 }
-
-
