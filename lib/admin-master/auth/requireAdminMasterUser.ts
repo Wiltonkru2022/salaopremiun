@@ -1,12 +1,11 @@
 import { redirect } from "next/navigation";
-import {
-  mergeAdminMasterPermissions,
-  type AdminMasterPermissions,
-  type AdminMasterPermissionKey,
+import type {
+  AdminMasterPermissions,
+  AdminMasterPermissionKey,
 } from "@/lib/admin-master/auth/adminMasterPermissions";
 import { ADMIN_MASTER_LOGIN_PATH } from "@/lib/admin-master/auth/login-path";
 import { readAdminMasterSession } from "@/lib/admin-master/auth/session";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { resolveAdminMasterSessionAccess } from "@/lib/admin-master/auth/password-access-neon.server";
 
 export class AdminMasterAuthError extends Error {
   status: number;
@@ -53,186 +52,83 @@ type AdminMasterAccessDenied = {
 
 export type AdminMasterAccessResult = AdminMasterAccessAllowed | AdminMasterAccessDenied;
 
-function getOwnerEmails() {
-  return String(process.env.ADMIN_MASTER_OWNER_EMAILS || "")
-    .split(",")
-    .map((email) => email.trim().toLowerCase())
-    .filter(Boolean);
+function errorStatus(error: unknown) {
+  if (typeof error === "object" && error && "status" in error) {
+    const value = Number((error as { status?: unknown }).status || 500);
+    if ([400, 401, 403, 404, 409, 422, 500].includes(value)) return value;
+  }
+  return 500;
 }
 
-function isLegacyUuid(value: string) {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
-}
-
-async function bootstrapOwnerIfAllowed(params: {
-  authUserId: string;
-  email: string;
-  nome: string;
-}) {
-  const ownerEmails = getOwnerEmails();
-  if (!ownerEmails.includes(params.email.toLowerCase())) return null;
-
-  const databaseAdmin = getDatabaseAdmin();
-  const payload: Record<string, unknown> = {
-    email: params.email.toLowerCase(),
-    nome: params.nome,
-    perfil: "owner",
-    status: "ativo",
-    atualizado_em: new Date().toISOString(),
-  };
-  if (isLegacyUuid(params.authUserId)) payload.auth_user_id = params.authUserId;
-
-  const { data, error } = await databaseAdmin
-    .from("admin_master_usuarios")
-    .upsert(payload, { onConflict: "email" })
-    .select("id, nome, email, perfil, status")
-    .single();
-
-  if (error) throw new AdminMasterAuthError("Erro ao criar owner AdminMaster.", 500);
-  const usuario = data as AdminMasterUsuarioRow;
-
-  await databaseAdmin.from("admin_master_permissoes").upsert(
-    {
-      id_admin_master_usuario: usuario.id,
-      dashboard_ver: true,
-      saloes_ver: true,
-      saloes_editar: true,
-      saloes_entrar_como: true,
-      assinaturas_ver: true,
-      assinaturas_ajustar: true,
-      cobrancas_ver: true,
-      cobrancas_reprocessar: true,
-      financeiro_ver: true,
-      operacao_ver: true,
-      operacao_reprocessar: true,
-      suporte_ver: true,
-      tickets_ver: true,
-      tickets_editar: true,
-      produto_ver: true,
-      planos_editar: true,
-      recursos_editar: true,
-      feature_flags_editar: true,
-      comunicacao_ver: true,
-      notificacoes_editar: true,
-      campanhas_editar: true,
-      whatsapp_ver: true,
-      whatsapp_editar: true,
-      relatorios_ver: true,
-      usuarios_admin_ver: true,
-      usuarios_admin_editar: true,
-      auditoria_ver: true,
-      atualizado_em: new Date().toISOString(),
-    },
-    { onConflict: "id_admin_master_usuario" }
-  );
-
-  return usuario;
-}
-
+/**
+ * Compatibilidade para chamadas internas que já possuem identidade.
+ * Também usa SQL direto no Neon; não passa mais pelo adapter painel-query.server.ts.
+ */
 export async function resolveAdminMasterAccessForIdentity(
   identity: AdminMasterIdentity,
-  permission: AdminMasterPermissionKey = "dashboard_ver"
+  permission: AdminMasterPermissionKey = "dashboard_ver",
 ): Promise<AdminMasterAccessResult> {
-  const databaseAdmin = getDatabaseAdmin();
   const email = String(identity.email || "").trim().toLowerCase();
-  const nome = String(identity.nome || "").trim() || email.split("@")[0] || "Admin Master";
-  const legacyUuid = isLegacyUuid(identity.id);
-
-  let adminUser: any = null;
-  let error: any = null;
-
-  if (legacyUuid) {
-    const result = await databaseAdmin
-      .from("admin_master_usuarios")
-      .select("id, nome, email, perfil, status")
-      .eq("auth_user_id", identity.id)
-      .maybeSingle();
-    adminUser = result.data;
-    error = result.error;
+  if (!email) {
+    return { ok: false, status: 403, message: "Usuário Admin Master sem e-mail válido." };
   }
 
-  if (!adminUser && email) {
-    const { data: adminByEmail, error: emailError } = await databaseAdmin
-      .from("admin_master_usuarios")
-      .select("id, nome, email, perfil, status")
-      .eq("email", email)
-      .maybeSingle();
+  try {
+    const access = await resolveAdminMasterSessionAccess({
+      email,
+      authUserId: String(identity.id || "").trim(),
+      permission,
+    });
 
-    if (emailError) return { ok: false, status: 500, message: "Erro ao validar AdminMaster." };
-
-    if (adminByEmail?.id) {
-      adminUser = adminByEmail;
-      const update: Record<string, unknown> = { ultimo_acesso_em: new Date().toISOString() };
-      if (legacyUuid) update.auth_user_id = identity.id;
-      await databaseAdmin.from("admin_master_usuarios").update(update).eq("id", adminByEmail.id);
-    }
-  }
-
-  if (error) return { ok: false, status: 500, message: "Erro ao carregar usuario AdminMaster." };
-
-  if (!adminUser && email) {
-    adminUser = await bootstrapOwnerIfAllowed({ authUserId: identity.id, email, nome });
-  }
-
-  if (!adminUser) {
+    return {
+      ok: true,
+      authUser: {
+        id: access.authUserId,
+        email: access.email,
+        user_metadata: { nome: access.nome },
+      },
+      usuario: {
+        id: access.id,
+        nome: access.nome,
+        email: access.email,
+        perfil: access.perfil,
+        status: "ativo",
+      },
+      permissions: access.permissions,
+    };
+  } catch (error) {
     return {
       ok: false,
-      status: 403,
-      message: "Usuario sem acesso ao AdminMaster. Cadastre este e-mail em admin_master_usuarios.",
+      status: errorStatus(error),
+      message: error instanceof Error ? error.message : "Erro ao validar Admin Master.",
     };
   }
-
-  const usuario = adminUser as AdminMasterUsuarioRow;
-  if (String(usuario.status || "").toLowerCase() !== "ativo") {
-    return { ok: false, status: 403, message: "Usuario AdminMaster inativo." };
-  }
-
-  const { data: permissoesDb, error: permissoesError } = await databaseAdmin
-    .from("admin_master_permissoes")
-    .select(
-      "assinaturas_ajustar, assinaturas_ver, atualizado_em, auditoria_ver, campanhas_editar, cobrancas_reprocessar, cobrancas_ver, comunicacao_ver, criado_em, dashboard_ver, feature_flags_editar, financeiro_ver, id, id_admin_master_usuario, notificacoes_editar, operacao_reprocessar, operacao_ver, planos_editar, produto_ver, recursos_editar, relatorios_ver, saloes_editar, saloes_entrar_como, saloes_ver, suporte_ver, tickets_editar, tickets_ver, usuarios_admin_editar, usuarios_admin_ver, whatsapp_editar, whatsapp_ver"
-    )
-    .eq("id_admin_master_usuario", usuario.id)
-    .maybeSingle();
-
-  if (permissoesError) return { ok: false, status: 500, message: "Erro ao carregar permissoes AdminMaster." };
-
-  const permissions = mergeAdminMasterPermissions(
-    usuario.perfil,
-    permissoesDb as Record<string, unknown> | null
-  );
-  if (!permissions[permission]) {
-    return { ok: false, status: 403, message: "Usuario sem permissao para esta area do AdminMaster." };
-  }
-
-  await databaseAdmin
-    .from("admin_master_usuarios")
-    .update({ ultimo_acesso_em: new Date().toISOString() })
-    .eq("id", usuario.id);
-
-  return {
-    ok: true,
-    authUser: { id: identity.id, email, user_metadata: { nome } },
-    usuario,
-    permissions,
-  };
 }
 
+/**
+ * Validação usada por todas as páginas /admin-master após o login.
+ * A sessão HttpOnly fornece authUserId/e-mail e a consulta vai direto ao Neon.
+ */
 export async function getAdminMasterAccess(
-  permission: AdminMasterPermissionKey = "dashboard_ver"
+  permission: AdminMasterPermissionKey = "dashboard_ver",
 ): Promise<AdminMasterAccessResult> {
   const session = await readAdminMasterSession();
   if (!session) {
-    return { ok: false, status: 401, message: "Sessao expirada. Faca login novamente no Admin Master." };
+    return {
+      ok: false,
+      status: 401,
+      message: "Sessão expirada. Faça login novamente no Admin Master.",
+    };
   }
+
   return resolveAdminMasterAccessForIdentity(
     { id: session.authUserId, email: session.email },
-    permission
+    permission,
   );
 }
 
 export async function requireAdminMasterUser(
-  permission: AdminMasterPermissionKey = "dashboard_ver"
+  permission: AdminMasterPermissionKey = "dashboard_ver",
 ) {
   const result = await getAdminMasterAccess(permission);
   if (!result.ok) {
