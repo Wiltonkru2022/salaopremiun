@@ -18,6 +18,10 @@ function buildPainelHostUrl(pathname: string) {
   return `https://${PAINEL_HOST}${normalizedPath}`;
 }
 
+function isLocalHost(hostname: string) {
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "[::1]";
+}
+
 export default function AdminMasterClerkLoginPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-[#f4efe7]" />}>
@@ -35,10 +39,20 @@ function AdminMasterClerkLoginContent() {
 
   const onAuthenticated = useCallback((redirectTo: string) => {
     if (typeof window === "undefined") return;
+
+    // Em desenvolvimento o Admin Master permanece no próprio localhost.
+    // Antes o login 200 tentava navegar para painel.salaopremiun.com.br,
+    // iniciando novas trocas de sessão e causando 401 depois do sucesso.
+    if (isLocalHost(window.location.hostname)) {
+      window.location.assign(redirectTo.startsWith("/") ? redirectTo : ADMIN_MASTER_HOME_PATH);
+      return;
+    }
+
     if (window.location.hostname !== PAINEL_HOST && redirectTo.startsWith("/")) {
       window.location.assign(buildPainelHostUrl(redirectTo));
       return;
     }
+
     window.location.assign(redirectTo);
   }, []);
 
@@ -52,7 +66,7 @@ function AdminMasterClerkLoginContent() {
             <p className="mt-5 max-w-md text-base leading-7 text-white/70">Acesse com segurança as ferramentas de administração do SalãoPremium.</p>
           </div>
           <div className="grid gap-3 text-sm text-white/75">
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">Verificação em duas etapas para o acesso administrativo.</div>
+            <div className="rounded-2xl border border-white/10 bg-white/5 p-4">Acesso por e-mail e senha. A verificação em duas etapas é opcional.</div>
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">Sessão separada do painel dos salões.</div>
             <div className="rounded-2xl border border-white/10 bg-white/5 p-4">Seus dados administrativos permanecem protegidos.</div>
           </div>
@@ -61,7 +75,7 @@ function AdminMasterClerkLoginContent() {
         <section className="p-6 sm:p-8 lg:p-10">
           <p className="text-xs font-black uppercase tracking-[0.22em] text-[#9d7c45]">Acesso executivo</p>
           <h2 className="mt-2 text-3xl font-black tracking-[-0.04em]">Entrar no Admin Master</h2>
-          <p className="mt-3 text-sm leading-6 text-[#6b5b45]">Use sua conta administrativa. Quando necessário, confirme também a verificação em duas etapas.</p>
+          <p className="mt-3 text-sm leading-6 text-[#6b5b45]">Entre com sua conta administrativa. A verificação em duas etapas pode ser ativada depois, se desejar.</p>
 
           <div className="mt-6">
             <ClerkAdminSignIn
