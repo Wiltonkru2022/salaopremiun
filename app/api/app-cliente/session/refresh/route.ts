@@ -1,30 +1,29 @@
-import { NextResponse } from "next/server";
-
+import { NextRequest, NextResponse } from "next/server";
 import {
-  createClienteSession,
   createClienteSessionRestoreToken,
   getClienteSessionFromCookie,
   hasClienteLogoutMarker,
   parseClienteSessionRestoreToken,
+  setClienteSessionOnResponse,
   type ClienteAppSession,
 } from "@/lib/cliente-auth.server";
+import { queryNeonDirect } from "@/lib/neon/direct.server";
+import { getClienteSecurityDecisionDirect } from "@/lib/client-app/security-access-direct.server";
 
-import { getDatabaseAdmin } from "@/lib/db/admin";
-import { asLooseDbClient } from "@/lib/db/loose-client";
+type AccountRow = {
+  id: string;
+  nome: string | null;
+  email: string | null;
+  telefone: string | null;
+  whatsapp: string | null;
+  ativo: boolean | null;
+  auth_version: number | string | null;
+};
 
-async function readRestoreToken(
-  request: Request
-) {
+async function readRestoreToken(request: Request) {
   try {
-    const body =
-      (await request.json()) as {
-        restoreToken?: unknown;
-      };
-
-    return typeof body.restoreToken ===
-      "string"
-      ? body.restoreToken
-      : "";
+    const body = (await request.json()) as { restoreToken?: unknown };
+    return typeof body.restoreToken === "string" ? body.restoreToken : "";
   } catch {
     return "";
   }
@@ -32,67 +31,38 @@ async function readRestoreToken(
 
 async function validateSessionAgainstAccount(
   session: ClienteAppSession
-) {
-  const database = asLooseDbClient(
-    getDatabaseAdmin()
+): Promise<ClienteAppSession | null> {
+  const result = await queryNeonDirect<AccountRow>(
+    `select id::text,
+            nome::text,
+            email::text,
+            telefone::text,
+            whatsapp::text,
+            ativo,
+            auth_version
+       from public.clientes_app_auth
+      where id::text = $1::text
+      limit 1`,
+    [session.idConta]
   );
 
-  const { data: account, error } =
-    await database
-      .from("clientes_app_auth")
-      .select(
-        "id, nome, email, telefone, whatsapp, ativo, auth_version"
-      )
-      .eq("id", session.idConta)
-      .limit(1)
-      .maybeSingle<{
-        id?: string | null;
-        nome?: string | null;
-        email?: string | null;
-        telefone?: string | null;
-        whatsapp?: string | null;
-        ativo?: boolean | null;
-        auth_version?: number | null;
-      }>();
+  const account = result.rows[0];
+  if (!account?.id || account.ativo === false) return null;
 
-  if (
-    error ||
-    !account?.id ||
-    account.ativo === false
-  ) {
-    return null;
-  }
+  const authVersion = Number(account.auth_version || 1);
+  if (Number(session.authVersion || 1) !== authVersion) return null;
 
-  const authVersion = Number(
-    account.auth_version || 1
-  );
-
-  if (
-    Number(session.authVersion || 1) !==
-    authVersion
-  ) {
-    return null;
-  }
+  const security = await getClienteSecurityDecisionDirect({
+    userId: account.id,
+  });
+  if (!security.allowed) return null;
 
   return {
-    idConta: String(account.id),
-    nome:
-      String(
-        account.nome ||
-          session.nome ||
-          "Cliente"
-      ).trim() || "Cliente",
-    email: String(
-      account.email ||
-        session.email ||
-        ""
-    ).trim(),
+    idConta: account.id,
+    nome: String(account.nome || session.nome || "Cliente").trim() || "Cliente",
+    email: String(account.email || session.email || "").trim(),
     telefone:
-      String(
-        account.telefone ||
-          session.telefone ||
-          ""
-      ).trim() || null,
+      String(account.telefone || session.telefone || "").trim() || null,
     whatsapp:
       String(
         account.whatsapp ||
@@ -103,109 +73,51 @@ async function validateSessionAgainstAccount(
       ).trim() || null,
     authVersion,
     issuedAt: Date.now(),
-    tipo: "cliente" as const,
-  } satisfies ClienteAppSession;
+    tipo: "cliente",
+  };
 }
 
-export async function POST(
-  request: Request
-) {
-  /*
-   * Marcador existe apenas para logout explícito.
-   * Nessa situação não devemos restaurar automaticamente.
-   */
+export async function POST(request: NextRequest) {
   if (await hasClienteLogoutMarker()) {
     return NextResponse.json(
-      {
-        ok: false,
-        message:
-          "Sessão encerrada neste aparelho.",
-      },
-      {
-        status: 401,
-        headers: {
-          "Cache-Control": "no-store",
-        },
-      }
+      { ok: false, message: "Sessão encerrada neste aparelho." },
+      { status: 401, headers: { "Cache-Control": "no-store" } }
     );
   }
 
-  const cookieSession =
-    await getClienteSessionFromCookie();
-
-  /*
-   * Mesmo que haja um cookie inválido em outro cenário, permitimos
-   * que o restore token seja lido quando não existe sessão utilizável.
-   */
-  const restoreToken = cookieSession
-    ? ""
-    : await readRestoreToken(request);
-
+  const cookieSession = await getClienteSessionFromCookie();
+  const restoreToken = cookieSession ? "" : await readRestoreToken(request);
   const restoredSession = restoreToken
-    ? parseClienteSessionRestoreToken(
-        restoreToken
-      )
+    ? parseClienteSessionRestoreToken(restoreToken)
     : null;
-
-  const candidateSession =
-    cookieSession || restoredSession;
+  const candidateSession = cookieSession || restoredSession;
 
   if (!candidateSession?.idConta) {
     return NextResponse.json(
-      {
-        ok: false,
-        message:
-          "Sessão do cliente indisponível.",
-      },
-      {
-        status: 401,
-        headers: {
-          "Cache-Control": "no-store",
-        },
-      }
+      { ok: false, message: "Sessão do cliente indisponível." },
+      { status: 401, headers: { "Cache-Control": "no-store" } }
     );
   }
 
-  const session =
-    await validateSessionAgainstAccount(
-      candidateSession
-    );
-
+  const session = await validateSessionAgainstAccount(candidateSession);
   if (!session) {
     return NextResponse.json(
       {
         ok: false,
-        message:
-          "Sua sessão não é mais válida. Entre novamente.",
+        message: "Sua sessão não é mais válida. Entre novamente.",
       },
-      {
-        status: 401,
-        headers: {
-          "Cache-Control": "no-store",
-        },
-      }
+      { status: 401, headers: { "Cache-Control": "no-store" } }
     );
   }
 
-  /*
-   * Regrava uma sessão limpa e atualizada.
-   * createClienteSession também remove qualquer marcador residual.
-   */
-  await createClienteSession(session);
-
-  return NextResponse.json(
+  const response = NextResponse.json(
     {
       ok: true,
-      restoreToken:
-        createClienteSessionRestoreToken(
-          session
-        ),
+      restoreToken: createClienteSessionRestoreToken(session),
     },
-    {
-      headers: {
-        "Cache-Control":
-          "no-store, max-age=0",
-      },
-    }
+    { headers: { "Cache-Control": "no-store, max-age=0" } }
   );
+
+  setClienteSessionOnResponse(request, response, session);
+  return response;
 }
