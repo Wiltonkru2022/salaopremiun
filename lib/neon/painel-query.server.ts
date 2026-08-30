@@ -617,9 +617,12 @@ async function resolveRpcSignature(
   const names = row.arg_names || [];
   const types = row.arg_types || [];
   const map = new Map<string, string>();
+  const allowedTypeChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_ .[]"';
   names.forEach((name, index) => {
     const type = types[index];
-    if (type && /^[A-Za-z0-9_ .\[\]"]+$/.test(type)) map.set(name, type);
+    const safeType =
+      type && [...type].every((character) => allowedTypeChars.includes(character));
+    if (type && safeType) map.set(name, type);
   });
   return map;
 }
