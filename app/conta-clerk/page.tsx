@@ -50,6 +50,7 @@ function safeReturnPath(value: string | null) {
 
 export default function ContaClerkPage() {
   const hostRef = useRef<HTMLDivElement>(null);
+  const clerkRef = useRef<ClerkLike | null>(null);
 
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -62,33 +63,16 @@ export default function ContaClerkPage() {
     ).get("next");
 
     const safeReturn = safeReturnPath(requestedReturn);
-
     setReturnHref(safeReturn);
-
-    const host = hostRef.current;
-
-    if (!host) {
-      return;
-    }
-
-    /*
-     * Guarda uma referência não-nula.
-     * Assim o TypeScript sabe que o elemento existe
-     * durante todo este effect.
-     */
-    const profileHost: HTMLDivElement = host;
 
     let active = true;
 
-    async function mount() {
+    async function verifySecurity() {
       try {
-        const key =
-          process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
+        const key = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
 
         if (!key) {
-          throw new Error(
-            "O acesso seguro não está configurado."
-          );
+          throw new Error("O acesso seguro não está configurado.");
         }
 
         const clerkWindow = window as ClerkWindow;
@@ -100,19 +84,13 @@ export default function ContaClerkPage() {
             script.async = true;
             script.crossOrigin = "anonymous";
             script.dataset.clerkPublishableKey = key;
-
             script.src =
               `https://${getClerkDomain(key)}` +
               `/npm/@clerk/clerk-js@6/dist/clerk.browser.js`;
 
             script.onload = () => resolve();
-
             script.onerror = () =>
-              reject(
-                new Error(
-                  "Não foi possível carregar a autenticação."
-                )
-              );
+              reject(new Error("Não foi possível carregar a autenticação."));
 
             document.head.appendChild(script);
           });
@@ -121,65 +99,36 @@ export default function ContaClerkPage() {
         const clerk = (window as ClerkWindow).Clerk;
 
         if (!clerk) {
-          throw new Error(
-            "O sistema de autenticação não foi carregado."
-          );
+          throw new Error("O sistema de autenticação não foi carregado.");
         }
 
         await clerk.load();
 
-        if (!active) {
-          return;
-        }
+        if (!active) return;
+
+        clerkRef.current = clerk;
 
         const session =
-          clerk.session ??
-          clerk.client?.activeSessions?.[0] ??
-          null;
+          clerk.session ?? clerk.client?.activeSessions?.[0] ?? null;
 
-        const tasks = Array.isArray(session?.tasks)
-          ? session.tasks
-          : [];
-
+        const tasks = Array.isArray(session?.tasks) ? session.tasks : [];
         const hasSetupMfaTask = tasks.some(
           (task) =>
             task?.key === "setup-mfa" ||
             task?.type === "setup-mfa"
         );
 
-        /*
-         * NÃO existe exigência de MFA.
-         *
-         * O salão entra normalmente no painel.
-         */
         if (!hasSetupMfaTask) {
           window.location.replace(safeReturn);
           return;
         }
 
-        /*
-         * Só chega aqui quando o Clerk realmente
-         * exige configuração de MFA.
-         */
         setMfaRequired(true);
         setLoading(false);
-
-        if (!clerk.mountUserProfile) {
-          throw new Error(
-            "A área de segurança da conta não está disponível."
-          );
-        }
-
-        clerk.mountUserProfile(profileHost, {
-          routing: "hash",
-        });
       } catch (cause) {
-        if (!active) {
-          return;
-        }
+        if (!active) return;
 
         setLoading(false);
-
         setError(
           cause instanceof Error
             ? cause.message
@@ -188,16 +137,34 @@ export default function ContaClerkPage() {
       }
     }
 
-    void mount();
+    void verifySecurity();
 
     return () => {
       active = false;
-
-      const clerk = (window as ClerkWindow).Clerk;
-
-      clerk?.unmountUserProfile?.(profileHost);
     };
   }, []);
+
+  useEffect(() => {
+    if (!mfaRequired) return;
+
+    const clerk = clerkRef.current;
+    const profileHost = hostRef.current;
+
+    if (!clerk || !profileHost) return;
+
+    if (!clerk.mountUserProfile) {
+      setError("A área de segurança da conta não está disponível.");
+      return;
+    }
+
+    clerk.mountUserProfile(profileHost, {
+      routing: "hash",
+    });
+
+    return () => {
+      clerk.unmountUserProfile?.(profileHost);
+    };
+  }, [mfaRequired]);
 
   if (loading) {
     return (
@@ -227,8 +194,7 @@ export default function ContaClerkPage() {
             </h1>
 
             <p className="mt-1 text-sm text-zinc-600">
-              A autenticação em dois fatores é necessária
-              para concluir este acesso.
+              A autenticação em dois fatores é necessária para concluir este acesso.
             </p>
           </div>
 
@@ -247,10 +213,7 @@ export default function ContaClerkPage() {
         ) : null}
 
         {mfaRequired ? (
-          <div
-            ref={hostRef}
-            className="mt-6 min-h-[640px]"
-          />
+          <div ref={hostRef} className="mt-6 min-h-[640px]" />
         ) : null}
       </div>
     </main>
