@@ -6,6 +6,8 @@ import { setClienteSessionOnResponse } from "@/lib/cliente-auth.server";
 
 export const dynamic = "force-dynamic";
 
+// publicRoute: login precisa ser publico; possui rate limit por CPF/IP e só cria sessão após validar CPF + nascimento.
+
 function requestMetadata(request: NextRequest) {
   const forwarded = String(
     request.headers.get("x-forwarded-for") || ""
