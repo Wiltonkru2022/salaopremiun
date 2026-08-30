@@ -31,13 +31,11 @@ const RESTORE_TOKEN_TTL_SECONDS = 60 * 60 * 12;
 const TOKEN_PREFIX = "spc1";
 
 function getSessionSecret() {
-  const secret =
-    process.env.CLIENTE_SESSION_SECRET ||
-    process.env.PROFISSIONAL_SESSION_SECRET;
+  const secret = String(process.env.CLIENTE_SESSION_SECRET || "").trim();
 
-  if (!secret || secret.trim().length < 16) {
+  if (secret.length < 32) {
     throw new Error(
-      "CLIENTE_SESSION_SECRET não configurada ou muito curta."
+      "CLIENTE_SESSION_SECRET não configurada ou muito curta. Use pelo menos 32 caracteres."
     );
   }
 
@@ -55,21 +53,16 @@ function safeEqual(a: string, b: string) {
   try {
     const left = Buffer.from(a);
     const right = Buffer.from(b);
-    return (
-      left.length === right.length &&
-      crypto.timingSafeEqual(left, right)
-    );
+    return left.length === right.length && crypto.timingSafeEqual(left, right);
   } catch {
     return false;
   }
 }
 
 function encodeEnvelope(envelope: SessionEnvelope) {
-  const payload = Buffer.from(
-    JSON.stringify(envelope),
-    "utf8"
-  ).toString("base64url");
-
+  const payload = Buffer.from(JSON.stringify(envelope), "utf8").toString(
+    "base64url"
+  );
   const unsigned = `${TOKEN_PREFIX}.${payload}`;
   return `${unsigned}.${sign(unsigned)}`;
 }
@@ -77,20 +70,10 @@ function encodeEnvelope(envelope: SessionEnvelope) {
 function decodeEnvelope(token: string): SessionEnvelope | null {
   const [prefix, payload, signature] = String(token || "").split(".");
 
-  if (
-    prefix !== TOKEN_PREFIX ||
-    !payload ||
-    !signature
-  ) {
-    return null;
-  }
+  if (prefix !== TOKEN_PREFIX || !payload || !signature) return null;
 
   const unsigned = `${prefix}.${payload}`;
-  const expected = sign(unsigned);
-
-  if (!safeEqual(signature, expected)) {
-    return null;
-  }
+  if (!safeEqual(signature, sign(unsigned))) return null;
 
   try {
     const parsed = JSON.parse(
@@ -115,17 +98,10 @@ function decodeEnvelope(token: string): SessionEnvelope | null {
   }
 }
 
-function createClienteSessionTokenWithTtl(
-  session: ClienteAppSession,
-  ttlSeconds: number
-) {
+function createTokenWithTtl(session: ClienteAppSession, ttlSeconds: number) {
   const authVersion = Number(session.authVersion);
 
-  if (
-    !session.idConta ||
-    !Number.isFinite(authVersion) ||
-    authVersion < 1
-  ) {
+  if (!session.idConta || !Number.isFinite(authVersion) || authVersion < 1) {
     throw new Error("Sessão de cliente inválida.");
   }
 
@@ -137,26 +113,18 @@ function createClienteSessionTokenWithTtl(
       issuedAt: session.issuedAt || Date.now(),
       tipo: "cliente",
     },
-    exp:
-      Math.floor(Date.now() / 1000) +
-      ttlSeconds,
+    exp: Math.floor(Date.now() / 1000) + ttlSeconds,
   });
 }
 
-export function createClienteSessionToken(
-  session: ClienteAppSession
-) {
-  return createClienteSessionTokenWithTtl(
-    session,
-    SESSION_TTL_SECONDS
-  );
+export function createClienteSessionToken(session: ClienteAppSession) {
+  return createTokenWithTtl(session, SESSION_TTL_SECONDS);
 }
 
 export function parseClienteSessionToken(
   token: string
 ): ClienteAppSession | null {
   const envelope = decodeEnvelope(token);
-
   if (!envelope) return null;
 
   return {
@@ -166,76 +134,40 @@ export function parseClienteSessionToken(
   };
 }
 
-
-/*
- * Compatibilidade com recuperação/restauração de sessão já usada
- * em outras partes do App Cliente.
- */
-export function createClienteSessionRestoreToken(
-  session: ClienteAppSession
-) {
-  return createClienteSessionTokenWithTtl(
-    {
-      ...session,
-      issuedAt: Date.now(),
-    },
+export function createClienteSessionRestoreToken(session: ClienteAppSession) {
+  return createTokenWithTtl(
+    { ...session, issuedAt: Date.now() },
     RESTORE_TOKEN_TTL_SECONDS
   );
 }
 
-export function parseClienteSessionRestoreToken(
-  token: string
-) {
+export function parseClienteSessionRestoreToken(token: string) {
   return parseClienteSessionToken(token);
 }
 
-/*
- * Compatibilidade com o fluxo legado de senha.
- * O login novo CPF+nascimento não usa senha, mas auth.ts ainda
- * mantém rotas/funções de migração e recuperação antigas.
- */
-export async function hashClientePassword(
-  password: string
-) {
+export async function hashClientePassword(password: string) {
   return bcrypt.hash(password, 10);
 }
 
-export async function verifyClientePassword(
-  password: string,
-  hash: string
-) {
+export async function verifyClientePassword(password: string, hash: string) {
   return bcrypt.compare(password, hash);
 }
 
 function isLocalHost(hostname: string) {
-  return (
-    hostname === "localhost" ||
-    hostname === "127.0.0.1" ||
-    hostname === "::1"
-  );
+  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
 }
 
 function responseCookieOptions(request: NextRequest) {
-  const hostname = request.nextUrl.hostname;
-  const local = isLocalHost(hostname);
-
+  const local = isLocalHost(request.nextUrl.hostname);
   const base = {
     httpOnly: true,
     sameSite: "lax" as const,
-    secure:
-      !local &&
-      request.nextUrl.protocol === "https:",
+    secure: !local && request.nextUrl.protocol === "https:",
     path: "/",
   };
 
-  if (
-    process.env.NODE_ENV === "production" &&
-    !local
-  ) {
-    return {
-      ...base,
-      domain: `.${getAppRootDomain()}`,
-    };
+  if (process.env.NODE_ENV === "production" && !local) {
+    return { ...base, domain: `.${getAppRootDomain()}` };
   }
 
   return base;
@@ -248,32 +180,16 @@ export function setClienteSessionOnResponse(
 ) {
   const options = responseCookieOptions(request);
 
-  /*
-   * Primeiro elimina estados antigos no MESMO response.
-   */
-  response.cookies.set(SESSION_COOKIE, "", {
-    ...options,
-    maxAge: 0,
-    expires: new Date(0),
-  });
-
   response.cookies.set(LOGOUT_COOKIE, "", {
     ...options,
     maxAge: 0,
     expires: new Date(0),
   });
 
-  /*
-   * Depois cria uma única sessão nova.
-   */
-  response.cookies.set(
-    SESSION_COOKIE,
-    createClienteSessionToken(session),
-    {
-      ...options,
-      maxAge: SESSION_TTL_SECONDS,
-    }
-  );
+  response.cookies.set(SESSION_COOKIE, createClienteSessionToken(session), {
+    ...options,
+    maxAge: SESSION_TTL_SECONDS,
+  });
 
   return response;
 }
@@ -292,14 +208,10 @@ export function clearClienteSessionOnResponse(
   });
 
   if (explicitLogout) {
-    response.cookies.set(
-      LOGOUT_COOKIE,
-      String(Date.now()),
-      {
-        ...options,
-        maxAge: SESSION_TTL_SECONDS,
-      }
-    );
+    response.cookies.set(LOGOUT_COOKIE, String(Date.now()), {
+      ...options,
+      maxAge: SESSION_TTL_SECONDS,
+    });
   } else {
     response.cookies.set(LOGOUT_COOKIE, "", {
       ...options,
@@ -314,10 +226,6 @@ export function clearClienteSessionOnResponse(
 export async function getClienteSessionFromCookie(): Promise<ClienteAppSession | null> {
   const store = await cookies();
 
-  /*
-   * Sessão válida tem prioridade sobre marcador residual.
-   * Isso impede logout antigo de bloquear um login novo.
-   */
   for (const item of store.getAll(SESSION_COOKIE)) {
     const session = parseClienteSessionToken(item.value);
     if (session) return session;
@@ -330,9 +238,7 @@ export async function hasClienteLogoutMarker() {
   const store = await cookies();
 
   for (const item of store.getAll(SESSION_COOKIE)) {
-    if (parseClienteSessionToken(item.value)) {
-      return false;
-    }
+    if (parseClienteSessionToken(item.value)) return false;
   }
 
   return Boolean(store.get(LOGOUT_COOKIE)?.value);
@@ -340,23 +246,13 @@ export async function hasClienteLogoutMarker() {
 
 export async function requireClienteSession() {
   const session = await getClienteSessionFromCookie();
-
-  if (!session) {
-    redirect("/app-cliente/login");
-  }
-
+  if (!session) redirect("/app-cliente/login");
   return session;
 }
 
-/*
- * Compatibilidade com partes antigas do projeto.
- * A autenticação nova deve preferir setClienteSessionOnResponse().
- */
-export async function createClienteSession(
-  session: ClienteAppSession
-) {
+/* Compatibilidade com fluxos antigos ainda existentes fora da tela de login. */
+export async function createClienteSession(session: ClienteAppSession) {
   const store = await cookies();
-  const token = createClienteSessionToken(session);
 
   store.set(LOGOUT_COOKIE, "", {
     httpOnly: true,
@@ -367,7 +263,7 @@ export async function createClienteSession(
     expires: new Date(0),
   });
 
-  store.set(SESSION_COOKIE, token, {
+  store.set(SESSION_COOKIE, createClienteSessionToken(session), {
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -378,7 +274,6 @@ export async function createClienteSession(
 
 export async function clearClienteSessionOnly() {
   const store = await cookies();
-
   store.set(SESSION_COOKIE, "", {
     httpOnly: true,
     sameSite: "lax",

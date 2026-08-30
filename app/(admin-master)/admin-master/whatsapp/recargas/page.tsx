@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { Pool } from "@neondatabase/serverless";
 import { AlertTriangle, CheckCircle2, Clock3, RefreshCw, WalletCards } from "lucide-react";
 import AdminMasterPageHeader from "@/components/admin-master/AdminMasterPageHeader";
 import {
@@ -6,9 +7,97 @@ import {
   reprocessarRecargaWhatsappAdminMaster,
 } from "@/app/(admin-master)/admin-master/whatsapp/actions";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { resolveNeonRuntimeUrl } from "@/lib/neon/runtime-url.server";
 
 export const dynamic = "force-dynamic";
+
+type RecargaRow = {
+  id: string;
+  id_salao: string | null;
+  status: string | null;
+  valor_centavos: number | string | null;
+  billing_type: string | null;
+  asaas_payment_id: string | null;
+  criado_em: string | null;
+  expira_em: string | null;
+  pago_em: string | null;
+  creditado_em: string | null;
+  erro_texto: string | null;
+  atualizado_em: string | null;
+};
+
+type SalaoRow = {
+  id: string;
+  nome: string | null;
+  responsavel: string | null;
+};
+
+let pool: Pool | null = null;
+let poolUrl = "";
+
+function getPool() {
+  const url = resolveNeonRuntimeUrl(
+    process.env.NEON_ADMIN_DATABASE_URL || process.env.NEON_DATABASE_URL,
+  );
+  if (!url) {
+    throw new Error("Neon nao configurado para carregar recargas WhatsApp.");
+  }
+  if (!pool || poolUrl !== url) {
+    pool = new Pool({ connectionString: url });
+    poolUrl = url;
+  }
+  return pool;
+}
+
+async function loadRecargasWhatsapp() {
+  const client = await getPool().connect();
+  try {
+    await client.query(
+      `update public.whatsapp_creditos_recargas
+          set status = 'expirado', atualizado_em = now()
+        where status = 'pendente'
+          and expira_em is not null
+          and expira_em <= now()`,
+    );
+
+    const recargasResult = await client.query<RecargaRow>(
+      `select
+         id::text as id,
+         id_salao::text as id_salao,
+         status::text as status,
+         valor_centavos,
+         billing_type::text as billing_type,
+         asaas_payment_id::text as asaas_payment_id,
+         criado_em::text as criado_em,
+         expira_em::text as expira_em,
+         pago_em::text as pago_em,
+         creditado_em::text as creditado_em,
+         erro_texto::text as erro_texto,
+         atualizado_em::text as atualizado_em
+       from public.whatsapp_creditos_recargas
+       order by criado_em desc nulls last
+       limit 100`,
+    );
+
+    const rows = recargasResult.rows || [];
+    const salaoIds = [...new Set(rows.map((row) => String(row.id_salao || "")).filter(Boolean))];
+
+    let saloes: SalaoRow[] = [];
+    if (salaoIds.length) {
+      const saloesResult = await client.query<SalaoRow>(
+        `select id::text as id, nome::text as nome, responsavel::text as responsavel
+           from public.saloes
+          where id::text = any($1::text[])`,
+        [salaoIds],
+      );
+      saloes = saloesResult.rows || [];
+    }
+
+    return { rows, saloes };
+  } finally {
+    client.release();
+  }
+}
 
 function money(value: unknown) {
   return (Number(value || 0) / 100).toLocaleString("pt-BR", {
@@ -37,39 +126,17 @@ function statusStyle(status: string) {
 
 export default async function AdminMasterWhatsappRecargasPage() {
   await requireAdminMasterUser("whatsapp_ver");
-  const database = getDatabaseAdmin() as any;
-  const now = new Date().toISOString();
+  const { rows, saloes } = await loadRecargasWhatsapp();
 
-  await database
-    .from("whatsapp_creditos_recargas")
-    .update({ status: "expirado", atualizado_em: now })
-    .eq("status", "pendente")
-    .lte("expira_em", now);
-
-  const { data: recargas, error } = await database
-    .from("whatsapp_creditos_recargas")
-    .select(
-      "id, id_salao, status, valor_centavos, billing_type, asaas_payment_id, criado_em, expira_em, pago_em, creditado_em, erro_texto, atualizado_em"
-    )
-    .order("criado_em", { ascending: false })
-    .limit(100);
-
-  if (error) throw new Error(error.message || "Nao foi possivel carregar as recargas WhatsApp.");
-
-  const rows = (recargas || []) as Array<Record<string, unknown>>;
-  const salaoIds = [...new Set(rows.map((row) => String(row.id_salao || "")).filter(Boolean))];
-  const { data: saloes } = salaoIds.length
-    ? await database.from("saloes").select("id, nome, responsavel").in("id", salaoIds)
-    : { data: [] };
   const salaoMap = new Map<string, string>(
-    (saloes || []).map((salao: Record<string, unknown>) => [
+    saloes.map((salao) => [
       String(salao.id),
       String(salao.nome || salao.responsavel || "Salao"),
-    ] as [string, string])
+    ]),
   );
 
   const falhasPagas = rows.filter(
-    (row) => String(row.status || "") === "falhou" && Boolean(row.pago_em)
+    (row) => String(row.status || "") === "falhou" && Boolean(row.pago_em),
   );
   const pendentes = rows.filter((row) => String(row.status || "") === "pendente");
   const pagos = rows.filter((row) => String(row.status || "") === "pago");
@@ -138,10 +205,10 @@ export default async function AdminMasterWhatsappRecargasPage() {
                   <span className={`inline-flex rounded-full border px-2.5 py-1 text-xs font-black ${statusStyle(status)}`}>{status}</span>
                 </div>
                 <div className="mt-3 grid gap-1 text-xs leading-5 text-zinc-500">
-                  <span>Gerado: {dateTime(String(row.criado_em || ""))}</span>
-                  <span>Expira: {dateTime(String(row.expira_em || ""))}</span>
-                  <span>Pago: {dateTime(row.pago_em ? String(row.pago_em) : null)}</span>
-                  <span>Creditado: {dateTime(row.creditado_em ? String(row.creditado_em) : null)}</span>
+                  <span>Gerado: {dateTime(row.criado_em)}</span>
+                  <span>Expira: {dateTime(row.expira_em)}</span>
+                  <span>Pago: {dateTime(row.pago_em)}</span>
+                  <span>Creditado: {dateTime(row.creditado_em)}</span>
                 </div>
                 {row.erro_texto ? <div className="mt-3 rounded-xl bg-rose-50 p-3 text-xs font-semibold text-rose-700">Falha registrada para suporte.</div> : null}
                 <details className="mt-3 rounded-xl border border-zinc-200 bg-zinc-50">
@@ -195,12 +262,12 @@ export default async function AdminMasterWhatsappRecargasPage() {
                       {row.erro_texto ? <div className="mt-2 max-w-[260px] text-xs leading-5 text-rose-600">Falha registrada para suporte.</div> : null}
                     </td>
                     <td className="px-4 py-4 text-xs leading-6 text-zinc-600">
-                      <div>{dateTime(String(row.criado_em || ""))}</div>
-                      <div className="font-bold">Expira: {dateTime(String(row.expira_em || ""))}</div>
+                      <div>{dateTime(row.criado_em)}</div>
+                      <div className="font-bold">Expira: {dateTime(row.expira_em)}</div>
                     </td>
                     <td className="px-4 py-4 text-xs leading-6 text-zinc-600">
-                      <div>Pago: {dateTime(row.pago_em ? String(row.pago_em) : null)}</div>
-                      <div>Creditado: {dateTime(row.creditado_em ? String(row.creditado_em) : null)}</div>
+                      <div>Pago: {dateTime(row.pago_em)}</div>
+                      <div>Creditado: {dateTime(row.creditado_em)}</div>
                     </td>
                     <td className="px-4 py-4">
                       <div className="flex min-w-[190px] flex-col gap-2">

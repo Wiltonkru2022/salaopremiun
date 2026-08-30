@@ -19,10 +19,27 @@ function listLabel(value: unknown) {
     .join(", ");
 }
 
+function relationRows<T extends Record<string, unknown>>(value: unknown): T[] {
+  if (Array.isArray(value)) {
+    return value.filter((item): item is T => Boolean(item && typeof item === "object"));
+  }
+  if (value && typeof value === "object") {
+    return [value as T];
+  }
+  return [];
+}
+
 function partnerName(value: unknown) {
-  if (!value || typeof value !== "object") return "Salão Premiun";
-  const row = value as { nome_fantasia?: string | null; razao_social?: string | null };
+  const rows = relationRows<{ nome_fantasia?: string | null; razao_social?: string | null }>(value);
+  const row = rows[0];
+  if (!row) return "Salão Premiun";
   return row.nome_fantasia || row.razao_social || "Empresa parceira";
+}
+
+function activeCreativeCount(value: unknown) {
+  return relationRows<{ id?: string | null; ativo?: boolean | null }>(value).filter(
+    (item) => item.ativo !== false,
+  ).length;
 }
 
 export async function getAdvertisingCampaignsSection(): Promise<AdminSectionData> {
@@ -39,7 +56,7 @@ export async function getAdvertisingCampaignsSection(): Promise<AdminSectionData
     throw new Error(error.message || "Não foi possível carregar as campanhas de anúncios.");
   }
 
-  const campaigns = (data || []) as Array<{
+  const campaigns = (Array.isArray(data) ? data : []) as Array<{
     id: string;
     id_parceiro?: string | null;
     nome?: string | null;
@@ -54,7 +71,7 @@ export async function getAdvertisingCampaignsSection(): Promise<AdminSectionData
     prioridade?: number | null;
     criado_em?: string | null;
     parceiros_comerciais?: unknown;
-    parceria_criativos?: Array<{ id?: string | null; ativo?: boolean | null }> | null;
+    parceria_criativos?: unknown;
   }>;
 
   const now = Date.now();
@@ -69,7 +86,7 @@ export async function getAdvertisingCampaignsSection(): Promise<AdminSectionData
   const internalCampaigns = campaigns.filter((row) => row.origem === "salao_premium" || !row.id_parceiro).length;
 
   const rows: AdminTableRow[] = campaigns.map((row) => {
-    const activeCreatives = (row.parceria_criativos || []).filter((item) => item.ativo !== false).length;
+    const activeCreatives = activeCreativeCount(row.parceria_criativos);
     return {
       campanha: row.nome || "Campanha sem nome",
       anunciante: row.id_parceiro ? partnerName(row.parceiros_comerciais) : "Salão Premiun",
@@ -104,7 +121,7 @@ export async function getAdvertisingCampaignsSection(): Promise<AdminSectionData
       },
       {
         label: "Criativos",
-        value: String(campaigns.reduce((sum, row) => sum + (row.parceria_criativos || []).filter((item) => item.ativo !== false).length, 0)),
+        value: String(campaigns.reduce((sum, row) => sum + activeCreativeCount(row.parceria_criativos), 0)),
         detail: "Somente a contagem dos criativos é carregada junto da campanha; nenhuma imagem é baixada para montar esta tabela.",
         tone: "blue",
       },

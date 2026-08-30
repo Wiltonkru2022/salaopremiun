@@ -1,6 +1,8 @@
+import "server-only";
+
 import crypto from "node:crypto";
-import { getDatabaseAdmin } from "@/lib/db/admin";
 import { normalizeCpf } from "@/lib/client-app/identity";
+import { queryNeonDirect } from "@/lib/neon/direct.server";
 
 const CPF_WINDOW_MINUTES = 10;
 const CPF_MAX_ATTEMPTS = 5;
@@ -8,11 +10,18 @@ const IP_WINDOW_MINUTES = 10;
 const IP_MAX_ATTEMPTS = 20;
 
 function identitySecret() {
-  return (
-    process.env.CLIENT_APP_IDENTITY_HASH_SECRET ||
-    process.env.CLIENTE_SESSION_SECRET ||
-    process.env.PROFISSIONAL_SESSION_SECRET ||
-    "salaopremium-identity"
+  const configured = String(
+    process.env.CLIENT_APP_IDENTITY_HASH_SECRET || ""
+  ).trim();
+
+  if (configured.length >= 16) return configured;
+
+  if (process.env.NODE_ENV === "development") {
+    return "salaopremium-local-dev-identity-secret";
+  }
+
+  throw new Error(
+    "CLIENT_APP_IDENTITY_HASH_SECRET não configurada ou muito curta."
   );
 }
 
@@ -34,19 +43,7 @@ export async function assertClienteCpfLoginAllowed(params: {
   cpf: string;
   ip?: string | null;
 }) {
-  /*
-   * Ambiente LOCAL:
-   * durante desenvolvimento não bloqueia o programador por tentativas
-   * anteriores, loops de sessão ou testes repetidos.
-   *
-   * Isso NÃO afeta produção, porque NODE_ENV será "production".
-   */
   if (process.env.NODE_ENV === "development") {
-    console.log("[CLIENTE_LOGIN_RATE_LIMIT:DEV_BYPASS]", {
-      cpfFinal: normalizeCpf(params.cpf).slice(-4),
-      ip: params.ip || null,
-    });
-
     return {
       allowed: true,
       attemptsByCpf: 0,
@@ -55,42 +52,32 @@ export async function assertClienteCpfLoginAllowed(params: {
     };
   }
 
-  const database = getDatabaseAdmin();
   const identityKey = buildClienteCpfIdentityKey(params.cpf);
-
-  const identityQuery = database
-    .from("security_login_attempts")
-    .select("id", { count: "exact", head: true })
-    .eq("tipo_usuario", "cliente")
-    .eq("identidade", identityKey)
-    .gte("criado_em", since(CPF_WINDOW_MINUTES));
-
   const ip = String(params.ip || "").trim();
 
-  const ipQuery = ip
-    ? database
-        .from("security_login_attempts")
-        .select("id", { count: "exact", head: true })
-        .eq("tipo_usuario", "cliente")
-        .eq("ip", ip)
-        .gte("criado_em", since(IP_WINDOW_MINUTES))
-    : null;
-
   const [identityResult, ipResult] = await Promise.all([
-    identityQuery,
-    ipQuery || Promise.resolve({ count: 0, error: null }),
+    queryNeonDirect<{ count: number }>(
+      `select count(*)::int as count
+         from public.security_login_attempts
+        where tipo_usuario::text = 'cliente'
+          and identidade::text = $1::text
+          and criado_em >= $2::timestamptz`,
+      [identityKey, since(CPF_WINDOW_MINUTES)]
+    ),
+    ip
+      ? queryNeonDirect<{ count: number }>(
+          `select count(*)::int as count
+             from public.security_login_attempts
+            where tipo_usuario::text = 'cliente'
+              and ip::text = $1::text
+              and criado_em >= $2::timestamptz`,
+          [ip, since(IP_WINDOW_MINUTES)]
+        )
+      : Promise.resolve({ rows: [{ count: 0 }] } as any),
   ]);
 
-  if (identityResult.error) {
-    throw identityResult.error;
-  }
-
-  if (ipResult.error) {
-    throw ipResult.error;
-  }
-
-  const attemptsByCpf = Number(identityResult.count || 0);
-  const attemptsByIp = Number(ipResult.count || 0);
+  const attemptsByCpf = Number(identityResult.rows[0]?.count || 0);
+  const attemptsByIp = Number(ipResult.rows[0]?.count || 0);
 
   const allowed =
     attemptsByCpf < CPF_MAX_ATTEMPTS &&
@@ -100,8 +87,6 @@ export async function assertClienteCpfLoginAllowed(params: {
     allowed,
     attemptsByCpf,
     attemptsByIp,
-    retryAfterSeconds: allowed
-      ? 0
-      : CPF_WINDOW_MINUTES * 60,
+    retryAfterSeconds: allowed ? 0 : CPF_WINDOW_MINUTES * 60,
   };
 }

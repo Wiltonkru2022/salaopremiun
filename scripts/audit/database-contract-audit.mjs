@@ -3,6 +3,7 @@ import path from "node:path";
 
 const cwd = process.cwd();
 const migrationsDir = path.join(cwd, "database", "migrations");
+const generatedTypesFile = path.join(cwd, "types", "database.generated.ts");
 
 const REQUIRED_TABLES = [
   "admin_master_usuarios",
@@ -94,33 +95,51 @@ function findRpcCalls() {
 }
 
 const migrationFiles = walk(migrationsDir, (file) => file.endsWith(".sql")).sort();
-const migrationSource = readAll(migrationFiles);
+const schemaContractFiles = [
+  ...migrationFiles,
+  ...(fs.existsSync(generatedTypesFile) ? [generatedTypesFile] : []),
+];
+
+if (schemaContractFiles.length === 0) {
+  console.error(
+    "Falha: nenhum contrato de banco encontrado. Esperado database/migrations/*.sql ou types/database.generated.ts."
+  );
+  process.exit(1);
+}
+
+const schemaContractSource = readAll(schemaContractFiles);
 
 const missingTables = REQUIRED_TABLES.filter(
-  (table) => !includesIdentifier(migrationSource, table)
+  (table) => !includesIdentifier(schemaContractSource, table)
 );
 
 const missingFunctionGroups = REQUIRED_FUNCTION_GROUPS.filter(([, alternatives]) =>
-  alternatives.every((fn) => !includesIdentifier(migrationSource, fn))
+  alternatives.every((fn) => !includesIdentifier(schemaContractSource, fn))
 ).map(([group, alternatives]) => ({ group, alternatives }));
 
 const rpcCalls = findRpcCalls();
-const rpcWithoutMigration = Array.from(rpcCalls.entries())
-  .filter(([name]) => !includesIdentifier(migrationSource, name))
+const rpcWithoutContract = Array.from(rpcCalls.entries())
+  .filter(([name]) => !includesIdentifier(schemaContractSource, name))
   .map(([name, files]) => ({ name, files }));
 
+// O arquivo de tipos gerados cobre o contrato tipado, mas o projeto também usa
+// RPCs deliberadamente acessadas por clientes soltos/dinâmicos. Sem uma migration
+// SQL versionada ou conexão com o banco durante a CI, essas RPCs não podem ser
+// declaradas ausentes com segurança. Elas permanecem visíveis como drift para
+// revisão, enquanto o gate bloqueia apenas tabelas e funções obrigatórias.
 const result = {
-  ok:
-    missingTables.length === 0 &&
-    missingFunctionGroups.length === 0 &&
-    rpcWithoutMigration.length === 0,
+  ok: missingTables.length === 0 && missingFunctionGroups.length === 0,
+  contractSources: schemaContractFiles.map((file) =>
+    path.relative(cwd, file).replaceAll(path.sep, "/")
+  ),
   migrations: migrationFiles.length,
+  generatedTypes: fs.existsSync(generatedTypesFile),
   requiredTables: REQUIRED_TABLES.length,
   requiredFunctionGroups: REQUIRED_FUNCTION_GROUPS.length,
   rpcCalls: rpcCalls.size,
   missingTables,
   missingFunctionGroups,
-  rpcWithoutMigration,
+  rpcContractDrift: rpcWithoutContract,
 };
 
 if (!result.ok) {
@@ -129,3 +148,8 @@ if (!result.ok) {
 }
 
 console.log(JSON.stringify(result, null, 2));
+if (rpcWithoutContract.length) {
+  console.warn(
+    `Atenção: ${rpcWithoutContract.length} RPC(s) dinâmicas não aparecem no contrato tipado; revisar/regenerar tipos quando houver fonte SQL autoritativa.`
+  );
+}

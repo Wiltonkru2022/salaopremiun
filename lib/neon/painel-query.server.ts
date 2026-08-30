@@ -1,7 +1,20 @@
-﻿import type { PoolClient } from "@neondatabase/serverless";
+import type { PoolClient } from "@neondatabase/serverless";
 
 export type PainelDbFilter = {
-  op: "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "like" | "ilike" | "is" | "in" | "contains" | "not" | "or";
+  op:
+    | "eq"
+    | "neq"
+    | "gt"
+    | "gte"
+    | "lt"
+    | "lte"
+    | "like"
+    | "ilike"
+    | "is"
+    | "in"
+    | "contains"
+    | "not"
+    | "or";
   column?: string;
   value?: unknown;
 };
@@ -48,6 +61,12 @@ type RelationSpec = {
   columns: string[];
 };
 
+type RelationLink = {
+  source_column: string;
+  relation_column: string;
+  direction: "forward" | "reverse";
+};
+
 const IDENT = /^[A-Za-z_][A-Za-z0-9_]*$/;
 const COLUMN_PATH = /^([A-Za-z_][A-Za-z0-9_]*)(?:->>([A-Za-z_][A-Za-z0-9_]*))?$/;
 const SIMPLE_SELECT = /^[A-Za-z0-9_.*,\s:!()]+$/;
@@ -55,6 +74,11 @@ const SIMPLE_SELECT = /^[A-Za-z0-9_.*,\s:!()]+$/;
 function quoteIdent(value: string) {
   if (!IDENT.test(value)) throw new Error(`Identificador SQL invalido: ${value}`);
   return `"${value}"`;
+}
+
+function assertIdent(value: string) {
+  if (!IDENT.test(value)) throw new Error(`Identificador SQL invalido: ${value}`);
+  return value;
 }
 
 function renderColumn(value: string, prefix = "") {
@@ -94,7 +118,7 @@ function parseSelect(value?: string) {
   const relations: RelationSpec[] = [];
   for (const part of splitTopLevel(raw)) {
     const relation = part.match(
-      /^(?:([A-Za-z_][A-Za-z0-9_]*):)?([A-Za-z_][A-Za-z0-9_]*)(?:![A-Za-z_][A-Za-z0-9_]*)?\s*\(([\s\S]*)\)$/
+      /^(?:([A-Za-z_][A-Za-z0-9_]*):)?([A-Za-z_][A-Za-z0-9_]*)(?:![A-Za-z_][A-Za-z0-9_]*)?\s*\(([\s\S]*)\)$/,
     );
     if (relation) {
       const table = relation[2];
@@ -140,14 +164,16 @@ function buildSimpleClause(
   column: string,
   value: unknown,
   values: unknown[],
-  prefix = ""
+  prefix = "",
 ) {
   const col = renderColumn(column, prefix);
   switch (op) {
     case "eq":
+      if (value === null) return `${col} IS NULL`;
       values.push(value);
       return `${col} = $${values.length}`;
     case "neq":
+      if (value === null) return `${col} IS NOT NULL`;
       values.push(value);
       return `${col} <> $${values.length}`;
     case "gt":
@@ -180,6 +206,7 @@ function buildSimpleClause(
       const input = value as { operator?: string; value?: unknown };
       if (input.operator === "is" && input.value === null) return `${col} IS NOT NULL`;
       if (input.operator === "eq") {
+        if (input.value === null) return `${col} IS NOT NULL`;
         values.push(input.value);
         return `${col} <> $${values.length}`;
       }
@@ -200,9 +227,11 @@ function buildSimpleClause(
 }
 
 function buildOrEntry(entry: string, values: unknown[], prefix: string) {
-  const match = entry.trim().match(
-    /^([A-Za-z_][A-Za-z0-9_]*(?:->>[A-Za-z_][A-Za-z0-9_]*)?)\.(eq|neq|gt|gte|lt|lte|like|ilike|is|not\.is|not\.eq)\.(.+)$/
-  );
+  const match = entry
+    .trim()
+    .match(
+      /^([A-Za-z_][A-Za-z0-9_]*(?:->>[A-Za-z_][A-Za-z0-9_]*)?)\.(eq|neq|gt|gte|lt|lte|like|ilike|is|not\.is|not\.eq)\.(.+)$/,
+    );
   if (!match) throw new Error(`Filtro OR nao suportado: ${entry}`);
   const [, column, op, rawValue] = match;
   if (op.startsWith("not.")) {
@@ -211,7 +240,7 @@ function buildOrEntry(entry: string, values: unknown[], prefix: string) {
       column,
       { operator: op.slice(4), value: parseOrValue(rawValue) },
       values,
-      prefix
+      prefix,
     );
   }
   return buildSimpleClause(op, column, parseOrValue(rawValue), values, prefix);
@@ -224,7 +253,7 @@ function buildOrClause(raw: unknown, values: unknown[], prefix = "") {
     const grouped = entry.match(/^and\(([\s\S]*)\)$/);
     if (!grouped) return buildOrEntry(entry, values, prefix);
     const andClauses = splitTopLevel(grouped[1]).map((item) =>
-      buildOrEntry(item, values, prefix)
+      buildOrEntry(item, values, prefix),
     );
     if (!andClauses.length) throw new Error("Grupo AND vazio no filtro OR.");
     return `(${andClauses.join(" AND ")})`;
@@ -243,69 +272,118 @@ function buildWhere(filters: PainelDbFilter[], values: unknown[], prefix = "") {
 }
 
 async function primaryKeyColumns(client: PoolClient, table: string) {
+  assertIdent(table);
   const result = await client.query<{ column_name: string }>(
     `select a.attname as column_name
        from pg_index i
-       join pg_attribute a on a.attrelid = i.indrelid and a.attnum = any(i.indkey)
-      where i.indrelid = format('public.%I', $1::text)::regclass
+       join pg_attribute a
+         on a.attrelid = i.indrelid
+        and a.attnum = any(i.indkey)
+      where i.indrelid = to_regclass($1::text)
         and i.indisprimary
       order by array_position(i.indkey, a.attnum)`,
-    [table]
+    [`public.${table}`],
   );
   return result.rows.map((row) => row.column_name);
 }
 
-async function findRelation(client: PoolClient, sourceTable: string, relationTable: string) {
-  const result = await client.query<{
-    source_column: string;
-    relation_column: string;
-    direction: string;
-  }>(
+async function findRelation(
+  client: PoolClient,
+  sourceTable: string,
+  relationTable: string,
+): Promise<RelationLink | null> {
+  assertIdent(sourceTable);
+  assertIdent(relationTable);
+  const result = await client.query<RelationLink>(
     `select source_column, relation_column, direction
        from (
          select a_src.attname as source_column,
                 a_rel.attname as relation_column,
-                'forward'::text as direction
+                'forward'::text as direction,
+                c.oid as constraint_oid
            from pg_constraint c
            join pg_class src on src.oid = c.conrelid
            join pg_namespace nsrc on nsrc.oid = src.relnamespace
            join pg_class rel on rel.oid = c.confrelid
-           join pg_attribute a_src on a_src.attrelid = c.conrelid and a_src.attnum = c.conkey[1]
-           join pg_attribute a_rel on a_rel.attrelid = c.confrelid and a_rel.attnum = c.confkey[1]
-          where c.contype = 'f' and nsrc.nspname = 'public'
-            and src.relname = $1::text and rel.relname = $2::text
+           join pg_namespace nrel on nrel.oid = rel.relnamespace
+           join pg_attribute a_src
+             on a_src.attrelid = c.conrelid and a_src.attnum = c.conkey[1]
+           join pg_attribute a_rel
+             on a_rel.attrelid = c.confrelid and a_rel.attnum = c.confkey[1]
+          where c.contype = 'f'
+            and nsrc.nspname = 'public'
+            and nrel.nspname = 'public'
+            and src.relname = $1::text
+            and rel.relname = $2::text
          union all
          select a_src.attname as source_column,
                 a_rel.attname as relation_column,
-                'reverse'::text as direction
+                'reverse'::text as direction,
+                c.oid as constraint_oid
            from pg_constraint c
            join pg_class rel on rel.oid = c.conrelid
            join pg_namespace nrel on nrel.oid = rel.relnamespace
            join pg_class src on src.oid = c.confrelid
-           join pg_attribute a_rel on a_rel.attrelid = c.conrelid and a_rel.attnum = c.conkey[1]
-           join pg_attribute a_src on a_src.attrelid = c.confrelid and a_src.attnum = c.confkey[1]
-          where c.contype = 'f' and nrel.nspname = 'public'
-            and src.relname = $1::text and rel.relname = $2::text
+           join pg_namespace nsrc on nsrc.oid = src.relnamespace
+           join pg_attribute a_rel
+             on a_rel.attrelid = c.conrelid and a_rel.attnum = c.conkey[1]
+           join pg_attribute a_src
+             on a_src.attrelid = c.confrelid and a_src.attnum = c.confkey[1]
+          where c.contype = 'f'
+            and nsrc.nspname = 'public'
+            and nrel.nspname = 'public'
+            and src.relname = $1::text
+            and rel.relname = $2::text
        ) relations
+      order by case when direction = 'forward' then 0 else 1 end, constraint_oid
       limit 1`,
-    [sourceTable, relationTable]
+    [sourceTable, relationTable],
   );
   return result.rows[0] || null;
 }
 
+function cleanMutationObject(value: Record<string, unknown>) {
+  return Object.fromEntries(Object.entries(value).filter(([, item]) => item !== undefined));
+}
+
 function normalizeMutationRows(payload: unknown) {
   const rows = Array.isArray(payload) ? payload : [payload];
-  const objects = rows.filter(
-    (row): row is Record<string, unknown> => Boolean(row && typeof row === "object" && !Array.isArray(row))
-  );
-  if (objects.length !== rows.length) throw new Error("Payload de mutacao invalido.");
+  const objects = rows.map((row) => {
+    if (!row || typeof row !== "object" || Array.isArray(row)) {
+      throw new Error("Payload de mutacao invalido.");
+    }
+    return cleanMutationObject(row as Record<string, unknown>);
+  });
   return objects;
 }
 
-export async function executePainelNeonQuery(
-  client: PoolClient,
-  query: PainelDbQuery
-) {
+function relationProjection(relation: RelationSpec, link: RelationLink) {
+  const relationColumns = relation.columns.includes("*")
+    ? "r.*"
+    : relation.columns.map((column) => `r.${quoteIdent(column)}`).join(", ");
+  const condition = `r.${quoteIdent(link.relation_column)} = src.${quoteIdent(
+    link.source_column,
+  )}`;
+
+  if (link.direction === "reverse") {
+    return `(SELECT COALESCE(jsonb_agg(to_jsonb(rel_row)), '[]'::jsonb)
+               FROM (
+                 SELECT ${relationColumns}
+                   FROM public.${quoteIdent(relation.table)} r
+                  WHERE ${condition}
+               ) rel_row) AS ${quoteIdent(relation.alias)}`;
+  }
+
+  return `(SELECT to_jsonb(rel_row)
+             FROM (
+               SELECT ${relationColumns}
+                 FROM public.${quoteIdent(relation.table)} r
+                WHERE ${condition}
+                LIMIT 1
+             ) rel_row) AS ${quoteIdent(relation.alias)}`;
+}
+
+export async function executePainelNeonQuery(client: PoolClient, query: PainelDbQuery) {
   if (!IDENT.test(query.table)) throw new Error("Tabela invalida.");
   const filters = query.filters || [];
   const orders = query.orders || [];
@@ -317,15 +395,24 @@ export async function executePainelNeonQuery(
 
   if (!query.mutation) {
     if (query.selectOptions?.head && query.selectOptions?.count === "exact") {
-      const result = await client.query(`SELECT count(*)::int AS count FROM ${table}${where}`, values);
-      return { data: null, error: null, count: Number(result.rows[0]?.count || 0), status: 200, statusText: "OK" };
+      const result = await client.query(
+        `SELECT count(*)::int AS count FROM ${table}${where}`,
+        values,
+      );
+      return {
+        data: null,
+        error: null,
+        count: Number(result.rows[0]?.count || 0),
+        status: 200,
+        statusText: "OK",
+      };
     }
 
     let exactCount: number | null = null;
     if (query.selectOptions?.count === "exact") {
       const countResult = await client.query(
         `SELECT count(*)::int AS count FROM ${table}${hasRelations ? " src" : ""}${where}`,
-        values
+        values,
       );
       exactCount = Number(countResult.rows[0]?.count || 0);
     }
@@ -335,19 +422,10 @@ export async function executePainelNeonQuery(
       const relationSelects: string[] = [];
       for (const relation of parsedSelect.relations) {
         const link = await findRelation(client, query.table, relation.table);
-        if (!link) throw new Error(`Relacao ${query.table} -> ${relation.table} nao encontrada.`);
-        const relationColumns = relation.columns.includes("*")
-          ? "r.*"
-          : relation.columns.map((column) => `r.${quoteIdent(column)}`).join(", ");
-        const condition =
-          link.direction === "forward"
-            ? `r.${quoteIdent(link.relation_column)} = src.${quoteIdent(link.source_column)}`
-            : `r.${quoteIdent(link.relation_column)} = src.${quoteIdent(link.source_column)}`;
-        relationSelects.push(
-          `(SELECT to_jsonb(rel_row) FROM (SELECT ${relationColumns} FROM public.${quoteIdent(
-            relation.table
-          )} r WHERE ${condition} LIMIT 1) rel_row) AS ${quoteIdent(relation.alias)}`
-        );
+        if (!link) {
+          throw new Error(`Relacao ${query.table} -> ${relation.table} nao encontrada.`);
+        }
+        relationSelects.push(relationProjection(relation, link));
       }
       selectSql += `, ${relationSelects.join(", ")}`;
     }
@@ -382,7 +460,10 @@ export async function executePainelNeonQuery(
       if (query.single && result.rows.length !== 1) {
         return {
           data: null,
-          error: { message: `Esperado 1 registro; encontrados ${result.rows.length}.`, code: "PGRST116" },
+          error: {
+            message: `Esperado 1 registro; encontrados ${result.rows.length}.`,
+            code: "PGRST116",
+          },
           count: null,
           status: 406,
           statusText: "Not Acceptable",
@@ -391,7 +472,10 @@ export async function executePainelNeonQuery(
       if (query.maybeSingle && result.rows.length > 1) {
         return {
           data: null,
-          error: { message: `Esperado no maximo 1 registro; encontrados ${result.rows.length}.`, code: "PGRST116" },
+          error: {
+            message: `Esperado no maximo 1 registro; encontrados ${result.rows.length}.`,
+            code: "PGRST116",
+          },
           count: null,
           status: 406,
           statusText: "Not Acceptable",
@@ -400,6 +484,10 @@ export async function executePainelNeonQuery(
       data = result.rows[0] || null;
     }
     return { data, error: null, count: exactCount, status: 200, statusText: "OK" };
+  }
+
+  if (parsedSelect.relations.length) {
+    throw new Error("RETURNING com relacoes aninhadas nao e suportado no adapter Neon.");
   }
 
   const selectColumns = parsedSelect.base.includes("*")
@@ -414,10 +502,18 @@ export async function executePainelNeonQuery(
       return { data: [], error: null, count: null, status: 201, statusText: "Created" };
     }
     const keys = Object.keys(rows[0]);
-    if (!keys.length || keys.some((key) => !IDENT.test(key))) throw new Error("Payload insert invalido.");
-    if (rows.some((row) => keys.some((key) => !(key in row)))) {
+    if (!keys.length || keys.some((key) => !IDENT.test(key))) {
+      throw new Error("Payload insert invalido.");
+    }
+    if (
+      rows.some((row) => {
+        const rowKeys = Object.keys(row);
+        return rowKeys.length !== keys.length || keys.some((key) => !(key in row));
+      })
+    ) {
       throw new Error("Linhas de insert possuem colunas diferentes.");
     }
+
     const tuples = rows.map(
       (row) =>
         `(${keys
@@ -425,7 +521,7 @@ export async function executePainelNeonQuery(
             values.push(row[key]);
             return `$${values.length}`;
           })
-          .join(", ")})`
+          .join(", ")})`,
     );
     text = `INSERT INTO ${table} (${keys.map(quoteIdent).join(", ")}) VALUES ${tuples.join(", ")}`;
 
@@ -434,7 +530,9 @@ export async function executePainelNeonQuery(
         .split(",")
         .map((item) => item.trim())
         .filter(Boolean);
-      const conflictColumns = configured.length ? configured : await primaryKeyColumns(client, query.table);
+      const conflictColumns = configured.length
+        ? configured
+        : await primaryKeyColumns(client, query.table);
       if (!conflictColumns.length || conflictColumns.some((column) => !IDENT.test(column))) {
         throw new Error("Nao foi possivel identificar a chave de conflito do upsert.");
       }
@@ -444,16 +542,22 @@ export async function executePainelNeonQuery(
         const updateKeys = keys.filter((key) => !conflictColumns.includes(key));
         text += ` ON CONFLICT (${conflictColumns.map(quoteIdent).join(", ")}) DO ${
           updateKeys.length
-            ? `UPDATE SET ${updateKeys.map((key) => `${quoteIdent(key)} = EXCLUDED.${quoteIdent(key)}`).join(", ")}`
+            ? `UPDATE SET ${updateKeys
+                .map((key) => `${quoteIdent(key)} = EXCLUDED.${quoteIdent(key)}`)
+                .join(", ")}`
             : "NOTHING"
         }`;
       }
     }
     text += returning;
   } else if (query.mutation.kind === "update") {
-    const payload = query.mutation.payload as Record<string, unknown>;
-    const keys = Object.keys(payload || {});
-    if (!keys.length || keys.some((key) => !IDENT.test(key))) throw new Error("Payload update invalido.");
+    const payload = cleanMutationObject(
+      (query.mutation.payload || {}) as Record<string, unknown>,
+    );
+    const keys = Object.keys(payload);
+    if (!keys.length || keys.some((key) => !IDENT.test(key))) {
+      throw new Error("Payload update invalido.");
+    }
     const set = keys.map((key) => {
       values.push(payload[key]);
       return `${quoteIdent(key)} = $${values.length}`;
@@ -471,8 +575,7 @@ export async function executePainelNeonQuery(
     data,
     error: null,
     count:
-      query.mutation.kind === "delete" &&
-      query.mutation.options?.count === "exact"
+      query.mutation.kind === "delete" && query.mutation.options?.count === "exact"
         ? result.rowCount
         : null,
     status: query.mutation.kind === "insert" ? 201 : 200,
@@ -480,16 +583,69 @@ export async function executePainelNeonQuery(
   };
 }
 
+async function resolveRpcSignature(
+  client: PoolClient,
+  fn: string,
+  argNames: string[],
+) {
+  const result = await client.query<{
+    oid: number;
+    arg_names: string[] | null;
+    arg_types: string[] | null;
+  }>(
+    `select p.oid::int as oid,
+            p.proargnames as arg_names,
+            array(
+              select format_type(t, null)
+                from unnest(p.proargtypes::oid[]) with ordinality x(t, ord)
+               order by ord
+            ) as arg_types
+       from pg_proc p
+       join pg_namespace n on n.oid = p.pronamespace
+      where n.nspname = 'public'
+        and p.proname = $1::text`,
+    [fn],
+  );
+
+  const matches = result.rows.filter((row) => {
+    const names = row.arg_names || [];
+    return argNames.every((name) => names.includes(name));
+  });
+  if (matches.length !== 1) return null;
+
+  const row = matches[0];
+  const names = row.arg_names || [];
+  const types = row.arg_types || [];
+  const map = new Map<string, string>();
+  const allowedTypeChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_ .[]"';
+  names.forEach((name, index) => {
+    const type = types[index];
+    const safeType =
+      type && [...type].every((character) => allowedTypeChars.includes(character));
+    if (type && safeType) map.set(name, type);
+  });
+  return map;
+}
+
 export async function executePainelNeonRpc(client: PoolClient, request: PainelDbRpc) {
   if (!IDENT.test(request.fn)) throw new Error("RPC invalida.");
   const args = request.args || {};
-  const entries = Object.entries(args);
+  const entries = Object.entries(args).filter(([, value]) => value !== undefined);
   if (entries.some(([key]) => !IDENT.test(key))) throw new Error("Parametro RPC invalido.");
+
+  const signature = await resolveRpcSignature(
+    client,
+    request.fn,
+    entries.map(([key]) => key),
+  );
   const values: unknown[] = [];
   const named = entries.map(([key, value]) => {
     values.push(value);
-    return `${quoteIdent(key)} => $${values.length}`;
+    const type = signature?.get(key);
+    const placeholder = type ? `$${values.length}::${type}` : `$${values.length}`;
+    return `${quoteIdent(key)} => ${placeholder}`;
   });
+
   const fn = `public.${quoteIdent(request.fn)}`;
   const result = await client.query(`SELECT * FROM ${fn}(${named.join(", ")})`, values);
 
@@ -503,5 +659,3 @@ export async function executePainelNeonRpc(client: PoolClient, request: PainelDb
   }
   return { data, error: null, count: null, status: 200, statusText: "OK" };
 }
-
-

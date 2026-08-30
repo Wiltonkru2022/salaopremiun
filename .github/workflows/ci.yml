@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, principal]
+    branches: [main, principal, fix/app-cliente-auth-stable]
   pull_request:
 
 permissions:
@@ -60,3 +60,5 @@ jobs:
         run: npm run build:professional
       - name: Build
         run: npm run build
+      - name: Full CI validation
+        run: npm run ci:validate

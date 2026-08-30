@@ -1,5 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { executePainelNeonQuery } from "@/lib/neon/painel-query.server";
+import {
+  executePainelNeonQuery,
+  executePainelNeonRpc,
+  type PainelDbQuery,
+} from "@/lib/neon/painel-query.server";
 
 function databaseClient(rows: Array<Record<string, unknown>> = []) {
   const query = vi.fn(async (text: string) => ({
@@ -10,6 +14,12 @@ function databaseClient(rows: Array<Record<string, unknown>> = []) {
     fields: [],
   }));
   return { client: { query } as any, query };
+}
+
+function scriptedClient(handler: (sql: string, values?: unknown[]) => any) {
+  return {
+    query: vi.fn(async (sql: string, values?: unknown[]) => handler(sql, values)),
+  } as any;
 }
 
 describe("executePainelNeonQuery", () => {
@@ -69,5 +79,111 @@ describe("executePainelNeonQuery", () => {
     });
 
     expect(result.count).toBe(2);
+  });
+
+  it("tipa lookup de chave primaria e remove undefined de upsert", async () => {
+    const seen: Array<{ sql: string; values?: unknown[] }> = [];
+    const client = scriptedClient((sql, values) => {
+      seen.push({ sql, values });
+      if (sql.includes("from pg_index")) return { rows: [{ column_name: "id" }] };
+      return { rows: [{ id: "1", nome: "Teste" }], rowCount: 1 };
+    });
+
+    const query: PainelDbQuery = {
+      table: "exemplo",
+      select: "id,nome",
+      mutation: {
+        kind: "upsert",
+        payload: { id: "1", nome: "Teste", opcional: undefined },
+      },
+      single: true,
+    };
+
+    const result = await executePainelNeonQuery(client, query);
+    expect(result.error).toBeNull();
+    const pk = seen.find((item) => item.sql.includes("from pg_index"));
+    expect(pk?.sql).toContain("to_regclass($1::text)");
+    expect(pk?.values).toEqual(["public.exemplo"]);
+    const insert = seen.find((item) => item.sql.startsWith("INSERT INTO"));
+    expect(insert?.sql).not.toContain("opcional");
+    expect(insert?.sql).toContain('ON CONFLICT ("id")');
+  });
+
+  it("materializa relacao reversa como array e forward como objeto", async () => {
+    const seen: string[] = [];
+    let relationLookup = 0;
+    const client = scriptedClient((sql) => {
+      seen.push(sql);
+      if (sql.includes("from pg_constraint")) {
+        relationLookup += 1;
+        if (relationLookup === 1) {
+          return {
+            rows: [
+              {
+                source_column: "id",
+                relation_column: "id_campanha",
+                direction: "reverse",
+              },
+            ],
+          };
+        }
+        return {
+          rows: [
+            {
+              source_column: "id_parceiro",
+              relation_column: "id",
+              direction: "forward",
+            },
+          ],
+        };
+      }
+      return { rows: [] };
+    });
+
+    await executePainelNeonQuery(client, {
+      table: "parceria_campanhas",
+      select:
+        "id,parceria_criativos(id,ativo),parceiros_comerciais(nome_fantasia)",
+    });
+
+    const select = seen.find((sql) => sql.startsWith("SELECT"));
+    expect(select).toContain("jsonb_agg");
+    expect(select).toContain("'[]'::jsonb");
+    expect(select).toContain("to_jsonb(rel_row)");
+  });
+});
+
+describe("executePainelNeonRpc", () => {
+  it("usa tipos reais da assinatura PostgreSQL para evitar 42P18", async () => {
+    const seen: Array<{ sql: string; values?: unknown[] }> = [];
+    const client = scriptedClient((sql, values) => {
+      seen.push({ sql, values });
+      if (sql.includes("from pg_proc")) {
+        return {
+          rows: [
+            {
+              oid: 1,
+              arg_names: ["p_id", "p_payload"],
+              arg_types: ["uuid", "jsonb"],
+            },
+          ],
+        };
+      }
+      return { rows: [{ result: true }] };
+    });
+
+    const result = await executePainelNeonRpc(client, {
+      kind: "rpc",
+      fn: "fn_teste",
+      args: {
+        p_id: "00000000-0000-0000-0000-000000000000",
+        p_payload: {},
+      },
+    });
+
+    expect(result.data).toBe(true);
+    const call = seen.find((item) => item.sql.includes('public."fn_teste"'));
+    expect(call?.sql).toContain("$1::uuid");
+    expect(call?.sql).toContain("$2::jsonb");
   });
 });

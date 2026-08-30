@@ -3,6 +3,15 @@
 import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
 
+type ClerkBrowserApi = {
+  load?: () => Promise<unknown> | unknown;
+  handleRedirectCallback?: (options?: Record<string, unknown>) => Promise<unknown> | unknown;
+};
+
+function getClerkBrowserApi() {
+  return (window as typeof window & { Clerk?: ClerkBrowserApi }).Clerk;
+}
+
 function authenticationDomain(publishableKey: string) {
   const encoded = publishableKey.split("_")[2] || "";
   const normalized = encoded.replace(/-/g, "+").replace(/_/g, "/");
@@ -12,6 +21,20 @@ function authenticationDomain(publishableKey: string) {
 
 function loadAuthenticationScript(src: string, publishableKey: string) {
   return new Promise<void>((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>(
+      `script[data-clerk-publishable-key="${publishableKey}"]`
+    );
+
+    if (existing) {
+      if (getClerkBrowserApi()) {
+        resolve();
+        return;
+      }
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener("error", () => reject(new Error()), { once: true });
+      return;
+    }
+
     const script = document.createElement("script");
     script.src = src;
     script.async = true;
@@ -31,14 +54,21 @@ export default function AuthenticationCallbackPage() {
 
     async function finish() {
       const key = process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY?.trim();
-      if (!key) throw new Error();
+      if (!key) throw new Error("CLERK_PUBLISHABLE_KEY_MISSING");
+
       const domain = authenticationDomain(key);
+      if (!domain) throw new Error("CLERK_DOMAIN_INVALID");
+
       await loadAuthenticationScript(
         `https://${domain}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`,
         key
       );
-      await window.Clerk?.load();
-      await window.Clerk?.handleRedirectCallback?.({});
+
+      const clerk = getClerkBrowserApi();
+      if (!clerk) throw new Error("CLERK_BROWSER_API_MISSING");
+
+      await clerk.load?.();
+      await clerk.handleRedirectCallback?.({});
     }
 
     void finish().catch(() => {

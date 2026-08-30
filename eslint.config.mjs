@@ -74,6 +74,14 @@ export default [
   },
 
   {
+    files: ["app/services/cliente-app/auth.ts"],
+    rules: {
+      // Arquivo legado em migração: há variáveis reatribuídas condicionalmente pelo fluxo Neon.
+      "prefer-const": "off",
+    },
+  },
+
+  {
     files: ["apps/app-profissional-vite/src/pages/ClientesPage.tsx"],
     rules: {
       "@typescript-eslint/no-unused-vars": "off",
