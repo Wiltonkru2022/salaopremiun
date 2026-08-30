@@ -1,7 +1,11 @@
 import "server-only";
 
 import { Pool } from "@neondatabase/serverless";
-import { mergeAdminMasterPermissions } from "@/lib/admin-master/auth/adminMasterPermissions";
+import {
+  mergeAdminMasterPermissions,
+  type AdminMasterPermissionKey,
+  type AdminMasterPermissions,
+} from "@/lib/admin-master/auth/adminMasterPermissions";
 import { resolveNeonRuntimeUrl } from "@/lib/neon/runtime-url.server";
 
 type AdminRow = {
@@ -21,6 +25,7 @@ export type AdminMasterPasswordAccess = {
   nome: string;
   email: string;
   perfil: string;
+  permissions: AdminMasterPermissions;
 };
 
 let pool: Pool | null = null;
@@ -51,36 +56,51 @@ function normalizeEmail(value: unknown) {
   return String(value || "").trim().toLowerCase();
 }
 
-/**
- * Validação dedicada do Admin Master.
- *
- * Esta função NÃO passa pelo adapter Supabase-like de lib/neon/painel-query.server.ts.
- * Todas as variáveis PostgreSQL recebem casts explícitos para impedir 42P18.
- */
-export async function resolveAdminMasterPasswordAccess(params: {
+async function loadAccess(params: {
   email: string;
-  clerkUserId: string;
-  externalId?: string | null;
+  authUserId?: string | null;
+  fallbackAuthUserId?: string | null;
   nome?: string | null;
+  permission: AdminMasterPermissionKey;
 }): Promise<AdminMasterPasswordAccess> {
   const email = normalizeEmail(params.email);
-  if (!email) throw Object.assign(new Error("E-mail administrativo inválido."), { status: 400 });
+  if (!email) {
+    throw Object.assign(new Error("E-mail administrativo inválido."), { status: 400 });
+  }
 
   const client = await getPool().connect();
   try {
-    const adminResult = await client.query<AdminRow>(
-      `select
-         id::text as id,
-         coalesce(nome, '')::text as nome,
-         lower(email::text) as email,
-         coalesce(perfil, 'analista')::text as perfil,
-         coalesce(status, 'inativo')::text as status,
-         auth_user_id::text as auth_user_id
-       from public.admin_master_usuarios
-       where lower(email::text) = lower($1::text)
-       limit 1`,
-      [email],
-    );
+    const authUserId = String(params.authUserId || "").trim();
+
+    const adminResult = authUserId
+      ? await client.query<AdminRow>(
+          `select
+             id::text as id,
+             coalesce(nome, '')::text as nome,
+             lower(email::text) as email,
+             coalesce(perfil, 'analista')::text as perfil,
+             coalesce(status, 'inativo')::text as status,
+             auth_user_id::text as auth_user_id
+           from public.admin_master_usuarios
+           where auth_user_id::text = $1::text
+              or lower(email::text) = lower($2::text)
+           order by case when auth_user_id::text = $1::text then 0 else 1 end
+           limit 1`,
+          [authUserId, email],
+        )
+      : await client.query<AdminRow>(
+          `select
+             id::text as id,
+             coalesce(nome, '')::text as nome,
+             lower(email::text) as email,
+             coalesce(perfil, 'analista')::text as perfil,
+             coalesce(status, 'inativo')::text as status,
+             auth_user_id::text as auth_user_id
+           from public.admin_master_usuarios
+           where lower(email::text) = lower($1::text)
+           limit 1`,
+          [email],
+        );
 
     const admin = adminResult.rows[0] || null;
     if (!admin) {
@@ -104,9 +124,9 @@ export async function resolveAdminMasterPasswordAccess(params: {
 
     const dbPermissions = (permissionResult.rows[0] || null) as PermissionRow;
     const permissions = mergeAdminMasterPermissions(admin.perfil, dbPermissions);
-    if (!permissions.dashboard_ver) {
+    if (!permissions[params.permission]) {
       throw Object.assign(
-        new Error("Usuário sem permissão para o dashboard do Admin Master."),
+        new Error("Usuário sem permissão para esta área do Admin Master."),
         { status: 403 },
       );
     }
@@ -120,8 +140,8 @@ export async function resolveAdminMasterPasswordAccess(params: {
 
     const stableAuthId =
       String(admin.auth_user_id || "").trim() ||
-      String(params.externalId || "").trim() ||
-      String(params.clerkUserId || "").trim();
+      authUserId ||
+      String(params.fallbackAuthUserId || "").trim();
 
     return {
       id: admin.id,
@@ -129,8 +149,42 @@ export async function resolveAdminMasterPasswordAccess(params: {
       nome: String(admin.nome || params.nome || email.split("@")[0] || "Admin Master"),
       email: admin.email || email,
       perfil: admin.perfil || "analista",
+      permissions,
     };
   } finally {
     client.release();
   }
+}
+
+/** Login por senha: Clerk valida a senha e Neon valida acesso/permissão. */
+export async function resolveAdminMasterPasswordAccess(params: {
+  email: string;
+  clerkUserId: string;
+  externalId?: string | null;
+  nome?: string | null;
+}): Promise<AdminMasterPasswordAccess> {
+  return loadAccess({
+    email: params.email,
+    authUserId: params.externalId,
+    fallbackAuthUserId: params.clerkUserId,
+    nome: params.nome,
+    permission: "dashboard_ver",
+  });
+}
+
+/**
+ * Validação de cada página do Admin Master após o login.
+ * Usa SQL direto e tipado; não passa pelo adapter painel-query.server.ts.
+ */
+export async function resolveAdminMasterSessionAccess(params: {
+  email: string;
+  authUserId: string;
+  permission?: AdminMasterPermissionKey;
+}): Promise<AdminMasterPasswordAccess> {
+  return loadAccess({
+    email: params.email,
+    authUserId: params.authUserId,
+    fallbackAuthUserId: params.authUserId,
+    permission: params.permission || "dashboard_ver",
+  });
 }
