@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+// publicRoute: endpoint legado intencionalmente publico; apenas retorna 410 e nao acessa dados nem cria sessao.
 export async function POST() {
   return NextResponse.json(
     {
