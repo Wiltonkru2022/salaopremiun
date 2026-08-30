@@ -24,19 +24,20 @@ function isUuid(value: unknown) {
   );
 }
 
-function buildMfaEnrollmentUrl(nextPath: string) {
-  const backToLogin = `/admin-master/login?next=${encodeURIComponent(nextPath)}`;
-  return `/conta?next=${encodeURIComponent(backToLogin)}`;
-}
-
 export async function POST(request: Request) {
   if (getAuthProviderForSurface("admin-master") !== "clerk") {
-    return NextResponse.json({ ok: false, message: "O acesso administrativo está temporariamente indisponível." }, { status: 409, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(
+      { ok: false, message: "O acesso administrativo está temporariamente indisponível." },
+      { status: 409, headers: { "Cache-Control": "no-store" } }
+    );
   }
 
   const token = readBearerToken(request);
   if (!token) {
-    return NextResponse.json({ ok: false, message: "Não foi possível confirmar sua sessão." }, { status: 401, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(
+      { ok: false, message: "Não foi possível confirmar sua sessão." },
+      { status: 401, headers: { "Cache-Control": "no-store" } }
+    );
   }
 
   const body = (await request.json().catch(() => null)) as RequestBody | null;
@@ -45,8 +46,12 @@ export async function POST(request: Request) {
   try {
     const identity = await verifyClerkBearerToken(token);
     const email = String(identity.email || "").trim().toLowerCase();
+
     if (!email) {
-      return NextResponse.json({ ok: false, message: "Sua conta não possui um e-mail principal válido." }, { status: 403, headers: { "Cache-Control": "no-store" } });
+      return NextResponse.json(
+        { ok: false, message: "Sua conta não possui um e-mail principal válido." },
+        { status: 403, headers: { "Cache-Control": "no-store" } }
+      );
     }
 
     const { data: clerkData, error: clerkError } = await clerkAdminApi.getUserById(identity.subject);
@@ -57,37 +62,11 @@ export async function POST(request: Request) {
       );
     }
 
+    // MFA é opcional. Se a conta tiver MFA e a sessão atual tiver concluído
+    // o segundo fator, registramos isso na sessão interna. Se não tiver,
+    // o login continua normalmente apenas com a autenticação do Clerk.
     const accountMfaEnrolled = Boolean(clerkData.user.two_factor_enabled);
-    if (!accountMfaEnrolled || !identity.mfaVerified) {
-      const enrollmentRequired = !accountMfaEnrolled;
-      void emitSecurityEvent({
-        evento: "admin_master_mfa_requerido",
-        tipoUsuario: "salao",
-        userId: identity.subject,
-        risco: "baixo",
-        ip: getClientIp(request),
-        userAgent: request.headers.get("user-agent") || null,
-        origem: "admin-master-clerk",
-        route: "/admin-master/login",
-        detalhes: {
-          email,
-          provider: "clerk",
-          enrollment_required: enrollmentRequired,
-        },
-      });
-      return NextResponse.json(
-        {
-          ok: false,
-          mfaRequired: true,
-          mfaEnrollmentRequired: enrollmentRequired,
-          redirectTo: enrollmentRequired ? buildMfaEnrollmentUrl(nextPath) : undefined,
-          message: enrollmentRequired
-            ? "Ative a verificação em duas etapas antes de continuar."
-            : "Conclua a verificação em duas etapas para continuar.",
-        },
-        { status: 403, headers: { "Cache-Control": "no-store" } }
-      );
-    }
+    const mfaVerified = Boolean(identity.mfaVerified);
 
     let stableAuthId = String(clerkData.user.externalId || "").trim();
 
@@ -101,6 +80,7 @@ export async function POST(request: Request) {
         .eq("email", email)
         .maybeSingle();
       const legacyAuthId = String(adminByEmail?.auth_user_id || "").trim();
+
       if (isUuid(legacyAuthId)) {
         stableAuthId = legacyAuthId;
         await clerkAdminApi
@@ -118,20 +98,34 @@ export async function POST(request: Request) {
     );
 
     if (!access.ok) {
-      return NextResponse.json({ ok: false, message: access.message }, { status: access.status, headers: { "Cache-Control": "no-store" } });
+      return NextResponse.json(
+        { ok: false, message: access.message },
+        { status: access.status, headers: { "Cache-Control": "no-store" } }
+      );
     }
 
-    const response = NextResponse.json({
-      ok: true,
-      redirectTo: nextPath,
-      usuario: { id: access.usuario.id, nome: access.usuario.nome, perfil: access.usuario.perfil },
-    }, { status: 200, headers: { "Cache-Control": "no-store" } });
+    const response = NextResponse.json(
+      {
+        ok: true,
+        redirectTo: nextPath,
+        usuario: {
+          id: access.usuario.id,
+          nome: access.usuario.nome,
+          perfil: access.usuario.perfil,
+        },
+        security: {
+          mfaEnrolled: accountMfaEnrolled,
+          mfaVerified,
+        },
+      },
+      { status: 200, headers: { "Cache-Control": "no-store" } }
+    );
 
     await setAdminMasterSessionCookie(response, {
       authUserId: stableAuthId,
       email,
       host: getRequestHost(request),
-      mfaVerifiedAt: Math.floor(Date.now() / 1000),
+      mfaVerifiedAt: mfaVerified ? Math.floor(Date.now() / 1000) : 0,
     });
 
     void emitSecurityEvent({
@@ -147,15 +141,16 @@ export async function POST(request: Request) {
         email,
         provider: "clerk",
         clerk_subject: identity.subject,
-        mfa: "validado",
+        mfa_enrolled: accountMfaEnrolled,
+        mfa_verified: mfaVerified,
       },
     });
 
     return response;
   } catch {
-    return NextResponse.json({
-      ok: false,
-      message: "Não foi possível validar seu acesso.",
-    }, { status: 401, headers: { "Cache-Control": "no-store" } });
+    return NextResponse.json(
+      { ok: false, message: "Não foi possível validar seu acesso." },
+      { status: 401, headers: { "Cache-Control": "no-store" } }
+    );
   }
 }
