@@ -12,7 +12,7 @@ type ClerkSession = {
 };
 
 type ClerkLike = {
-  load: () => Promise<void>;
+  load: (options?: Record<string, unknown>) => Promise<void>;
   session?: ClerkSession | null;
   client?: {
     activeSessions?: ClerkSession[];
@@ -27,6 +27,7 @@ type ClerkLike = {
 type ClerkWindow = Window &
   typeof globalThis & {
     Clerk?: ClerkLike;
+    __internal_ClerkUICtor?: unknown;
   };
 
 function getClerkDomain(key: string) {
@@ -56,6 +57,55 @@ function isAdminMasterSecurityFlow(returnPath: string) {
   );
 }
 
+function loadScript(src: string, attributes?: Record<string, string>) {
+  return new Promise<void>((resolve, reject) => {
+    const existing = document.querySelector<HTMLScriptElement>(
+      `script[src="${src}"]`
+    );
+
+    if (existing) {
+      if (existing.dataset.loaded === "true") {
+        resolve();
+        return;
+      }
+
+      existing.addEventListener("load", () => resolve(), { once: true });
+      existing.addEventListener(
+        "error",
+        () => reject(new Error(`Falha ao carregar ${src}.`)),
+        { once: true }
+      );
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.async = true;
+    script.crossOrigin = "anonymous";
+    script.src = src;
+
+    Object.entries(attributes || {}).forEach(([key, value]) => {
+      script.setAttribute(key, value);
+    });
+
+    script.addEventListener(
+      "load",
+      () => {
+        script.dataset.loaded = "true";
+        resolve();
+      },
+      { once: true }
+    );
+
+    script.addEventListener(
+      "error",
+      () => reject(new Error(`Falha ao carregar ${src}.`)),
+      { once: true }
+    );
+
+    document.head.appendChild(script);
+  });
+}
+
 export default function ContaClerkPage() {
   const hostRef = useRef<HTMLDivElement>(null);
   const clerkRef = useRef<ClerkLike | null>(null);
@@ -82,34 +132,39 @@ export default function ContaClerkPage() {
           throw new Error("O acesso seguro não está configurado.");
         }
 
+        const domain = getClerkDomain(key);
         const clerkWindow = window as ClerkWindow;
 
+        // ClerkJS 6 separa o SDK principal do pacote de UI. Como esta tela
+        // usa mountUserProfile(), precisamos carregar explicitamente @clerk/ui
+        // antes de inicializar o Clerk com os componentes visuais.
+        if (!clerkWindow.__internal_ClerkUICtor) {
+          await loadScript(
+            `https://${domain}/npm/@clerk/ui@1/dist/ui.browser.js`
+          );
+        }
+
         if (!clerkWindow.Clerk) {
-          await new Promise<void>((resolve, reject) => {
-            const script = document.createElement("script");
-
-            script.async = true;
-            script.crossOrigin = "anonymous";
-            script.dataset.clerkPublishableKey = key;
-            script.src =
-              `https://${getClerkDomain(key)}` +
-              `/npm/@clerk/clerk-js@6/dist/clerk.browser.js`;
-
-            script.onload = () => resolve();
-            script.onerror = () =>
-              reject(new Error("Não foi possível carregar a autenticação."));
-
-            document.head.appendChild(script);
-          });
+          await loadScript(
+            `https://${domain}/npm/@clerk/clerk-js@6/dist/clerk.browser.js`,
+            { "data-clerk-publishable-key": key }
+          );
         }
 
         const clerk = (window as ClerkWindow).Clerk;
+        const ClerkUI = (window as ClerkWindow).__internal_ClerkUICtor;
 
         if (!clerk) {
           throw new Error("O sistema de autenticação não foi carregado.");
         }
 
-        await clerk.load();
+        if (!ClerkUI) {
+          throw new Error("Os componentes visuais de segurança não foram carregados.");
+        }
+
+        await clerk.load({
+          ui: { ClerkUI },
+        });
 
         if (!active) return;
 
@@ -172,9 +227,18 @@ export default function ContaClerkPage() {
       return;
     }
 
-    clerk.mountUserProfile(profileHost, {
-      routing: "hash",
-    });
+    try {
+      clerk.mountUserProfile(profileHost, {
+        routing: "hash",
+      });
+    } catch (cause) {
+      setError(
+        cause instanceof Error
+          ? cause.message
+          : "Não foi possível abrir a área de segurança da conta."
+      );
+      return;
+    }
 
     return () => {
       clerk.unmountUserProfile?.(profileHost);
