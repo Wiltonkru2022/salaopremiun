@@ -1,6 +1,6 @@
 import "server-only";
 
-import { Pool, type PoolClient, type QueryResultRow } from "@neondatabase/serverless";
+import { Pool, type PoolClient } from "@neondatabase/serverless";
 import { resolveNeonRuntimeUrl } from "@/lib/neon/runtime-url.server";
 
 let pool: Pool | null = null;
@@ -43,9 +43,12 @@ export async function withNeonDirectClient<T>(
   }
 }
 
-export async function queryNeonDirect<T extends QueryResultRow = QueryResultRow>(
+export async function queryNeonDirect<T = Record<string, unknown>>(
   text: string,
   values: unknown[] = []
 ) {
-  return withNeonDirectClient((client) => client.query<T>(text, values));
+  return withNeonDirectClient(async (client) => {
+    const result = await client.query(text, values);
+    return result as typeof result & { rows: T[] };
+  });
 }
