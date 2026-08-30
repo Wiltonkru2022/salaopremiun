@@ -41,6 +41,30 @@ function bookedForAnotherPersonName(observacoes?: string | null) {
   return nome && nome.toLowerCase() !== "nome não informado" ? nome : null;
 }
 
+function normalizeAppointmentDate(value?: string | null) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+
+  const isoDate = /^(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+  if (isoDate) return `${isoDate[1]}-${isoDate[2]}-${isoDate[3]}`;
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) return "";
+
+  const year = parsed.getUTCFullYear();
+  const month = String(parsed.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getUTCDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function normalizeAppointmentTime(value?: string | null) {
+  const raw = String(value || "").trim();
+  if (!raw) return "";
+  const match = /^(\d{1,2}):(\d{2})/.exec(raw);
+  if (!match) return raw;
+  return `${match[1].padStart(2, "0")}:${match[2]}:00`;
+}
+
 export default async function ClienteAppointmentsPage({
   searchParams,
 }: {
@@ -63,6 +87,9 @@ export default async function ClienteAppointmentsPage({
     const outraPessoa = bookedForAnotherPersonName(item.observacoes);
     return {
       ...item,
+      data: normalizeAppointmentDate(item.data),
+      horaInicio: normalizeAppointmentTime(item.horaInicio),
+      horaFim: normalizeAppointmentTime(item.horaFim),
       salaoNome: outraPessoa ? `${item.salaoNome} · Agendado por você` : item.salaoNome,
       servicoNome: outraPessoa ? `${item.servicoNome} · Para ${outraPessoa}` : item.servicoNome,
       criadoEm: toDeterministicSalonLocalDateTime(
