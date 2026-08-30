@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, principal]
+    branches: [main, principal, fix/app-cliente-auth-stable]
   pull_request:
 
 permissions:
