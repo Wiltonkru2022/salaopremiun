@@ -1,0 +1,19 @@
+"use client";
+import { useState } from "react";
+import { cadastrarAluno } from "../actions";
+
+const Field=({label,name,type="text",required=true,full=false,...props}:{label:string;name:string;type?:string;required?:boolean;full?:boolean;[key:string]:unknown})=><div className={`cursos-field${full?" full":""}`}><label htmlFor={name}>{label}</label><input id={name} name={name} type={type} required={required} {...props}/></div>;
+
+export default function CadastroForm(){
+ const [menor,setMenor]=useState(false);
+ function checkAge(value:string){const birth=new Date(`${value}T12:00:00`); const now=new Date(); const age=now.getFullYear()-birth.getFullYear()-(now < new Date(now.getFullYear(),birth.getMonth(),birth.getDate())?1:0); setMenor(age<18);}
+ return <form className="cursos-form" action={cadastrarAluno}>
+  <h1>Crie sua conta</h1><p className="cursos-muted">Seus dados serão usados para matrícula, contrato e certificado.</p>
+  <section className="cursos-form-section"><h2>Dados pessoais</h2><div className="cursos-fields"><Field label="Nome completo" name="nome" full/><Field label="CPF" name="cpf" inputMode="numeric" placeholder="000.000.000-00"/><Field label="Data de nascimento" name="data_nascimento" type="date" onChange={(e:React.ChangeEvent<HTMLInputElement>)=>checkAge(e.target.value)}/><Field label="E-mail" name="email" type="email"/><Field label="WhatsApp" name="telefone" type="tel" placeholder="(00) 00000-0000"/></div></section>
+  <section className="cursos-form-section"><h2>Endereço</h2><div className="cursos-fields"><Field label="CEP" name="cep" inputMode="numeric"/><Field label="Endereço" name="endereco"/><Field label="Número" name="numero"/><Field label="Complemento" name="complemento" required={false}/><Field label="Bairro" name="bairro"/><Field label="Cidade" name="cidade"/><div className="cursos-field"><label htmlFor="estado">Estado</label><select id="estado" name="estado" required><option value="">Selecione</option>{["AC","AL","AP","AM","BA","CE","DF","ES","GO","MA","MT","MS","MG","PA","PB","PR","PE","PI","RJ","RN","RS","RO","RR","SC","SP","SE","TO"].map(uf=><option key={uf}>{uf}</option>)}</select></div></div></section>
+  {menor&&<section className="cursos-form-section"><h2>Responsável legal</h2><p className="cursos-muted">Obrigatório para alunas menores de 18 anos.</p><div className="cursos-fields"><Field label="Nome completo do responsável" name="responsavel_nome" full/><Field label="CPF do responsável" name="responsavel_cpf"/><Field label="Parentesco" name="responsavel_parentesco"/><Field label="E-mail do responsável" name="responsavel_email" type="email"/><Field label="Telefone do responsável" name="responsavel_telefone" type="tel"/></div></section>}
+  <section className="cursos-form-section"><h2>Seu acesso</h2><div className="cursos-fields"><Field label="Senha" name="password" type="password"/><Field label="Confirmar senha" name="confirm_password" type="password"/></div><p className="cursos-muted">Use ao menos 8 caracteres, com letras e números.</p></section>
+  <section className="cursos-form-section"><label className="cursos-check"><input type="checkbox" name="termos" required/> Li e aceito os Termos de Uso.</label><label className="cursos-check"><input type="checkbox" name="privacidade" required/> Li a Política de Privacidade e entendo o uso dos dados para matrícula e contrato.</label><label className="cursos-check"><input type="checkbox" name="marketing"/> Quero receber avisos sobre novas turmas e cursos.</label><label className="cursos-check"><input type="checkbox" name="imagem"/> Autorizo, de forma opcional, o uso de imagem em registros e divulgação do curso.</label></section>
+  <button className="cursos-button" type="submit" style={{width:"100%",marginTop:28}}>Criar conta e ver contrato</button>
+ </form>;
+}
