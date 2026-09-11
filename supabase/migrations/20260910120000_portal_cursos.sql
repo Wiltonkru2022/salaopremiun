@@ -139,7 +139,3 @@ alter table public.cursos_auditoria enable row level security;
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
 values ('cursos-materiais', 'cursos-materiais', false, 26214400, array['application/pdf','video/mp4','image/jpeg','image/png'])
 on conflict (id) do update set public = false, file_size_limit = 26214400;
-
-insert into public.cursos_catalogo (slug,nome,resumo,descricao,carga_horaria,valor_centavos)
-values ('aperfeicoamento-profissional','Aperfeiçoamento Profissional','Uma formação presencial completa para elevar sua técnica e atendimento.','Aprenda fundamentos, prática orientada, organização do atendimento e acabamento profissional com acompanhamento próximo da professora.',16,0)
-on conflict (slug) do nothing;

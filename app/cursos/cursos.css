@@ -9,6 +9,10 @@
 .cursos-nav a:hover,.cursos-nav button:hover { background: #f5edf2; color: #5b164f; }
 .cursos-main { padding: 48px 0 80px; }
 .cursos-hero { overflow: hidden; position: relative; border-radius: 34px; padding: clamp(36px,7vw,82px); color: #fff; background: radial-gradient(circle at 85% 20%,rgba(236,188,211,.35),transparent 24%), linear-gradient(135deg,#35102f,#6d235f 58%,#9e527f); box-shadow: 0 30px 70px rgba(61,20,55,.2); }
+.cursos-hero-home { min-height: 620px; display: flex; align-items: center; background-image: linear-gradient(90deg,rgba(38,8,33,.94) 0%,rgba(66,13,54,.84) 34%,rgba(77,20,62,.3) 58%,rgba(41,9,35,.08) 100%), url("/cursos/hero-formacao.png"); background-size: cover; background-position: center; }
+.cursos-hero-content { position: relative; z-index: 1; max-width: 610px; }
+.cursos-hero-home h1 { max-width: 600px; font-size: clamp(42px,5.6vw,72px); text-shadow: 0 3px 28px rgba(27,5,23,.35); }
+.cursos-hero-home p { max-width: 560px; color: #fff5fa; text-shadow: 0 2px 16px rgba(27,5,23,.45); }
 .cursos-eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 7px 11px; border-radius: 999px; background: rgba(255,255,255,.13); color: #fff; font-size: 12px; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
 .cursos-hero h1 { max-width: 760px; margin: 22px 0 16px; font-size: clamp(38px,6vw,76px); line-height: .98; letter-spacing: -.045em; }
 .cursos-hero p { max-width: 660px; margin: 0; color: #f3dfe9; font-size: clamp(17px,2vw,21px); line-height: 1.6; }
@@ -61,5 +65,5 @@
 .cursos-material { display: flex; justify-content: space-between; gap: 16px; align-items: center; padding: 12px 0; border-top: 1px solid #f0e8ed; }
 .cursos-footer { padding: 28px 0; border-top: 1px solid #eadfe5; color: #756873; font-size: 13px; background: #fff; }
 @media(max-width:900px){.cursos-grid{grid-template-columns:1fr 1fr}.cursos-dashboard{grid-template-columns:1fr}.cursos-sidebar{position:static}.cursos-stats{grid-template-columns:1fr 1fr}}
-@media(max-width:620px){.cursos-nav a:not(:last-child){display:none}.cursos-main{padding-top:28px}.cursos-grid,.cursos-fields,.cursos-stats{grid-template-columns:1fr}.cursos-hero{border-radius:24px}.cursos-card{padding:20px}}
+@media(max-width:620px){.cursos-nav a:not(:last-child){display:none}.cursos-main{padding-top:28px}.cursos-grid,.cursos-fields,.cursos-stats{grid-template-columns:1fr}.cursos-hero{border-radius:24px}.cursos-hero-home{min-height:680px;align-items:flex-end;padding:34px 24px;background-image:linear-gradient(180deg,rgba(36,8,30,.02) 12%,rgba(45,10,38,.44) 48%,rgba(37,7,31,.97) 76%),url("/cursos/hero-formacao.png");background-position:78% center}.cursos-hero-home h1{font-size:clamp(38px,12vw,52px)}.cursos-hero-home p{font-size:16px;line-height:1.5}.cursos-hero-home .cursos-actions{margin-top:22px}.cursos-hero-home .cursos-button{flex:1}.cursos-card{padding:20px}}
 @media print {.cursos-header,.cursos-footer,.no-print{display:none!important}.cursos-shell{background:#fff}.cursos-main{padding:0}.cursos-contract-paper{box-shadow:none;border:0}.cursos-wrap{width:100%}}

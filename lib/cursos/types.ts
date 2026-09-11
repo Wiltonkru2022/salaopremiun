@@ -31,6 +31,8 @@ export type Curso = {
   valor_centavos: number;
   imagem_url: string | null;
   ativo: boolean;
+  contrato_versao: string | null;
+  contrato_conteudo: string | null;
 };
 
 export type Turma = {

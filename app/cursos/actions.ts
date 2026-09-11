@@ -59,6 +59,7 @@ export async function cadastrarAluno(form: FormData) {
   if (menor && (responsavelNome.length < 3 || responsavelCpf.length !== 11)) fail("/cursos/cadastro", "Para menores de 18 anos, informe nome e CPF do responsável.");
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
+  const role = emailPodeAdministrar(parsed.data.email) ? "admin" : "aluno";
   const { data, error } = await cursosDb().from("cursos_usuarios").insert({
     nome: parsed.data.nome, email: parsed.data.email, cpf: parsed.data.cpf, telefone: parsed.data.telefone,
     data_nascimento: parsed.data.dataNascimento, cep: parsed.data.cep, endereco: parsed.data.endereco,
@@ -69,13 +70,13 @@ export async function cadastrarAluno(form: FormData) {
     responsavel_telefone: menor ? digits(form.get("responsavel_telefone")) : null,
     responsavel_parentesco: menor ? text(form, "responsavel_parentesco") : null,
     marketing_aceito: form.get("marketing") === "on", imagem_aceita: form.get("imagem") === "on",
-    role: "aluno",
+    role,
   }).select("id,email,role").single();
   if (error) {
     if (error.code === "23505") fail("/cursos/cadastro", "Já existe uma conta com este e-mail ou CPF.");
     fail("/cursos/cadastro", "Não foi possível criar a conta agora. Tente novamente.");
   }
-  await createCursoSession({ userId: String(data.id), email: String(data.email), role: "aluno" });
+  await createCursoSession({ userId: String(data.id), email: String(data.email), role });
   redirect("/cursos/contrato");
 }
 
@@ -104,7 +105,7 @@ export async function aceitarTermoCadastro(form: FormData) {
     termo_cadastro_aceito_em: agora, termo_cadastro_assinatura: assinatura, termo_cadastro_versao: "1.0",
   }).eq("id", session.userId);
   if (error) fail("/cursos/contrato", "Não foi possível registrar o aceite.");
-  redirect("/meuscursos");
+  redirect(emailPodeAdministrar(session.email) ? "/admin-cursos" : "/meuscursos");
 }
 
 export async function matricularSe(form: FormData) {
@@ -131,12 +132,14 @@ export async function aceitarContratoMatricula(form: FormData) {
   const matriculaId = text(form, "matricula_id");
   const assinatura = text(form, "assinatura");
   if (assinatura.length < 3 || form.get("aceite") !== "on") fail(`/meuscursos/${matriculaId}/contrato`, "Confirme o aceite e digite o nome completo.");
-  const { data: matricula } = await cursosDb().from("cursos_matriculas").select("id,aluno_id,curso_id,turma_id").eq("id", matriculaId).eq("aluno_id", session.userId).single();
+  const { data: matricula } = await cursosDb().from("cursos_matriculas").select("id,aluno_id,curso_id,turma_id,curso:cursos_catalogo(contrato_versao,contrato_conteudo)").eq("id", matriculaId).eq("aluno_id", session.userId).single();
   if (!matricula) redirect("/meuscursos");
+  const curso = Array.isArray(matricula.curso) ? matricula.curso[0] : matricula.curso;
+  if (!curso?.contrato_conteudo || !curso?.contrato_versao) fail(`/meuscursos/${matriculaId}/contrato`, "O contrato deste curso ainda não foi publicado.");
   const agora = new Date().toISOString();
   const { error } = await cursosDb().from("cursos_contratos").upsert({
-    matricula_id: matricula.id, versao: "1.0", assinatura_nome: assinatura, assinado_em: agora,
-    conteudo_snapshot: "Contrato de prestação de serviços educacionais do SalãoPremium Cursos. A aluna declara ciência das datas, conteúdo, carga horária, regras de presença, pagamento, cancelamento, uso da plataforma e tratamento de dados necessários à execução do curso.",
+    matricula_id: matricula.id, versao: curso.contrato_versao, assinatura_nome: assinatura, assinado_em: agora,
+    conteudo_snapshot: curso.contrato_conteudo,
   }, { onConflict: "matricula_id" });
   if (error) fail(`/meuscursos/${matriculaId}/contrato`, "Não foi possível registrar a assinatura.");
   await cursosDb().from("cursos_matriculas").update({ status: "confirmada", contrato_aceito_em: agora }).eq("id", matricula.id);
@@ -151,9 +154,22 @@ export async function criarCurso(form: FormData) {
   const { error } = await cursosDb().from("cursos_catalogo").insert({
     nome, slug, resumo: text(form, "resumo"), descricao: text(form, "descricao"),
     carga_horaria: Number(text(form, "carga_horaria") || 0), valor_centavos: Math.round(Number(text(form, "valor")) * 100), ativo: true,
+    contrato_versao: text(form, "contrato_versao"), contrato_conteudo: text(form, "contrato_conteudo"),
   });
   if (error) fail("/admin-cursos", "Não foi possível criar o curso.");
   revalidatePath("/admin-cursos"); revalidatePath("/cursos");
+}
+
+export async function atualizarContratoCurso(form: FormData) {
+  const session = await readCursoSession();
+  if (!session || !(session.role === "admin" || emailPodeAdministrar(session.email))) redirect("/admin-cursos/login");
+  const cursoId = text(form, "curso_id");
+  const versao = text(form, "contrato_versao");
+  const conteudo = text(form, "contrato_conteudo");
+  if (!cursoId || !versao || conteudo.length < 50) fail("/admin-cursos", "Informe a versão e um contrato completo com pelo menos 50 caracteres.");
+  const { error } = await cursosDb().from("cursos_catalogo").update({ contrato_versao: versao, contrato_conteudo: conteudo }).eq("id", cursoId);
+  if (error) fail("/admin-cursos", "Não foi possível atualizar o contrato do curso.");
+  revalidatePath("/admin-cursos");
 }
 
 export async function criarTurma(form: FormData) {
