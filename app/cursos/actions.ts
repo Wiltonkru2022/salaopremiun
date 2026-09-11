@@ -43,20 +43,23 @@ function idadeEmAnos(dataNascimento: string) {
 }
 
 export async function cadastrarAluno(form: FormData) {
+  const cadastroAdmin = text(form, "origem") === "admin";
+  const cadastroPath = cadastroAdmin ? "/admin-cursos/cadastro" : "/cursos/cadastro";
   const parsed = cadastroSchema.safeParse({
     nome: text(form, "nome"), email: text(form, "email").toLowerCase(), cpf: digits(form.get("cpf")),
     telefone: digits(form.get("telefone")), dataNascimento: text(form, "data_nascimento"), cep: digits(form.get("cep")),
     endereco: text(form, "endereco"), numero: text(form, "numero"), bairro: text(form, "bairro"),
     cidade: text(form, "cidade"), estado: text(form, "estado").toUpperCase(), password: text(form, "password"),
   });
-  if (!parsed.success) fail("/cursos/cadastro", "Revise os campos obrigatórios. A senha precisa ter 8 caracteres, letras e números.");
-  if (form.get("privacidade") !== "on" || form.get("termos") !== "on") fail("/cursos/cadastro", "É necessário aceitar os Termos e a Política de Privacidade.");
-  if (text(form, "password") !== text(form, "confirm_password")) fail("/cursos/cadastro", "As senhas não coincidem.");
+  if (!parsed.success) fail(cadastroPath, "Revise os campos obrigatórios. A senha precisa ter 8 caracteres, letras e números.");
+  if (form.get("privacidade") !== "on" || form.get("termos") !== "on") fail(cadastroPath, "É necessário aceitar os Termos e a Política de Privacidade.");
+  if (text(form, "password") !== text(form, "confirm_password")) fail(cadastroPath, "As senhas não coincidem.");
+  if (cadastroAdmin && !emailPodeAdministrar(parsed.data.email)) fail(cadastroPath, "Este e-mail não está autorizado para administrar os cursos.");
 
   const menor = idadeEmAnos(parsed.data.dataNascimento) < 18;
   const responsavelNome = text(form, "responsavel_nome");
   const responsavelCpf = digits(form.get("responsavel_cpf"));
-  if (menor && (responsavelNome.length < 3 || responsavelCpf.length !== 11)) fail("/cursos/cadastro", "Para menores de 18 anos, informe nome e CPF do responsável.");
+  if (menor && (responsavelNome.length < 3 || responsavelCpf.length !== 11)) fail(cadastroPath, "Para menores de 18 anos, informe nome e CPF do responsável.");
 
   const passwordHash = await bcrypt.hash(parsed.data.password, 12);
   const role = emailPodeAdministrar(parsed.data.email) ? "admin" : "aluno";
@@ -73,18 +76,19 @@ export async function cadastrarAluno(form: FormData) {
     role,
   }).select("id,email,role").single();
   if (error) {
-    if (error.code === "23505") fail("/cursos/cadastro", "Já existe uma conta com este e-mail ou CPF.");
-    fail("/cursos/cadastro", "Não foi possível criar a conta agora. Tente novamente.");
+    if (error.code === "23505") fail(cadastroPath, "Já existe uma conta com este e-mail ou CPF.");
+    fail(cadastroPath, "Não foi possível criar a conta agora. Tente novamente.");
   }
   await createCursoSession({ userId: String(data.id), email: String(data.email), role });
-  redirect("/cursos/contrato");
+  redirect(cadastroAdmin ? "/admin-cursos" : "/cursos/contrato");
 }
 
 export async function entrarCursos(form: FormData) {
+  const loginPath = text(form, "origem") === "admin" ? "/admin-cursos/login" : "/cursos/login";
   const email = text(form, "email").toLowerCase();
   const password = text(form, "password");
   const usuario = await buscarUsuarioPorEmail(email);
-  if (!usuario || !(await bcrypt.compare(password, usuario.password_hash))) fail("/cursos/login", "E-mail ou senha inválidos.");
+  if (!usuario || !(await bcrypt.compare(password, usuario.password_hash))) fail(loginPath, "E-mail ou senha inválidos.");
   const role = emailPodeAdministrar(email) ? "admin" : usuario.role;
   await createCursoSession({ userId: usuario.id, email: usuario.email, role });
   redirect(role === "admin" || role === "professor" ? "/admin-cursos" : "/meuscursos");
