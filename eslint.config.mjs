@@ -18,6 +18,7 @@ export default [
       "apps/**/dist/**",
       "apps/mobile-shells/**/android/**",
       "apps/mobile-shells/**/node_modules/**",
+      "apps/mobile-shells/**/www/**",
       "public/app-profissional/assets/**",
       "public/app-profissional/sw.js",
       "public/app-profissional/workbox-*.js",

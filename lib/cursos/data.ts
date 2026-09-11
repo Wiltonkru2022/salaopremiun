@@ -6,6 +6,10 @@ import type { Curso, CursoUsuario, MatriculaPainel, Turma } from "./types";
 // Os tipos definitivos passam a incluir estas tabelas após gerar o schema remoto.
 const db = () => getSupabaseAdmin() as any;
 
+function isCursosSchemaMissing(error: { code?: string; message?: string } | null) {
+  return error?.code === "PGRST205" && error.message?.includes("cursos_catalogo");
+}
+
 export async function listarCursosAbertos() {
   const { data, error } = await db()
     .from("cursos_catalogo")
@@ -13,6 +17,9 @@ export async function listarCursosAbertos() {
     .eq("ativo", true)
     .eq("cursos_turmas.status", "aberta")
     .order("nome");
+  // O catálogo público deve continuar disponível enquanto a migration do
+  // portal ainda está sendo aplicada no projeto Supabase.
+  if (isCursosSchemaMissing(error)) return [];
   if (error) throw error;
   return (data || []) as unknown as Array<Curso & { cursos_turmas: Turma[] }>;
 }
