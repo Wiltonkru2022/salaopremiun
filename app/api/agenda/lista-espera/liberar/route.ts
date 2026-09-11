@@ -6,7 +6,7 @@ import {
   requireSalaoAnyPermission,
 } from "@/lib/auth/require-salao-permission";
 import { notifyWaitlistAboutReleasedSlot } from "@/lib/client-app/waitlist";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const payloadSchema = z.object({
   idSalao: z.string().uuid(),
@@ -27,7 +27,7 @@ export async function POST(req: NextRequest) {
     ]);
 
     const resultado = await notifyWaitlistAboutReleasedSlot({
-      databaseAdmin: getDatabaseAdmin(),
+      supabaseAdmin: getSupabaseAdmin(),
       releasedSlot: {
         idSalao: body.idSalao,
         idServico: body.idServico,

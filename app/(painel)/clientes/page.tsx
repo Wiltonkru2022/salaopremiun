@@ -17,7 +17,7 @@ import PaginationControls from "@/components/ui/PaginationControls";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import { getAssinaturaUrl } from "@/lib/site-urls";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 
 type Cliente = {
   id: string;
@@ -38,7 +38,7 @@ type Permissoes = Record<string, boolean>;
 const CLIENTES_PAGE_SIZE = 10;
 
 export default function ClientesPage() {
-  const database = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const { snapshot: painelSession } = usePainelSession();
   const { planoAccess } = usePlanoAccessSnapshot(true);
@@ -116,7 +116,7 @@ export default function ClientesPage() {
       const from = page * CLIENTES_PAGE_SIZE;
       const to = from + CLIENTES_PAGE_SIZE - 1;
 
-      let query = database
+      let query = supabase
         .from("clientes")
         .select(
           "id, nome, cashback, whatsapp, telefone, email, bairro, profissao, status, ativo, created_at",
@@ -149,7 +149,7 @@ export default function ClientesPage() {
       const rows = ((data ?? []) as unknown as Cliente[]) || [];
       const ids = rows.map((item) => item.id).filter(Boolean);
       const { data: authRows } = ids.length
-        ? await database
+        ? await supabase
             .from("clientes_auth")
             .select("id_cliente, app_conta_id, app_ativo")
             .eq("id_salao", salaoId)
@@ -178,7 +178,7 @@ export default function ClientesPage() {
       setClientesTotal(count ?? (append ? from + rows.length : rows.length));
       setClientesHasMore((count ?? 0) > to + 1);
     },
-    [database, statusFiltro, buscaAplicada]
+    [supabase, statusFiltro, buscaAplicada]
   );
 
   const bootstrap = useCallback(async () => {

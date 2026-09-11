@@ -7,7 +7,7 @@ import {
 import type { AdminMasterPermissionKey } from "@/lib/admin-master/auth/adminMasterPermissions";
 import { syncAdminMasterAlerts } from "@/lib/admin-master/alerts-sync";
 import { syncAdminMasterWebhookEvents } from "@/lib/admin-master/webhooks-sync";
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 export function createAdminMasterOperacaoService() {
   return {
@@ -39,8 +39,8 @@ export function createAdminMasterOperacaoService() {
       return runAdminOperation({
         action: "admin_master_avaliar_extensao_trial",
         idSalao,
-        run: async (databaseAdmin) => {
-          const { data, error } = await databaseAdmin.rpc(
+        run: async (supabaseAdmin) => {
+          const { data, error } = await supabaseAdmin.rpc(
             "fn_admin_master_avaliar_extensao_trial",
             {
               p_id_salao: idSalao || undefined,

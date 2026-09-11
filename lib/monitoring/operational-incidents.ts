@@ -1,4 +1,4 @@
-import type { DatabaseClient } from "@/lib/db/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { registrarLogSistema } from "@/lib/system-logs";
 
 type OperationalAlertSeverity = "baixa" | "media" | "alta" | "critica";
@@ -12,7 +12,7 @@ type WebhookIncidentPayload = {
 };
 
 type OperationalIncidentParams = {
-  databaseAdmin: DatabaseClient;
+  supabaseAdmin: SupabaseClient;
   key: string;
   module: string;
   title: string;
@@ -55,7 +55,7 @@ export async function reportOperationalIncident(
     },
   });
 
-  await params.databaseAdmin.from("alertas_sistema").upsert(
+  await params.supabaseAdmin.from("alertas_sistema").upsert(
     {
       chave: `alerta:${params.key}`,
       tipo: `${params.module}_erro`,
@@ -78,7 +78,7 @@ export async function reportOperationalIncident(
     return;
   }
 
-  await params.databaseAdmin.from("eventos_webhook").upsert(
+  await params.supabaseAdmin.from("eventos_webhook").upsert(
     {
       chave: params.webhook.key,
       origem: params.webhook.origin,

@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { createProfissionalSession } from "@/lib/profissional-auth.server";
+import {
+  createProfissionalNativeAccessToken,
+  createProfissionalSession,
+} from "@/lib/profissional-auth.server";
 import { loginProfissionalByCpfSenha } from "@/app/services/profissional/auth";
 import {
   assertProfissionalLoginAllowed,
@@ -57,6 +60,9 @@ export async function POST(request: Request) {
     }
 
     await clearProfissionalLoginFailures(rateLimitKey).catch(() => undefined);
+    const isNativeApp =
+      request.headers.get("x-sp-native-app") ===
+      "br.com.salaopremiun.profissional";
     await createProfissionalSession(result.session);
     return NextResponse.json(
       {
@@ -69,6 +75,9 @@ export async function POST(request: Request) {
           nivel_acesso: result.session.nivelAcesso,
           podeVerAgendaTodos: result.session.podeVerAgendaTodos,
         },
+        ...(isNativeApp
+          ? { nativeAccessToken: createProfissionalNativeAccessToken(result.session) }
+          : {}),
       },
       { headers: { "Cache-Control": "no-store" } }
     );

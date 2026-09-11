@@ -1,6 +1,6 @@
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
+type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
 
 type ProfissionalRow = {
   id: string;
@@ -17,7 +17,7 @@ type RegraServicoRow = {
 };
 
 export function createProfissionalService(
-  databaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
+  supabaseAdmin: SupabaseAdminClient = getSupabaseAdmin()
 ) {
   return {
     async atualizarFoto(params: {
@@ -25,7 +25,7 @@ export function createProfissionalService(
       idProfissional: string;
       fotoUrl: string;
     }) {
-      const { data, error } = await databaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("profissionais")
         .update({ foto_url: params.fotoUrl, foto: params.fotoUrl })
         .eq("id", params.idProfissional)
@@ -46,7 +46,7 @@ export function createProfissionalService(
       idProfissional: string;
       ativo: boolean;
     }) {
-      const { data, error } = await databaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("profissionais")
         .update({
           ativo: params.ativo,
@@ -61,7 +61,7 @@ export function createProfissionalService(
       if (!data?.id) throw new Error("Profissional nao encontrado.");
 
       if (!params.ativo) {
-        await databaseAdmin
+        await supabaseAdmin
           .from("profissionais_acessos")
           .update({ ativo: false })
           .eq("id_profissional", params.idProfissional);
@@ -75,7 +75,7 @@ export function createProfissionalService(
     },
 
     async buscarExistente(params: { idSalao: string; idProfissional: string }) {
-      const { data, error } = await databaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("profissionais")
         .select("id, ativo")
         .eq("id", params.idProfissional)
@@ -87,7 +87,7 @@ export function createProfissionalService(
     },
 
     async criar(payload: Record<string, unknown>) {
-      const { data, error } = await databaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("profissionais")
         .insert(payload)
         .select("id")
@@ -102,7 +102,7 @@ export function createProfissionalService(
       idProfissional: string;
       payload: Record<string, unknown>;
     }) {
-      const { error } = await databaseAdmin
+      const { error } = await supabaseAdmin
         .from("profissionais")
         .update(params.payload)
         .eq("id", params.idProfissional)
@@ -118,7 +118,7 @@ export function createProfissionalService(
     }) {
       if (params.idsServicos.length === 0) return;
 
-      const { data, error } = await databaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("servicos")
         .select("id")
         .eq("id_salao", params.idSalao)
@@ -140,7 +140,7 @@ export function createProfissionalService(
     }) {
       if (params.assistentes.length === 0) return;
 
-      const { data, error } = await databaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("profissionais")
         .select("id")
         .eq("id_salao", params.idSalao)
@@ -173,14 +173,14 @@ export function createProfissionalService(
       const isAssistenteSalao = tipoProfissional === "assistente";
 
       if (isAssistenteSalao) {
-        await databaseAdmin
+        await supabaseAdmin
           .from("profissionais_acessos")
           .update({ ativo: false })
           .eq("id_profissional", idProfissional);
       }
 
       const { data: vinculosAtuais, error: vinculosAtuaisError } =
-        await databaseAdmin
+        await supabaseAdmin
           .from("profissional_servicos")
           .select(
             `
@@ -204,7 +204,7 @@ export function createProfissionalService(
         ])
       );
 
-      const { error: removeServicosError } = await databaseAdmin
+      const { error: removeServicosError } = await supabaseAdmin
         .from("profissional_servicos")
         .delete()
         .eq("id_salao", idSalao)
@@ -235,14 +235,14 @@ export function createProfissionalService(
               ?.desconta_taxa_maquininha ?? null,
         }));
 
-        const { error: insertServicosError } = await databaseAdmin
+        const { error: insertServicosError } = await supabaseAdmin
           .from("profissional_servicos")
           .insert(vinculos);
 
         if (insertServicosError) throw insertServicosError;
       }
 
-      const { error: removeAssistentesError } = await databaseAdmin
+      const { error: removeAssistentesError } = await supabaseAdmin
         .from("profissional_assistentes")
         .delete()
         .eq("id_salao", idSalao)
@@ -260,7 +260,7 @@ export function createProfissionalService(
           }));
 
         if (vinculosAssistentes.length > 0) {
-          const { error: insertAssistentesError } = await databaseAdmin
+          const { error: insertAssistentesError } = await supabaseAdmin
             .from("profissional_assistentes")
             .insert(vinculosAssistentes);
 
@@ -279,24 +279,24 @@ export function createProfissionalService(
         { count: comissoesCount, error: comissoesError },
         { count: valesCount, error: valesError },
       ] = await Promise.all([
-        databaseAdmin
+        supabaseAdmin
           .from("agendamentos")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", params.idSalao)
           .eq("profissional_id", params.idProfissional),
-        databaseAdmin
+        supabaseAdmin
           .from("comanda_itens")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", params.idSalao)
           .or(
             `id_profissional.eq.${params.idProfissional},id_assistente.eq.${params.idProfissional}`
           ),
-        databaseAdmin
+        supabaseAdmin
           .from("comissoes_lancamentos")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", params.idSalao)
           .eq("id_profissional", params.idProfissional),
-        databaseAdmin
+        supabaseAdmin
           .from("profissionais_vales")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", params.idSalao)
@@ -317,14 +317,14 @@ export function createProfissionalService(
     },
 
     async excluir(params: { idSalao: string; idProfissional: string }) {
-      const { error: acessoError } = await databaseAdmin
+      const { error: acessoError } = await supabaseAdmin
         .from("profissionais_acessos")
         .delete()
         .eq("id_profissional", params.idProfissional);
 
       if (acessoError) throw acessoError;
 
-      const { error: vinculoServicoError } = await databaseAdmin
+      const { error: vinculoServicoError } = await supabaseAdmin
         .from("profissional_servicos")
         .delete()
         .eq("id_salao", params.idSalao)
@@ -332,7 +332,7 @@ export function createProfissionalService(
 
       if (vinculoServicoError) throw vinculoServicoError;
 
-      const { error: vinculoAssistentePrincipalError } = await databaseAdmin
+      const { error: vinculoAssistentePrincipalError } = await supabaseAdmin
         .from("profissional_assistentes")
         .delete()
         .eq("id_salao", params.idSalao)
@@ -340,7 +340,7 @@ export function createProfissionalService(
 
       if (vinculoAssistentePrincipalError) throw vinculoAssistentePrincipalError;
 
-      const { error: vinculoAssistenteSecundarioError } = await databaseAdmin
+      const { error: vinculoAssistenteSecundarioError } = await supabaseAdmin
         .from("profissional_assistentes")
         .delete()
         .eq("id_salao", params.idSalao)
@@ -348,7 +348,7 @@ export function createProfissionalService(
 
       if (vinculoAssistenteSecundarioError) throw vinculoAssistenteSecundarioError;
 
-      const { data, error } = await databaseAdmin
+      const { data, error } = await supabaseAdmin
         .from("profissionais")
         .delete()
         .eq("id", params.idProfissional)

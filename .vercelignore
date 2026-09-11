@@ -1,6 +1,32 @@
-.codex-dev-server*.log
-.env
-.env.*
-.git
+﻿# Builds e caches
 .next
-node_modules
+dist
+build
+coverage
+.cache
+tmp
+temp
+
+# Arquivos grandes que não vão para o site
+*.zip
+*.rar
+*.7z
+*.apk
+*.aab
+*.exe
+*.msi
+*.iso
+
+# Flutter / Android / iOS
+.dart_tool
+.gradle
+android/.gradle
+android/app/build
+ios/Pods
+ios/build
+
+# Backups
+backup
+backups
+*_backup
+*-backup

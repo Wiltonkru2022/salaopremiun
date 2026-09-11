@@ -1,6 +1,6 @@
-import { createClient } from "@/lib/db/server";
+import { createClient } from "@/lib/supabase/server";
 import { requireProfissionalServerContext } from "@/lib/profissional-context.server";
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { clearBackupMetadata } from "@/lib/auth/mfa-backup-codes";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import {
@@ -12,8 +12,6 @@ import {
   buildMfaRecoveryRejectedMessage,
 } from "@/lib/auth/mfa-recovery";
 import { registrarLogSistema } from "@/lib/system-logs";
-import { clerkAdminApi } from "@/lib/platform/clerk-admin-api.server";
-import { getCloudinaryPublicUrl, uploadCloudinaryFile } from "@/lib/platform/cloudinary.server";
 import type { Json } from "@/types/database.generated";
 import crypto from "node:crypto";
 
@@ -488,16 +486,20 @@ function normalizeTicketAttachments(value: unknown): TicketAttachment[] {
 }
 
 async function signTicketAttachments(
-  database: Awaited<ReturnType<typeof createClient>>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   attachments: TicketAttachment[]
 ) {
   if (!attachments.length) return [];
 
   const signed = await Promise.all(
     attachments.map(async (attachment) => {
+      const { data } = await supabase.storage
+        .from(attachment.bucket)
+        .createSignedUrl(attachment.path, 60 * 60);
+
       return {
         ...attachment,
-        signedUrl: getCloudinaryPublicUrl(attachment.bucket, attachment.path),
+        signedUrl: data?.signedUrl || null,
       };
     })
   );
@@ -506,11 +508,11 @@ async function signTicketAttachments(
 }
 
 async function mapTicketMessage(
-  database: Awaited<ReturnType<typeof createClient>>,
+  supabase: Awaited<ReturnType<typeof createClient>>,
   row: TicketMessageRow
 ): Promise<TicketDetailMessage> {
   const anexos = await signTicketAttachments(
-    database,
+    supabase,
     normalizeTicketAttachments(row.anexos_json)
   );
 
@@ -585,8 +587,8 @@ export async function listSalaoTickets(idSalao: string) {
   return runAdminOperation({
     action: "support_list_salao_tickets",
     idSalao,
-    run: async (database) => {
-      const { data: tickets, error } = await database
+    run: async (supabase) => {
+      const { data: tickets, error } = await supabase
         .from("tickets")
         .select(
           "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, sla_limite_em, origem_contexto"
@@ -605,7 +607,7 @@ export async function listSalaoTickets(idSalao: string) {
 
       if (ids.length > 0) {
         const mensagensLimit = Math.max(ids.length * 3, 150);
-        const { data: mensagens, error: mensagensError } = await database
+        const { data: mensagens, error: mensagensError } = await supabase
           .from("ticket_mensagens")
           .select(
             "id, id_ticket, mensagem, criada_em, autor_tipo, autor_nome, interna"
@@ -651,7 +653,7 @@ export type AdminTicketListParams = {
 export async function listAdminTickets(params?: AdminTicketListParams) {
   return runAdminOperation({
     action: "support_list_admin_tickets",
-    run: async (database) => {
+    run: async (supabase) => {
       const limit = Math.min(Math.max(params?.limit ?? 10, 1), 50);
       const page = Math.max(params?.page ?? 0, 0);
       const from = page * limit;
@@ -663,7 +665,7 @@ export async function listAdminTickets(params?: AdminTicketListParams) {
 
       if (search.length >= 2) {
         const cleanSearch = search.replace(/[,%()]/g, " ").trim();
-        const { data: salaoMatches } = await database
+        const { data: salaoMatches } = await supabase
           .from("saloes")
           .select("id")
           .or(
@@ -673,7 +675,7 @@ export async function listAdminTickets(params?: AdminTicketListParams) {
         salaoSearchIds = ((salaoMatches || []) as Array<{ id: string }>).map((item) => item.id);
       }
 
-      let query = database
+      let query = supabase
         .from("tickets")
         .select(
           "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, sla_limite_em, origem_contexto, id_responsavel_admin",
@@ -751,10 +753,10 @@ export async function listAdminTickets(params?: AdminTicketListParams) {
 
       const [saloesResult, adminsResult] = await Promise.all([
         salaoIds.length
-          ? database.from("saloes").select("id, nome").in("id", salaoIds).limit(salaoIds.length)
+          ? supabase.from("saloes").select("id, nome").in("id", salaoIds).limit(salaoIds.length)
           : Promise.resolve({ data: [] as Array<{ id: string; nome?: string | null }>, error: null }),
         adminIds.length
-          ? database.from("admin_master_usuarios").select("id, nome, email").in("id", adminIds).limit(adminIds.length)
+          ? supabase.from("admin_master_usuarios").select("id, nome, email").in("id", adminIds).limit(adminIds.length)
           : Promise.resolve({ data: [] as Array<{ id: string; nome?: string | null; email?: string | null }>, error: null }),
       ]);
 
@@ -765,7 +767,7 @@ export async function listAdminTickets(params?: AdminTicketListParams) {
 
       if (ids.length > 0) {
         const mensagensLimit = Math.max(ids.length * 4, 120);
-        const { data: mensagens, error: mensagensError } = await database
+        const { data: mensagens, error: mensagensError } = await supabase
           .from("ticket_mensagens")
           .select("id, id_ticket, mensagem, criada_em, autor_tipo, autor_nome, interna")
           .in("id_ticket", ids)
@@ -799,8 +801,8 @@ export async function getSalaoTicketDetail(params: {
   return runAdminOperation({
     action: "support_get_salao_ticket_detail",
     idSalao: params.idSalao,
-    run: async (database) => {
-      const { data: ticket, error } = await database
+    run: async (supabase) => {
+      const { data: ticket, error } = await supabase
         .from("tickets")
         .select(
           "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, solicitante_email, origem_contexto, sla_limite_em, id_responsavel_admin"
@@ -821,7 +823,7 @@ export async function getSalaoTicketDetail(params: {
         { data: mensagens, error: mensagensError },
         { data: eventos, error: eventosError },
       ] = await Promise.all([
-        database
+        supabase
           .from("ticket_mensagens")
           .select(
             "id, id_ticket, autor_tipo, autor_nome, mensagem, interna, criada_em, id_usuario_salao, id_profissional, id_admin_usuario, anexos_json"
@@ -829,7 +831,7 @@ export async function getSalaoTicketDetail(params: {
           .eq("id_ticket", params.idTicket)
           .eq("interna", false)
           .order("criada_em", { ascending: true }),
-        database
+        supabase
           .from("ticket_eventos")
           .select("id, evento, descricao, payload_json, criado_em")
           .eq("id_ticket", params.idTicket)
@@ -846,7 +848,7 @@ export async function getSalaoTicketDetail(params: {
 
       const rawMessages = (mensagens || []) as TicketMessageRow[];
       const detailedMessages = await Promise.all(
-        rawMessages.map((row) => mapTicketMessage(database, row))
+        rawMessages.map((row) => mapTicketMessage(supabase, row))
       );
 
       return {
@@ -863,8 +865,8 @@ export async function getAdminTicketDetail(
 ): Promise<AdminTicketDetail> {
   return runAdminOperation({
     action: "support_get_admin_ticket_detail",
-    run: async (database) => {
-      const { data: ticket, error } = await database
+    run: async (supabase) => {
+      const { data: ticket, error } = await supabase
         .from("tickets")
         .select(
           "id, id_salao, numero, assunto, categoria, prioridade, status, origem, criado_em, atualizado_em, ultima_interacao_em, solicitante_nome, solicitante_email, origem_contexto, sla_limite_em, id_responsavel_admin"
@@ -891,27 +893,27 @@ export async function getAdminTicketDetail(
         { data: salao },
         { data: responsavelAdmin },
       ] = await Promise.all([
-        database
+        supabase
           .from("ticket_mensagens")
           .select(
             "id, id_ticket, autor_tipo, autor_nome, mensagem, interna, criada_em, id_usuario_salao, id_profissional, id_admin_usuario, anexos_json"
           )
           .eq("id_ticket", idTicket)
           .order("criada_em", { ascending: true }),
-        database
+        supabase
           .from("ticket_eventos")
           .select("id, evento, descricao, payload_json, criado_em")
           .eq("id_ticket", idTicket)
           .order("criado_em", { ascending: false }),
         header.id_salao
-          ? database
+          ? supabase
               .from("saloes")
               .select("id, nome, responsavel, email")
               .eq("id", header.id_salao)
               .maybeSingle()
           : Promise.resolve({ data: null, error: null }),
         header.id_responsavel_admin
-          ? database
+          ? supabase
               .from("admin_master_usuarios")
               .select("id, nome, email")
               .eq("id", header.id_responsavel_admin)
@@ -929,7 +931,7 @@ export async function getAdminTicketDetail(
 
       const rawMessages = (mensagens || []) as TicketMessageRow[];
       const detailedMessages = await Promise.all(
-        rawMessages.map((row) => mapTicketMessage(database, row))
+        rawMessages.map((row) => mapTicketMessage(supabase, row))
       );
 
       return {
@@ -1004,8 +1006,8 @@ export async function createSalaoTicket(params: {
         ? params.context.idUsuario
         : params.context.idProfissional,
     idSalao: params.context.idSalao,
-    run: async (database) => {
-      const { data: createdTicket, error } = await database
+    run: async (supabase) => {
+      const { data: createdTicket, error } = await supabase
         .from("tickets")
         .insert({
           id_salao: params.context.idSalao,
@@ -1053,7 +1055,7 @@ export async function createSalaoTicket(params: {
         messagePayload.id_usuario_salao = params.context.idUsuario;
       }
 
-      const { error: messageError } = await database
+      const { error: messageError } = await supabase
         .from("ticket_mensagens")
         .insert(messagePayload);
 
@@ -1063,7 +1065,7 @@ export async function createSalaoTicket(params: {
         );
       }
 
-      await database.from("ticket_eventos").insert({
+      await supabase.from("ticket_eventos").insert({
         id_ticket: createdTicket.id,
         evento: "ticket_aberto",
         descricao:
@@ -1122,8 +1124,8 @@ export async function replySalaoTicket(params: {
         ? params.context.idUsuario
         : params.context.idProfissional,
     idSalao: params.context.idSalao,
-    run: async (database) => {
-      const { data: ticket, error } = await database
+    run: async (supabase) => {
+      const { data: ticket, error } = await supabase
         .from("tickets")
         .select("id, status")
         .eq("id", params.idTicket)
@@ -1163,7 +1165,7 @@ export async function replySalaoTicket(params: {
         messagePayload.id_usuario_salao = params.context.idUsuario;
       }
 
-      const { error: replyError } = await database
+      const { error: replyError } = await supabase
         .from("ticket_mensagens")
         .insert(messagePayload);
 
@@ -1178,7 +1180,7 @@ export async function replySalaoTicket(params: {
           : "aguardando_tecnico";
       const now = new Date().toISOString();
 
-      await database
+      await supabase
         .from("tickets")
         .update({
           status: nextStatus,
@@ -1189,7 +1191,7 @@ export async function replySalaoTicket(params: {
         .eq("id", params.idTicket)
         .eq("id_salao", params.context.idSalao);
 
-      await database.from("ticket_eventos").insert({
+      await supabase.from("ticket_eventos").insert({
         id_ticket: params.idTicket,
         evento: "mensagem_cliente",
         descricao:
@@ -1238,8 +1240,8 @@ export async function updateSalaoTicketStatus(params: {
         ? params.context.idUsuario
         : params.context.idProfissional,
     idSalao: params.context.idSalao,
-    run: async (database) => {
-      const { data: ticket, error } = await database
+    run: async (supabase) => {
+      const { data: ticket, error } = await supabase
         .from("tickets")
         .select("id, status")
         .eq("id", params.idTicket)
@@ -1256,7 +1258,7 @@ export async function updateSalaoTicketStatus(params: {
 
       const now = new Date().toISOString();
 
-      await database
+      await supabase
         .from("tickets")
         .update({
           status: newStatus,
@@ -1267,7 +1269,7 @@ export async function updateSalaoTicketStatus(params: {
         .eq("id", params.idTicket)
         .eq("id_salao", params.context.idSalao);
 
-      await database.from("ticket_eventos").insert({
+      await supabase.from("ticket_eventos").insert({
         id_ticket: params.idTicket,
         evento:
           newStatus === "fechado"
@@ -1327,8 +1329,8 @@ export async function replyAdminTicket(params: {
   await runAdminOperation({
     action: "support_reply_admin_ticket",
     actorId: params.context.idAdmin,
-    run: async (database) => {
-      const { data: ticket, error } = await database
+    run: async (supabase) => {
+      const { data: ticket, error } = await supabase
         .from("tickets")
         .select("id, status")
         .eq("id", params.idTicket)
@@ -1342,7 +1344,7 @@ export async function replyAdminTicket(params: {
         throw new Error("NOT_FOUND");
       }
 
-      const { error: replyError } = await database
+      const { error: replyError } = await supabase
         .from("ticket_mensagens")
         .insert({
           id_ticket: params.idTicket,
@@ -1369,12 +1371,12 @@ export async function replyAdminTicket(params: {
         updatePayload.id_responsavel_admin = params.context.idAdmin;
       }
 
-      await database
+      await supabase
         .from("tickets")
         .update(updatePayload)
         .eq("id", params.idTicket);
 
-      await database.from("ticket_eventos").insert({
+      await supabase.from("ticket_eventos").insert({
         id_ticket: params.idTicket,
         evento: "resposta_admin",
         descricao: "Resposta enviada pelo AdminMaster.",
@@ -1420,8 +1422,8 @@ export async function updateAdminTicketStatus(params: {
   const statusResult = await runAdminOperation({
     action: "support_update_admin_ticket_status",
     actorId: params.context.idAdmin,
-    run: async (database) => {
-      const { data: ticket, error } = await database
+    run: async (supabase) => {
+      const { data: ticket, error } = await supabase
         .from("tickets")
         .select("id, id_salao, prioridade, status, origem_contexto, id_responsavel_admin")
         .eq("id", params.idTicket)
@@ -1567,7 +1569,7 @@ export async function updateAdminTicketStatus(params: {
             throw new Error("Não foi possível localizar a conta desta recuperação.");
           }
 
-          const { data: usuarioSalao, error: usuarioSalaoError } = await database
+          const { data: usuarioSalao, error: usuarioSalaoError } = await supabase
             .from("usuarios")
             .select("auth_user_id")
             .eq("id", userIdSalao)
@@ -1582,7 +1584,7 @@ export async function updateAdminTicketStatus(params: {
           }
 
           const { data: factorsData, error: factorError } =
-            await clerkAdminApi.mfa.listFactors({
+            await supabase.auth.admin.mfa.listFactors({
               userId: usuarioSalao.auth_user_id,
             });
 
@@ -1600,7 +1602,7 @@ export async function updateAdminTicketStatus(params: {
 
           if (totpFactor) {
             const { error: deleteFactorError } =
-              await clerkAdminApi.mfa.deleteFactor({
+              await supabase.auth.admin.mfa.deleteFactor({
                 id: totpFactor.id,
                 userId: usuarioSalao.auth_user_id,
               });
@@ -1614,7 +1616,7 @@ export async function updateAdminTicketStatus(params: {
           }
 
           const { data: authUserData, error: authUserError } =
-            await clerkAdminApi.getUserById(usuarioSalao.auth_user_id);
+            await supabase.auth.admin.getUserById(usuarioSalao.auth_user_id);
 
           if (authUserError || !authUserData?.user) {
             throw new Error(
@@ -1623,7 +1625,7 @@ export async function updateAdminTicketStatus(params: {
             );
           }
 
-          const currentAppMetadata = (authUserData.user.privateMetadata ||
+          const currentAppMetadata = (authUserData.user.app_metadata ||
             {}) as Record<string, unknown>;
           const currentMfaMetadata =
             (currentAppMetadata.salaopremium_mfa as Record<string, unknown> | undefined) ||
@@ -1633,8 +1635,8 @@ export async function updateAdminTicketStatus(params: {
           ).toISOString();
 
           const { error: updateAuthError } =
-            await clerkAdminApi.updateUserById(usuarioSalao.auth_user_id, {
-              privateMetadata: {
+            await supabase.auth.admin.updateUserById(usuarioSalao.auth_user_id, {
+              app_metadata: {
                 ...currentAppMetadata,
                 salaopremium_mfa: {
                   ...currentMfaMetadata,
@@ -1683,7 +1685,7 @@ export async function updateAdminTicketStatus(params: {
 
       if (params.responsavelAdminId !== undefined) {
         if (params.responsavelAdminId) {
-          const { data: responsavel, error: responsavelError } = await database
+          const { data: responsavel, error: responsavelError } = await supabase
             .from("admin_master_usuarios")
             .select("id")
             .eq("id", params.responsavelAdminId)
@@ -1700,12 +1702,12 @@ export async function updateAdminTicketStatus(params: {
         updatePayload.id_responsavel_admin = params.context.idAdmin;
       }
 
-      await database
+      await supabase
         .from("tickets")
         .update(updatePayload)
         .eq("id", params.idTicket);
 
-      await database.from("ticket_eventos").insert({
+      await supabase.from("ticket_eventos").insert({
         id_ticket: params.idTicket,
         evento: eventName,
         descricao: eventDescription,
@@ -1718,7 +1720,7 @@ export async function updateAdminTicketStatus(params: {
       });
 
       if (customerMessage) {
-        await database.from("ticket_mensagens").insert({
+        await supabase.from("ticket_mensagens").insert({
           id_ticket: params.idTicket,
           autor_tipo: "admin",
           autor_nome: "Equipe de seguranca",
@@ -1804,8 +1806,8 @@ export async function uploadSalaoTicketAttachment(params: {
         ? params.context.idUsuario
         : params.context.idProfissional,
     idSalao: params.context.idSalao,
-    run: async (database) => {
-      const { data: ticket, error } = await database
+    run: async (supabase) => {
+      const { data: ticket, error } = await supabase
         .from("tickets")
         .select("id, status")
         .eq("id", params.idTicket)
@@ -1820,18 +1822,21 @@ export async function uploadSalaoTicketAttachment(params: {
         throw new Error("NOT_FOUND");
       }
 
-      const uploaded = await uploadCloudinaryFile({
-        collection: TICKET_ATTACHMENT_BUCKET,
-        path: attachmentPath,
-        bytes: params.bytes,
-        mimeType: contentType,
-      });
-      if (!uploaded.secureUrl) throw new Error("Cloudinary nao retornou a URL do anexo.");
+      const { error: uploadError } = await supabase.storage
+        .from(TICKET_ATTACHMENT_BUCKET)
+        .upload(attachmentPath, params.bytes, {
+          contentType,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        throw new Error(uploadError.message || "Erro ao enviar anexo.");
+      }
 
       const attachmentMeta = [
         {
           bucket: TICKET_ATTACHMENT_BUCKET,
-          path: uploaded.secureUrl,
+          path: attachmentPath,
           fileName,
           contentType,
           sizeBytes: params.bytes.byteLength,
@@ -1863,7 +1868,7 @@ export async function uploadSalaoTicketAttachment(params: {
         messagePayload.id_usuario_salao = params.context.idUsuario;
       }
 
-      const { error: messageError } = await database
+      const { error: messageError } = await supabase
         .from("ticket_mensagens")
         .insert(messagePayload);
 
@@ -1878,7 +1883,7 @@ export async function uploadSalaoTicketAttachment(params: {
           : "aguardando_tecnico";
       const now = new Date().toISOString();
 
-      await database
+      await supabase
         .from("tickets")
         .update({
           status: nextStatus,
@@ -1889,7 +1894,7 @@ export async function uploadSalaoTicketAttachment(params: {
         .eq("id", params.idTicket)
         .eq("id_salao", params.context.idSalao);
 
-      await database.from("ticket_eventos").insert({
+      await supabase.from("ticket_eventos").insert({
         id_ticket: params.idTicket,
         evento: "anexo_cliente",
         descricao:

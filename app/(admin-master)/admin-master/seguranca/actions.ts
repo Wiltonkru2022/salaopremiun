@@ -5,7 +5,7 @@ import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { getMfaAssurance } from "@/lib/auth/mfa-assurance";
 import { captureSystemEvent } from "@/lib/monitoring/server";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type SecurityActionResult = {
   ok: boolean;
@@ -52,8 +52,8 @@ export async function desbloquearUsuarioSegurancaAction(formData: FormData): Pro
   const motivoAdmin = formText(formData, "motivo");
   if (!userId) return { ok: false, message: "Usuário não informado." };
 
-  const database = getDatabaseAdmin();
-  const { data: before, error: beforeError } = await database
+  const supabase = getSupabaseAdmin();
+  const { data: before, error: beforeError } = await supabase
     .from("user_security_status")
     .select("user_id, tipo_usuario, status, motivo, risco_atual, bloqueado_ate, verificacao_necessaria, atualizado_em")
     .eq("user_id", userId)
@@ -62,7 +62,7 @@ export async function desbloquearUsuarioSegurancaAction(formData: FormData): Pro
 
   const now = new Date().toISOString();
   const after = { status: "ativo", motivo: null, risco_atual: "baixo", bloqueado_ate: null, verificacao_necessaria: false, atualizado_em: now };
-  const { error } = await database.from("user_security_status").update(after).eq("user_id", userId);
+  const { error } = await supabase.from("user_security_status").update(after).eq("user_id", userId);
   if (error) return { ok: false, message: "Não foi possível desbloquear este usuário." };
 
   await registrarAdminMasterAuditoria({
@@ -89,8 +89,8 @@ export async function desbloquearSalaoSegurancaAction(formData: FormData): Promi
   const motivoAdmin = formText(formData, "motivo");
   if (!idSalao) return { ok: false, message: "Salão não informado." };
 
-  const database = getDatabaseAdmin();
-  const { data: before, error: beforeError } = await database
+  const supabase = getSupabaseAdmin();
+  const { data: before, error: beforeError } = await supabase
     .from("saloes")
     .select("id, nome, status_seguranca, motivo_seguranca, bloqueado_ate")
     .eq("id", idSalao)
@@ -98,7 +98,7 @@ export async function desbloquearSalaoSegurancaAction(formData: FormData): Promi
   if (beforeError || !before?.id) return { ok: false, message: "Não foi possível localizar este salão." };
 
   const after = { status_seguranca: "ativo", motivo_seguranca: null, bloqueado_ate: null };
-  const { error } = await database.from("saloes").update(after).eq("id", idSalao);
+  const { error } = await supabase.from("saloes").update(after).eq("id", idSalao);
   if (error) return { ok: false, message: "Não foi possível desbloquear este salão." };
 
   await registrarAdminMasterAuditoria({ idAdmin: admin.usuario.id, acao: "desbloquear_salao_seguranca", entidade: "saloes", entidadeId: idSalao, descricao: motivoAdmin, payload: { motivo_admin: motivoAdmin, antes: before, depois: after } });
@@ -115,10 +115,10 @@ export async function limparLogsSegurancaAction(formData: FormData): Promise<Sec
   if (auth.denied) return auth.denied;
   const admin = auth.admin;
   const motivoAdmin = formText(formData, "motivo");
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
 
-  const { error } = await database.from("security_login_attempts").delete().lt("criado_em", cutoff);
+  const { error } = await supabase.from("security_login_attempts").delete().lt("criado_em", cutoff);
   if (error) return { ok: false, message: "Não foi possível aplicar a retenção dos logs de segurança." };
 
   await registrarAdminMasterAuditoria({ idAdmin: admin.usuario.id, acao: "limpar_logs_seguranca", entidade: "security_login_attempts", descricao: motivoAdmin, payload: { motivo_admin: motivoAdmin, antes: { politica: "logs anteriores a 30 dias presentes" }, depois: { cutoff_principal: cutoff, politica: "retenção de 30 dias aplicada" } } });

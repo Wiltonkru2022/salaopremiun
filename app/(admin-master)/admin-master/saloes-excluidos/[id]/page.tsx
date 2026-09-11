@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import AdminMasterPageHeader from "@/components/admin-master/AdminMasterPageHeader";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Json } from "@/types/database.generated";
 import {
   manterSalaoExcluidoAdminMaster,
@@ -122,9 +122,9 @@ export default async function AdminMasterSalaoExcluidoDetailPage({
   await requireAdminMasterUser("saloes_ver");
   const { id } = await params;
   const queryParams = searchParams ? await searchParams : {};
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
 
-  const { data, error } = await (database as any)
+  const { data, error } = await (supabase as any)
     .from("reativar_salao")
     .select(DELETED_SALON_DETAIL_COLUMNS)
     .eq("id", id)

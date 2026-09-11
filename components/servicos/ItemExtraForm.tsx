@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { maskMoneyInput, parseMoneyToNumber } from "@/lib/utils/serviceMasks";
@@ -52,7 +52,7 @@ function formatMoneyFromDb(value: unknown) {
 }
 
 export default function ItemExtraForm({ modo }: ItemExtraFormProps) {
-  const database = createClient();
+  const supabase = createClient();
   const router = useRouter();
   const params = useParams();
 
@@ -111,7 +111,7 @@ export default function ItemExtraForm({ modo }: ItemExtraFormProps) {
   }
 
   async function carregarItem(id: string, salaoId: string) {
-    const { data, error } = await database
+    const { data, error } = await supabase
       .from("itens_extras")
       .select("ativo, atualizado_em, categoria, comissao_percentual, comissionavel, controla_estoque, criado_em, custo, descricao, estoque_atual, estoque_minimo, id, id_salao, nome, preco_venda, unidade_medida")
       .eq("id", id)
@@ -169,7 +169,7 @@ export default function ItemExtraForm({ modo }: ItemExtraFormProps) {
       };
 
       if (modo === "novo") {
-        const { error } = await database.from("itens_extras").insert(payload);
+        const { error } = await supabase.from("itens_extras").insert(payload);
 
         if (error) throw error;
 
@@ -181,7 +181,7 @@ export default function ItemExtraForm({ modo }: ItemExtraFormProps) {
         throw new Error("Item extra invalido.");
       }
 
-      const { error } = await database
+      const { error } = await supabase
         .from("itens_extras")
         .update(payload)
         .eq("id", item.id)

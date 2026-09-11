@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import AdminMasterPageHeader from "@/components/admin-master/AdminMasterPageHeader";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 function dateTime(value?: string | null) {
   if (!value) return "-";
@@ -39,7 +39,7 @@ export default async function AdminMasterWhatsappDetailPage({
   const [kind, rawId] = decodeURIComponent(id).split(":");
   if (!kind || !rawId) notFound();
 
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const table =
     kind === "envio"
       ? "whatsapp_envios"
@@ -50,7 +50,7 @@ export default async function AdminMasterWhatsappDetailPage({
           : null;
   if (!table) notFound();
 
-  const { data } = await (database as any)
+  const { data } = await (supabase as any)
     .from(table)
     .select(WHATSAPP_DETAIL_COLUMNS[table])
     .eq("id", rawId)
@@ -60,7 +60,7 @@ export default async function AdminMasterWhatsappDetailPage({
   const row = data as Record<string, unknown>;
   const idSalao = String(row.id_salao || "");
   const { data: salao } = idSalao
-    ? await database.from("saloes").select("id, nome").eq("id", idSalao).maybeSingle()
+    ? await supabase.from("saloes").select("id, nome").eq("id", idSalao).maybeSingle()
     : { data: null };
 
   return (

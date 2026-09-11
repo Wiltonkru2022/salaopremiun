@@ -17,6 +17,7 @@ import { useState } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { Button } from "../ui/Button";
 import { ptBR } from "../../../../../core/i18n/pt-BR";
+import { publicAsset } from "../../lib/publicAsset";
 
 export type View =
   | "inicio"
@@ -54,7 +55,7 @@ function BrandLogo({ compact = false }: { compact?: boolean }) {
   return (
     <div className="flex items-center gap-3">
       <img
-        src="/app-profissional/icons/icon-192.png"
+        src={publicAsset("brand-logo-profissional-v2.png")}
         alt="Salão Premium"
         className="h-11 w-11 rounded-2xl shadow-sm"
       />

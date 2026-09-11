@@ -5,12 +5,12 @@ import {
   criarPreviewComissaoManual,
   resolverRegraComissaoServico,
 } from "@/lib/comissoes/regrasServico";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 
-type CaixaDatabaseClient = ReturnType<typeof createClient>;
+type CaixaSupabaseClient = ReturnType<typeof createClient>;
 
 type Params = {
-  database: CaixaDatabaseClient;
+  supabase: CaixaSupabaseClient;
   idSalao: string;
   idComanda: string;
   itemModal: ModalItemState;
@@ -22,7 +22,7 @@ type Params = {
 };
 
 export async function buildComandaItemPayload({
-  database,
+  supabase,
   idSalao,
   idComanda,
   itemModal,
@@ -80,7 +80,7 @@ export async function buildComandaItemPayload({
   const vinculo =
     servico?.id && itemModal.idProfissional
       ? await buscarVinculoProfissionalServico({
-          database,
+          supabase,
           idSalao,
           idProfissional: itemModal.idProfissional,
           idServico: servico.id,

@@ -20,7 +20,7 @@ export function GET() {
     orientation: "portrait",
     icons: [
       {
-        src: "/favicon-preview.png",
+        src: "/brand-logo-v2.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",

@@ -2,7 +2,7 @@ import "server-only";
 
 import { createHash, createHmac, randomBytes, timingSafeEqual } from "node:crypto";
 import { htmlEscape, sendBrevoEmail } from "@/lib/email/brevo";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 function subscriptionSecret() {
   return String(process.env.STATUS_SUBSCRIPTION_SECRET || process.env.CRON_SECRET || "").trim();
@@ -50,8 +50,8 @@ export async function requestStatusSubscription(rawEmail: unknown) {
   if (!email) return { ok: true, accepted: false };
   if (!subscriptionSecret()) return { ok: false, accepted: false, reason: "subscription_not_configured" };
 
-  const database = getDatabaseAdmin() as any;
-  const { data: existing } = await database
+  const supabase = getSupabaseAdmin() as any;
+  const { data: existing } = await supabase
     .from("status_subscriptions")
     .select("id, status, updated_at")
     .ilike("email", email)
@@ -67,7 +67,7 @@ export async function requestStatusSubscription(rawEmail: unknown) {
 
   if (id) {
     const unsubscribeToken = makeUnsubscribeToken(id);
-    await database
+    await supabase
       .from("status_subscriptions")
       .update({
         email,
@@ -80,7 +80,7 @@ export async function requestStatusSubscription(rawEmail: unknown) {
       .eq("id", id);
   } else {
     const temporaryUnsubscribeHash = sha256(randomBytes(32).toString("base64url"));
-    const { data, error } = await database
+    const { data, error } = await supabase
       .from("status_subscriptions")
       .insert({
         email,
@@ -93,7 +93,7 @@ export async function requestStatusSubscription(rawEmail: unknown) {
     if (error) throw error;
     id = data.id;
     const unsubscribeToken = makeUnsubscribeToken(id!);
-    await database
+    await supabase
       .from("status_subscriptions")
       .update({ unsubscribe_token_hash: sha256(unsubscribeToken) })
       .eq("id", id);
@@ -114,8 +114,8 @@ export async function requestStatusSubscription(rawEmail: unknown) {
 
 export async function confirmStatusSubscription(token: string) {
   const hash = sha256(String(token || ""));
-  const database = getDatabaseAdmin() as any;
-  const { data, error } = await database
+  const supabase = getSupabaseAdmin() as any;
+  const { data, error } = await supabase
     .from("status_subscriptions")
     .select("id, status")
     .eq("confirm_token_hash", hash)
@@ -123,7 +123,7 @@ export async function confirmStatusSubscription(token: string) {
   if (error || !data?.id) return false;
 
   const unsubscribeToken = makeUnsubscribeToken(data.id);
-  const { error: updateError } = await database
+  const { error: updateError } = await supabase
     .from("status_subscriptions")
     .update({
       status: "active",
@@ -140,15 +140,15 @@ export async function confirmStatusSubscription(token: string) {
 export async function unsubscribeStatus(token: string) {
   const id = verifyUnsubscribeToken(token);
   if (!id) return false;
-  const database = getDatabaseAdmin() as any;
-  const { data, error } = await database
+  const supabase = getSupabaseAdmin() as any;
+  const { data, error } = await supabase
     .from("status_subscriptions")
     .select("unsubscribe_token_hash")
     .eq("id", id)
     .maybeSingle();
   if (error || !data?.unsubscribe_token_hash) return false;
   if (data.unsubscribe_token_hash !== sha256(token)) return false;
-  const { error: updateError } = await database
+  const { error: updateError } = await supabase
     .from("status_subscriptions")
     .update({ status: "unsubscribed", unsubscribed_at: new Date().toISOString(), updated_at: new Date().toISOString() })
     .eq("id", id);
@@ -159,64 +159,29 @@ export async function sendPendingPublicStatusNotifications() {
   if (!subscriptionSecret() || !process.env.BREVO_API_KEY) {
     return { sent: 0, skipped: true };
   }
-  const database = getDatabaseAdmin() as any;
+  const supabase = getSupabaseAdmin() as any;
   const since = new Date(Date.now() - 30 * 60 * 1000).toISOString();
-  const [{ data: rawUpdates }, { data: subscriptions }] = await Promise.all([
-    database
+  const [{ data: updates }, { data: subscriptions }] = await Promise.all([
+    supabase
       .from("incident_updates")
-      .select("id, incident_id, status_to, public_message, created_at")
+      .select("id, incident_id, status_to, public_message, created_at, incidentes_sistema(titulo, mensagem_publica, operational_components(nome))")
       .eq("public_visible", true)
       .not("public_message", "is", null)
       .gte("created_at", since)
       .order("created_at", { ascending: true })
       .limit(20),
-    database
+    supabase
       .from("status_subscriptions")
       .select("id, email")
       .eq("status", "active")
       .limit(200),
   ]);
 
-  const incidentIds = Array.from(
-    new Set((rawUpdates || []).map((update: any) => update.incident_id).filter(Boolean))
-  );
-  const { data: incidents } = incidentIds.length
-    ? await database
-        .from("incidentes_sistema")
-        .select("id, titulo, mensagem_publica, component_key")
-        .in("id", incidentIds)
-    : { data: [] };
-  const componentKeys = Array.from(
-    new Set((incidents || []).map((incident: any) => incident.component_key).filter(Boolean))
-  );
-  const { data: components } = componentKeys.length
-    ? await database
-        .from("operational_components")
-        .select("component_key, nome")
-        .in("component_key", componentKeys)
-    : { data: [] };
-  const componentByKey = new Map(
-    (components || []).map((component: any) => [component.component_key, component])
-  );
-  const incidentById = new Map(
-    (incidents || []).map((incident: any) => [
-      incident.id,
-      {
-        ...incident,
-        operational_components: componentByKey.get(incident.component_key) || null,
-      },
-    ])
-  );
-  const updates = (rawUpdates || []).map((update: any) => ({
-    ...update,
-    incidentes_sistema: incidentById.get(update.incident_id) || null,
-  }));
-
   let sent = 0;
   for (const update of updates || []) {
     for (const subscription of subscriptions || []) {
       if (sent >= 50) return { sent, capped: true };
-      const { data: delivery } = await database
+      const { data: delivery } = await supabase
         .from("status_notification_deliveries")
         .select("id, status")
         .eq("subscription_id", subscription.id)
@@ -236,7 +201,7 @@ export async function sendPendingPublicStatusNotifications() {
       const component = String(componentData?.nome || "SalãoPremium");
       const publicMessage = String(update.public_message || incidentData?.mensagem_publica || "Atualização de status disponível.");
 
-      const { data: deliveryRow, error: deliveryError } = await database
+      const { data: deliveryRow, error: deliveryError } = await supabase
         .from("status_notification_deliveries")
         .upsert(
           {
@@ -259,13 +224,13 @@ export async function sendPendingPublicStatusNotifications() {
           text: `${component}\n${title}\n${publicMessage}\n\nStatus: ${statusBaseUrl()}\nCancelar inscrição: ${unsubscribeUrl}`,
           html: `<div style="font-family:Arial,sans-serif;max-width:620px;margin:auto;color:#18181b"><div style="font-size:12px;font-weight:700;color:#6b7280">${htmlEscape(component)}</div><h1>${htmlEscape(title)}</h1><p>${htmlEscape(publicMessage)}</p><p><a href="${htmlEscape(statusBaseUrl())}">Ver status do SalãoPremium</a></p><hr style="border:0;border-top:1px solid #e5e7eb"><p style="font-size:12px;color:#71717a"><a href="${htmlEscape(unsubscribeUrl)}">Cancelar inscrição</a></p></div>`,
         });
-        await database
+        await supabase
           .from("status_notification_deliveries")
           .update({ status: "sent", provider_message_id: providerMessageId, sent_at: new Date().toISOString() })
           .eq("id", deliveryRow.id);
         sent += 1;
       } catch (error) {
-        await database
+        await supabase
           .from("status_notification_deliveries")
           .update({ status: "failed", erro_texto: error instanceof Error ? error.message.slice(0, 300) : "Falha no envio." })
           .eq("id", deliveryRow.id);

@@ -4,23 +4,23 @@ import {
   reabrirVenda,
   validarComandaVenda,
 } from "@/lib/vendas/processar";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
+type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
 
 export function createVendaService(
-  databaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
+  supabaseAdmin: SupabaseAdminClient = getSupabaseAdmin()
 ) {
   return {
     validarComanda: (params: { idSalao: string; idComanda: string }) =>
       validarComandaVenda({
-        databaseAdmin,
+        supabaseAdmin,
         ...params,
       }),
 
     obterDetalhes: (params: { idComanda: string }) =>
       obterDetalhesVenda({
-        databaseAdmin,
+        supabaseAdmin,
         ...params,
       }),
 
@@ -31,7 +31,7 @@ export function createVendaService(
       idUsuario: string;
     }) =>
       reabrirVenda({
-        databaseAdmin,
+        supabaseAdmin,
         ...params,
       }),
 
@@ -42,7 +42,7 @@ export function createVendaService(
       idUsuario: string;
     }) =>
       excluirVenda({
-        databaseAdmin,
+        supabaseAdmin,
         ...params,
       }),
   };

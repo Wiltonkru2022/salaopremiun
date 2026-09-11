@@ -1,4 +1,4 @@
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import type { ClienteAppSession } from "@/lib/cliente-auth.server";
 import {
   isValidCpf,
@@ -32,8 +32,8 @@ export async function completeClienteIdentityMigration(params: {
   return runAdminOperation({
     action: "cliente_app_complete_identity_migration",
     actorId: idConta,
-    run: async (databaseAdmin): Promise<CompleteClienteIdentityResult> => {
-      const { data: current, error: currentError } = await databaseAdmin
+    run: async (supabaseAdmin): Promise<CompleteClienteIdentityResult> => {
+      const { data: current, error: currentError } = await supabaseAdmin
         .from("clientes_app_auth")
         .select("id, nome, email, ativo, auth_version")
         .eq("id", idConta)
@@ -43,7 +43,7 @@ export async function completeClienteIdentityMigration(params: {
         return { ok: false, error: "Sua conta não está disponível agora." };
       }
 
-      const { data: duplicateRows, error: duplicateError } = await databaseAdmin
+      const { data: duplicateRows, error: duplicateError } = await supabaseAdmin
         .from("clientes_app_auth")
         .select("id")
         .eq("cpf", cpf)
@@ -55,7 +55,7 @@ export async function completeClienteIdentityMigration(params: {
       }
 
       const nextAuthVersion = Number(current.auth_version || 1) + 1;
-      const updateResult = await databaseAdmin
+      const updateResult = await supabaseAdmin
         .from("clientes_app_auth")
         .update({
           cpf,
@@ -71,14 +71,14 @@ export async function completeClienteIdentityMigration(params: {
 
       await syncClienteAppLinksByIdentity({ idConta });
 
-      const { data: links } = await databaseAdmin
+      const { data: links } = await supabaseAdmin
         .from("clientes_auth")
         .select("id_cliente, id_salao")
         .eq("app_conta_id", idConta);
 
       for (const link of links || []) {
         if (!link.id_cliente || !link.id_salao) continue;
-        await databaseAdmin
+        await supabaseAdmin
           .from("clientes")
           .update({
             cpf,

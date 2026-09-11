@@ -20,9 +20,15 @@ function parseMoneyInput(value: string) { const normalized = String(value || "")
 function formatMoneyInput(value: string) { const parsed = parseMoneyInput(value); if (!String(value || "").trim() || !Number.isFinite(parsed)) return ""; return parsed.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }); }
 function compactDuration(value: string) { const minutes = Math.floor(Number(value)); if (!Number.isFinite(minutes) || minutes <= 0) return ""; const hours = Math.floor(minutes / 60); const rest = minutes % 60; if (hours === 0) return `${minutes}min`; if (rest === 0) return `${hours}h`; return `${hours}h${String(rest).padStart(2, "0")}`; }
 
-export function ServicosPage({ servicos, onSave, onEdit }: { servicos: Servico[]; onSave: (payload: Payload) => Promise<void>; onEdit: (id: string, payload: Payload) => Promise<void> }) {
+export function ServicosPage({ servicos, profissionalId, onSave, onEdit }: { servicos: Servico[]; profissionalId: string; onSave: (payload: Payload) => Promise<void>; onEdit: (id: string, payload: Payload) => Promise<void> }) {
   const [creating, setCreating] = useState(false); const [editing, setEditing] = useState<Servico | null>(null); const [query, setQuery] = useState(""); const [page, setPage] = useState(1);
-  const filtered = servicos.filter((servico) => `${servico.nome} ${servico.descricao || ""}`.toLowerCase().includes(query.toLowerCase()));
+  const scopedServices = servicos.filter((servico) => servico.profissional_id === profissionalId);
+  const uniqueServices = Array.from(new Map(scopedServices.map((servico) => {
+    const signature = [servico.nome.trim().toLocaleLowerCase("pt-BR"), Number(servico.preco || 0).toFixed(2), Number(servico.duracao_minutos || 0), String(servico.descricao || "").trim().toLocaleLowerCase("pt-BR")].join("|");
+    return [signature, servico] as const;
+  })).values());
+  const normalizedQuery = query.trim().toLocaleLowerCase("pt-BR");
+  const filtered = uniqueServices.filter((servico) => `${servico.nome} ${servico.descricao || ""}`.toLocaleLowerCase("pt-BR").includes(normalizedQuery));
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE)); const pageItems = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
   return <div className="space-y-5 pb-6">
     <Button className="h-14 w-full rounded-[1.35rem] text-[15px] shadow-[0_14px_30px_rgba(9,9,11,0.16)] active:scale-[0.99]" onClick={() => setCreating(true)}><Plus size={19} />Novo serviço</Button>

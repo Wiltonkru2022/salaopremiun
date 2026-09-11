@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import {
   PAINEL_SESSION_STORAGE_KEY,
   type PainelSessionSnapshot,
@@ -24,7 +24,7 @@ export async function getUsuarioLogado() {
               status: "ativo",
               auth_user_id: null,
             },
-            database: createClient(),
+            supabase: createClient(),
             idSalao: snapshot.idSalao,
           };
         }
@@ -34,12 +34,12 @@ export async function getUsuarioLogado() {
     }
   }
 
-  const database = createClient();
+  const supabase = createClient();
 
   const {
     data: { user },
     error: authError,
-  } = await database.auth.getUser();
+  } = await supabase.auth.getUser();
 
   if (authError) {
     return { ok: false, error: "Erro ao validar autenticação." };
@@ -49,7 +49,7 @@ export async function getUsuarioLogado() {
     return { ok: false, error: "Usuário não autenticado." };
   }
 
-  const { data: perfilRows, error: perfilError } = await database
+  const { data: perfilRows, error: perfilError } = await supabase
     .from("usuarios")
     .select("id, id_salao, nome, email, nivel, status, auth_user_id")
     .eq("auth_user_id", user.id)
@@ -80,7 +80,7 @@ export async function getUsuarioLogado() {
     ok: true,
     user,
     perfil,
-    database,
+    supabase,
     idSalao: perfil.id_salao,
   };
 }

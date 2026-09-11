@@ -3,28 +3,28 @@ import {
   reverterEstoqueNoFluxoComanda,
 } from "@/lib/comandas/operational-flow";
 import { registrarLogSistema } from "@/lib/system-logs";
-import type { getDatabaseAdmin } from "@/lib/db/admin";
+import type { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-type AdminClient = ReturnType<typeof getDatabaseAdmin>;
+type AdminClient = ReturnType<typeof getSupabaseAdmin>;
 
 type ComandaFlowModule = "caixa" | "vendas" | "comandas";
 type EstoqueMode = "apply" | "revert";
 type LogSeverity = "info" | "warning" | "error";
 
 export async function carregarComandaDoSalao(params: {
-  databaseAdmin: AdminClient;
+  supabaseAdmin: AdminClient;
   idSalao: string;
   idComanda: string;
   notFoundMessage?: string;
 }) {
   const {
-    databaseAdmin,
+    supabaseAdmin,
     idSalao,
     idComanda,
     notFoundMessage = "Comanda nao encontrada para este salao.",
   } = params;
 
-  const { data: comanda, error } = await databaseAdmin
+  const { data: comanda, error } = await supabaseAdmin
     .from("comandas")
     .select("id, id_salao, id_cliente, numero, status")
     .eq("id", idComanda)
@@ -41,7 +41,7 @@ export async function carregarComandaDoSalao(params: {
 }
 
 export async function executarMutacaoComandaComEstoque(params: {
-  databaseAdmin: AdminClient;
+  supabaseAdmin: AdminClient;
   idSalao: string;
   idComanda: string;
   idUsuario: string;
@@ -58,7 +58,7 @@ export async function executarMutacaoComandaComEstoque(params: {
   successSeverity?: LogSeverity;
 }) {
   const {
-    databaseAdmin,
+    supabaseAdmin,
     idSalao,
     idComanda,
     idUsuario,
@@ -80,7 +80,7 @@ export async function executarMutacaoComandaComEstoque(params: {
   const estoqueFlow =
     stockMode === "apply"
       ? await aplicarBaixaEstoqueNoFluxoComanda({
-          databaseAdmin,
+          supabaseAdmin,
           idSalao,
           idComanda,
           idUsuario,
@@ -88,7 +88,7 @@ export async function executarMutacaoComandaComEstoque(params: {
           sourceAction,
         })
       : await reverterEstoqueNoFluxoComanda({
-          databaseAdmin,
+          supabaseAdmin,
           idSalao,
           idComanda,
           idUsuario,

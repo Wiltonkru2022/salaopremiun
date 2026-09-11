@@ -58,7 +58,7 @@ export default function MonitoringClient() {
       surface: inferSurface(pathname),
     });
 
-    // Page views foram desligadas aqui para proteger o plano free do Neon.
+    // Page views foram desligadas aqui para proteger o plano free do Supabase.
     // A camada de monitoramento continua registrando falhas, lentidão e alertas reais.
   }, [pathname]);
 

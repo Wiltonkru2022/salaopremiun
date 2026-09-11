@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDatabaseAdmin } from "@/lib/db/admin";
-import { clerkAdminApi } from "@/lib/platform/clerk-admin-api.server";
-import { readPainelClerkSession } from "@/lib/platform/painel-clerk-session.server";
+import { createClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
 import {
   buildBackupMetadata,
   clearBackupMetadata,
@@ -27,34 +27,46 @@ type RequestBody = {
 const APP_METADATA_KEY = "salaopremium_mfa";
 
 async function getAuthenticatedContext() {
-  const session = await readPainelClerkSession();
-  if (!session) {
+  const supabase = await createClient();
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+
+  if (authError || !user) {
     throw new Error("Sessao invalida.");
   }
 
-  if (!session.idSalao) {
+  const usuario = await getPainelUserContextByAuthUserId(user.id);
+
+  if (!usuario?.id_salao) {
     throw new Error("Nao foi possivel identificar o salao do usuario.");
   }
 
-  if (session.status && session.status !== "ativo") {
+  if (usuario.status && usuario.status !== "ativo") {
     throw new Error("Usuario inativo.");
   }
 
-  const admin = getDatabaseAdmin();
+  const {
+    data: { session },
+  } = await supabase.auth.getSession();
+
   const { data: authUserData, error: authUserError } =
-    await clerkAdminApi.getUserById(session.clerkSubject);
+    await supabaseAdmin.auth.admin.getUserById(user.id);
 
   if (authUserError || !authUserData?.user) {
-    throw new Error("Não foi possível carregar a conta autenticada.");
+    throw new Error("Nao foi possivel carregar a conta autenticada.");
   }
 
   const { data: factorsData, error: factorError } =
-    await clerkAdminApi.mfa.listFactors({
-      userId: session.clerkSubject,
+    await supabaseAdmin.auth.admin.mfa.listFactors({
+      userId: user.id,
     });
 
   if (factorError) {
-    throw new Error("Não foi possível carregar a verificação em duas etapas.");
+    throw new Error(factorError.message || "Erro ao carregar fatores MFA.");
   }
 
   const totpFactor =
@@ -62,18 +74,26 @@ async function getAuthenticatedContext() {
       (factor) => factor.factor_type === "totp" && factor.status === "verified"
     ) || null;
 
-  const currentLevel: "aal1" | "aal2" = session.mfaVerified ? "aal2" : "aal1";
-  const appMetadata = (authUserData.user.privateMetadata ||
+  let currentLevel: "aal1" | "aal2" | null = null;
+
+  if (session?.access_token) {
+    const { data: aalData } = await supabase.auth.mfa.getAuthenticatorAssuranceLevel(
+      session.access_token
+    );
+    currentLevel =
+      (aalData?.currentLevel as "aal1" | "aal2" | null | undefined) ?? null;
+  }
+
+  const appMetadata = (authUserData.user.app_metadata ||
     {}) as Record<string, unknown>;
   const mfaMetadata =
     (appMetadata[APP_METADATA_KEY] as SalaoPremiumMfaMetadata | undefined) ||
     null;
 
   return {
-    admin,
+    supabaseAdmin,
     authUser: authUserData.user,
-    clerkSubject: session.clerkSubject,
-    idSalao: session.idSalao,
+    idSalao: usuario.id_salao,
     currentLevel,
     totpFactor,
     mfaMetadata,
@@ -84,19 +104,22 @@ async function persistMfaMetadata(params: {
   authUserId: string;
   nextMetadata: SalaoPremiumMfaMetadata;
 }) {
-  const { data, error } = await clerkAdminApi.getUserById(params.authUserId);
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data, error } = await supabaseAdmin.auth.admin.getUserById(
+    params.authUserId
+  );
 
   if (error || !data?.user) {
-    throw new Error("Não foi possível atualizar o autenticador da conta.");
+    throw new Error("Nao foi possivel atualizar a conta do autenticador.");
   }
 
-  const currentAppMetadata = (data.user.privateMetadata ||
+  const currentAppMetadata = (data.user.app_metadata ||
     {}) as Record<string, unknown>;
 
-  const { error: updateError } = await clerkAdminApi.updateUserById(
+  const { error: updateError } = await supabaseAdmin.auth.admin.updateUserById(
     params.authUserId,
     {
-      privateMetadata: {
+      app_metadata: {
         ...currentAppMetadata,
         [APP_METADATA_KEY]: params.nextMetadata,
       },
@@ -105,7 +128,7 @@ async function persistMfaMetadata(params: {
 
   if (updateError) {
     throw new Error(
-      "Não foi possível salvar os códigos de recuperação."
+      updateError.message || "Nao foi possivel salvar os backup codes."
     );
   }
 }
@@ -116,7 +139,6 @@ export async function GET() {
 
     return NextResponse.json({
       ok: true,
-      provider: "clerk",
       factorActive: Boolean(ctx.totpFactor),
       currentLevel: ctx.currentLevel,
       backupCodesRemaining: getRemainingBackupCodeCount(ctx.mfaMetadata),
@@ -160,7 +182,7 @@ export async function POST(request: NextRequest) {
           {
             ok: false,
             error:
-              "Confirme o autenticador nesta sessão antes de gerar novos códigos de recuperação.",
+              "Confirme o autenticador nesta sessao antes de gerar novos backup codes.",
           },
           { status: 403 }
         );
@@ -294,16 +316,18 @@ export async function POST(request: NextRequest) {
           {
             ok: false,
             error:
-              "Confirme o autenticador nesta sessão antes de desativar a proteção.",
+              "Confirme o autenticador nesta sessao antes de desativar a protecao.",
           },
           { status: 403 }
         );
       }
 
-      const { error: deleteError } = await clerkAdminApi.mfa.deleteFactor({
-        id: ctx.totpFactor.id,
-        userId: ctx.clerkSubject,
-      });
+      const { error: deleteError } = await ctx.supabaseAdmin.auth.admin.mfa.deleteFactor(
+        {
+          id: ctx.totpFactor.id,
+          userId: ctx.authUser.id,
+        }
+      );
 
       if (deleteError) {
         return NextResponse.json(
@@ -311,7 +335,7 @@ export async function POST(request: NextRequest) {
             ok: false,
             error:
               deleteError.message ||
-              "Não foi possível desativar o autenticador.",
+              "Nao foi possivel desativar o autenticador.",
           },
           { status: 400 }
         );

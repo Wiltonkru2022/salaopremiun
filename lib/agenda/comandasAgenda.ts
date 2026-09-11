@@ -1,26 +1,26 @@
-import type { DatabaseClient } from "@/lib/db/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import type { ComandaResumo } from "@/components/agenda/page-types";
 
 type BuscarComandasAbertasParams = {
-  database: DatabaseClient;
+  supabase: SupabaseClient;
   idSalao: string;
   clienteId: string;
 };
 
 type CriarComandaAgendaParams = {
-  database: DatabaseClient;
+  supabase: SupabaseClient;
   idSalao: string;
   clienteId: string;
 };
 
 export async function buscarComandasAbertasDoClienteAgenda({
-  database,
+  supabase,
   idSalao,
   clienteId,
 }: BuscarComandasAbertasParams): Promise<ComandaResumo[]> {
   if (!idSalao || !clienteId) return [];
 
-  const { data, error } = await database
+  const { data, error } = await supabase
     .from("comandas")
     .select("id, numero, status, id_cliente")
     .eq("id_salao", idSalao)
@@ -37,7 +37,7 @@ export async function buscarComandasAbertasDoClienteAgenda({
 }
 
 export async function criarNovaComandaAgenda({
-  database,
+  supabase,
   idSalao,
   clienteId,
 }: CriarComandaAgendaParams): Promise<ComandaResumo> {
@@ -45,7 +45,7 @@ export async function criarNovaComandaAgenda({
     throw new Error("Salão não identificado.");
   }
 
-  const { data: ultimaRows, error: ultimaError } = await database
+  const { data: ultimaRows, error: ultimaError } = await supabase
     .from("comandas")
     .select("numero")
     .eq("id_salao", idSalao)
@@ -59,7 +59,7 @@ export async function criarNovaComandaAgenda({
 
   const ultimoNumero = ultimaRows?.[0]?.numero || 0;
 
-  const { data, error } = await database
+  const { data, error } = await supabase
     .from("comandas")
     .insert({
       id_salao: idSalao,

@@ -3,7 +3,7 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 function textValue(formData: FormData, key: string) {
   return String(formData.get(key) || "").trim();
@@ -29,14 +29,14 @@ function integerOrNull(formData: FormData, key: string) {
 
 export async function salvarPlanoAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("planos_editar");
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const id = textValue(formData, "id");
 
   if (!id) {
     throw new Error("Plano invalido para edicao.");
   }
 
-  const { data: before } = await database
+  const { data: before } = await supabase
     .from("planos_saas")
     .select("id, nome, subtitulo, valor_mensal, preco_anual, limite_usuarios, limite_profissionais, trial_dias, ideal_para, cta, destaque, ativo, ordem")
     .eq("id", id)
@@ -58,7 +58,7 @@ export async function salvarPlanoAdminMaster(formData: FormData) {
     updated_at: new Date().toISOString(),
   };
 
-  const { error } = await database.from("planos_saas").update(payload).eq("id", id);
+  const { error } = await supabase.from("planos_saas").update(payload).eq("id", id);
 
   if (error) {
     throw new Error(error.message || "Nao foi possivel salvar o plano.");
@@ -81,7 +81,7 @@ export async function salvarPlanoAdminMaster(formData: FormData) {
 
 export async function salvarRecursoPlanoAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("recursos_editar");
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const idPlano = textValue(formData, "id_plano");
   const recursoCodigo = textValue(formData, "recurso_codigo");
 
@@ -89,7 +89,7 @@ export async function salvarRecursoPlanoAdminMaster(formData: FormData) {
     throw new Error("Recurso invalido para edicao.");
   }
 
-  const { data: beforeResource } = await database
+  const { data: beforeResource } = await supabase
     .from("planos_recursos")
     .select("id_plano, recurso_codigo, habilitado, limite_numero, observacao")
     .eq("id_plano", idPlano)
@@ -105,7 +105,7 @@ export async function salvarRecursoPlanoAdminMaster(formData: FormData) {
     atualizado_em: new Date().toISOString(),
   };
 
-  const { error } = await database
+  const { error } = await supabase
     .from("planos_recursos")
     .upsert(payload, { onConflict: "id_plano,recurso_codigo" });
 

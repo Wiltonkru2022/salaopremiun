@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
 import { getAdminMasterAccess } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   removeCampanhaImage,
   uploadCampanhaImage,
@@ -44,15 +44,15 @@ export async function GET() {
   const auth = await requireAccess();
   if (!auth.access) return auth.response!;
 
-  const database = getDatabaseAdmin() as any;
+  const supabase = getSupabaseAdmin() as any;
   const [{ data: campanhas, error: campanhasError }, { data: artes, error: artesError }] =
     await Promise.all([
-      database
+      supabase
         .from("parceria_campanhas")
         .select("id,nome,status,origem,publico,locais_exibicao")
         .order("criado_em", { ascending: false })
         .limit(200),
-      database
+      supabase
         .from("parceria_criativos_locais")
         .select(
           "id,id_campanha,local_exibicao,imagem_url,formato,ativo,criado_em,atualizado_em"
@@ -111,8 +111,8 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const database = getDatabaseAdmin() as any;
-    const { data: campanha, error: campanhaError } = await database
+    const supabase = getSupabaseAdmin() as any;
+    const { data: campanha, error: campanhaError } = await supabase
       .from("parceria_campanhas")
       .select("id,nome")
       .eq("id", idCampanha)
@@ -125,7 +125,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: anterior } = await database
+    const { data: anterior } = await supabase
       .from("parceria_criativos_locais")
       .select("id,imagem_url")
       .eq("id_campanha", idCampanha)
@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
       file: arquivo,
     });
 
-    const { data: salva, error: saveError } = await database
+    const { data: salva, error: saveError } = await supabase
       .from("parceria_criativos_locais")
       .upsert(
         {
@@ -206,8 +206,8 @@ export async function DELETE(request: NextRequest) {
       );
     }
 
-    const database = getDatabaseAdmin() as any;
-    const { data: anterior, error: findError } = await database
+    const supabase = getSupabaseAdmin() as any;
+    const { data: anterior, error: findError } = await supabase
       .from("parceria_criativos_locais")
       .select("id,imagem_url")
       .eq("id_campanha", idCampanha)
@@ -225,7 +225,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ ok: true });
     }
 
-    const { error: deleteError } = await database
+    const { error: deleteError } = await supabase
       .from("parceria_criativos_locais")
       .delete()
       .eq("id", anterior.id);

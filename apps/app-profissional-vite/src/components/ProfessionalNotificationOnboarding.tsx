@@ -44,7 +44,12 @@ export function ProfessionalNotificationOnboarding() {
       return;
     }
 
-    const timer = window.setTimeout(() => setVisible(true), 650);
+    const timer = window.setTimeout(() => {
+      setVisible(true);
+      // No Android a permissão oficial é exibida logo no primeiro acesso
+      // autenticado, como nos aplicativos nativos convencionais.
+      if (isNativeProfessionalApp()) void enable();
+    }, 650);
     return () => window.clearTimeout(timer);
   }, []);
 
@@ -68,6 +73,13 @@ export function ProfessionalNotificationOnboarding() {
     if (result === "denied") {
       rememberChoice();
       setMessage("As notificações foram bloqueadas. Você pode liberar depois nas permissões do navegador.");
+      setLoading(false);
+      return;
+    }
+
+    if (result === "unconfigured") {
+      rememberChoice();
+      setMessage("A permissão do Android foi ativada. Para receber avisos com o app fechado, ainda precisamos concluir a configuração segura de notificações.");
       setLoading(false);
       return;
     }

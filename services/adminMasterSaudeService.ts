@@ -5,7 +5,7 @@ import {
 import type { AdminMasterPermissionKey } from "@/lib/admin-master/auth/adminMasterPermissions";
 import { REQUIRED_DATABASE_FUNCTIONS } from "@/lib/db/required-rpcs";
 import { REQUIRED_DATABASE_TABLES } from "@/lib/db/required-tables";
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 type RoutineRow = {
   function_name: string;
@@ -42,8 +42,8 @@ export function createAdminMasterSaudeService() {
     async validarFuncoesObrigatorias(functionNames: readonly string[]) {
       return runAdminOperation({
         action: "admin_master_saude_validar_funcoes_obrigatorias",
-        run: async (databaseAdmin) => {
-          const { data, error } = await databaseAdmin.rpc(
+        run: async (supabaseAdmin) => {
+          const { data, error } = await supabaseAdmin.rpc(
             "fn_validar_funcoes_obrigatorias",
             {
               p_function_names: [...functionNames],
@@ -72,8 +72,8 @@ export function createAdminMasterSaudeService() {
     async validarTabelasObrigatorias(tableNames: readonly string[]) {
       return runAdminOperation({
         action: "admin_master_saude_validar_tabelas_obrigatorias",
-        run: async (databaseAdmin) => {
-          const adminQueryClient = databaseAdmin as unknown as {
+        run: async (supabaseAdmin) => {
+          const adminQueryClient = supabaseAdmin as unknown as {
             from(table: string): {
               select(
                 columns: string,

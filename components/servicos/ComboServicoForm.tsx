@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Layers3, Plus, Scissors, Trash2 } from "lucide-react";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import { parseMoneyToNumber } from "@/lib/utils/serviceMasks";
 import {
@@ -82,7 +82,7 @@ const INITIAL_ITEMS: ComboItemForm[] = [
 ];
 
 export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) {
-  const database = createClient();
+  const supabase = createClient();
   const router = useRouter();
   const params = useParams();
   const comboId = typeof params?.id === "string" ? params.id : "";
@@ -226,13 +226,13 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
       setIdSalao(usuario.idSalao);
 
       const [categoriasRes, servicosRes, vinculosRes] = await Promise.all([
-        database
+        supabase
           .from("servicos_categorias")
           .select("id, nome")
           .eq("id_salao", usuario.idSalao)
           .eq("ativo", true)
           .order("nome", { ascending: true }),
-        database
+        supabase
           .from("servicos")
           .select(
             "id, nome, categoria, duracao_minutos, preco, preco_padrao, custo_produto, comissao_percentual, comissao_percentual_padrao, eh_combo"
@@ -240,7 +240,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
           .eq("id_salao", usuario.idSalao)
           .eq("ativo", true)
           .order("nome", { ascending: true }),
-        database
+        supabase
           .from("profissional_servicos")
           .select("id_servico, id_profissional, ativo")
           .eq("id_salao", usuario.idSalao)
@@ -272,7 +272,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
       setVinculosPorServico(mapaVinculos);
 
       if (modo === "editar" && comboId) {
-        const { data: comboRowRaw, error: comboError } = await database
+        const { data: comboRowRaw, error: comboError } = await supabase
           .from("servicos")
           .select(
             "id, nome, descricao, preco_padrao, ativo, status, id_categoria, combo_resumo, eh_combo"
@@ -286,7 +286,7 @@ export default function ComboServicoForm({ modo }: { modo: "novo" | "editar" }) 
         if (!comboRow?.id) throw new Error("Combo não encontrado.");
         if (!comboRow.eh_combo) throw new Error("Este serviço não é um combo.");
 
-        const { data: itensRows, error: itensError } = await database
+        const { data: itensRows, error: itensError } = await supabase
           .from("servicos_combo_itens")
           .select("id_servico_item, ordem, preco_base, percentual_rateio")
           .eq("id_salao", usuario.idSalao)

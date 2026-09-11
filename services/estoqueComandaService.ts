@@ -8,7 +8,7 @@ import {
   validarComandaParaEstoque,
 } from "@/lib/estoque/comanda-stock";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { registrarLogSistema } from "@/lib/system-logs";
 
 type EstoqueComandaParams = {
@@ -36,13 +36,13 @@ export function createEstoqueComandaService() {
 
     async validarComanda(params: EstoqueComandaParams) {
       return validarComandaParaEstoque({
-        databaseAdmin: getDatabaseAdmin(),
+        supabaseAdmin: getSupabaseAdmin(),
         ...params,
       });
     },
 
     async processarComanda(params: EstoqueComandaParams & { idUsuario: string }) {
-      return processarEstoqueComanda(getDatabaseAdmin(), {
+      return processarEstoqueComanda(getSupabaseAdmin(), {
         ...params,
         sourceModule: "estoque",
         sourceAction: "processar_comanda",
@@ -50,7 +50,7 @@ export function createEstoqueComandaService() {
     },
 
     async reverterComanda(params: EstoqueComandaParams & { idUsuario: string }) {
-      return reverterEstoqueComanda(getDatabaseAdmin(), {
+      return reverterEstoqueComanda(getSupabaseAdmin(), {
         ...params,
         sourceModule: "estoque",
         sourceAction: "reverter_comanda",
@@ -115,7 +115,7 @@ export function createEstoqueComandaService() {
     }) {
       try {
         await reportOperationalIncident({
-          databaseAdmin: getDatabaseAdmin(),
+          supabaseAdmin: getSupabaseAdmin(),
           key: `estoque:processar_comanda:${params.idSalao}:${params.idComanda}`,
           module: "estoque",
           title: "Baixa de estoque da comanda falhou",
@@ -146,7 +146,7 @@ export function createEstoqueComandaService() {
     }) {
       try {
         await reportOperationalIncident({
-          databaseAdmin: getDatabaseAdmin(),
+          supabaseAdmin: getSupabaseAdmin(),
           key: `estoque:reverter_comanda:${params.idSalao}:${params.idComanda}`,
           module: "estoque",
           title: "Reversao de estoque da comanda falhou",

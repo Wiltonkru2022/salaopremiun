@@ -2,7 +2,7 @@ import {
   AuthzError,
   requireSalaoAnyPermission,
 } from "@/lib/auth/require-salao-permission";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { abrirCaixa, fecharCaixa } from "./sessao";
 import { lancarMovimentacao } from "./movimentos";
 import { adicionarPagamento, removerPagamento } from "./pagamentos";
@@ -61,7 +61,7 @@ export async function criarContextoCaixa(params: {
 
   return {
     ctx: {
-      databaseAdmin: getDatabaseAdmin(),
+      supabaseAdmin: getSupabaseAdmin(),
       idSalao,
       idUsuario: permissionMembership.usuario.id,
     } satisfies CaixaProcessarContext,
@@ -94,7 +94,7 @@ export async function processarAcaoCaixa(params: {
   }
 
   await carregarComandaBase({
-    databaseAdmin: ctx.databaseAdmin,
+    supabaseAdmin: ctx.supabaseAdmin,
     idSalao: ctx.idSalao,
     idComanda,
   });

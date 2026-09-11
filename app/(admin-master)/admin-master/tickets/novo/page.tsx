@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import AdminMasterPageHeader from "@/components/admin-master/AdminMasterPageHeader";
 import { criarTicketInternoAdminMaster } from "@/app/(admin-master)/admin-master/tickets/novo/actions";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -55,8 +55,8 @@ export default async function AdminMasterNovoTicketPage({
 }) {
   await requireAdminMasterUser("tickets_editar");
   const params = searchParams ? await searchParams : {};
-  const database = getDatabaseAdmin();
-  const { data: saloes } = await database
+  const supabase = getSupabaseAdmin();
+  const { data: saloes } = await supabase
     .from("saloes")
     .select("id, nome, cidade, estado, plano, status")
     .order("nome", { ascending: true })

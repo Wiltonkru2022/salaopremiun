@@ -4,7 +4,7 @@ import AdminMasterSalaoActions from "@/components/admin-master/AdminMasterSalaoA
 import AdminMasterDataTableClient from "@/components/admin-master/AdminMasterDataTableClient";
 import { AdminMasterMetricCard } from "@/components/admin-master/AdminMasterPageHeader";
 import { getAdminMasterSalaoDetail } from "@/lib/admin-master/data";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -40,15 +40,15 @@ export default async function AdminMasterSalaoDetalhePage({
   const data = await getAdminMasterSalaoDetail(id);
   const salao = data.salao || {};
   const assinatura = data.assinatura || {};
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
 
-  const { data: planos } = await database
+  const { data: planos } = await supabase
     .from("planos_saas")
     .select("codigo, nome")
     .eq("ativo", true)
     .order("ordem", { ascending: true });
 
-  const { data: trialControle } = await database
+  const { data: trialControle } = await supabase
     .from("assinaturas")
     .select("trial_fim_em, email_trial_3d_sent_at, email_trial_1d_sent_at, email_trial_today_sent_at, email_trial_expired_sent_at")
     .eq("id_salao", id)

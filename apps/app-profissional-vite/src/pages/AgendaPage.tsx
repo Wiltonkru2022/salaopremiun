@@ -55,22 +55,22 @@ export function AgendaPage({
     <div className="space-y-4">
       {confirmaveis.length ? (
         <section className="rounded-[1.3rem] border border-emerald-100 bg-white p-3 shadow-sm">
-          <div className="mb-2 flex items-center justify-between gap-3">
-            <div>
+          <div className="mb-2 flex min-w-0 items-center justify-between gap-3">
+            <div className="min-w-0">
               <div className="text-[0.67rem] font-black uppercase tracking-[0.16em] text-emerald-700">WhatsApp</div>
               <div className="text-base font-black text-zinc-950">Confirmar clientes do dia</div>
             </div>
-            <span className="rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-700">{confirmaveis.length}</span>
+            <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-xs font-black text-emerald-700">{confirmaveis.length}</span>
           </div>
           <div className="grid gap-2">
             {confirmaveis.map((item) => (
-              <button key={`wa-${item.id}`} type="button" onClick={() => openConfirmationWhatsApp(item)} className="flex items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50/70 px-3 py-3 text-left active:bg-emerald-50">
+              <button key={`wa-${item.id}`} type="button" onClick={() => openConfirmationWhatsApp(item)} className="flex w-full min-w-0 items-center gap-3 rounded-2xl border border-zinc-200 bg-zinc-50/70 px-3 py-3 text-left active:bg-emerald-50">
                 <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-700"><MessageCircle size={20} /></div>
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-black text-zinc-950">{item.hora_inicio.slice(0, 5)} · {item.clientes?.nome || "Cliente"}</div>
                   <div className="truncate text-xs font-bold text-zinc-500">{item.servicos?.nome || "Atendimento"}</div>
                 </div>
-                <span className="text-xs font-black text-emerald-700">Confirmar</span>
+                <span className="shrink-0 text-xs font-black text-emerald-700">Confirmar</span>
               </button>
             ))}
           </div>

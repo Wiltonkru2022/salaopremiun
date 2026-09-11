@@ -11,7 +11,7 @@ import {
 } from "@/components/painel-ui";
 import AppModal from "@/components/ui/AppModal";
 import PaginationControls from "@/components/ui/PaginationControls";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import { getWorkspaceWindowTarget } from "@/lib/painel/workspace-windows";
 
 type ComandaRow = {
@@ -90,7 +90,7 @@ function getStatusMeta(status: string) {
 }
 
 export default function ComandasPage() {
-  const database = createClient();
+  const supabase = createClient();
   const router = useRouter();
   const { snapshot: painelSession } = usePainelSession();
 
@@ -145,7 +145,7 @@ export default function ComandasPage() {
       const from = page * COMANDAS_PAGE_SIZE;
       const to = from + COMANDAS_PAGE_SIZE - 1;
 
-      let comandasQuery = database
+      let comandasQuery = supabase
         .from("comandas")
         .select(`
           id,
@@ -181,7 +181,7 @@ export default function ComandasPage() {
       let clientesMap = new Map<string, string>();
 
       if (idsClientes.length > 0) {
-        const { data: clientesData, error: clientesError } = await database
+        const { data: clientesData, error: clientesError } = await supabase
           .from("clientes")
           .select("id, nome")
           .in("id", idsClientes);
@@ -210,7 +210,7 @@ export default function ComandasPage() {
       setComandasTotal(count ?? (append ? from + rows.length : rows.length));
       setComandasHasMore((count ?? 0) > to + 1);
     },
-    [database, statusFiltro]
+    [supabase, statusFiltro]
   );
 
   const bootstrap = useCallback(async () => {

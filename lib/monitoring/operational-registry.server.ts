@@ -5,14 +5,14 @@ import {
   listOperationalComponents,
   OPERATIONAL_REGISTRY_VERSION,
 } from "@/lib/monitoring/operational-components";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export async function syncOperationalComponentRegistry() {
-  const database = getDatabaseAdmin() as any;
+  const supabase = getSupabaseAdmin() as any;
   const components = listOperationalComponents();
   const keys = components.map((component) => component.componentKey);
 
-  const { count, error: countError } = await database
+  const { count, error: countError } = await supabase
     .from("operational_components")
     .select("component_key", { count: "exact", head: true })
     .eq("registry_version", OPERATIONAL_REGISTRY_VERSION)
@@ -60,7 +60,7 @@ export async function syncOperationalComponentRegistry() {
     };
   });
 
-  const { error } = await database
+  const { error } = await supabase
     .from("operational_components")
     .upsert(rows, { onConflict: "component_key" });
   if (error) throw error;
@@ -75,13 +75,13 @@ export async function syncOperationalComponentRegistry() {
   );
 
   if (keys.length) {
-    await database
+    await supabase
       .from("operational_component_dependencies")
       .delete()
       .in("component_key", keys);
   }
   if (dependencies.length) {
-    const { error: dependencyError } = await database
+    const { error: dependencyError } = await supabase
       .from("operational_component_dependencies")
       .insert(dependencies);
     if (dependencyError) throw dependencyError;

@@ -172,6 +172,13 @@ export async function createProfissionalSession(session: ProfissionalSession) {
 }
 
 export async function getProfissionalSessionFromCookie(): Promise<ProfissionalSession | null> {
+  const authorization = String((await headers()).get("authorization") || "");
+  const bearerToken = authorization.replace(/^Bearer\s+/i, "").trim();
+  if (bearerToken) {
+    const session = parseSession(bearerToken);
+    if (session?.idProfissional) return session;
+  }
+
   const cookieStore = await cookies();
   const candidates = cookieStore
     .getAll(COOKIE_NAME)
@@ -190,6 +197,10 @@ export async function getProfissionalSessionFromCookie(): Promise<ProfissionalSe
   }
 
   return null;
+}
+
+export function createProfissionalNativeAccessToken(session: ProfissionalSession) {
+  return serializeSession(session);
 }
 
 export async function requireProfissionalSession() {

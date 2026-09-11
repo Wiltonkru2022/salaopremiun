@@ -36,6 +36,14 @@ input,
 select,
 textarea {
   font: inherit;
+  max-width: 100%;
+}
+
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
 }
 
 button,
@@ -82,4 +90,36 @@ textarea {
     transparent 8px,
     transparent 16px
   );
+}
+
+@keyframes sp-reveal-logo-in {
+  0% { opacity: 0; transform: scale(0.55) rotate(-8deg); filter: brightness(0.6); }
+  55% { opacity: 1; transform: scale(1.08) rotate(0); filter: brightness(1.3); }
+  100% { opacity: 1; transform: scale(1); filter: brightness(1); }
+}
+
+@keyframes sp-reveal-copy-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes sp-reveal-glow {
+  0%, 100% { opacity: 0.3; transform: scale(0.78); }
+  55% { opacity: 0.8; transform: scale(1.08); }
+}
+
+.sp-reveal-logo { animation: sp-reveal-logo-in 1.15s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.sp-reveal-title { animation: sp-reveal-copy-in 0.55s 0.72s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.sp-reveal-subtitle { animation: sp-reveal-copy-in 0.5s 0.95s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.sp-reveal-glow {
+  position: absolute;
+  width: min(84vw, 30rem);
+  height: min(84vw, 30rem);
+  border-radius: 999px;
+  background: radial-gradient(circle, rgba(246, 196, 83, 0.22), transparent 66%);
+  animation: sp-reveal-glow 1.4s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-reveal-logo, .sp-reveal-title, .sp-reveal-subtitle, .sp-reveal-glow { animation-duration: 1ms; }
 }

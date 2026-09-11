@@ -14,7 +14,7 @@ export default function manifest(): MetadataRoute.Manifest {
     orientation: "any",
     icons: [
       {
-        src: "/favicon-preview.png",
+        src: "/brand-logo-v2.png",
         sizes: "512x512",
         type: "image/png",
         purpose: "maskable",

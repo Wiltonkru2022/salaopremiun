@@ -1,6 +1,6 @@
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-type AdminClient = ReturnType<typeof getDatabaseAdmin>;
+type AdminClient = ReturnType<typeof getSupabaseAdmin>;
 
 type ComandaItemRow = {
   id: string;
@@ -147,13 +147,13 @@ function buildServicoObservation(params: {
 }
 
 export async function validarComandaParaEstoque(params: {
-  databaseAdmin: AdminClient;
+  supabaseAdmin: AdminClient;
   idSalao: string;
   idComanda: string;
 }) {
-  const { databaseAdmin, idSalao, idComanda } = params;
+  const { supabaseAdmin, idSalao, idComanda } = params;
 
-  const { data, error } = await databaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("comandas")
     .select("id, status, id_salao")
     .eq("id", idComanda)
@@ -172,11 +172,11 @@ export async function validarComandaParaEstoque(params: {
 }
 
 async function carregarItensDaComanda(
-  databaseAdmin: AdminClient,
+  supabaseAdmin: AdminClient,
   idSalao: string,
   idComanda: string
 ) {
-  const { data, error } = await databaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("comanda_itens")
     .select("id, tipo_item, id_produto, id_servico, descricao, quantidade")
     .eq("id_salao", idSalao)
@@ -191,7 +191,7 @@ async function carregarItensDaComanda(
 }
 
 async function carregarProdutos(
-  databaseAdmin: AdminClient,
+  supabaseAdmin: AdminClient,
   idSalao: string,
   idsProdutos: string[]
 ) {
@@ -199,7 +199,7 @@ async function carregarProdutos(
     return new Map<string, ProdutoRow>();
   }
 
-  const { data, error } = await databaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("produtos")
     .select(
       "id, nome, estoque_atual, estoque_minimo, preco_custo, custos_extras, custo_real, custo_por_dose"
@@ -217,7 +217,7 @@ async function carregarProdutos(
 }
 
 async function carregarConsumoServicos(
-  databaseAdmin: AdminClient,
+  supabaseAdmin: AdminClient,
   idSalao: string,
   idsServicos: string[]
 ) {
@@ -225,7 +225,7 @@ async function carregarConsumoServicos(
     return [] as ConsumoServicoRow[];
   }
 
-  const { data, error } = await databaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("produto_servico_consumo")
     .select("id_produto, id_servico, quantidade_consumo, custo_estimado")
     .eq("id_salao", idSalao)
@@ -240,11 +240,11 @@ async function carregarConsumoServicos(
 }
 
 async function carregarMovimentosExistentes(
-  databaseAdmin: AdminClient,
+  supabaseAdmin: AdminClient,
   idSalao: string,
   idComanda: string
 ) {
-  const { data, error } = await databaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("produtos_movimentacoes")
     .select("id, observacoes, id_produto, quantidade")
     .eq("id_salao", idSalao)
@@ -263,7 +263,7 @@ async function carregarMovimentosExistentes(
 }
 
 async function resolverAlertasBaixoEstoque(
-  databaseAdmin: AdminClient,
+  supabaseAdmin: AdminClient,
   idSalao: string,
   produtosAfetados: ProdutoRow[],
   estoqueFinalMap: Map<string, number>
@@ -271,7 +271,7 @@ async function resolverAlertasBaixoEstoque(
   if (produtosAfetados.length === 0) return;
 
   const idsProdutos = produtosAfetados.map((produto) => produto.id);
-  const { data: alertasAtivos, error } = await databaseAdmin
+  const { data: alertasAtivos, error } = await supabaseAdmin
     .from("produtos_alertas")
     .select("id, id_produto, resolvido")
     .eq("id_salao", idSalao)
@@ -299,7 +299,7 @@ async function resolverAlertasBaixoEstoque(
     .filter(Boolean) as string[];
 
   if (alertasParaResolver.length > 0) {
-    const { error: resolveError } = await databaseAdmin
+    const { error: resolveError } = await supabaseAdmin
       .from("produtos_alertas")
       .update({
         resolvido: true,
@@ -328,7 +328,7 @@ async function resolverAlertasBaixoEstoque(
     }));
 
   if (alertasParaCriar.length > 0) {
-    const { error: createError } = await databaseAdmin
+    const { error: createError } = await supabaseAdmin
       .from("produtos_alertas")
       .insert(alertasParaCriar);
 
@@ -339,10 +339,10 @@ async function resolverAlertasBaixoEstoque(
 }
 
 export async function processarEstoqueComanda(
-  databaseAdmin: AdminClient,
+  supabaseAdmin: AdminClient,
   params: ComandaEstoqueParams
 ) {
-  const { data: rpcData, error: rpcError } = await databaseAdmin.rpc(
+  const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc(
     "fn_processar_estoque_comanda_atomic",
     {
       p_id_salao: params.idSalao,
@@ -362,7 +362,7 @@ export async function processarEstoqueComanda(
   }
 
   const itens = await carregarItensDaComanda(
-    databaseAdmin,
+    supabaseAdmin,
     params.idSalao,
     params.idComanda
   );
@@ -382,20 +382,20 @@ export async function processarEstoqueComanda(
     .filter(Boolean) as string[];
 
   const consumos = await carregarConsumoServicos(
-    databaseAdmin,
+    supabaseAdmin,
     params.idSalao,
     idsServicos
   );
 
   const idsProdutosConsumo = consumos.map((item) => item.id_produto);
   const produtos = await carregarProdutos(
-    databaseAdmin,
+    supabaseAdmin,
     params.idSalao,
     [...new Set([...idsProdutosDiretos, ...idsProdutosConsumo])]
   );
 
   const movimentosExistentes = await carregarMovimentosExistentes(
-    databaseAdmin,
+    supabaseAdmin,
     params.idSalao,
     params.idComanda
   );
@@ -500,7 +500,7 @@ export async function processarEstoqueComanda(
   if (custoPorItem.size > 0) {
     await Promise.all(
       Array.from(custoPorItem.entries()).map(async ([itemId, custoTotal]) => {
-        const { error } = await databaseAdmin
+        const { error } = await supabaseAdmin
           .from("comanda_itens")
           .update({
             custo_total: custoTotal,
@@ -556,7 +556,7 @@ export async function processarEstoqueComanda(
     );
   }
 
-  const { error: insertError } = await databaseAdmin
+  const { error: insertError } = await supabaseAdmin
     .from("produtos_movimentacoes")
     .insert(
       planejados.map((movimento) => ({
@@ -589,7 +589,7 @@ export async function processarEstoqueComanda(
 
       estoqueFinalMap.set(idProduto, novoEstoque);
 
-      const { error } = await databaseAdmin
+      const { error } = await supabaseAdmin
         .from("produtos")
         .update({
           estoque_atual: novoEstoque,
@@ -605,7 +605,7 @@ export async function processarEstoqueComanda(
   );
 
   await resolverAlertasBaixoEstoque(
-    databaseAdmin,
+    supabaseAdmin,
     params.idSalao,
     Array.from(quantidadePorProduto.keys())
       .map((idProduto) => produtos.get(idProduto))
@@ -621,10 +621,10 @@ export async function processarEstoqueComanda(
 }
 
 export async function reverterEstoqueComanda(
-  databaseAdmin: AdminClient,
+  supabaseAdmin: AdminClient,
   params: ComandaEstoqueParams
 ) {
-  const { data: rpcData, error: rpcError } = await databaseAdmin.rpc(
+  const { data: rpcData, error: rpcError } = await supabaseAdmin.rpc(
     "fn_reverter_estoque_comanda_atomic",
     {
       p_id_salao: params.idSalao,
@@ -643,7 +643,7 @@ export async function reverterEstoqueComanda(
   }
 
   const movimentos = await carregarMovimentosExistentes(
-    databaseAdmin,
+    supabaseAdmin,
     params.idSalao,
     params.idComanda
   );
@@ -659,7 +659,7 @@ export async function reverterEstoqueComanda(
     new Set(movimentos.map((item) => item.id_produto).filter(Boolean))
   ) as string[];
   const produtos = await carregarProdutos(
-    databaseAdmin,
+    supabaseAdmin,
     params.idSalao,
     idsProdutos
   );
@@ -691,7 +691,7 @@ export async function reverterEstoqueComanda(
 
       estoqueFinalMap.set(idProduto, novoEstoque);
 
-      const { error } = await databaseAdmin
+      const { error } = await supabaseAdmin
         .from("produtos")
         .update({
           estoque_atual: novoEstoque,
@@ -706,7 +706,7 @@ export async function reverterEstoqueComanda(
     })
   );
 
-  const { error: deleteError } = await databaseAdmin
+  const { error: deleteError } = await supabaseAdmin
     .from("produtos_movimentacoes")
     .delete()
     .eq("id_salao", params.idSalao)
@@ -717,7 +717,7 @@ export async function reverterEstoqueComanda(
   }
 
   await resolverAlertasBaixoEstoque(
-    databaseAdmin,
+    supabaseAdmin,
     params.idSalao,
     Array.from(quantidadePorProduto.keys())
       .map((idProduto) => produtos.get(idProduto))

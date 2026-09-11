@@ -3,7 +3,7 @@ import {
   type AdminMasterAccessResult,
 } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import type { AdminMasterPermissionKey } from "@/lib/admin-master/auth/adminMasterPermissions";
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 export type AdminMasterSearchResultAction = {
   label: string;
@@ -44,50 +44,50 @@ export function createAdminMasterSearchService() {
         { data: planos },
       ] = await runAdminOperation({
         action: "admin_master_search_buscar",
-        run: async (database) =>
+        run: async (supabase) =>
           Promise.all([
-            database
+            supabase
               .from("saloes")
               .select("id, nome, responsavel, email, status")
               .or(`nome.ilike.${like},responsavel.ilike.${like},email.ilike.${like}`)
               .limit(5),
-            database
+            supabase
               .from("clientes")
               .select("id, id_salao, nome, email, whatsapp, telefone, status")
               .or(`nome.ilike.${like},email.ilike.${like},whatsapp.ilike.${like},telefone.ilike.${like}`)
               .limit(5),
-            (database as any)
+            (supabase as any)
               .from("parceiros_comerciais")
               .select("id, razao_social, nome_fantasia, segmento, cidade, uf, status, email, whatsapp")
               .or(`razao_social.ilike.${like},nome_fantasia.ilike.${like},segmento.ilike.${like},email.ilike.${like},whatsapp.ilike.${like}`)
               .limit(5),
-            database
+            supabase
               .from("assinaturas_cobrancas")
               .select("id, referencia, descricao, status, valor, id_salao")
               .or(`referencia.ilike.${like},descricao.ilike.${like},asaas_payment_id.ilike.${like},txid.ilike.${like}`)
               .limit(5),
             hasNumericQuery
-              ? database
+              ? supabase
                   .from("tickets")
                   .select("id, numero, assunto, status, id_salao")
                   .or(`numero.eq.${numericQuery},assunto.ilike.${like}`)
                   .limit(5)
-              : database
+              : supabase
                   .from("tickets")
                   .select("id, numero, assunto, status, id_salao")
                   .or(`assunto.ilike.${like},categoria.ilike.${like}`)
                   .limit(5),
-            database
+            supabase
               .from("eventos_webhook")
               .select("id, evento, status, origem, id_salao")
               .or(`evento.ilike.${like},origem.ilike.${like},status.ilike.${like}`)
               .limit(5),
-            database
+            supabase
               .from("admin_master_usuarios")
               .select("id, nome, email, perfil, status")
               .or(`nome.ilike.${like},email.ilike.${like},perfil.ilike.${like}`)
               .limit(5),
-            database
+            supabase
               .from("planos_saas")
               .select("id, codigo, nome, subtitulo, ativo")
               .or(`codigo.ilike.${like},nome.ilike.${like},subtitulo.ilike.${like}`)

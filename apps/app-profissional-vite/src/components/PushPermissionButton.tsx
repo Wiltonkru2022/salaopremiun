@@ -8,6 +8,7 @@ export type ProfessionalPushState =
   | "saving"
   | "enabled"
   | "denied"
+  | "unconfigured"
   | "unsupported";
 
 const NATIVE_NOTIFICATION_CHANNEL_ID = "salaopremiun_default";
@@ -113,6 +114,23 @@ function isNativePushAvailable() {
   );
 }
 
+function hasNativePushConfiguration() {
+  return import.meta.env.VITE_NATIVE_PUSH_CONFIGURED === "true";
+}
+
+async function requestNativeNotificationPermission(): Promise<ProfessionalPushState> {
+  try {
+    const { LocalNotifications } = await import("@capacitor/local-notifications");
+    let permission = await LocalNotifications.checkPermissions();
+    if (permission.display === "prompt") {
+      permission = await LocalNotifications.requestPermissions();
+    }
+    return permission.display === "granted" ? "ready" : "denied";
+  } catch {
+    return "unsupported";
+  }
+}
+
 export function isNativeProfessionalApp() {
   return typeof window !== "undefined" && Capacitor.isNativePlatform();
 }
@@ -137,6 +155,14 @@ async function resolveProfessionalNativePushState(
   requestPermission: boolean
 ): Promise<ProfessionalPushState | null> {
   if (!isNativePushAvailable()) return null;
+
+  // A permissão do Android é solicitada mesmo quando o Firebase ainda não foi
+  // configurado. Sem google-services.json, não chamamos register(), pois ele
+  // encerra alguns aparelhos ao tentar inicializar o FCM sem configuração.
+  if (!hasNativePushConfiguration()) {
+    const permission = await requestNativeNotificationPermission();
+    return permission === "ready" ? "unconfigured" : permission;
+  }
 
   const { PushNotifications } = await import("@capacitor/push-notifications");
   let permissions = await PushNotifications.checkPermissions().catch(() => ({
@@ -299,7 +325,7 @@ export function PushPermissionButton({ expanded = false }: { expanded?: boolean 
           "pushNotificationActionPerformed",
           (event) => {
             const url = getSafeInternalUrl(event.notification.data?.url);
-            if (url) window.location.assign(url);
+            if (url) window.dispatchEvent(new CustomEvent("sp:professional:navigate", { detail: { url } }));
           }
         )
           .then((handle) => {
@@ -312,7 +338,7 @@ export function PushPermissionButton({ expanded = false }: { expanded?: boolean 
           "localNotificationActionPerformed",
           (event) => {
             const url = getSafeInternalUrl(event.notification.extra?.url);
-            if (url) window.location.assign(url);
+            if (url) window.dispatchEvent(new CustomEvent("sp:professional:navigate", { detail: { url } }));
           }
         )
           .then((handle) => {
@@ -342,7 +368,7 @@ export function PushPermissionButton({ expanded = false }: { expanded?: boolean 
   }, []);
 
   async function enable() {
-    if (state !== "ready") return;
+    if (state !== "ready" && state !== "unconfigured") return;
     setState("saving");
     const next = await requestProfessionalPushPermission();
     setState(next);
@@ -357,11 +383,14 @@ export function PushPermissionButton({ expanded = false }: { expanded?: boolean 
   }
 
   const enabled = state === "enabled";
+  const unconfigured = state === "unconfigured";
   const denied = state === "denied";
   const saving = state === "saving";
   const label = enabled
     ? "Notificações ativadas"
-    : denied
+    : unconfigured
+      ? "Permissão ativada"
+      : denied
       ? "Bloqueadas no navegador"
       : saving
         ? "Ativando..."
@@ -371,9 +400,11 @@ export function PushPermissionButton({ expanded = false }: { expanded?: boolean 
     <button
       type="button"
       onClick={() => void enable()}
-      disabled={enabled || denied || saving}
+      disabled={enabled || denied || saving || unconfigured}
       title={
-        denied
+        unconfigured
+          ? "A permissão do Android foi ativada. As notificações remotas dependem da configuração Firebase."
+          : denied
           ? "Libere as notificações nas permissões do navegador."
           : enabled
             ? "Notificações ativadas neste celular"
@@ -386,7 +417,9 @@ export function PushPermissionButton({ expanded = false }: { expanded?: boolean 
       } border transition disabled:cursor-default ${
         enabled
           ? "border-emerald-200 bg-emerald-50 text-emerald-700"
-          : denied
+          : unconfigured
+            ? "border-amber-200 bg-amber-50 text-amber-800"
+            : denied
             ? "border-red-200 bg-red-50 text-red-700"
             : "border-zinc-200 bg-white text-zinc-800 shadow-sm"
       }`}

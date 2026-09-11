@@ -1,9 +1,11 @@
 import { addDays, format, isBefore } from "date-fns";
-import { headers } from "next/headers";
-import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
+import { createServerClient } from "@supabase/ssr";
+import { cookies, headers } from "next/headers";
+import { getPainelUserContextByAuthUserId } from "@/lib/auth/get-painel-user-context";
 import { getRenovacaoAutomaticaInfo } from "@/lib/assinaturas/renovacao-automatica";
 import { buscarCobranca } from "@/lib/payments/pix-provider";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseCookieOptions } from "@/lib/supabase/cookie-options";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   createAsaasSubscription,
   isAsaasSubscriptionNotFoundError,
@@ -42,6 +44,33 @@ const PLANO_TRIAL_PADRAO: PlanoTrialRow = {
   ativo: true,
 };
 
+async function getSupabaseServer() {
+  const cookieStore = await cookies();
+  const headersList = await headers();
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_URL nao configurada.");
+  }
+
+  if (!supabaseAnonKey) {
+    throw new Error("NEXT_PUBLIC_SUPABASE_ANON_KEY nao configurada.");
+  }
+
+  const cookieOptions = getSupabaseCookieOptions(headersList.get("host"));
+
+  return createServerClient(supabaseUrl, supabaseAnonKey, {
+    cookieOptions,
+    cookies: {
+      getAll() {
+        return cookieStore.getAll();
+      },
+      setAll() {},
+    },
+  });
+}
+
 async function getRemoteIp() {
   const requestHeaders = await headers();
   const forwardedFor = requestHeaders.get("x-forwarded-for");
@@ -61,45 +90,58 @@ async function getRemoteIp() {
 
 function getRecurringNextDueDate(vencimentoEm?: string | null) {
   const normalized = String(vencimentoEm || "").trim();
+
   if (normalized) {
     const dueDate = new Date(`${normalized}T12:00:00`);
     if (!Number.isNaN(dueDate.getTime()) && !isBefore(dueDate, new Date())) {
       return normalized;
     }
   }
+
   return format(addDays(new Date(), 30), "yyyy-MM-dd");
 }
 
 export function createAssinaturaService() {
-  const database = getDatabaseAdmin();
+  const supabaseAdmin = getSupabaseAdmin();
 
   return {
     async validarSalaoAdmin(idSalao: string, adminOnlyMessage: string) {
-      const context = await getPainelUserContext();
-      if (context.mfaRequired) {
-        throw new AssinaturaServiceError("MFA obrigatorio para esta operacao.", 403);
+      const supabase = await getSupabaseServer();
+
+      const {
+        data: { user },
+        error: authError,
+      } = await supabase.auth.getUser();
+
+      if (authError) {
+        throw new AssinaturaServiceError("Erro ao validar usuario autenticado.", 401);
       }
-      if (!context.user || !context.usuario) {
+
+      if (!user) {
         throw new AssinaturaServiceError("Usuario nao autenticado.", 401);
       }
 
-      const usuario = context.usuario;
-      if (!usuario.id_salao) {
+      const usuario = await getPainelUserContextByAuthUserId(user.id);
+
+      if (!usuario?.id_salao) {
         throw new AssinaturaServiceError("Usuario sem salao vinculado.", 403);
       }
+
       if (String(usuario.status || "").toLowerCase() !== "ativo") {
         throw new AssinaturaServiceError("Usuario inativo.", 403);
       }
+
       if (usuario.id_salao !== idSalao) {
         throw new AssinaturaServiceError("Acesso negado para este salao.", 403);
       }
+
       if (String(usuario.nivel || "").toLowerCase() !== "admin") {
         throw new AssinaturaServiceError(adminOnlyMessage, 403);
       }
     },
 
     async buscarAssinaturaSalao(idSalao: string) {
-      const { data, error } = await database
+      const { data, error } = await supabaseAdmin
         .from("assinaturas")
         .select(
           "id, plano, valor, vencimento_em, renovacao_automatica, forma_pagamento_atual, asaas_customer_id, asaas_payment_id, asaas_credit_card_token, asaas_subscription_id, asaas_subscription_status, status, trial_ativo, trial_inicio_em, trial_fim_em"
@@ -108,8 +150,12 @@ export function createAssinaturaService() {
         .maybeSingle();
 
       if (error) {
-        throw new AssinaturaServiceError(error.message || "Erro ao consultar assinatura.", 500);
+        throw new AssinaturaServiceError(
+          error.message || "Erro ao consultar assinatura.",
+          500
+        );
       }
+
       return data || null;
     },
 
@@ -120,14 +166,23 @@ export function createAssinaturaService() {
     }) {
       const payment = await buscarCobranca(params.paymentId);
       const creditCard =
-        payment.creditCard && typeof payment.creditCard === "object" ? payment.creditCard : null;
+        payment.creditCard && typeof payment.creditCard === "object"
+          ? payment.creditCard
+          : null;
+
       const token = String(creditCard?.creditCardToken || "").trim() || null;
       const brand = String(creditCard?.creditCardBrand || "").trim() || null;
       const last4 = String(creditCard?.creditCardNumber || "").trim() || null;
 
-      if (!token) return { updated: false, token: null };
+      if (!token) {
+        return {
+          updated: false,
+          token: null,
+        };
+      }
 
-      const { error } = await database
+      const supabaseAdmin = getSupabaseAdmin();
+      const { error } = await supabaseAdmin
         .from("assinaturas")
         .update({
           forma_pagamento_atual: "CREDIT_CARD",
@@ -141,9 +196,16 @@ export function createAssinaturaService() {
         .eq("id_salao", params.idSalao);
 
       if (error) {
-        throw new AssinaturaServiceError(error.message || "Erro ao salvar token do cartao na assinatura.", 500);
+        throw new AssinaturaServiceError(
+          error.message || "Erro ao salvar token do cartao na assinatura.",
+          500
+        );
       }
-      return { updated: true, token };
+
+      return {
+        updated: true,
+        token,
+      };
     },
 
     async atualizarRenovacaoAssinatura(params: {
@@ -151,13 +213,17 @@ export function createAssinaturaService() {
       idSalao: string;
       renovacaoAutomatica: boolean;
     }) {
-      const { error } = await database
+      const { error } = await supabaseAdmin
         .from("assinaturas")
         .update({ renovacao_automatica: params.renovacaoAutomatica })
         .eq("id", params.assinaturaId)
         .eq("id_salao", params.idSalao);
+
       if (error) {
-        throw new AssinaturaServiceError(error.message || "Erro ao atualizar renovacao automatica.", 500);
+        throw new AssinaturaServiceError(
+          error.message || "Erro ao atualizar renovacao automatica.",
+          500
+        );
       }
     },
 
@@ -181,21 +247,31 @@ export function createAssinaturaService() {
         creditCardToken: params.creditCardToken,
         remoteIp,
       });
+
       const subscriptionId = String(recurring.id || "").trim();
+
       if (!subscriptionId) {
-        throw new AssinaturaServiceError("Nao foi possivel provisionar a assinatura recorrente no Asaas.", 502);
+        throw new AssinaturaServiceError(
+          "Nao foi possivel provisionar a assinatura recorrente no Asaas.",
+          502
+        );
       }
 
-      const { error } = await database
+      const { error } = await supabaseAdmin
         .from("assinaturas")
         .update({
           asaas_subscription_id: subscriptionId,
-          asaas_subscription_status: String(recurring.status || "").trim() || "ACTIVE",
+          asaas_subscription_status:
+            String(recurring.status || "").trim() || "ACTIVE",
         })
         .eq("id", params.assinaturaId)
         .eq("id_salao", params.idSalao);
+
       if (error) {
-        throw new AssinaturaServiceError(error.message || "Erro ao salvar assinatura recorrente do cartao.", 500);
+        throw new AssinaturaServiceError(
+          error.message || "Erro ao salvar assinatura recorrente do cartao.",
+          500
+        );
       }
     },
 
@@ -207,16 +283,25 @@ export function createAssinaturaService() {
       try {
         await removeAsaasSubscription(params.asaasSubscriptionId);
       } catch (error) {
-        if (!isAsaasSubscriptionNotFoundError(error)) throw error;
+        if (!isAsaasSubscriptionNotFoundError(error)) {
+          throw error;
+        }
       }
 
-      const { error } = await database
+      const { error } = await supabaseAdmin
         .from("assinaturas")
-        .update({ asaas_subscription_id: null, asaas_subscription_status: null })
+        .update({
+          asaas_subscription_id: null,
+          asaas_subscription_status: null,
+        })
         .eq("id", params.assinaturaId)
         .eq("id_salao", params.idSalao);
+
       if (error) {
-        throw new AssinaturaServiceError(error.message || "Erro ao limpar assinatura recorrente do cartao.", 500);
+        throw new AssinaturaServiceError(
+          error.message || "Erro ao limpar assinatura recorrente do cartao.",
+          500
+        );
       }
     },
 
@@ -225,17 +310,24 @@ export function createAssinaturaService() {
     },
 
     async buscarPlanoTeste() {
-      const { data, error } = await database
+      const { data, error } = await supabaseAdmin
         .from("planos_saas")
-        .select("id, codigo, nome, descricao, valor_mensal, limite_usuarios, limite_profissionais, ativo")
+        .select(
+          "id, codigo, nome, descricao, valor_mensal, limite_usuarios, limite_profissionais, ativo"
+        )
         .eq("codigo", "teste_gratis")
         .eq("ativo", true)
         .maybeSingle();
+
       if (error) {
-        throw new AssinaturaServiceError(error.message || "Erro ao consultar plano de teste.", 500);
+        throw new AssinaturaServiceError(
+          error.message || "Erro ao consultar plano de teste.",
+          500
+        );
       }
 
       const plano = (data as PlanoTrialRow | null) || PLANO_TRIAL_PADRAO;
+
       return {
         ...plano,
         nome: plano.nome || PLANO_TRIAL_PADRAO.nome,
@@ -247,31 +339,41 @@ export function createAssinaturaService() {
     },
 
     async buscarSalaoBasico(idSalao: string) {
-      const { data, error } = await database
+      const { data, error } = await supabaseAdmin
         .from("saloes")
         .select("id, plano, trial_ativo, trial_inicio_em, trial_fim_em")
         .eq("id", idSalao)
         .maybeSingle();
+
       if (error) {
-        throw new AssinaturaServiceError(error.message || "Erro ao consultar salao.", 500);
+        throw new AssinaturaServiceError(
+          error.message || "Erro ao consultar salao.",
+          500
+        );
       }
+
       return data || null;
     },
 
     async salvarTrial(params: {
       idSalao: string;
       planoTeste: PlanoTrialRow;
-      assinaturaExistente?: { id?: string | null; renovacao_automatica?: boolean | null } | null;
+      assinaturaExistente?: {
+        id?: string | null;
+        renovacao_automatica?: boolean | null;
+      } | null;
       agoraIso: string;
       trialFimIso: string;
       vencimentoEm: string;
     }) {
       const valorMensal = Number(params.planoTeste.valor_mensal || 0);
       const limiteUsuarios = Number(params.planoTeste.limite_usuarios || 999);
-      const limiteProfissionais = Number(params.planoTeste.limite_profissionais || 999);
+      const limiteProfissionais = Number(
+        params.planoTeste.limite_profissionais || 999
+      );
 
       if (params.assinaturaExistente?.id) {
-        const { error } = await database
+        const { error } = await supabaseAdmin
           .from("assinaturas")
           .update({
             plano: params.planoTeste.codigo,
@@ -289,15 +391,20 @@ export function createAssinaturaService() {
             id_cobranca_atual: null,
             referencia_atual: null,
             asaas_payment_id: null,
-            renovacao_automatica: params.assinaturaExistente.renovacao_automatica ?? false,
+            renovacao_automatica:
+              params.assinaturaExistente.renovacao_automatica ?? false,
           })
           .eq("id", params.assinaturaExistente.id)
           .eq("id_salao", params.idSalao);
+
         if (error) {
-          throw new AssinaturaServiceError(error.message || "Erro ao atualizar assinatura trial.", 500);
+          throw new AssinaturaServiceError(
+            error.message || "Erro ao atualizar assinatura trial.",
+            500
+          );
         }
       } else {
-        const { error } = await database.from("assinaturas").insert({
+        const { error } = await supabaseAdmin.from("assinaturas").insert({
           id_salao: params.idSalao,
           asaas_customer_id: null,
           asaas_payment_id: null,
@@ -317,12 +424,16 @@ export function createAssinaturaService() {
           referencia_atual: null,
           renovacao_automatica: false,
         });
+
         if (error) {
-          throw new AssinaturaServiceError(error.message || "Erro ao criar assinatura trial.", 500);
+          throw new AssinaturaServiceError(
+            error.message || "Erro ao criar assinatura trial.",
+            500
+          );
         }
       }
 
-      const { error: salaoError } = await database
+      const { error: salaoError } = await supabaseAdmin
         .from("saloes")
         .update({
           status: "teste_gratis",
@@ -333,8 +444,12 @@ export function createAssinaturaService() {
           limite_usuarios: limiteUsuarios,
         })
         .eq("id", params.idSalao);
+
       if (salaoError) {
-        throw new AssinaturaServiceError(salaoError.message || "Erro ao atualizar dados do salao.", 500);
+        throw new AssinaturaServiceError(
+          salaoError.message || "Erro ao atualizar dados do salao.",
+          500
+        );
       }
 
       return {
@@ -350,16 +465,21 @@ export function createAssinaturaService() {
     },
 
     async listarHistorico(idSalao: string) {
-      const { data, error } = await database
+      const { data, error } = await supabaseAdmin
         .from("assinaturas_cobrancas")
         .select(
           "id, referencia, descricao, valor, status, forma_pagamento, data_expiracao, payment_date, confirmed_date, invoice_url, bank_slip_url, created_at, updated_at, asaas_payment_id, deleted, plano_origem, plano_destino, tipo_movimento, gerada_automaticamente"
         )
         .eq("id_salao", idSalao)
         .order("created_at", { ascending: false });
+
       if (error) {
-        throw new AssinaturaServiceError(error.message || "Erro ao carregar historico.", 500);
+        throw new AssinaturaServiceError(
+          error.message || "Erro ao carregar historico.",
+          500
+        );
       }
+
       return data || [];
     },
   };

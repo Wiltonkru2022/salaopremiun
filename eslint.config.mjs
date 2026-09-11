@@ -48,7 +48,7 @@ export default [
     },
 
     rules: {
-      // IMPORTANTE: não travar dev em integrações Neon/RPC ainda sem tipos gerados
+      // IMPORTANTE: não travar dev em integrações Supabase/RPC ainda sem tipos gerados
       "@typescript-eslint/no-explicit-any": "off",
 
       // hooks funcionando corretamente
@@ -70,14 +70,6 @@ export default [
 
       // permitir comentários vazios em catch
       "no-empty": ["error", { allowEmptyCatch: true }],
-    },
-  },
-
-  {
-    files: ["app/services/cliente-app/auth.ts"],
-    rules: {
-      // Arquivo legado em migração: há variáveis reatribuídas condicionalmente pelo fluxo Neon.
-      "prefer-const": "off",
     },
   },
 

@@ -10,8 +10,8 @@ import {
   assertCanMutatePlanFeature,
   PlanAccessError,
 } from "@/lib/plans/access";
-import { runAdminOperation } from "@/lib/db/admin-ops";
-import { asLooseDbClient } from "@/lib/db/loose-client";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
 
 type MutationAction =
   | "criar_agendamento"
@@ -45,7 +45,7 @@ function positiveInteger(value: unknown, fallback = 30) {
 }
 
 async function resolveTargetProfissional(params: {
-  database: any;
+  supabase: any;
   requestedId: unknown;
   idProfissional: string;
   idSalao: string;
@@ -58,7 +58,7 @@ async function resolveTargetProfissional(params: {
     throw new Error("FORBIDDEN_PROFISSIONAL");
   }
 
-  const { data, error } = await params.database
+  const { data, error } = await params.supabase
     .from("profissionais")
     .select("id")
     .eq("id", requested)
@@ -161,12 +161,12 @@ export async function POST(request: Request) {
       action: `app_profissional_mutacao_${action}`,
       actorId: context.idProfissional,
       idSalao: context.idSalao,
-      run: async (database) => {
-        const rpc = asLooseDbClient(database);
+      run: async (supabase) => {
+        const rpc = asLooseSupabaseClient(supabase);
 
         if (action === "criar_agendamento") {
           const targetProfissionalId = await resolveTargetProfissional({
-            database,
+            supabase,
             requestedId: body.profissionalId,
             idProfissional: context.idProfissional,
             idSalao: context.idSalao,
@@ -228,7 +228,7 @@ export async function POST(request: Request) {
 
           const servicoId = text(data);
           if (servicoId) {
-            const { error: descricaoError } = await (database as any)
+            const { error: descricaoError } = await (supabase as any)
               .from("servicos")
               .update({
                 descricao: nullableText(body.descricao),
@@ -256,7 +256,7 @@ export async function POST(request: Request) {
           });
           if (error) throw error;
 
-          const { error: descricaoError } = await (database as any)
+          const { error: descricaoError } = await (supabase as any)
             .from("servicos")
             .update({
               descricao: nullableText(body.descricao),
@@ -282,7 +282,7 @@ export async function POST(request: Request) {
             throw new Error("Escolha uma senha diferente da atual.");
           }
 
-          const { data: acesso, error: acessoError } = await (database as any)
+          const { data: acesso, error: acessoError } = await (supabase as any)
             .from("profissionais_acessos")
             .select("id, senha_hash")
             .eq("id_profissional", context.idProfissional)

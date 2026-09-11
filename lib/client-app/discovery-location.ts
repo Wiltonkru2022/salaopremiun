@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { canUsePlanFeature, isSalaoStatusOperational } from "@/lib/plans/access";
 import type { ClientAppSalonListItem } from "@/lib/client-app/queries";
 
@@ -147,19 +147,19 @@ function mapSalon(row: Record<string, unknown>): ClientAppSalonListItem {
 
 async function enrich(saloes: ClientAppSalonListItem[]) {
   if (!saloes.length) return saloes;
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const ids = saloes.map((item) => item.id);
-  const databaseUntyped = database as any;
+  const supabaseUntyped = supabase as any;
 
   const [servicesResult, professionalsResult, reviewsResult] = await Promise.allSettled([
-    databaseUntyped
+    supabaseUntyped
       .from("servicos")
       .select("id_salao,nome,categoria,preco,preco_padrao,duracao_minutos,duracao")
       .in("id_salao", ids)
       .eq("ativo", true)
       .eq("app_cliente_visivel", true)
       .limit(1200),
-    databaseUntyped
+    supabaseUntyped
       .from("profissionais")
       .select("id_salao,id")
       .in("id_salao", ids)
@@ -167,7 +167,7 @@ async function enrich(saloes: ClientAppSalonListItem[]) {
       .eq("app_cliente_visivel", true)
       .or("eh_assistente.is.null,eh_assistente.eq.false")
       .limit(600),
-    databaseUntyped
+    supabaseUntyped
       .from("clientes_avaliacoes")
       .select("id_salao,nota")
       .in("id_salao", ids)
@@ -238,8 +238,8 @@ export async function listClientAppSaloesByLocation(params: {
   const estado = String(params.estado || "").trim().slice(0, 40);
   if (!cidade || !estado) return [] as ClientAppSalonListItem[];
 
-  const database = getDatabaseAdmin();
-  const { data, error } = await database
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
     .from("saloes")
     .select(SALON_SELECT)
     .eq("app_cliente_publicado", true)
@@ -266,8 +266,8 @@ export async function listClientAppSaloesByLocation(params: {
 }
 
 export async function listClientAppLocations() {
-  const database = getDatabaseAdmin();
-  const { data, error } = await database
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase
     .from("saloes")
     .select("id,cidade,estado,status,app_cliente_pausado")
     .eq("app_cliente_publicado", true)

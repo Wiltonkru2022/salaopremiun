@@ -1,4 +1,4 @@
-﻿import { Plus, Search, UserPlus, X } from "lucide-react";
+import { Plus, Search, UserPlus, X } from "lucide-react";
 import { FormEvent, useMemo, useState } from "react";
 
 export type SearchPickerOption = {
@@ -58,7 +58,7 @@ export function SearchPicker({
   emptyText = "Nada encontrado.",
   allowClear = true,
   hideInputWhenSelected = true,
-  maxResults = 6,
+  maxResults,
   createKind
 }: {
   label?: string;
@@ -88,9 +88,11 @@ export function SearchPicker({
   const filtered = useMemo(() => {
     const normalized = query.trim().toLocaleLowerCase("pt-BR");
     if (!normalized) return [];
-    return allOptions
-      .filter((item) => `${item.label} ${item.description || ""} ${item.meta || ""}`.toLocaleLowerCase("pt-BR").includes(normalized))
-      .slice(0, maxResults);
+    const matches = allOptions
+      .filter((item) => `${item.label} ${item.description || ""} ${item.meta || ""}`.toLocaleLowerCase("pt-BR").includes(normalized));
+    return typeof maxResults === "number" && maxResults > 0
+      ? matches.slice(0, maxResults)
+      : matches;
   }, [allOptions, maxResults, query]);
 
   const showResults = query.trim().length > 0;
@@ -135,9 +137,14 @@ export function SearchPicker({
         <div className="relative">
           <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400" size={18} />
           <input
+            type="search"
             value={query}
             onChange={(event) => setQuery(event.target.value)}
             placeholder={placeholder || (visibleLabel ? `Buscar ${visibleLabel.toLowerCase()}` : "Buscar")}
+            inputMode="search"
+            enterKeyHint="search"
+            autoComplete="off"
+            spellCheck={false}
             className="h-12 w-full rounded-[1.05rem] border border-zinc-200 bg-white pl-11 pr-4 font-bold text-zinc-950 outline-none transition placeholder:text-zinc-400 focus:border-amber-400 focus:ring-4 focus:ring-amber-100/70"
           />
         </div>
@@ -146,7 +153,7 @@ export function SearchPicker({
       {showResults ? (
         <div className="overflow-hidden rounded-[1.05rem] border border-zinc-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.09)]">
           {filtered.length ? (
-            <div className="max-h-44 overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
+            <div className="max-h-[20rem] overflow-auto overscroll-contain [-webkit-overflow-scrolling:touch]">
               {filtered.map((item) => (
                 <button
                   key={item.value}
@@ -249,7 +256,7 @@ function InlineCreateSheet({ kind, initialName, onClose, onCreated }: {
   }
 
   return (
-    <div className="fixed inset-0 z-[140] flex items-end justify-center bg-zinc-950/60 p-2 backdrop-blur-md sm:items-center" onMouseDown={(event) => { if (event.target === event.currentTarget && !loading) onClose(); }}>
+    <div className="fixed inset-0 z-[140] flex items-end justify-center bg-zinc-950/60 p-2 backdrop-blur-md sm:items-center" onPointerDown={(event) => { if (event.target === event.currentTarget && !loading) onClose(); }}>
       <section className="w-full max-w-lg overflow-hidden rounded-t-[1.75rem] border border-white/70 bg-white shadow-[0_-22px_70px_rgba(15,23,42,0.24)] sm:rounded-[1.75rem]">
         <div className="flex justify-center pt-2.5 sm:hidden"><span className="h-1 w-12 rounded-full bg-zinc-300" /></div>
         <header className="flex items-start justify-between gap-3 border-b border-zinc-100 px-5 pb-4 pt-4">
@@ -261,7 +268,7 @@ function InlineCreateSheet({ kind, initialName, onClose, onCreated }: {
           <button type="button" onClick={onClose} disabled={loading} className="grid h-11 w-11 shrink-0 place-items-center rounded-full border border-zinc-200 bg-zinc-50 text-zinc-900"><X size={20} /></button>
         </header>
 
-        <form onSubmit={submit} className="max-h-[72vh] overflow-auto px-5 py-4">
+        <form onSubmit={submit} className="max-h-[72dvh] overflow-auto px-5 py-4">
           <div className="grid gap-3.5">
             <QuickField label={kind === "cliente" ? "Nome da cliente" : "Nome do serviço"}>
               <input autoFocus value={name} onChange={(event) => setName(event.target.value)} className="h-12 w-full rounded-[1rem] border border-zinc-200 px-4 font-bold outline-none focus:border-amber-400 focus:ring-4 focus:ring-amber-100/70" />

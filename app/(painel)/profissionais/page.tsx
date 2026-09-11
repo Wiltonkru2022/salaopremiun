@@ -21,7 +21,7 @@ import PaginationControls from "@/components/ui/PaginationControls";
 import { getErrorMessage } from "@/lib/get-error-message";
 import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import { getAssinaturaUrl } from "@/lib/site-urls";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 
 type Profissional = {
   id: string;
@@ -49,7 +49,7 @@ type Permissoes = Record<string, boolean>;
 const PROFISSIONAIS_PAGE_SIZE = 10;
 
 export default function ProfissionaisListPage() {
-  const database = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const { snapshot: painelSession } = usePainelSession();
 
@@ -128,7 +128,7 @@ export default function ProfissionaisListPage() {
       const from = page * PROFISSIONAIS_PAGE_SIZE;
       const to = from + PROFISSIONAIS_PAGE_SIZE - 1;
 
-      let query = database
+      let query = supabase
         .from("profissionais")
         .select(
           [
@@ -187,13 +187,13 @@ export default function ProfissionaisListPage() {
 
       const idsProfissionais = listaBase.map((item) => item.id);
 
-      const { data: assistentesRows, error: assistentesError } = await database
+      const { data: assistentesRows, error: assistentesError } = await supabase
         .from("profissional_assistentes")
         .select("id_profissional")
         .eq("id_salao", salaoId)
         .in("id_profissional", idsProfissionais);
 
-      const { data: acessosRows, error: acessosError } = await database
+      const { data: acessosRows, error: acessosError } = await supabase
         .from("profissionais_acessos")
         .select("id_profissional, ativo")
         .in("id_profissional", idsProfissionais);
@@ -228,7 +228,7 @@ export default function ProfissionaisListPage() {
       setProfissionaisTotal(count ?? listaBase.length);
       setProfissionaisHasMore((count ?? 0) > to + 1);
     },
-    [buscaAplicada, statusFiltro, database]
+    [buscaAplicada, statusFiltro, supabase]
   );
 
   const bootstrap = useCallback(async () => {

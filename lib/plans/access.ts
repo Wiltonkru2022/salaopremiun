@@ -1,6 +1,6 @@
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
 import { getPlanoCatalogo } from "@/lib/plans/catalog";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { unstable_cache } from "next/cache";
 
 export type PlanoRecursoCodigo =
@@ -288,15 +288,15 @@ export function getPlanoRecursoLabel(recurso: string) {
 async function getPlanoAccessSnapshotUncached(
   idSalao: string
 ): Promise<PlanoAccessSnapshot> {
-  const databaseAdmin = getDatabaseAdmin();
+  const supabaseAdmin = getSupabaseAdmin();
 
   const [{ data: salao }, { data: assinatura }] = await Promise.all([
-    databaseAdmin
+    supabaseAdmin
       .from("saloes")
       .select("id, plano, status, limite_usuarios, limite_profissionais")
       .eq("id", idSalao)
       .maybeSingle(),
-    databaseAdmin
+    supabaseAdmin
       .from("assinaturas")
       .select(
         "plano, status, vencimento_em, trial_fim_em, limite_usuarios, limite_profissionais"
@@ -321,7 +321,7 @@ async function getPlanoAccessSnapshotUncached(
     resumo.emTesteGratis && resumo.ativa ? "premium" : planoCodigo;
   const planoCatalogo = getPlanoCatalogo(planoCodigoEfetivo);
 
-  const { data: plano } = await databaseAdmin
+  const { data: plano } = await supabaseAdmin
     .from("planos_saas")
     .select("id, codigo, nome, limite_usuarios, limite_profissionais")
     .eq("codigo", planoCodigoEfetivo)
@@ -341,38 +341,38 @@ async function getPlanoAccessSnapshotUncached(
   ] =
     await Promise.all([
       idPlano
-        ? databaseAdmin
+        ? supabaseAdmin
             .from("planos_recursos")
             .select("recurso_codigo, habilitado, limite_numero")
             .eq("id_plano", idPlano)
         : Promise.resolve({ data: [] }),
-      databaseAdmin
+      supabaseAdmin
         .from("saloes_recursos_extras")
         .select("recurso_codigo, habilitado, limite_numero")
         .eq("id_salao", idSalao)
         .eq("habilitado", true)
         .or(`expira_em.is.null,expira_em.gt.${new Date().toISOString()}`),
-      databaseAdmin
+      supabaseAdmin
         .from("usuarios")
         .select("id", { count: "exact", head: true })
         .eq("id_salao", idSalao)
         .eq("status", "ativo"),
-      databaseAdmin
+      supabaseAdmin
         .from("profissionais")
         .select("id", { count: "exact", head: true })
         .eq("id_salao", idSalao)
         .eq("ativo", true),
-      databaseAdmin
+      supabaseAdmin
         .from("clientes")
         .select("id", { count: "exact", head: true })
         .eq("id_salao", idSalao)
         .eq("ativo", "true"),
-      databaseAdmin
+      supabaseAdmin
         .from("servicos")
         .select("id", { count: "exact", head: true })
         .eq("id_salao", idSalao)
         .eq("ativo", true),
-      databaseAdmin
+      supabaseAdmin
         .from("agendamentos")
         .select("id", { count: "exact", head: true })
         .eq("id_salao", idSalao)

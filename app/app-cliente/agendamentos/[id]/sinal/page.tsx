@@ -5,7 +5,7 @@ import ClientAppFrame from "@/components/client-app/ClientAppFrame";
 import ClientSignalReceiptForm from "@/components/client-app/ClientSignalReceiptForm";
 import ClientBookingDraftCleanup from "@/components/client-app/ClientBookingDraftCleanup";
 import { requireClienteAppContext } from "@/lib/client-context.server";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { buildPixPayload } from "@/lib/pix/brcode";
 
 function formatCurrency(value: number) {
@@ -26,9 +26,9 @@ export default async function ClienteAgendamentoSinalPage({
   const query = searchParams ? await searchParams : undefined;
   const salaoId = Array.isArray(query?.salao) ? query.salao[0] : query?.salao;
   const session = await requireClienteAppContext();
-  const databaseAdmin = getDatabaseAdmin();
+  const supabaseAdmin = getSupabaseAdmin();
 
-  const { data: agendamento } = await (databaseAdmin as any)
+  const { data: agendamento } = await (supabaseAdmin as any)
     .from("agendamentos")
     .select("id, cliente_id, id_salao, data, hora_inicio, status, sinal_valor, sinal_percentual, sinal_pix_chave, sinal_pix_recebedor, sinal_pix_cidade, reserva_expira_em, servicos(nome, preco_padrao, preco), profissionais(nome, nome_exibicao)")
     .eq("id", id)
@@ -36,7 +36,7 @@ export default async function ClienteAgendamentoSinalPage({
 
   if (!agendamento?.id) redirect("/app-cliente/agendamentos");
 
-  const { data: vinculo } = await (databaseAdmin as any)
+  const { data: vinculo } = await (supabaseAdmin as any)
     .from("clientes_auth")
     .select("id_cliente")
     .eq("id_cliente", agendamento.cliente_id)

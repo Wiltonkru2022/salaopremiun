@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { uploadSalaoPublicAsset } from "@/services/salaoPublicAssetsService";
 
 const MAX_PORTFOLIO_FOTOS = 12;
@@ -40,8 +40,8 @@ export async function GET() {
     );
   }
 
-  const databaseAdmin = getDatabaseAdmin();
-  const { data, error } = await (databaseAdmin as any)
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data, error } = await (supabaseAdmin as any)
     .from("salao_portfolio_fotos")
     .select("id, imagem_url, legenda, ordem")
     .eq("id_salao", context.idSalao)
@@ -71,8 +71,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const databaseAdmin = getDatabaseAdmin();
-  const { count, error: countError } = await (databaseAdmin as any)
+  const supabaseAdmin = getSupabaseAdmin();
+  const { count, error: countError } = await (supabaseAdmin as any)
     .from("salao_portfolio_fotos")
     .select("id", { count: "exact", head: true })
     .eq("id_salao", context.idSalao)
@@ -110,7 +110,7 @@ export async function POST(request: Request) {
       file,
     });
 
-    const { data, error } = await (databaseAdmin as any)
+    const { data, error } = await (supabaseAdmin as any)
       .from("salao_portfolio_fotos")
       .insert({
         id_salao: context.idSalao,
@@ -158,8 +158,8 @@ export async function DELETE(request: Request) {
     );
   }
 
-  const databaseAdmin = getDatabaseAdmin();
-  const { error } = await (databaseAdmin as any)
+  const supabaseAdmin = getSupabaseAdmin();
+  const { error } = await (supabaseAdmin as any)
     .from("salao_portfolio_fotos")
     .update({ ativo: false, updated_at: new Date().toISOString() })
     .eq("id", id)

@@ -14,7 +14,7 @@ import {
 import PaginationControls from "@/components/ui/PaginationControls";
 import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import { getAssinaturaUrl } from "@/lib/site-urls";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 
 type ItemExtra = {
   id: string;
@@ -46,7 +46,7 @@ function formatQuantidade(value?: number | null) {
 }
 
 export default function ServicosExtrasPage() {
-  const database = createClient();
+  const supabase = createClient();
   const router = useRouter();
   const { snapshot: painelSession } = usePainelSession();
   const { planoAccess } = usePlanoAccessSnapshot(true);
@@ -103,7 +103,7 @@ export default function ServicosExtrasPage() {
       const termoBusca = busca.trim();
       const from = paginaAtual * EXTRAS_PAGE_SIZE;
       const to = from + EXTRAS_PAGE_SIZE - 1;
-      let query = database
+      let query = supabase
         .from("itens_extras")
         .select(
           "id, nome, categoria, descricao, preco_venda, custo, controla_estoque, estoque_atual",
@@ -129,7 +129,7 @@ export default function ServicosExtrasPage() {
       setItens((data as ItemExtra[]) || []);
       setTotalItens(count || 0);
     },
-    [busca, paginaAtual, database]
+    [busca, paginaAtual, supabase]
   );
 
   const bootstrap = useCallback(async () => {
@@ -172,7 +172,7 @@ export default function ServicosExtrasPage() {
       setErro("");
       setMsg("");
 
-      const { error } = await database
+      const { error } = await supabase
         .from("itens_extras")
         .delete()
         .eq("id", id)

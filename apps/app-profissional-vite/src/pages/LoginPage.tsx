@@ -3,6 +3,7 @@ import { FormEvent, useState } from "react";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "../components/ui/Button";
 import { Field, Input } from "../components/ui/Input";
+import { publicAsset } from "../lib/publicAsset";
 
 function onlyDigits(value: string) {
   return value.replace(/\D/g, "");
@@ -40,7 +41,7 @@ export function LoginPage() {
     <main className="flex min-h-screen items-center justify-center bg-zinc-950 px-5 py-8 text-white">
       <form onSubmit={submit} className="w-full max-w-sm">
         <div className="mb-8 flex items-center gap-3">
-          <img src="/app-profissional/icons/icon-192.png" alt="Salão Premiun" className="h-16 w-16 rounded-[1.35rem] shadow-2xl shadow-amber-500/10" />
+          <img src={publicAsset("brand-logo-profissional-v2.png")} alt="Salão Premium" className="h-16 w-16 rounded-[1.35rem] shadow-2xl shadow-amber-500/10" />
           <div>
             <div className="text-xs font-black uppercase tracking-[0.2em] text-amber-200">Salão Premiun</div>
             <div className="mt-1 text-sm font-bold text-zinc-400">Profissional</div>

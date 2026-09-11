@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   criarProfissionalTicketUseCase,
   ProfissionalTicketUseCaseError,
@@ -36,9 +36,9 @@ export async function POST(req: NextRequest) {
         await runAdminOperation({
           action: "app_profissional_tickets_report_incident",
           idSalao,
-          run: async (databaseAdmin) => {
+          run: async (supabaseAdmin) => {
             await reportOperationalIncident({
-              databaseAdmin,
+              supabaseAdmin,
               key: `app-profissional:tickets:${idSalao}`,
               module: "app_profissional",
               title: "Abertura de ticket do app profissional falhou",

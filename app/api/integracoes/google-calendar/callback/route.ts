@@ -1,9 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getGoogleCalendarEnv, isGoogleCalendarConfigured } from "@/lib/google-calendar/oauth";
 import { verifyGoogleCalendarState } from "@/lib/google-calendar/state";
 import { emitSecurityEvent } from "@/lib/security/security-events";
-import { getPainelUrl } from "@/lib/site-urls";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +16,7 @@ export async function GET(request: NextRequest) {
 
   if (!code || !idSalao || !isGoogleCalendarConfigured()) {
     return NextResponse.redirect(
-      getPainelUrl("/perfil-salao?google_calendar=erro")
+      "https://painel.salaopremiun.com.br/perfil-salao?google_calendar=erro"
     );
   }
 
@@ -46,7 +45,7 @@ export async function GET(request: NextRequest) {
 
   if (!tokenResponse.ok || !tokenData?.access_token) {
     return NextResponse.redirect(
-      getPainelUrl("/perfil-salao?google_calendar=erro")
+      "https://painel.salaopremiun.com.br/perfil-salao?google_calendar=erro"
     );
   }
 
@@ -62,8 +61,8 @@ export async function GET(request: NextRequest) {
   }
 
   const expiresAt = new Date(Date.now() + Number(tokenData.expires_in || 3300) * 1000);
-  const database = getDatabaseAdmin();
-  const { error } = await (database as any)
+  const supabase = getSupabaseAdmin();
+  const { error } = await (supabase as any)
     .from("saloes_google_calendar_connections")
     .upsert(
       {
@@ -81,7 +80,7 @@ export async function GET(request: NextRequest) {
 
   if (error) {
     return NextResponse.redirect(
-      getPainelUrl("/perfil-salao?google_calendar=erro")
+      "https://painel.salaopremiun.com.br/perfil-salao?google_calendar=erro"
     );
   }
 
@@ -104,6 +103,6 @@ export async function GET(request: NextRequest) {
   });
 
   return NextResponse.redirect(
-    getPainelUrl(state?.returnTo || "/perfil-salao?google_calendar=connected")
+    `https://painel.salaopremiun.com.br${state?.returnTo || "/perfil-salao?google_calendar=connected"}`
   );
 }

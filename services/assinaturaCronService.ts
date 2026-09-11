@@ -1,8 +1,8 @@
-import type { DatabaseClient } from "@/lib/db/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { verifyBearerSecret } from "@/lib/auth/verify-secret";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { executarCronRenovacaoAssinaturas } from "@/lib/assinaturas/renewal-service";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export class AssinaturaCronServiceError extends Error {
   constructor(
@@ -20,24 +20,24 @@ export function createAssinaturaCronService() {
       return verifyBearerSecret(authorizationHeader, process.env.CRON_SECRET);
     },
 
-    criarDatabaseAdmin() {
-      return getDatabaseAdmin();
+    criarSupabaseAdmin() {
+      return getSupabaseAdmin();
     },
 
-    async executarRenovacao(databaseAdmin: DatabaseClient) {
-      return executarCronRenovacaoAssinaturas(databaseAdmin);
+    async executarRenovacao(supabaseAdmin: SupabaseClient) {
+      return executarCronRenovacaoAssinaturas(supabaseAdmin);
     },
 
     async reportarFalhaCron(params: {
-      databaseAdmin: DatabaseClient | null;
+      supabaseAdmin: SupabaseClient | null;
       error: unknown;
     }) {
-      if (!params.databaseAdmin) {
+      if (!params.supabaseAdmin) {
         return;
       }
 
       await reportOperationalIncident({
-        databaseAdmin: params.databaseAdmin,
+        supabaseAdmin: params.supabaseAdmin,
         key: "cron:renovar-assinaturas:erro",
         module: "cron_renovacao_assinaturas",
         title: "Cron de renovacao de assinaturas falhou",

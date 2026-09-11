@@ -3,7 +3,7 @@ import {
   validarPermissaoRecalculoComissao,
 } from "@/lib/comissoes/recalcular-taxa-profissional";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export function createComissaoTaxaRouteService() {
   return {
@@ -18,7 +18,7 @@ export function createComissaoTaxaRouteService() {
     }) {
       try {
         await reportOperationalIncident({
-          databaseAdmin: getDatabaseAdmin(),
+          supabaseAdmin: getSupabaseAdmin(),
           key: `comissoes:recalcular-taxa:${params.idSalao}:${params.idComanda || "sem-comanda"}`,
           module: "comissoes",
           title: "Recalculo de taxa profissional falhou",

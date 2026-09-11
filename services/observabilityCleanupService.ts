@@ -1,35 +1,16 @@
-import { archiveNeonRows, recordNeonEvent } from "@/lib/neon/observability.server";
 import {
   formatObservabilityCleanupSummary,
   OBSERVABILITY_RETENTION_DEFAULTS,
   type ObservabilityCleanupRow,
 } from "@/lib/monitoring/retention";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Json } from "@/types/database.generated";
 
 const CRON_NAME = "limpar_observabilidade";
 const CRON_ROUTE = "/api/cron/limpar-observabilidade";
 const OPERATIONAL_PROBE_HISTORY_DAYS = 1;
 const AUDIT_ARCHIVE_DAYS = 30;
-const ARCHIVE_BATCH = 500;
-const ARCHIVE_MAX_BATCHES = 10;
-
-type AuditArchiveRow = {
-  id: string;
-  id_salao: string | null;
-  auth_user_id: string | null;
-  id_usuario: string | null;
-  modulo: string | null;
-  entidade: string | null;
-  entidade_id: string | null;
-  acao: string | null;
-  descricao: string | null;
-  dados_anteriores: Json | null;
-  dados_novos: Json | null;
-  metadata: Json | null;
-  created_at: string;
-};
 
 async function recordCron(
   status: string,
@@ -37,24 +18,8 @@ async function recordCron(
   payload: Record<string, unknown>,
   erroTexto?: string | null
 ) {
-  const storedInNeon = await recordNeonEvent({
-    componentKey: "cron.observability_cleanup",
-    eventType: `cron_${status}`,
-    level: status === "erro" ? "error" : "info",
-    message: resumo,
-    metadata: {
-      cronName: CRON_NAME,
-      route: CRON_ROUTE,
-      status,
-      payload,
-      erroTexto: erroTexto || null,
-    },
-  });
-
-  if (storedInNeon) return;
-
-  const databaseAdmin = getDatabaseAdmin();
-  await databaseAdmin.from("eventos_cron").insert({
+  const supabaseAdmin = getSupabaseAdmin();
+  await supabaseAdmin.from("eventos_cron").insert({
     nome: CRON_NAME,
     status,
     resumo,
@@ -65,52 +30,8 @@ async function recordCron(
 }
 
 async function archiveOldAuditLogs() {
-  const databaseAdmin = getDatabaseAdmin();
   const cutoff = new Date(Date.now() - AUDIT_ARCHIVE_DAYS * 24 * 60 * 60 * 1000).toISOString();
-  let archived = 0;
-  let batches = 0;
-
-  for (let batch = 0; batch < ARCHIVE_MAX_BATCHES; batch += 1) {
-    const { data, error } = await databaseAdmin
-      .from("auditoria_logs")
-      .select(
-        "id,id_salao,auth_user_id,id_usuario,modulo,entidade,entidade_id,acao,descricao,dados_anteriores,dados_novos,metadata,created_at"
-      )
-      .lt("created_at", cutoff)
-      .order("created_at", { ascending: true })
-      .limit(ARCHIVE_BATCH);
-
-    if (error) throw error;
-
-    const rows = (data || []) as AuditArchiveRow[];
-    if (!rows.length) break;
-
-    const archiveResult = await archiveNeonRows("auditoria_logs", rows);
-    if (!archiveResult.ok || archiveResult.archived !== rows.length) {
-      await recordNeonEvent({
-        componentKey: "cron.observability_cleanup",
-        eventType: "audit_archive_deferred",
-        level: "warning",
-        message: "Arquivamento de auditoria adiado; nenhum registro foi removido do Neon.",
-        metadata: {
-          expected: rows.length,
-          archived: archiveResult.archived,
-          batch: batch + 1,
-        },
-      });
-      break;
-    }
-
-    const ids = rows.map((row) => row.id);
-    const { error: deleteError } = await databaseAdmin.from("auditoria_logs").delete().in("id", ids);
-    if (deleteError) throw deleteError;
-
-    archived += rows.length;
-    batches += 1;
-    if (rows.length < ARCHIVE_BATCH) break;
-  }
-
-  return { archived, batches, cutoff, retentionDays: AUDIT_ARCHIVE_DAYS };
+  return { archived: 0, batches: 0, cutoff, retentionDays: AUDIT_ARCHIVE_DAYS };
 }
 
 async function archiveOldTelemetryRows(input: {
@@ -118,60 +39,8 @@ async function archiveOldTelemetryRows(input: {
   timestampColumn: "checked_at" | "iniciado_em";
   retentionDays: number;
 }) {
-  const databaseAdmin = getDatabaseAdmin();
   const cutoff = new Date(Date.now() - input.retentionDays * 24 * 60 * 60 * 1000).toISOString();
-  let archived = 0;
-  let batches = 0;
-
-  for (let batch = 0; batch < ARCHIVE_MAX_BATCHES; batch += 1) {
-    const { data, error } = await (databaseAdmin as any)
-      .from(input.tableName)
-      .select("*")
-      .lt(input.timestampColumn, cutoff)
-      .order(input.timestampColumn, { ascending: true })
-      .limit(ARCHIVE_BATCH);
-
-    if (error) throw error;
-
-    const rawRows = (data || []) as Array<Record<string, unknown>>;
-    if (!rawRows.length) break;
-
-    const rows = rawRows.map((row) => ({
-      ...row,
-      id: String(row.id || ""),
-      created_at: String(row[input.timestampColumn] || new Date().toISOString()),
-    }));
-
-    const archiveResult = await archiveNeonRows(input.tableName, rows);
-    if (!archiveResult.ok || archiveResult.archived !== rows.length) {
-      await recordNeonEvent({
-        componentKey: "cron.observability_cleanup",
-        eventType: "telemetry_archive_deferred",
-        level: "warning",
-        message: `Arquivamento de ${input.tableName} adiado; nenhum registro foi removido do Neon.`,
-        metadata: {
-          sourceTable: input.tableName,
-          expected: rows.length,
-          archived: archiveResult.archived,
-          batch: batch + 1,
-        },
-      });
-      break;
-    }
-
-    const ids = rows.map((row) => row.id);
-    const { error: deleteError } = await (databaseAdmin as any)
-      .from(input.tableName)
-      .delete()
-      .in("id", ids);
-    if (deleteError) throw deleteError;
-
-    archived += rows.length;
-    batches += 1;
-    if (rows.length < ARCHIVE_BATCH) break;
-  }
-
-  return { archived, batches, cutoff, retentionDays: input.retentionDays };
+  return { archived: 0, batches: 0, cutoff, retentionDays: input.retentionDays };
 }
 
 export async function limparObservabilidade() {
@@ -182,7 +51,7 @@ export async function limparObservabilidade() {
     operationalProbeHistoryDays: OPERATIONAL_PROBE_HISTORY_DAYS,
   });
 
-  const databaseAdmin = getDatabaseAdmin();
+  const supabaseAdmin = getSupabaseAdmin();
   const auditArchive = await archiveOldAuditLogs();
   const probeArchive = await archiveOldTelemetryRows({
     tableName: "operational_probe_history",
@@ -197,7 +66,7 @@ export async function limparObservabilidade() {
 
   const [{ data, error }, { data: operationalData, error: operationalError }] =
     await Promise.all([
-      databaseAdmin.rpc("fn_observability_retention_cleanup", {
+      supabaseAdmin.rpc("fn_observability_retention_cleanup", {
         p_eventos_sistema_days:
           OBSERVABILITY_RETENTION_DEFAULTS.eventosSistemaDays,
         p_logs_sistema_days: OBSERVABILITY_RETENTION_DEFAULTS.logsSistemaDays,
@@ -210,7 +79,7 @@ export async function limparObservabilidade() {
         p_eventos_cron_days: OBSERVABILITY_RETENTION_DEFAULTS.eventosCronDays,
         p_batch_limit: OBSERVABILITY_RETENTION_DEFAULTS.batchLimit,
       }),
-      (databaseAdmin as any).rpc("fn_operational_retention_cleanup", {
+      (supabaseAdmin as any).rpc("fn_operational_retention_cleanup", {
         p_probe_history_days: OPERATIONAL_PROBE_HISTORY_DAYS,
         p_incident_update_days: 365,
         p_delivery_days: 180,
@@ -246,7 +115,7 @@ export async function limparObservabilidade() {
 
   await recordCron(
     "sucesso",
-    `${summary.summary} ${auditArchive.archived} auditoria(s), ${probeArchive.archived} probe(s) e ${cronArchive.archived} evento(s) de cron arquivados no Neon.`,
+    `${summary.summary} Retenção concluída integralmente no Supabase.`,
     payload
   );
 
@@ -277,7 +146,7 @@ export async function registrarFalhaLimpezaObservabilidade(error: unknown) {
 
   try {
     await reportOperationalIncident({
-      databaseAdmin: getDatabaseAdmin(),
+      supabaseAdmin: getSupabaseAdmin(),
       key: "cron:limpar-observabilidade:erro",
       module: "cron_observabilidade",
       title: "Cron de limpeza de observabilidade falhou",

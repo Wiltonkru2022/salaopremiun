@@ -37,7 +37,7 @@
       "timeoutMs": 5000,
       "sourcePatterns": ["app/api/**/route.ts"],
       "routePrefixes": ["/api"],
-      "dependencies": ["infra.vercel.runtime", "database.data_api"]
+      "dependencies": ["infra.vercel.runtime", "supabase.data_api"]
     },
     {
       "componentKey": "platform.assets",
@@ -75,85 +75,85 @@
       "dependencies": []
     },
     {
-      "componentKey": "database.database",
-      "name": "Neon Database",
+      "componentKey": "supabase.database",
+      "name": "Supabase Database",
       "description": "PostgreSQL principal do SalãoPremium.",
-      "category": "Neon",
+      "category": "Supabase",
       "surface": "server",
       "criticality": "critical",
       "owner": "Backend/Dados",
       "publicVisible": true,
       "monitoringMode": "probe",
       "probeType": "database",
-      "probeKey": "probe:database:database",
+      "probeKey": "probe:supabase:database",
       "expectedIntervalSeconds": 600,
       "freshnessTtlSeconds": 1800,
       "timeoutMs": 4000,
-      "sourcePatterns": ["lib/database/**", "database/migrations/**"],
+      "sourcePatterns": ["lib/supabase/**", "supabase/migrations/**"],
       "dependencies": []
     },
     {
-      "componentKey": "database.data_api",
-      "name": "Neon API",
+      "componentKey": "supabase.data_api",
+      "name": "Supabase API",
       "description": "Data API usada pelas aplicações e serviços server-side.",
-      "category": "Neon",
+      "category": "Supabase",
       "surface": "server",
       "criticality": "critical",
       "owner": "Backend/Dados",
       "publicVisible": true,
       "monitoringMode": "probe",
       "probeType": "database",
-      "probeKey": "probe:database:data-api",
+      "probeKey": "probe:supabase:data-api",
       "expectedIntervalSeconds": 600,
       "freshnessTtlSeconds": 1800,
       "timeoutMs": 4000,
-      "sourcePatterns": ["lib/database/**", "app/api/**"],
-      "dependencies": ["database.database"]
+      "sourcePatterns": ["lib/supabase/**", "app/api/**"],
+      "dependencies": ["supabase.database"]
     },
     {
-      "componentKey": "database.auth",
-      "name": "Neon Auth",
+      "componentKey": "supabase.auth",
+      "name": "Supabase Auth",
       "description": "Serviço de autenticação e validação de sessão.",
-      "category": "Neon",
+      "category": "Supabase",
       "surface": "server",
       "criticality": "critical",
       "owner": "Segurança/Auth",
       "publicVisible": true,
       "monitoringMode": "probe",
       "probeType": "auth",
-      "probeKey": "probe:database:auth",
+      "probeKey": "probe:supabase:auth",
       "expectedIntervalSeconds": 600,
       "freshnessTtlSeconds": 1800,
       "timeoutMs": 5000,
-      "sourcePatterns": ["app/auth/**", "lib/auth/**", "lib/database/**"],
-      "dependencies": ["database.database"]
+      "sourcePatterns": ["app/auth/**", "lib/auth/**", "lib/supabase/**"],
+      "dependencies": ["supabase.database"]
     },
     {
-      "componentKey": "database.storage",
-      "name": "Neon Storage",
+      "componentKey": "supabase.storage",
+      "name": "Supabase Storage",
       "description": "Armazenamento de arquivos e objetos do sistema.",
-      "category": "Neon",
+      "category": "Supabase",
       "surface": "server",
       "criticality": "high",
       "owner": "Backend/Dados",
       "publicVisible": true,
       "monitoringMode": "probe",
       "probeType": "storage",
-      "probeKey": "probe:database:storage",
+      "probeKey": "probe:supabase:storage",
       "expectedIntervalSeconds": 1800,
       "freshnessTtlSeconds": 5400,
       "timeoutMs": 5000,
       "sourcePatterns": ["**/*storage*", "app/api/**/upload/**"],
-      "dependencies": ["database.database"]
+      "dependencies": ["supabase.database"]
     },
     {
-      "componentKey": "database.periodic_sync",
-      "name": "Sincronização periódica Neon",
-      "description": "Atualização periódica da agenda, caixa e PWAs pelo gateway Neon.",
-      "category": "Neon",
+      "componentKey": "supabase.realtime",
+      "name": "Supabase Realtime",
+      "description": "Realtime utilizado por agenda, caixa e PWAs.",
+      "category": "Supabase",
       "surface": "client",
       "criticality": "high",
-      "owner": "Backend/Sincronizacao",
+      "owner": "Backend/Realtime",
       "publicVisible": true,
       "monitoringMode": "telemetry",
       "probeType": "telemetry",
@@ -161,8 +161,8 @@
       "freshnessTtlSeconds": 7200,
       "timeoutMs": 5000,
       "sourcePatterns": ["**/*.tsx", "**/*.ts"],
-      "contentSignals": ["setInterval("],
-      "dependencies": ["database.database"]
+      "contentSignals": [".channel("],
+      "dependencies": ["supabase.database"]
     },
     {
       "componentKey": "client.auth",
@@ -181,7 +181,7 @@
       "timeoutMs": 5000,
       "sourcePatterns": ["app/app-cliente/login/**", "app/services/cliente-app/auth.ts", "lib/client-context.server.ts"],
       "routePrefixes": ["/app-cliente/login"],
-      "dependencies": ["database.auth", "database.database", "infra.vercel.runtime"]
+      "dependencies": ["supabase.auth", "supabase.database", "infra.vercel.runtime"]
     },
     {
       "componentKey": "client.registration",
@@ -199,7 +199,7 @@
       "timeoutMs": 5000,
       "sourcePatterns": ["app/app-cliente/cadastro/**", "app/services/cliente-app/identity-migration.ts"],
       "routePrefixes": ["/app-cliente/cadastro"],
-      "dependencies": ["database.auth", "database.database"]
+      "dependencies": ["supabase.auth", "supabase.database"]
     },
     {
       "componentKey": "client.explore",
@@ -218,7 +218,7 @@
       "timeoutMs": 5000,
       "sourcePatterns": ["app/app-cliente/explorar/**", "lib/client-app/queries.ts"],
       "routePrefixes": ["/app-cliente/explorar"],
-      "dependencies": ["database.database", "platform.api"]
+      "dependencies": ["supabase.database", "platform.api"]
     },
     {
       "componentKey": "client.salon",
@@ -236,7 +236,7 @@
       "timeoutMs": 5000,
       "sourcePatterns": ["app/app-cliente/salao/**", "components/client-app/**"],
       "routePrefixes": ["/app-cliente/salao"],
-      "dependencies": ["database.database", "database.storage"]
+      "dependencies": ["supabase.database", "supabase.storage"]
     },
     {
       "componentKey": "client.availability",
@@ -255,7 +255,7 @@
       "timeoutMs": 5000,
       "sourcePatterns": ["app/api/app-cliente/disponibilidade/**", "app/app-cliente/agenda/**"],
       "routePrefixes": ["/app-cliente/agenda", "/api/app-cliente/disponibilidade"],
-      "dependencies": ["agenda.core", "database.database"]
+      "dependencies": ["agenda.core", "supabase.database"]
     },
     {
       "componentKey": "client.appointments",
@@ -274,7 +274,7 @@
       "timeoutMs": 5000,
       "sourcePatterns": ["app/app-cliente/agendamentos/**", "components/client-app/ClientAppointmentsManager.tsx", "app/api/mobile/cliente/agendamentos/**"],
       "routePrefixes": ["/app-cliente/agendamentos"],
-      "dependencies": ["agenda.core", "database.database", "platform.assets"]
+      "dependencies": ["agenda.core", "supabase.database", "platform.assets"]
     },
     {
       "componentKey": "client.profile",
@@ -292,7 +292,7 @@
       "timeoutMs": 5000,
       "sourcePatterns": ["app/app-cliente/perfil/**"],
       "routePrefixes": ["/app-cliente/perfil"],
-      "dependencies": ["database.database"]
+      "dependencies": ["supabase.database"]
     },
     {
       "componentKey": "client.reviews",
@@ -309,7 +309,7 @@
       "freshnessTtlSeconds": 10800,
       "timeoutMs": 5000,
       "sourcePatterns": ["app/app-cliente/**/avaliar/**", "components/client-app/ClientAppointmentReviewForm.tsx"],
-      "dependencies": ["database.database"]
+      "dependencies": ["supabase.database"]
     },
     {
       "componentKey": "client.favorites",
@@ -326,7 +326,7 @@
       "freshnessTtlSeconds": 21600,
       "timeoutMs": 5000,
       "sourcePatterns": ["app/app-cliente/favoritos/**"],
-      "dependencies": ["database.database"]
+      "dependencies": ["supabase.database"]
     },
     {
       "componentKey": "client.pwa",
@@ -379,7 +379,7 @@
       "timeoutMs": 5000,
       "sourcePatterns": ["app/app-profissional/login/**", "app/services/profissional/auth.ts", "app/api/app-profissional/auth/**"],
       "routePrefixes": ["/app-profissional/login", "/api/app-profissional/auth"],
-      "dependencies": ["database.database", "infra.vercel.runtime"]
+      "dependencies": ["supabase.database", "infra.vercel.runtime"]
     },
     {
       "componentKey": "professional.agenda",
@@ -397,7 +397,7 @@
       "freshnessTtlSeconds": 1800,
       "timeoutMs": 5000,
       "sourcePatterns": ["app/app-profissional/agenda/**", "apps/app-profissional-vite/src/**agenda**"],
-      "dependencies": ["agenda.core", "database.database"]
+      "dependencies": ["agenda.core", "supabase.database"]
     },
     {
       "componentKey": "professional.clients",
@@ -448,7 +448,7 @@
       "freshnessTtlSeconds": 3600,
       "timeoutMs": 5000,
       "sourcePatterns": ["app/app-profissional/comandas/**", "apps/app-profissional-vite/src/**comanda**"],
-      "dependencies": ["cash.core", "database.database"]
+      "dependencies": ["cash.core", "supabase.database"]
     },
     {
       "componentKey": "professional.cash",
@@ -465,7 +465,7 @@
       "freshnessTtlSeconds": 3600,
       "timeoutMs": 5000,
       "sourcePatterns": ["app/app-profissional/**caixa**", "apps/app-profissional-vite/src/**caixa**", "apps/app-profissional-vite/src/**pagamento**"],
-      "dependencies": ["cash.core", "database.database"]
+      "dependencies": ["cash.core", "supabase.database"]
     },
     {
       "componentKey": "professional.pwa",
@@ -517,7 +517,7 @@
       "freshnessTtlSeconds": 1800,
       "timeoutMs": 5000,
       "sourcePatterns": ["app/(painel)/**", "components/dashboard/**"],
-      "dependencies": ["database.database", "platform.api"]
+      "dependencies": ["supabase.database", "platform.api"]
     },
     {
       "componentKey": "admin.master",
@@ -536,7 +536,7 @@
       "timeoutMs": 5000,
       "sourcePatterns": ["app/(admin-master)/**", "lib/admin-master/**", "components/admin-master/**"],
       "routePrefixes": ["/admin-master"],
-      "dependencies": ["database.database", "platform.api"]
+      "dependencies": ["supabase.database", "platform.api"]
     },
     {
       "componentKey": "admin.health",
@@ -554,7 +554,7 @@
       "freshnessTtlSeconds": 1800,
       "timeoutMs": 5000,
       "sourcePatterns": ["lib/monitoring/**", "lib/admin-master/operability.ts", "app/(admin-master)/admin-master/saude/**"],
-      "dependencies": ["database.database", "automation.cron"]
+      "dependencies": ["supabase.database", "automation.cron"]
     },
     {
       "componentKey": "agenda.core",
@@ -573,7 +573,7 @@
       "timeoutMs": 5000,
       "sourcePatterns": ["components/agenda/**", "lib/agenda/**", "app/api/painel/agendamentos/**", "app/(painel)/agenda/**"],
       "routePrefixes": ["/agenda", "/api/painel/agendamentos"],
-      "dependencies": ["database.database"]
+      "dependencies": ["supabase.database"]
     },
     {
       "componentKey": "crm.core",
@@ -590,7 +590,7 @@
       "freshnessTtlSeconds": 7200,
       "timeoutMs": 5000,
       "sourcePatterns": ["app/(painel)/clientes/**", "components/clientes/**", "app/api/**cliente**"],
-      "dependencies": ["database.database"]
+      "dependencies": ["supabase.database"]
     },
     {
       "componentKey": "services.core",
@@ -607,7 +607,7 @@
       "freshnessTtlSeconds": 7200,
       "timeoutMs": 5000,
       "sourcePatterns": ["app/(painel)/servicos/**", "components/servicos/**", "core/use-cases/servicos/**"],
-      "dependencies": ["database.database"]
+      "dependencies": ["supabase.database"]
     },
     {
       "componentKey": "cash.core",
@@ -625,7 +625,7 @@
       "freshnessTtlSeconds": 1800,
       "timeoutMs": 5000,
       "sourcePatterns": ["app/(painel)/caixa/**", "app/(painel)/comandas/**", "app/(painel)/vendas/**", "components/caixa/**"],
-      "dependencies": ["database.database"]
+      "dependencies": ["supabase.database"]
     },
     {
       "componentKey": "subscriptions.core",
@@ -643,7 +643,7 @@
       "freshnessTtlSeconds": 1800,
       "timeoutMs": 5000,
       "sourcePatterns": ["services/assinaturaCheckoutService.ts", "lib/assinaturas/**", "app/api/**assinatura**", "app/api/**checkout**"],
-      "dependencies": ["integration.asaas.api", "database.database"]
+      "dependencies": ["integration.asaas.api", "supabase.database"]
     },
     {
       "componentKey": "integration.asaas.api",
@@ -679,7 +679,7 @@
       "freshnessTtlSeconds": 1800,
       "timeoutMs": 5000,
       "sourcePatterns": ["app/api/**asaas**", "**/*webhook*asaas*", "**/*asaas*webhook*"],
-      "dependencies": ["integration.asaas.api", "database.database"]
+      "dependencies": ["integration.asaas.api", "supabase.database"]
     },
     {
       "componentKey": "communication.brevo",
@@ -769,7 +769,7 @@
       "timeoutMs": 5000,
       "sourcePatterns": ["app/api/cron/**", "vercel.json"],
       "routePrefixes": ["/api/cron"],
-      "dependencies": ["infra.vercel.runtime", "database.database"]
+      "dependencies": ["infra.vercel.runtime", "supabase.database"]
     }
   ]
 }

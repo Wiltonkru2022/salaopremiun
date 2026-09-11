@@ -5,7 +5,7 @@ import AdminMasterPageHeader, { AdminMasterMetricCard } from "@/components/admin
 import AdminMasterSecurityActionButton from "@/components/admin-master/AdminMasterSecurityActionButton";
 import PaginationLinks from "@/components/ui/PaginationLinks";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 25;
@@ -71,20 +71,20 @@ export default async function AdminMasterSegurancaPage({ searchParams }: { searc
   const to = from + PAGE_SIZE - 1;
   const sinceIso = new Date(Date.now() - periodHours(params.periodo) * 60 * 60 * 1000).toISOString();
   const cleanSearch = String(params.busca || "").replace(/[,%()]/g, " ").trim().slice(0, 80);
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
 
-  let eventsQuery = database
+  let eventsQuery = supabase
     .from("eventos_sistema")
     .select("id, id_usuario, id_salao, tipo_evento, severidade, mensagem, detalhes_json, created_at", { count: "exact" })
     .eq("modulo", "security")
     .gte("created_at", sinceIso);
-  let highRiskQuery = database
+  let highRiskQuery = supabase
     .from("eventos_sistema")
     .select("id", { count: "exact", head: true })
     .eq("modulo", "security")
     .gte("created_at", sinceIso)
     .in("severidade", ["critical", "error", "critico", "crítico"]);
-  let loginFailuresQuery = database
+  let loginFailuresQuery = supabase
     .from("eventos_sistema")
     .select("id", { count: "exact", head: true })
     .eq("modulo", "security")
@@ -107,8 +107,8 @@ export default async function AdminMasterSegurancaPage({ searchParams }: { searc
     eventsQuery.order("created_at", { ascending: false }).range(from, to),
     highRiskQuery,
     loginFailuresQuery,
-    database.from("user_security_status").select("user_id, tipo_usuario, status, motivo, risco_atual, bloqueado_ate, verificacao_necessaria, atualizado_em").neq("status", "ativo").order("atualizado_em", { ascending: false }).limit(60),
-    database.from("saloes").select("id, nome, status_seguranca, motivo_seguranca, bloqueado_ate").neq("status_seguranca", "ativo").order("nome", { ascending: true }).limit(60),
+    supabase.from("user_security_status").select("user_id, tipo_usuario, status, motivo, risco_atual, bloqueado_ate, verificacao_necessaria, atualizado_em").neq("status", "ativo").order("atualizado_em", { ascending: false }).limit(60),
+    supabase.from("saloes").select("id, nome, status_seguranca, motivo_seguranca, bloqueado_ate").neq("status_seguranca", "ativo").order("nome", { ascending: true }).limit(60),
   ]);
 
   const events = ((eventsResult.data || []) as SecurityEventRow[]).filter((row) => row.id);

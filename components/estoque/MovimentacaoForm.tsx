@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import { getUsuarioLogado } from "@/lib/auth/getUsuarioLogado";
 import {
   maskMoneyInput,
@@ -31,7 +31,7 @@ type EstoqueProcessarErrorResponse = {
 };
 
 export default function MovimentacaoForm() {
-  const database = createClient();
+  const supabase = createClient();
 
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -70,7 +70,7 @@ export default function MovimentacaoForm() {
 
       setIdSalao(usuarioLogado.idSalao);
 
-      const { data, error } = await database
+      const { data, error } = await supabase
         .from("produtos")
         .select("id, nome, unidade_medida, estoque_atual")
         .eq("id_salao", usuarioLogado.idSalao)

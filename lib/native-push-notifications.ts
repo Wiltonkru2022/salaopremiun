@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type NativePushAudience = "cliente_app" | "profissional_app" | "salao_painel";
 
@@ -163,7 +163,7 @@ export async function upsertNativePushDevice(params: {
   const fcmToken = sanitizeToken(params.fcmToken);
   const now = new Date().toISOString();
 
-  const { error } = await (getDatabaseAdmin() as any)
+  const { error } = await (getSupabaseAdmin() as any)
     .from("native_push_devices")
     .upsert(
       {
@@ -197,7 +197,7 @@ export async function listNativePushDevices(params: {
   idProfissional?: string | null;
   clienteAppContaId?: string | null;
 }) {
-  let query = (getDatabaseAdmin() as any)
+  let query = (getSupabaseAdmin() as any)
     .from("native_push_devices")
     .select("id, audience, fcm_token, platform, failure_count")
     .eq("ativo", true)
@@ -264,11 +264,11 @@ async function recordNativeDelivery(params: {
   deactivateDevice?: boolean;
 }) {
   try {
-    const database = getDatabaseAdmin() as any;
+    const supabase = getSupabaseAdmin() as any;
     const now = new Date().toISOString();
 
     if (params.status === "enviada") {
-      await database
+      await supabase
         .from("native_push_devices")
         .update({
           ativo: true,
@@ -290,10 +290,10 @@ async function recordNativeDelivery(params: {
       };
       if (params.deactivateDevice) update.ativo = false;
 
-      await database.from("native_push_devices").update(update).eq("id", params.row.id);
+      await supabase.from("native_push_devices").update(update).eq("id", params.row.id);
     }
 
-    await database.from("push_delivery_log").insert({
+    await supabase.from("push_delivery_log").insert({
       push_subscription_id: null,
       audience: params.row.audience,
       endpoint_host: "fcm.googleapis.com",

@@ -1,4 +1,4 @@
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import type { AdminTicketListParams } from "@/lib/support/tickets";
 
 const OPEN_STATUSES = ["aberto", "em_atendimento", "aguardando_cliente", "aguardando_tecnico"];
@@ -18,7 +18,7 @@ export type AdminTicketGlobalMetrics = {
 export async function getAdminTicketGlobalMetrics(params?: AdminTicketListParams): Promise<AdminTicketGlobalMetrics> {
   return runAdminOperation({
     action: "support_admin_ticket_global_metrics",
-    run: async (database) => {
+    run: async (supabase) => {
       const search = normalizeText(params?.search).slice(0, 80);
       const now = new Date();
       const nowIso = now.toISOString();
@@ -27,7 +27,7 @@ export async function getAdminTicketGlobalMetrics(params?: AdminTicketListParams
 
       if (search.length >= 2) {
         const cleanSearch = search.replace(/[,%()]/g, " ").trim();
-        const { data: salaoMatches } = await database
+        const { data: salaoMatches } = await supabase
           .from("saloes")
           .select("id")
           .or(`nome.ilike.%${cleanSearch}%,responsavel.ilike.%${cleanSearch}%,email.ilike.%${cleanSearch}%`)
@@ -36,7 +36,7 @@ export async function getAdminTicketGlobalMetrics(params?: AdminTicketListParams
       }
 
       const makeBaseQuery = () => {
-        let query = database
+        let query = supabase
           .from("tickets")
           .select("id", { count: "exact", head: true })
           .neq("origem", "app_profissional_login");

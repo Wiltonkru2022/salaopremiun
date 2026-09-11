@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { getProfissionalSessionFromCookie } from "@/lib/profissional-auth.server";
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   finalizarSuporteIAUseCase,
   FinalizarSuporteIAUseCaseError,
@@ -43,9 +43,9 @@ export async function POST(req: Request) {
         await runAdminOperation({
           action: "app_profissional_suporte_finalizar_report_incident",
           idSalao,
-          run: async (databaseAdmin) => {
+          run: async (supabaseAdmin) => {
             await reportOperationalIncident({
-              databaseAdmin,
+              supabaseAdmin,
               key: `app-profissional:suporte-finalizar:${idSalao}`,
               module: "app_profissional",
               title: "Finalizacao do chat do app profissional falhou",

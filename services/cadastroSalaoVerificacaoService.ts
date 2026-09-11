@@ -1,4 +1,4 @@
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 type SalaoExistsRow = {
   id?: string | null;
@@ -17,7 +17,7 @@ export async function verificarCadastroSalaoDuplicado({
   whatsapp,
   cpfCnpj,
 }: CadastroSalaoVerificacaoPayload) {
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const exists = {
     email: false,
     nomeSalao: false,
@@ -29,7 +29,7 @@ export async function verificarCadastroSalaoDuplicado({
 
   if (email) {
     checks.push(
-      database
+      supabase
         .from("saloes")
         .select("id")
         .eq("email", email)
@@ -43,7 +43,7 @@ export async function verificarCadastroSalaoDuplicado({
 
   if (nomeSalao) {
     checks.push(
-      database
+      supabase
         .from("saloes")
         .select("id")
         .ilike("nome", nomeSalao)
@@ -57,7 +57,7 @@ export async function verificarCadastroSalaoDuplicado({
 
   if (whatsapp) {
     checks.push(
-      database
+      supabase
         .from("saloes")
         .select("id")
         .or(`telefone.eq.${whatsapp},telefone.ilike.%${whatsapp}%`)
@@ -71,7 +71,7 @@ export async function verificarCadastroSalaoDuplicado({
 
   if (cpfCnpj) {
     checks.push(
-      database
+      supabase
         .from("saloes")
         .select("id")
         .or(`cpf_cnpj.eq.${cpfCnpj},cpf_cnpj.ilike.%${cpfCnpj}%`)

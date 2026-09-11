@@ -13,8 +13,8 @@ export const metadata: Metadata = {
     "Agende horários, acompanhe visitas e avalie atendimentos no app cliente do SalãoPremium.",
   manifest: "/app-cliente/manifest.webmanifest",
   icons: {
-    icon: "/app-brand-icon.svg",
-    apple: "/app-brand-icon.svg",
+    icon: "/brand-logo-v2.png",
+    apple: "/brand-logo-v2.png",
   },
   robots: {
     index: false,

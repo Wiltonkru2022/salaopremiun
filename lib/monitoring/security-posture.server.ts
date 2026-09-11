@@ -1,15 +1,15 @@
 import "server-only";
 
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const SOURCE = "database_posture";
 
 export async function syncOperationalSecurityPosture() {
-  const database = getDatabaseAdmin() as any;
+  const supabase = getSupabaseAdmin() as any;
   const [{ data, error }, { data: existing, error: existingError }] =
     await Promise.all([
-      database.rpc("fn_operational_security_posture"),
-      database
+      supabase.rpc("fn_operational_security_posture"),
+      supabase
         .from("operational_security_findings")
         .select("finding_key")
         .eq("source", SOURCE)
@@ -38,7 +38,7 @@ export async function syncOperationalSecurityPosture() {
     .filter((key: string) => key && !activeKeys.has(key));
 
   if (findings.length) {
-    const { error: upsertError } = await database
+    const { error: upsertError } = await supabase
       .from("operational_security_findings")
       .upsert(
         findings.map((finding) => ({
@@ -62,7 +62,7 @@ export async function syncOperationalSecurityPosture() {
   }
 
   if (staleKeys.length) {
-    const { error: staleError } = await database
+    const { error: staleError } = await supabase
       .from("operational_security_findings")
       .update({ resolved_at: now, updated_at: now })
       .in("finding_key", staleKeys);

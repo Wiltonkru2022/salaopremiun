@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { loadSalonNotificationSettings } from "@/lib/salon-notification-settings";
 import {
   classifyPushFailure,
@@ -119,9 +119,9 @@ export async function upsertPushSubscription(params: {
   userAgent?: string | null;
 }) {
   const parsed = parseSubscription(params.subscription);
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
-  const { data: existing } = await (database as any)
+  const { data: existing } = await (supabase as any)
     .from("push_subscriptions")
     .select(
       "id, p256dh, auth, id_salao, id_usuario, id_profissional, cliente_app_conta_id, ativo, updated_at"
@@ -149,7 +149,7 @@ export async function upsertPushSubscription(params: {
     }
   }
 
-  const { error } = await (database as any)
+  const { error } = await (supabase as any)
     .from("push_subscriptions")
     .upsert(
       {
@@ -172,7 +172,7 @@ export async function upsertPushSubscription(params: {
   if (error) throw new Error(error.message);
 
   if (params.audience === "cliente_app" && params.clienteAppContaId) {
-    await (database as any)
+    await (supabase as any)
       .from("push_subscriptions")
       .update({ ativo: false, updated_at: now })
       .eq("audience", "cliente_app")
@@ -186,7 +186,7 @@ async function isClienteAppPushEnabled(clienteAppContaId?: string | null) {
   const id = String(clienteAppContaId || "").trim();
   if (!id) return false;
 
-  const { data, error } = await (getDatabaseAdmin() as any)
+  const { data, error } = await (getSupabaseAdmin() as any)
     .from("clientes_app_auth")
     .select("notificacoes_ativas, notificacao_app_ativa")
     .eq("id", id)
@@ -219,7 +219,7 @@ async function filterClienteAppSubscriptionsByPreference(
   );
   if (!ids.length) return [];
 
-  const { data, error } = await (getDatabaseAdmin() as any)
+  const { data, error } = await (getSupabaseAdmin() as any)
     .from("clientes_app_auth")
     .select("id, notificacoes_ativas, notificacao_app_ativa")
     .in("id", ids);
@@ -266,7 +266,7 @@ async function filterProfissionalAppSubscriptionsByPreference(
   );
   if (!ids.length) return [];
 
-  const { data, error } = await (getDatabaseAdmin() as any)
+  const { data, error } = await (getSupabaseAdmin() as any)
     .from("profissionais")
     .select("id, notificacoes_ativas, notificacao_app_ativa")
     .in("id", ids);
@@ -305,7 +305,7 @@ async function isProfissionalNativePushEnabled(idProfissional?: string | null) {
   const id = String(idProfissional || "").trim();
   if (!id) return false;
 
-  const { data, error } = await (getDatabaseAdmin() as any)
+  const { data, error } = await (getSupabaseAdmin() as any)
     .from("profissionais")
     .select("id, notificacoes_ativas, notificacao_app_ativa")
     .eq("id", id)
@@ -403,7 +403,7 @@ function sleep(ms: number) {
 
 async function loadSubscriptionMetadata(row: PushSubscriptionRow) {
   try {
-    const { data } = await (getDatabaseAdmin() as any)
+    const { data } = await (getSupabaseAdmin() as any)
       .from("push_subscriptions")
       .select("audience, failure_count")
       .eq("id", row.id)
@@ -435,12 +435,12 @@ async function recordPushDelivery(params: {
   deactivateSubscription?: boolean;
 }) {
   try {
-    const database = getDatabaseAdmin() as any;
+    const supabase = getSupabaseAdmin() as any;
     const now = new Date().toISOString();
     const metadata = await loadSubscriptionMetadata(params.row);
 
     if (params.status === "enviada") {
-      await database
+      await supabase
         .from("push_subscriptions")
         .update({
           ativo: true,
@@ -462,7 +462,7 @@ async function recordPushDelivery(params: {
       };
       if (params.deactivateSubscription) failureUpdate.ativo = false;
 
-      await database
+      await supabase
         .from("push_subscriptions")
         .update(failureUpdate)
         .eq("id", params.row.id);
@@ -470,7 +470,7 @@ async function recordPushDelivery(params: {
 
     if (!metadata.audience) return;
 
-    await database.from("push_delivery_log").insert({
+    await supabase.from("push_delivery_log").insert({
       push_subscription_id: params.row.id,
       audience: metadata.audience,
       endpoint_host: getPushEndpointHost(params.row.endpoint),
@@ -668,12 +668,12 @@ export async function broadcastPushNotification(params: {
   url?: string | null;
   idSalao?: string | null;
 }) {
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const title = String(params.title || "").trim();
   const body = String(params.body || "").trim();
   if (!title || !body) throw new Error("Informe titulo e mensagem.");
 
-  let query = (database as any)
+  let query = (supabase as any)
     .from("push_subscriptions")
     .select(
       "id, audience, endpoint, p256dh, auth, cliente_app_conta_id, id_profissional"
@@ -729,15 +729,15 @@ export async function notifySalonAboutClientBooking(params: {
 }) {
   try {
     const settings = await loadSalonNotificationSettings(params.idSalao);
-    const database = getDatabaseAdmin();
+    const supabase = getSupabaseAdmin();
     const [salaoResult, profissionalResult] = await Promise.all([
-      (database as any)
+      (supabase as any)
         .from("push_subscriptions")
         .select("id, audience, endpoint, p256dh, auth")
         .eq("audience", "salao_painel")
         .eq("ativo", true)
         .eq("id_salao", params.idSalao),
-      (database as any)
+      (supabase as any)
         .from("push_subscriptions")
         .select("id, audience, endpoint, p256dh, auth, id_profissional")
         .eq("audience", "profissional_app")
@@ -806,8 +806,8 @@ export async function notifyClientAppointmentConfirmed(params: {
     const settings = await loadSalonNotificationSettings(params.idSalao);
     if (!settings.clienteAgendamentoConfirmado) return;
 
-    const database = getDatabaseAdmin();
-    const { data: agendamento, error: appointmentError } = await (database as any)
+    const supabase = getSupabaseAdmin();
+    const { data: agendamento, error: appointmentError } = await (supabase as any)
       .from("agendamentos")
       .select("id, id_salao, cliente_id, servico_id, data, hora_inicio")
       .eq("id", params.idAgendamento)
@@ -815,7 +815,7 @@ export async function notifyClientAppointmentConfirmed(params: {
       .maybeSingle();
     if (appointmentError || !agendamento?.cliente_id) return;
 
-    const { data: clienteAuth, error: authError } = await (database as any)
+    const { data: clienteAuth, error: authError } = await (supabase as any)
       .from("clientes_auth")
       .select("app_conta_id")
       .eq("id_salao", params.idSalao)
@@ -829,7 +829,7 @@ export async function notifyClientAppointmentConfirmed(params: {
     const clientePushEnabled = await isClienteAppPushEnabled(clienteAuth.app_conta_id);
     if (!clientePushEnabled) return;
 
-    const { data: rows, error: rowsError } = await (database as any)
+    const { data: rows, error: rowsError } = await (supabase as any)
       .from("push_subscriptions")
       .select("id, audience, endpoint, p256dh, auth")
       .eq("audience", "cliente_app")
@@ -838,7 +838,7 @@ export async function notifyClientAppointmentConfirmed(params: {
     if (rowsError || !rows?.length) return;
 
     const { data: servico } = agendamento.servico_id
-      ? await (database as any)
+      ? await (supabase as any)
           .from("servicos")
           .select("nome")
           .eq("id", agendamento.servico_id)

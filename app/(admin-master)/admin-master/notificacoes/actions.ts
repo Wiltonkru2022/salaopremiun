@@ -13,7 +13,7 @@ import {
   parseClientVisualNoticeConfig,
   parseSaoPauloDateTimeLocal,
 } from "@/lib/client-app/visual-notifications";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 function isTarget(value: string): value is BroadcastPushTarget {
   return ["todos", "clientes", "profissionais", "saloes"].includes(value);
@@ -136,12 +136,12 @@ export async function dispararNotificacaoAdminMasterAction(formData: FormData) {
 export async function publicarAvisoVisualClienteAction(formData: FormData) {
   const access = await requireAdminMasterUser("notificacoes_editar");
   const input = readVisualForm(formData);
-  const database = getDatabaseAdmin() as any;
+  const supabase = getSupabaseAdmin() as any;
   const now = new Date();
   const startsAtMs = new Date(input.startsAt).getTime();
   const status = startsAtMs > now.getTime() ? "agendada" : "publicada";
 
-  const { data, error } = await database
+  const { data, error } = await supabase
     .from("notificacoes_globais")
     .insert({
       titulo: input.title,
@@ -179,8 +179,8 @@ export async function atualizarAvisoVisualClienteAction(formData: FormData) {
   if (!id) visualError("Aviso inválido.");
 
   const input = readVisualForm(formData);
-  const database = getDatabaseAdmin() as any;
-  const { data: current, error: currentError } = await database
+  const supabase = getSupabaseAdmin() as any;
+  const { data: current, error: currentError } = await supabase
     .from("notificacoes_globais")
     .select("id, filtros_json")
     .eq("id", id)
@@ -197,7 +197,7 @@ export async function atualizarAvisoVisualClienteAction(formData: FormData) {
   const now = new Date();
   const startsAtMs = new Date(input.startsAt).getTime();
   const status = startsAtMs > now.getTime() ? "agendada" : "publicada";
-  const { error } = await database
+  const { error } = await supabase
     .from("notificacoes_globais")
     .update({
       titulo: input.title,
@@ -230,8 +230,8 @@ export async function encerrarAvisoVisualClienteAction(formData: FormData) {
   const id = String(formData.get("id") || "").trim();
   if (!id) visualError("Aviso inválido.");
 
-  const database = getDatabaseAdmin() as any;
-  const { data: current, error: currentError } = await database
+  const supabase = getSupabaseAdmin() as any;
+  const { data: current, error: currentError } = await supabase
     .from("notificacoes_globais")
     .select("id, filtros_json")
     .eq("id", id)
@@ -245,7 +245,7 @@ export async function encerrarAvisoVisualClienteAction(formData: FormData) {
     visualError("Aviso visual não encontrado.");
   }
 
-  const { error } = await database
+  const { error } = await supabase
     .from("notificacoes_globais")
     .update({ status: "encerrada" })
     .eq("id", id);

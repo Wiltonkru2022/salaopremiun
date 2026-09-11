@@ -115,7 +115,7 @@ export default function AgendaPage() {
   const [googleCalendarSyncing, setGoogleCalendarSyncing] = useState(false);
 
   const {
-    database,
+    supabase,
     loading,
     setLoading,
     erroTela,
@@ -228,7 +228,7 @@ export default function AgendaPage() {
 
   const { safeGetAuthUser, sincronizarAgendamento, loadAgenda, init } =
     useAgendaData({
-      database,
+      supabase,
       router,
       loadAgendaSeqRef,
       idSalao,
@@ -264,7 +264,7 @@ export default function AgendaPage() {
     handleMoveBlock,
     handleResizeBlock,
   } = useAgendaMutations({
-    database,
+    supabase,
     idSalao,
     config,
     modalMode,
@@ -410,7 +410,7 @@ export default function AgendaPage() {
     clienteId: string
   ): Promise<ComandaResumo[]> {
     return buscarComandasAbertasDoClienteAgenda({
-      database,
+      supabase,
       idSalao,
       clienteId,
     });
@@ -422,7 +422,7 @@ export default function AgendaPage() {
     }
 
     return criarNovaComandaAgenda({
-      database,
+      supabase,
       idSalao,
       clienteId,
     });
@@ -597,13 +597,13 @@ export default function AgendaPage() {
     try {
       const [{ data: clienteData, error: clienteError }, { data, error }] =
         await Promise.all([
-          database
+          supabase
             .from("clientes")
             .select("cashback")
             .eq("id_salao", idSalao)
             .eq("id", item.cliente_id)
             .maybeSingle(),
-          database
+          supabase
             .from("agendamentos")
             .select(
               "id, data, hora_inicio, hora_fim, status, observacoes, sinal_comprovante_path, servicos(nome)"
@@ -682,13 +682,13 @@ export default function AgendaPage() {
     try {
       const [{ data: clienteData, error: clienteError }, { data, error }] =
         await Promise.all([
-          database
+          supabase
             .from("clientes")
             .select("nome, whatsapp, cashback")
             .eq("id_salao", idSalao)
             .eq("id", clientId)
             .maybeSingle(),
-          database
+          supabase
             .from("agendamentos")
             .select(
               "id, data, hora_inicio, hora_fim, status, observacoes, sinal_comprovante_path, servicos(nome)"
@@ -920,17 +920,7 @@ export default function AgendaPage() {
       id: item.id,
       clientName: item.cliente?.nome || "Cliente sem nome",
       serviceName: item.servico?.nome || "Serviço",
-      dateLabel: (() => {
-        const rawDate = String(item.data ?? "").trim();
-        const normalizedDate = rawDate.match(/^\d{4}-\d{2}-\d{2}/)?.[0] ?? rawDate;
-        const parsedDate = /^\d{4}-\d{2}-\d{2}$/.test(normalizedDate)
-          ? new Date(`${normalizedDate}T12:00:00`)
-          : new Date(normalizedDate);
-
-        return Number.isNaN(parsedDate.getTime())
-          ? "--/--"
-          : format(parsedDate, "dd/MM");
-      })(),
+      dateLabel: format(new Date(`${item.data}T12:00:00`), "dd/MM"),
       timeLabel: `${normalizeTimeString(item.hora_inicio)} - ${normalizeTimeString(
         item.hora_fim
       )}`,

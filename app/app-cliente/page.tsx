@@ -22,26 +22,17 @@ export const metadata = {
   title: "Início",
 };
 
-function appointmentDate(value: string | null | undefined) {
-  const raw = String(value || "").trim();
-  if (!raw) return null;
-  const day = raw.match(/^\d{4}-\d{2}-\d{2}/)?.[0];
-  if (!day) return null;
-  const parsed = new Date(`${day}T12:00:00`);
-  return Number.isNaN(parsed.getTime()) ? null : parsed;
-}
-
 function formatDay(date: string) {
-  const parsed = appointmentDate(date);
-  if (!parsed) return "--";
-  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit" }).format(parsed);
+  if (!date) return "--";
+  return new Intl.DateTimeFormat("pt-BR", { day: "2-digit" }).format(
+    new Date(`${date}T12:00:00`)
+  );
 }
 
 function formatMonth(date: string) {
-  const parsed = appointmentDate(date);
-  if (!parsed) return "";
+  if (!date) return "";
   return new Intl.DateTimeFormat("pt-BR", { month: "short" })
-    .format(parsed)
+    .format(new Date(`${date}T12:00:00`))
     .replace(".", "")
     .toUpperCase();
 }
@@ -139,10 +130,26 @@ export default async function AppClienteIndexPage() {
           <h2 className="mt-7 text-2xl font-black">Acesso rápido</h2>
           <div className="mt-4 grid grid-cols-4 rounded-[1.35rem] border border-white/8 bg-[#121315] px-3 py-5 shadow-[0_22px_60px_rgba(0,0,0,0.35)]">
             {[
-              { href: "/app-cliente/explorar", label: "Reservar online", icon: CalendarDays },
-              { href: "/app-cliente/agendamentos", label: "Meus agendamentos", icon: CalendarDays },
-              { href: "/app-cliente/perfil/avaliacoes", label: "Avaliações", icon: Star },
-              { href: "/app-cliente/cupons", label: "Cupom", icon: Gift },
+              {
+                href: "/app-cliente/explorar",
+                label: "Reservar online",
+                icon: CalendarDays,
+              },
+              {
+                href: "/app-cliente/agendamentos",
+                label: "Meus agendamentos",
+                icon: CalendarDays,
+              },
+              {
+                href: "/app-cliente/perfil/avaliacoes",
+                label: "Avaliações",
+                icon: Star,
+              },
+              {
+                href: "/app-cliente/cupons",
+                label: "Cupom",
+                icon: Gift,
+              },
             ].map((item) => {
               const Icon = item.icon;
               return (
@@ -172,19 +179,29 @@ export default async function AppClienteIndexPage() {
             >
               <div className="grid grid-cols-[64px_1fr_86px] items-center gap-4">
                 <div className="h-16 w-16 overflow-hidden rounded-xl bg-zinc-800">
-                  <img src="/app-cliente-hero-woman.jpeg" alt="" className="h-full w-full object-cover" />
+                  <img
+                    src="/app-cliente-hero-woman.jpeg"
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
                 </div>
                 <div className="min-w-0">
-                  <h3 className="truncate text-xl font-black">{nextAppointment.servicoNome}</h3>
+                  <h3 className="truncate text-xl font-black">
+                    {nextAppointment.servicoNome}
+                  </h3>
                   <p className="mt-2 truncate text-base text-zinc-400">
                     com {nextAppointment.profissionalNome}
                   </p>
                 </div>
                 <div className="border-l border-white/10 pl-5 text-center">
-                  <div className="text-4xl font-light">{formatDay(nextAppointment.data)}</div>
-                  <div className="text-lg text-zinc-300">{formatMonth(nextAppointment.data)}</div>
+                  <div className="text-4xl font-light">
+                    {formatDay(nextAppointment.data)}
+                  </div>
+                  <div className="text-lg text-zinc-300">
+                    {formatMonth(nextAppointment.data)}
+                  </div>
                   <div className="mt-1 text-lg font-black">
-                    {String(nextAppointment.horaInicio || "--:--").slice(0, 5)}
+                    {nextAppointment.horaInicio.slice(0, 5)}
                   </div>
                 </div>
               </div>

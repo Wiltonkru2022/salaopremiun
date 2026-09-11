@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import {
   getStatusComissaoMeta,
   getStatusComissaoQueryValues,
@@ -65,7 +65,7 @@ function normalizeRateioConfig(value: unknown): RateioConfig {
 }
 
 export function useComissoesPage() {
-  const database = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const { snapshot: painelSession } = usePainelSession();
   const hoje = new Date();
@@ -149,7 +149,7 @@ export function useComissoesPage() {
         setErro("");
         setMsg("");
 
-        let query = database
+        let query = supabase
           .from("comissoes_lancamentos")
           .select("competencia, competencia_data, criado_em, descricao, id, id_agendamento, id_assistente, id_comanda, id_comanda_item, id_profissional, id_salao, observacoes, origem_percentual, pago_em, percentual, percentual_aplicado, status, tipo_destinatario, tipo_profissional, updated_at, valor_base, valor_comissao, valor_comissao_assistente")
           .eq("id_salao", salaoId)
@@ -195,7 +195,7 @@ export function useComissoesPage() {
         >();
 
         if (idsProfissionais.length > 0) {
-          const { data: profissionaisData, error: profError } = await database
+          const { data: profissionaisData, error: profError } = await supabase
             .from("profissionais")
             .select("id, nome, cpf, tipo_profissional")
             .in("id", idsProfissionais);
@@ -223,7 +223,7 @@ export function useComissoesPage() {
           }
         >();
         if (idsComandas.length > 0) {
-          const { data: comandasData, error: comandasError } = await database
+          const { data: comandasData, error: comandasError } = await supabase
             .from("comandas")
             .select("id, numero, fechada_em, desconto, acrescimo, clientes(nome)")
             .in("id", idsComandas);
@@ -251,7 +251,7 @@ export function useComissoesPage() {
           }
         >();
         if (idsItens.length > 0) {
-          const { data: itensData, error: itensError } = await database
+          const { data: itensData, error: itensError } = await supabase
             .from("comanda_itens")
             .select("id, descricao, tipo_item, custo_total")
             .in("id", idsItens);
@@ -341,7 +341,7 @@ export function useComissoesPage() {
       idSalao,
       profissionalId,
       status,
-      database,
+      supabase,
       tipoDestinatario,
     ]
   );
@@ -356,21 +356,21 @@ export function useComissoesPage() {
       setIdSalao(salaoIdFinal);
 
       const { data: profissionaisData, error: profissionaisError } =
-        await database
+        await supabase
           .from("profissionais")
           .select("id, nome, cpf, tipo_profissional")
           .eq("id_salao", salaoIdFinal)
           .order("nome");
       if (profissionaisError) throw profissionaisError;
 
-      const { data: salaoData, error: salaoError } = await database
+      const { data: salaoData, error: salaoError } = await supabase
         .from("saloes")
         .select("id, nome, cpf_cnpj, responsavel")
         .eq("id", salaoIdFinal)
         .maybeSingle();
       if (salaoError) throw salaoError;
 
-      const { data: configData, error: configError } = await database
+      const { data: configData, error: configError } = await supabase
         .from("configuracoes_salao")
         .select("rateio_config")
         .eq("id_salao", salaoIdFinal)
@@ -388,7 +388,7 @@ export function useComissoesPage() {
     } finally {
       setLoading(false);
     }
-  }, [carregarAcesso, database]);
+  }, [carregarAcesso, supabase]);
 
   useEffect(() => {
     void init();

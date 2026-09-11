@@ -1,6 +1,6 @@
-import type { DatabaseClient } from "@/lib/db/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { verifyHeaderSecret } from "@/lib/auth/verify-secret";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   resolverContextoWebhookAsaas,
   type AssinaturaWebhookContextRow,
@@ -38,8 +38,8 @@ export type AsaasWebhookContextResolved = {
 
 export function createAsaasWebhookService() {
   return {
-    criarDatabaseAdmin() {
-      return getDatabaseAdmin();
+    criarSupabaseAdmin() {
+      return getSupabaseAdmin();
     },
 
     validarTokenWebhook(headers: Headers) {
@@ -58,7 +58,7 @@ export function createAsaasWebhookService() {
     },
 
     async registrarEvento(params: {
-      databaseAdmin: DatabaseClient;
+      supabaseAdmin: SupabaseClient;
       fingerprint: string;
       body: AsaasWebhookBody;
       event: string;
@@ -69,7 +69,7 @@ export function createAsaasWebhookService() {
     },
 
     async registrarFalhaFallback(params: {
-      databaseAdmin: DatabaseClient;
+      supabaseAdmin: SupabaseClient;
       webhookPayload: AsaasWebhookBody;
       event: string;
       paymentId: string;
@@ -80,13 +80,13 @@ export function createAsaasWebhookService() {
     },
 
     async atualizarStatusEvento(
-      databaseAdmin: DatabaseClient,
+      supabaseAdmin: SupabaseClient,
       webhookEventId: string | null,
       status: "erro" | "processado",
       message?: string
     ) {
       return atualizarStatusEventoWebhook(
-        databaseAdmin,
+        supabaseAdmin,
         webhookEventId,
         status,
         message
@@ -94,7 +94,7 @@ export function createAsaasWebhookService() {
     },
 
     async resolverContexto(params: {
-      databaseAdmin: DatabaseClient;
+      supabaseAdmin: SupabaseClient;
       paymentId: string;
       payment: Record<string, unknown>;
       body: AsaasWebhookBody;
@@ -107,7 +107,7 @@ export function createAsaasWebhookService() {
     },
 
     async processarResolvido(params: {
-      databaseAdmin: DatabaseClient;
+      supabaseAdmin: SupabaseClient;
       webhookEventId: string | null;
       webhookPayload: AsaasWebhookBody;
       event: string;
@@ -126,7 +126,7 @@ export function createAsaasWebhookService() {
     },
 
     async processarPacoteWhatsapp(params: {
-      databaseAdmin: DatabaseClient;
+      supabaseAdmin: SupabaseClient;
       paymentId: string;
       payment: Record<string, unknown>;
       paymentStatus: string | null;
@@ -138,7 +138,7 @@ export function createAsaasWebhookService() {
     },
 
     async processarRecargaWhatsapp(params: {
-      databaseAdmin: DatabaseClient;
+      supabaseAdmin: SupabaseClient;
       paymentId: string;
       payment: Record<string, unknown>;
       paymentStatus: string | null;

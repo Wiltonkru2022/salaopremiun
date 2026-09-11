@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import ComandaItemModal, {
   type ComandaItemModalPayload,
 } from "@/components/comandas/ComandaItemModal";
@@ -99,7 +99,7 @@ function getErrorMessage(error: unknown, fallback: string) {
 }
 
 export default function ComandaForm({ modo }: ComandaFormProps) {
-  const database = createClient();
+  const supabase = createClient();
   const router = useRouter();
   const params = useParams();
 
@@ -255,27 +255,27 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
         profissionalServicosRes,
         produtosRes,
       ] = await Promise.all([
-        database
+        supabase
           .from("clientes")
           .select("id, nome")
           .eq("id_salao", usuarioLogado.idSalao)
           .in("ativo", ["true", "ativo"])
           .order("nome", { ascending: true }),
 
-        database
+        supabase
           .from("profissionais")
           .select("id, nome, comissao_percentual, tipo_profissional")
           .eq("id_salao", usuarioLogado.idSalao)
           .eq("ativo", true)
           .order("nome", { ascending: true }),
 
-        database
+        supabase
           .from("profissional_assistentes")
           .select("id_profissional, id_assistente")
           .eq("id_salao", usuarioLogado.idSalao)
           .eq("ativo", true),
 
-        database
+        supabase
           .from("servicos")
           .select(
             `
@@ -297,20 +297,20 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
           .eq("ativo", true)
           .order("nome", { ascending: true }),
 
-        database
+        supabase
           .from("servicos_combo_itens")
           .select("id_servico_combo, id_servico_item, ordem, preco_base, percentual_rateio")
           .eq("id_salao", usuarioLogado.idSalao)
           .eq("ativo", true)
           .order("ordem", { ascending: true }),
 
-        database
+        supabase
           .from("profissional_servicos")
           .select("id_servico, id_profissional")
           .eq("id_salao", usuarioLogado.idSalao)
           .eq("ativo", true),
 
-        database
+        supabase
           .from("produtos")
           .select(
             `
@@ -366,7 +366,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
       setProdutos((produtosRes.data as Produto[]) || []);
 
       if (modo === "novo") {
-        const { data: ultimaComandaRows, error: ultimaError } = await database
+        const { data: ultimaComandaRows, error: ultimaError } = await supabase
           .from("comandas")
           .select("numero")
           .eq("id_salao", usuarioLogado.idSalao)
@@ -391,7 +391,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
   }
 
   async function carregarComanda(id: string, salaoId: string) {
-    const { data: comanda, error } = await database
+    const { data: comanda, error } = await supabase
       .from("comandas")
       .select("aberta_em, acrescimo, cancelada_em, created_at, desconto, fechada_em, id, id_agendamento_principal, id_cliente, id_salao, motivo_cancelamento, numero, observacoes, origem, status, subtotal, total, updated_at")
       .eq("id", id)
@@ -480,7 +480,7 @@ export default function ComandaForm({ modo }: ComandaFormProps) {
   }
 
   async function recarregarItens(id: string) {
-    const { data: itensRows, error: itensError } = await database
+    const { data: itensRows, error: itensError } = await supabase
       .from("comanda_itens")
       .select("ativo, base_calculo_aplicada, comissao_assistente_percentual_aplicada, comissao_assistente_valor_aplicado, comissao_percentual_aplicada, comissao_valor_aplicado, created_at, custo_total, desconta_taxa_maquininha_aplicada, descricao, id, id_agendamento, id_assistente, id_comanda, id_item_extra, id_produto, id_profissional, id_salao, id_servico, idempotency_key, observacoes, origem, quantidade, tipo, tipo_item, updated_at, valor_total, valor_unitario")
       .eq("id_comanda", id)

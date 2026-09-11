@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import AdminMasterPageHeader from "@/components/admin-master/AdminMasterPageHeader";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import PaginationLinks from "@/components/ui/PaginationLinks";
 import type { Json } from "@/types/database.generated";
 
@@ -103,8 +103,8 @@ export default async function AdminMasterSaloesExcluidosPage({
   const from = paginaAtual * SALOES_EXCLUIDOS_PAGE_SIZE;
   const to = from + SALOES_EXCLUIDOS_PAGE_SIZE - 1;
 
-  const database = getDatabaseAdmin();
-  let query = (database as any)
+  const supabase = getSupabaseAdmin();
+  let query = (supabase as any)
     .from("reativar_salao")
     .select(
       "id, id_salao_original, nome_salao, nome_responsavel, email, telefone, whatsapp, cpf_cnpj, endereco_completo, cidade, estado, bairro, cep, data_exclusao, motivo, origem, metadata",

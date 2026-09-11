@@ -1,4 +1,4 @@
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import type { Json } from "@/types/database.generated";
 
 function normalizeString(value: unknown) {
@@ -35,12 +35,12 @@ export function extractWebhookSourceId(chave?: string | null) {
 export async function syncAdminMasterWebhookEvents() {
   return runAdminOperation({
     action: "admin_master_sync_webhook_events",
-    run: async (database) => {
+    run: async (supabase) => {
       const since = new Date(
         Date.now() - 14 * 24 * 60 * 60 * 1000
       ).toISOString();
 
-      const { data, error } = await database
+      const { data, error } = await supabase
         .from("asaas_webhook_eventos")
         .select(
           "id, evento, payment_id, payment_status, status_processamento, tentativas, erro_mensagem, payload, primeiro_recebido_em, ultimo_recebido_em, processado_em, id_salao, id_assinatura, id_cobranca, event_order, decisao"
@@ -118,7 +118,7 @@ export async function syncAdminMasterWebhookEvents() {
         };
       });
 
-      const { error: upsertError } = await database
+      const { error: upsertError } = await supabase
         .from("eventos_webhook")
         .upsert(payload, { onConflict: "chave" });
 

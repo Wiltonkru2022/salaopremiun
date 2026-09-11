@@ -5,7 +5,7 @@ import Link from "next/link";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
 import { PainelListLoading } from "@/components/painel-ui";
 import AppModal from "@/components/ui/AppModal";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import {
   BadgeDollarSign,
   CalendarDays,
@@ -32,7 +32,7 @@ import type { ComandaRow, PagamentoRow, ComissaoRow, ProfissionalRow, ComandaIte
 import { getJoinedName, formatCurrency, formatDateTime, formatDateInput, getDatePresetRange, escapeHtml, formatFormaPagamentoLabel, formatTipoItemLabel, csvCell, getStatusBadgeClass, KpiCard, ComboDescriptionCell } from "./relatorio-financeiro-support";
 
 export default function RelatorioFinanceiroPage() {
-  const database = createClient();
+  const supabase = createClient();
   const { snapshot: painelSession } = usePainelSession();
 
   const [loading, setLoading] = useState(true);
@@ -90,7 +90,7 @@ export default function RelatorioFinanceiroPage() {
           Boolean(painelSession?.planoRecursos?.relatorios_avancados)
         );
 
-        const { data: profissionaisData, error: profissionaisError } = await database
+        const { data: profissionaisData, error: profissionaisError } = await supabase
           .from("profissionais")
           .select("id, nome, tipo_profissional, status")
           .eq("id_salao", salaoId)
@@ -104,7 +104,7 @@ export default function RelatorioFinanceiroPage() {
 
         setProfissionais((profissionaisData as ProfissionalRow[]) || []);
 
-        let queryComandas = database
+        let queryComandas = supabase
           .from("comandas")
           .select(`
             id,
@@ -162,7 +162,7 @@ export default function RelatorioFinanceiroPage() {
         const listaComandas = (comandasData as ComandaRow[]) || [];
         setComandas(listaComandas);
 
-        const { data: caixaSessoesData, error: caixaSessoesError } = await database
+        const { data: caixaSessoesData, error: caixaSessoesError } = await supabase
           .from("caixa_sessoes")
           .select(`
             id,
@@ -204,7 +204,7 @@ export default function RelatorioFinanceiroPage() {
           { data: comissoesData, error: comissoesError },
           { data: itensData, error: itensError },
         ] = await Promise.all([
-          database
+          supabase
             .from("comanda_pagamentos")
             .select(`
               id,
@@ -222,7 +222,7 @@ export default function RelatorioFinanceiroPage() {
             `)
             .in("id_comanda", idsComandas),
 
-          database
+          supabase
             .from("comissoes_lancamentos")
             .select(`
               id,
@@ -239,7 +239,7 @@ export default function RelatorioFinanceiroPage() {
             `)
             .in("id_comanda", idsComandas),
 
-          database
+          supabase
             .from("comanda_itens")
             .select(`
               id,
@@ -291,7 +291,7 @@ export default function RelatorioFinanceiroPage() {
     },
     [
       dadosCarregados,
-      database,
+      supabase,
       idSalao,
       statusFiltro,
       dataInicio,

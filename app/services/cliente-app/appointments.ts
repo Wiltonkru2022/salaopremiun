@@ -1,4 +1,4 @@
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import { cancelarAgendamentoComComanda } from "@/lib/agenda/cancelarAgendamentoComComanda";
 import { canSalonAppearInClientApp } from "@/lib/client-app/eligibility";
 import {
@@ -245,14 +245,14 @@ function hasAppointmentConflictWithBuffer(params: {
 }
 
 async function loadBookingBaseContext(params: {
-  databaseAdmin: any;
+  supabaseAdmin: any;
   idSalao: string;
   idServico: string;
   idProfissional: string;
 }) {
   const [configResult, profissionalResult, servicoResult, vinculoResult] =
     await Promise.all([
-      params.databaseAdmin
+      params.supabaseAdmin
         .from("configuracoes_salao")
         .select(
           "id_salao, hora_abertura, hora_fechamento, intervalo_minutos, dias_funcionamento, sinal_agendamento_ativo, sinal_agendamento_percentual, sinal_pix_chave, sinal_pix_recebedor, sinal_pix_cidade, sinal_whatsapp, sinal_reserva_minutos, sinal_mensagem_comprovante"
@@ -260,7 +260,7 @@ async function loadBookingBaseContext(params: {
         .eq("id_salao", params.idSalao)
         .limit(1)
         .maybeSingle(),
-      (params.databaseAdmin as any)
+      (params.supabaseAdmin as any)
         .from("profissionais")
         .select(
           "id, id_salao, nome, nome_exibicao, foto_url, categoria, cargo, comissao_percentual, cor_agenda, status, ativo, dias_trabalho, pausas, app_cliente_visivel, eh_assistente, intervalo_agenda_minutos, pix_chave, sinal_confirmacao_responsavel, sinal_pix_proprio, sinal_pix_recebedor, sinal_whatsapp"
@@ -269,7 +269,7 @@ async function loadBookingBaseContext(params: {
         .eq("id_salao", params.idSalao)
         .limit(1)
         .maybeSingle(),
-      (params.databaseAdmin as any)
+      (params.supabaseAdmin as any)
         .from("servicos")
         .select(
           "id, id_salao, nome, ativo, preco, preco_padrao, duracao, duracao_minutos, descricao, app_cliente_visivel, cobra_sinal_agendamento, sinal_percentual_personalizado"
@@ -278,7 +278,7 @@ async function loadBookingBaseContext(params: {
         .eq("id_salao", params.idSalao)
         .limit(1)
         .maybeSingle(),
-      params.databaseAdmin
+      params.supabaseAdmin
         .from("profissional_servicos")
         .select("id, duracao_minutos, ativo")
         .eq("id_salao", params.idSalao)
@@ -387,7 +387,7 @@ function addMinutes(date: Date, minutes: number) {
 }
 
 async function loadBookingMultiContext(params: {
-  databaseAdmin: any;
+  supabaseAdmin: any;
   idSalao: string;
   idServico: string;
   idsServicos?: string[] | null;
@@ -401,12 +401,10 @@ async function loadBookingMultiContext(params: {
     )
   );
 
-  const contexts: Array<
-    Extract<Awaited<ReturnType<typeof loadBookingBaseContext>>, { ok: true }>
-  > = [];
+  const contexts = [];
   for (const idServico of idsServicos) {
     const context = await loadBookingBaseContext({
-      databaseAdmin: params.databaseAdmin,
+      supabaseAdmin: params.supabaseAdmin,
       idSalao: params.idSalao,
       idServico,
       idProfissional: params.idProfissional,
@@ -470,7 +468,7 @@ function calcularDescontoCupom(params: {
 }
 
 async function validarCupomAgendamento(params: {
-  databaseAdmin: any;
+  supabaseAdmin: any;
   idSalao: string;
   idCliente: string;
   clienteAppContaId: string;
@@ -484,7 +482,7 @@ async function validarCupomAgendamento(params: {
   }
 
   const hoje = new Date().toISOString().slice(0, 10);
-  const { data: cupom, error } = await (params.databaseAdmin as any)
+  const { data: cupom, error } = await (params.supabaseAdmin as any)
     .from("cupons_salao")
     .select(
       "id, codigo, nome, tipo_desconto, valor_desconto, valor_minimo, limite_uso_total, limite_uso_cliente, limite_uso_dia, limite_por_telefone_email, publico_tipo, valido_de, valido_ate, ativo, requer_resgate, status_campanha"
@@ -517,11 +515,11 @@ async function validarCupomAgendamento(params: {
   }
 
   const [{ count: totalUsos }, { count: usosCliente }] = await Promise.all([
-    (params.databaseAdmin as any)
+    (params.supabaseAdmin as any)
       .from("cupom_salao_usos")
       .select("id", { count: "exact", head: true })
       .eq("id_cupom", cupom.id),
-    (params.databaseAdmin as any)
+    (params.supabaseAdmin as any)
       .from("cupom_salao_usos")
       .select("id", { count: "exact", head: true })
       .eq("id_cupom", cupom.id)
@@ -538,7 +536,7 @@ async function validarCupomAgendamento(params: {
 
   const limiteDia = Number(cupom.limite_uso_dia || 0);
   if (limiteDia > 0) {
-    const { count: usosDia } = await (params.databaseAdmin as any)
+    const { count: usosDia } = await (params.supabaseAdmin as any)
       .from("cupom_salao_usos")
       .select("id", { count: "exact", head: true })
       .eq("id_cupom", cupom.id)
@@ -555,7 +553,7 @@ async function validarCupomAgendamento(params: {
   }
 
   if (cupom.limite_por_telefone_email !== false) {
-    const { data: contaCupom } = await (params.databaseAdmin as any)
+    const { data: contaCupom } = await (params.supabaseAdmin as any)
       .from("clientes_app_auth")
       .select("email, telefone")
       .eq("id", params.clienteAppContaId)
@@ -571,7 +569,7 @@ async function validarCupomAgendamento(params: {
       ]
         .filter(Boolean)
         .join(",");
-      const { data: usosMesmoContato } = await (params.databaseAdmin as any)
+      const { data: usosMesmoContato } = await (params.supabaseAdmin as any)
         .from("cupom_salao_usos")
         .select("id")
         .eq("id_cupom", cupom.id)
@@ -591,7 +589,7 @@ async function validarCupomAgendamento(params: {
 
   const publicoTipo = String(cupom.publico_tipo || "link");
   if (publicoTipo === "clientes_especificos") {
-    const { data: clientePermitido } = await (params.databaseAdmin as any)
+    const { data: clientePermitido } = await (params.supabaseAdmin as any)
       .from("cupom_salao_clientes")
       .select("id")
       .eq("id_cupom", cupom.id)
@@ -610,7 +608,7 @@ async function validarCupomAgendamento(params: {
   }
 
   if (publicoTipo === "novos_clientes") {
-    const { count: atendimentosAnteriores } = await (params.databaseAdmin as any)
+    const { count: atendimentosAnteriores } = await (params.supabaseAdmin as any)
       .from("agendamentos")
       .select("id", { count: "exact", head: true })
       .eq("id_salao", params.idSalao)
@@ -627,7 +625,7 @@ async function validarCupomAgendamento(params: {
   }
 
   if (cupom.requer_resgate !== false) {
-    const { data: resgate } = await (params.databaseAdmin as any)
+    const { data: resgate } = await (params.supabaseAdmin as any)
       .from("cupom_salao_resgates")
       .select("id")
       .eq("id_cupom", cupom.id)
@@ -645,7 +643,7 @@ async function validarCupomAgendamento(params: {
     }
   }
 
-  const { data: servicosCampanha } = await (params.databaseAdmin as any)
+  const { data: servicosCampanha } = await (params.supabaseAdmin as any)
     .from("cupom_salao_servicos")
     .select("id_servico, tipo_beneficio, valor_beneficio, limite_uso_servico")
     .eq("id_cupom", cupom.id)
@@ -672,7 +670,7 @@ async function validarCupomAgendamento(params: {
 
     const limiteServico = Number(servicoCupom.limite_uso_servico || 0);
     if (limiteServico > 0) {
-      const { count: usosServico } = await (params.databaseAdmin as any)
+      const { count: usosServico } = await (params.supabaseAdmin as any)
         .from("cupom_salao_usos")
         .select("id", { count: "exact", head: true })
         .eq("id_cupom", cupom.id)
@@ -813,7 +811,7 @@ function buildDisponibilidadeDia(params: {
 }
 
 async function warmClientAppNextSlotCache(params: {
-  databaseAdmin: any;
+  supabaseAdmin: any;
   idSalao: string;
   idServico: string;
   idProfissional: string;
@@ -837,7 +835,7 @@ async function warmClientAppNextSlotCache(params: {
   if (!rows.length) return;
 
   try {
-    await (params.databaseAdmin as any)
+    await (params.supabaseAdmin as any)
       .from("client_app_next_slots")
       .upsert(rows, {
         onConflict: "id_salao,id_servico,id_profissional,data,hora_inicio",
@@ -848,11 +846,11 @@ async function warmClientAppNextSlotCache(params: {
 }
 
 async function loadOwnedAppointment(params: {
-  databaseAdmin: any;
+  supabaseAdmin: any;
   idConta: string;
   idAgendamento: string;
 }): Promise<ClienteAgendamentoOwnership | null> {
-  const { data: agendamento, error } = await params.databaseAdmin
+  const { data: agendamento, error } = await params.supabaseAdmin
     .from("agendamentos")
     .select(
       "id, id_salao, cliente_id, profissional_id, servico_id, id_comanda, status, data, hora_inicio, hora_fim, clientes!agendamentos_cliente_id_fkey(nome), profissionais(nome, nome_exibicao), servicos(nome)"
@@ -865,7 +863,7 @@ async function loadOwnedAppointment(params: {
     return null;
   }
 
-  const { data: authRows, error: authError } = await params.databaseAdmin
+  const { data: authRows, error: authError } = await params.supabaseAdmin
     .from("clientes_auth")
     .select("id")
     .eq("id_salao", agendamento.id_salao)
@@ -974,7 +972,7 @@ export async function createClienteAppAppointment(
     action: "cliente_app_book_appointment",
     actorId: idConta,
     idSalao,
-    run: async (databaseAdmin) => {
+    run: async (supabaseAdmin) => {
       const vinculoConta = await ensureClienteContaVinculadaAoSalao({
         idConta,
         idSalao,
@@ -987,7 +985,7 @@ export async function createClienteAppAppointment(
       const idCliente = vinculoConta.idCliente;
 
       const [clienteResult, bookingContext] = await Promise.all([
-        databaseAdmin
+        supabaseAdmin
           .from("clientes")
           .select("id, id_salao, nome, status, email, telefone")
           .eq("id", idCliente)
@@ -995,7 +993,7 @@ export async function createClienteAppAppointment(
           .limit(1)
           .maybeSingle(),
         loadBookingMultiContext({
-          databaseAdmin,
+          supabaseAdmin,
           idSalao,
           idServico,
           idsServicos,
@@ -1061,7 +1059,7 @@ export async function createClienteAppAppointment(
 
       const [{ data: bloqueios, error: bloqueiosError }, { data: agendamentos, error: agendamentosError }] =
         await Promise.all([
-          databaseAdmin
+          supabaseAdmin
             .from("agenda_bloqueios")
             .select(
               "id, id_salao, profissional_id, data, hora_inicio, hora_fim, motivo"
@@ -1069,7 +1067,7 @@ export async function createClienteAppAppointment(
             .eq("id_salao", idSalao)
             .eq("profissional_id", idProfissional)
             .eq("data", data),
-          (databaseAdmin as any)
+          (supabaseAdmin as any)
             .from("agendamentos")
             .select("id, hora_inicio, hora_fim, status, reserva_expira_em")
             .eq("id_salao", idSalao)
@@ -1142,7 +1140,7 @@ export async function createClienteAppAppointment(
       let adicionaisRowsSalvos: Array<Record<string, unknown>> = [];
 
       if (adicionaisIds.length) {
-        const { data: adicionaisRows } = await (databaseAdmin as any)
+        const { data: adicionaisRows } = await (supabaseAdmin as any)
           .from("servicos")
           .select("id, nome, preco, preco_padrao")
           .eq("id_salao", idSalao)
@@ -1184,7 +1182,7 @@ export async function createClienteAppAppointment(
           0
         );
       const cupomResult = await validarCupomAgendamento({
-        databaseAdmin,
+        supabaseAdmin,
         idSalao,
         idCliente,
         clienteAppContaId: idConta,
@@ -1251,7 +1249,7 @@ export async function createClienteAppAppointment(
           .filter(Boolean)
           .join("\n\n") || null;
 
-      const { data: insertedAppointment, error: insertError } = await databaseAdmin
+      const { data: insertedAppointment, error: insertError } = await supabaseAdmin
         .from("agendamentos")
         .insert({
           id_salao: idSalao,
@@ -1306,13 +1304,13 @@ export async function createClienteAppAppointment(
       }));
 
       if (servicosExtrasDoAgendamento.length) {
-        await (databaseAdmin as any)
+        await (supabaseAdmin as any)
           .from("agendamento_adicionais")
           .insert(servicosExtrasDoAgendamento);
       }
 
       if (adicionaisRowsSalvos.length) {
-        await (databaseAdmin as any).from("agendamento_adicionais").insert(
+        await (supabaseAdmin as any).from("agendamento_adicionais").insert(
           adicionaisRowsSalvos.map((item) => ({
             id_salao: idSalao,
             id_agendamento: idAgendamento,
@@ -1326,7 +1324,7 @@ export async function createClienteAppAppointment(
       }
 
       if (cupomResult.cupom?.id && cupomResult.desconto > 0) {
-        await (databaseAdmin as any).from("cupom_salao_usos").insert({
+        await (supabaseAdmin as any).from("cupom_salao_usos").insert({
           id_salao: idSalao,
           id_cupom: cupomResult.cupom.id,
           id_cliente: idCliente,
@@ -1345,7 +1343,7 @@ export async function createClienteAppAppointment(
           },
         });
 
-        await (databaseAdmin as any).from("campanha_eventos").insert({
+        await (supabaseAdmin as any).from("campanha_eventos").insert({
           id_salao: idSalao,
           id_cupom: cupomResult.cupom.id,
           cliente_app_conta_id: idConta,
@@ -1354,7 +1352,7 @@ export async function createClienteAppAppointment(
           metadata: { id_agendamento: idAgendamento, id_servico: idServico },
         });
 
-        await (databaseAdmin as any)
+        await (supabaseAdmin as any)
           .from("cupom_salao_resgates")
           .update({
             status: "usado",
@@ -1430,9 +1428,9 @@ export async function getClienteAppBookingAvailability(params: {
     action: "cliente_app_load_availability",
     actorId: idProfissional,
     idSalao,
-    run: async (databaseAdmin) => {
+    run: async (supabaseAdmin) => {
       const bookingContext = await loadBookingMultiContext({
-        databaseAdmin,
+        supabaseAdmin,
         idSalao,
         idServico,
         idsServicos,
@@ -1470,7 +1468,7 @@ export async function getClienteAppBookingAvailability(params: {
 
       const [{ data: bloqueios, error: bloqueiosError }, { data: agendamentos, error: agendamentosError }] =
         await Promise.all([
-          databaseAdmin
+          supabaseAdmin
             .from("agenda_bloqueios")
             .select(
               "id, id_salao, profissional_id, data, hora_inicio, hora_fim, motivo"
@@ -1479,7 +1477,7 @@ export async function getClienteAppBookingAvailability(params: {
             .eq("profissional_id", idProfissional)
             .gte("data", dateFrom)
             .lte("data", dateTo),
-          (databaseAdmin as any)
+          (supabaseAdmin as any)
             .from("agendamentos")
             .select("id, data, hora_inicio, hora_fim, status, reserva_expira_em")
             .eq("id_salao", idSalao)
@@ -1541,7 +1539,7 @@ export async function getClienteAppBookingAvailability(params: {
       }
 
       await warmClientAppNextSlotCache({
-        databaseAdmin,
+        supabaseAdmin,
         idSalao,
         idServico,
         idProfissional,
@@ -1575,9 +1573,9 @@ export async function cancelClienteAppAppointment(
   return runAdminOperation({
     action: "cliente_app_cancel_appointment",
     actorId: idConta,
-    run: async (databaseAdmin) => {
+    run: async (supabaseAdmin) => {
       const ownership = await loadOwnedAppointment({
-        databaseAdmin,
+        supabaseAdmin,
         idConta,
         idAgendamento,
       });
@@ -1601,12 +1599,12 @@ export async function cancelClienteAppAppointment(
 
       if (ownership.idComanda) {
         await cancelarAgendamentoComComanda({
-          database: databaseAdmin,
+          supabase: supabaseAdmin,
           idSalao: ownership.idSalao,
           idAgendamento,
         });
       } else {
-        const { error: updateError } = await databaseAdmin
+        const { error: updateError } = await supabaseAdmin
           .from("agendamentos")
           .update({
             status: "cancelado",
@@ -1643,7 +1641,7 @@ export async function cancelClienteAppAppointment(
 
       try {
         await notifyWaitlistAboutReleasedSlot({
-          databaseAdmin,
+          supabaseAdmin,
           releasedSlot: {
             idSalao: ownership.idSalao,
             idServico: ownership.idServico,
@@ -1657,7 +1655,7 @@ export async function cancelClienteAppAppointment(
         // A agenda deve ser liberada mesmo se a lista de espera falhar.
       }
 
-      await (databaseAdmin as any)
+      await (supabaseAdmin as any)
         .from("cupom_salao_usos")
         .update({
           status: "cancelado",
@@ -1667,7 +1665,7 @@ export async function cancelClienteAppAppointment(
         .eq("id_agendamento", idAgendamento)
         .eq("status", "reservado");
 
-      const { error: deleteError } = await databaseAdmin
+      const { error: deleteError } = await supabaseAdmin
         .from("agendamentos")
         .delete()
         .eq("id", idAgendamento)
@@ -1702,9 +1700,9 @@ export async function confirmClienteAppAppointment(
   return runAdminOperation({
     action: "cliente_app_confirm_appointment",
     actorId: idConta,
-    run: async (databaseAdmin) => {
+    run: async (supabaseAdmin) => {
       const ownership = await loadOwnedAppointment({
-        databaseAdmin,
+        supabaseAdmin,
         idConta,
         idAgendamento,
       });
@@ -1753,7 +1751,7 @@ export async function confirmClienteAppAppointment(
       }
 
       const now = new Date().toISOString();
-      const { error: updateError } = await (databaseAdmin as any)
+      const { error: updateError } = await (supabaseAdmin as any)
         .from("agendamentos")
         .update({
           status: "confirmado",
@@ -1848,7 +1846,7 @@ export async function joinClienteAppWaitlist(
     action: "cliente_app_join_waitlist",
     actorId: idConta,
     idSalao,
-    run: async (databaseAdmin) => {
+    run: async (supabaseAdmin) => {
       const vinculoConta = await ensureClienteContaVinculadaAoSalao({
         idConta,
         idSalao,
@@ -1858,7 +1856,7 @@ export async function joinClienteAppWaitlist(
         return vinculoConta;
       }
 
-      let existingQuery = (databaseAdmin as any)
+      let existingQuery = (supabaseAdmin as any)
         .from("lista_espera_agendamentos")
         .select("id")
         .eq("id_salao", idSalao)
@@ -1880,7 +1878,7 @@ export async function joinClienteAppWaitlist(
         };
       }
 
-      const { error } = await (databaseAdmin as any)
+      const { error } = await (supabaseAdmin as any)
         .from("lista_espera_agendamentos")
         .insert({
           id_salao: idSalao,
@@ -1927,9 +1925,9 @@ export async function rescheduleClienteAppAppointment(
   return runAdminOperation({
     action: "cliente_app_reschedule_appointment",
     actorId: idConta,
-    run: async (databaseAdmin) => {
+    run: async (supabaseAdmin) => {
       const ownership = await loadOwnedAppointment({
-        databaseAdmin,
+        supabaseAdmin,
         idConta,
         idAgendamento,
       });
@@ -1974,7 +1972,7 @@ export async function rescheduleClienteAppAppointment(
       }
 
       const bookingContext = await loadBookingBaseContext({
-        databaseAdmin,
+        supabaseAdmin,
         idSalao: ownership.idSalao,
         idServico: ownership.idServico,
         idProfissional: ownership.idProfissional,
@@ -2002,13 +2000,13 @@ export async function rescheduleClienteAppAppointment(
 
       const [{ data: bloqueios, error: bloqueiosError }, { data: agendamentos, error: agendamentosError }] =
         await Promise.all([
-          databaseAdmin
+          supabaseAdmin
             .from("agenda_bloqueios")
             .select("id, id_salao, profissional_id, data, hora_inicio, hora_fim, motivo")
             .eq("id_salao", ownership.idSalao)
             .eq("profissional_id", ownership.idProfissional)
             .eq("data", data),
-          (databaseAdmin as any)
+          (supabaseAdmin as any)
             .from("agendamentos")
             .select("id, hora_inicio, hora_fim, status, reserva_expira_em")
             .eq("id_salao", ownership.idSalao)
@@ -2078,7 +2076,7 @@ export async function rescheduleClienteAppAppointment(
         };
       }
 
-      const { error: updateError } = await databaseAdmin
+      const { error: updateError } = await supabaseAdmin
         .from("agendamentos")
         .update({
           data,
@@ -2116,7 +2114,7 @@ export async function rescheduleClienteAppAppointment(
 
       try {
         await notifyWaitlistAboutReleasedSlot({
-          databaseAdmin,
+          supabaseAdmin,
           releasedSlot: {
             idSalao: ownership.idSalao,
             idServico: ownership.idServico,
@@ -2164,9 +2162,9 @@ export async function reviewClienteAppAppointment(
   return runAdminOperation({
     action: "cliente_app_review_appointment",
     actorId: idConta,
-    run: async (databaseAdmin) => {
+    run: async (supabaseAdmin) => {
       const ownership = await loadOwnedAppointment({
-        databaseAdmin,
+        supabaseAdmin,
         idConta,
         idAgendamento,
       });
@@ -2184,7 +2182,7 @@ export async function reviewClienteAppAppointment(
       }
 
       const { data: existingReview, error: existingReviewError } =
-        await (databaseAdmin as any)
+        await (supabaseAdmin as any)
           .from("clientes_avaliacoes")
           .select("id")
           .eq("id_cliente", ownership.idCliente)
@@ -2201,14 +2199,14 @@ export async function reviewClienteAppAppointment(
       }
 
       const reviewMutation = existingReview?.id
-        ? await (databaseAdmin as any)
+        ? await (supabaseAdmin as any)
             .from("clientes_avaliacoes")
             .update({
               nota,
               comentario,
             })
             .eq("id", existingReview.id)
-        : await (databaseAdmin as any)
+        : await (supabaseAdmin as any)
             .from("clientes_avaliacoes")
             .insert({
               id_cliente: ownership.idCliente,

@@ -1,11 +1,11 @@
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
 import { reverterEstoqueComanda, processarEstoqueComanda } from "@/lib/estoque/comanda-stock";
-import type { getDatabaseAdmin } from "@/lib/db/admin";
+import type { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-type AdminClient = ReturnType<typeof getDatabaseAdmin>;
+type AdminClient = ReturnType<typeof getSupabaseAdmin>;
 
 type EstoqueFlowParams = {
-  databaseAdmin: AdminClient;
+  supabaseAdmin: AdminClient;
   idSalao: string;
   idComanda: string;
   idUsuario?: string | null;
@@ -28,7 +28,7 @@ export async function aplicarBaixaEstoqueNoFluxoComanda(
   params: EstoqueFlowParams
 ) {
   try {
-    const result = await processarEstoqueComanda(params.databaseAdmin, {
+    const result = await processarEstoqueComanda(params.supabaseAdmin, {
       idSalao: params.idSalao,
       idComanda: params.idComanda,
       idUsuario: params.idUsuario || null,
@@ -48,7 +48,7 @@ export async function aplicarBaixaEstoqueNoFluxoComanda(
 
     try {
       await reportOperationalIncident({
-        databaseAdmin: params.databaseAdmin,
+        supabaseAdmin: params.supabaseAdmin,
         key: `fluxo:comanda:estoque_baixa:${params.idSalao}:${params.idComanda}:${params.sourceAction}`,
         module: "operacao_comanda",
         title: "Baixa de estoque falhou no fluxo da comanda",
@@ -79,7 +79,7 @@ export async function reverterEstoqueNoFluxoComanda(
   params: EstoqueFlowParams
 ) {
   try {
-    const result = await reverterEstoqueComanda(params.databaseAdmin, {
+    const result = await reverterEstoqueComanda(params.supabaseAdmin, {
       idSalao: params.idSalao,
       idComanda: params.idComanda,
       idUsuario: params.idUsuario || null,
@@ -99,7 +99,7 @@ export async function reverterEstoqueNoFluxoComanda(
 
     try {
       await reportOperationalIncident({
-        databaseAdmin: params.databaseAdmin,
+        supabaseAdmin: params.supabaseAdmin,
         key: `fluxo:comanda:estoque_reversao:${params.idSalao}:${params.idComanda}:${params.sourceAction}`,
         module: "operacao_comanda",
         title: "Reversao de estoque falhou no fluxo da comanda",

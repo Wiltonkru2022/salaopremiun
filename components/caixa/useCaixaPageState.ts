@@ -25,10 +25,10 @@ import {
   type CaixaMovimentacao,
   type CaixaSessao,
 } from "@/lib/caixa/sessaoCaixa";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 
 export function useCaixaPageState() {
-  const database = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => createClient(), []);
   const searchParams = useSearchParams();
 
   const [loading, setLoading] = useState(true);
@@ -178,7 +178,7 @@ export function useCaixaPageState() {
   }, [busca, agendamentosFila]);
 
   return {
-    database,
+    supabase,
     requestedComandaId,
     requestedAgendamentoId,
     requestedReaberta,

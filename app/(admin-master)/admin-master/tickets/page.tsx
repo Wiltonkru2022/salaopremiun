@@ -4,7 +4,7 @@ import AdminMasterPageHeader, { AdminMasterMetricCard } from "@/components/admin
 import AdminTicketQueueClient from "@/components/admin-master/tickets/AdminTicketQueueClient";
 import PaginationLinks from "@/components/ui/PaginationLinks";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { getAdminTicketGlobalMetrics } from "@/lib/support/admin-ticket-metrics";
 import { listAdminTickets, type AdminTicketListParams } from "@/lib/support/tickets";
 
@@ -44,7 +44,7 @@ export default async function AdminMasterTicketsPage({ searchParams }: { searchP
   const params = searchParams ? await searchParams : {};
   const page = Math.max(0, int(params.pagina, 1) - 1);
   const periodDays = params.periodo && params.periodo !== "todos" ? Math.max(1, int(params.periodo, 30)) : undefined;
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const filters: AdminTicketListParams = {
     search: params.busca,
     status: params.status,
@@ -59,7 +59,7 @@ export default async function AdminMasterTicketsPage({ searchParams }: { searchP
   const [{ items }, globalMetrics, { data: adminsData }] = await Promise.all([
     listAdminTickets({ ...filters, page, limit: PAGE_SIZE }),
     getAdminTicketGlobalMetrics(filters),
-    database.from("admin_master_usuarios").select("id, nome, email").eq("status", "ativo").order("nome", { ascending: true }).limit(40),
+    supabase.from("admin_master_usuarios").select("id, nome, email").eq("status", "ativo").order("nome", { ascending: true }).limit(40),
   ]);
 
   const admins = ((adminsData || []) as Array<{ id: string; nome?: string | null; email?: string | null }>).map((row) => ({

@@ -1,15 +1,15 @@
 import { recalcularTaxaProfissional } from "@/lib/comissoes/recalcular-taxa-profissional";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
+type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
 
 export function createComissaoTaxaService(
-  databaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
+  supabaseAdmin: SupabaseAdminClient = getSupabaseAdmin()
 ) {
   return {
     recalcular(params: { idSalao: string; idComanda: string }) {
       return recalcularTaxaProfissional({
-        databaseAdmin,
+        supabaseAdmin,
         idSalao: params.idSalao,
         idComanda: params.idComanda,
       });

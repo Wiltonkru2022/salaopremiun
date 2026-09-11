@@ -443,7 +443,12 @@ export default function AdminBlogEditor({ post, categories }: Props) {
   }
 
   async function deleteUploadedBlogMedia(publicUrl?: string | null) {
-    if (!publicUrl || !publicUrl.includes("res.cloudinary.com")) return;
+    if (
+      !publicUrl ||
+      !publicUrl.includes("/storage/v1/object/public/blog-media/")
+    ) {
+      return;
+    }
 
     await fetch("/api/admin-master/blog/media", {
       method: "DELETE",

@@ -23,7 +23,7 @@ export async function GET() {
 
     return NextResponse.json({
       ok: true,
-      provider: "vercel-database",
+      provider: "vercel-supabase",
       notifications,
     });
   } catch (error) {

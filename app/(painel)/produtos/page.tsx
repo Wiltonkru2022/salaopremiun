@@ -22,7 +22,7 @@ import { usePlanoAccessSnapshot } from "@/components/plans/usePlanoAccessSnapsho
 import { getErrorMessage } from "@/lib/get-error-message";
 import { getPlanoMinimoParaRecurso } from "@/lib/plans/catalog";
 import { getAssinaturaUrl } from "@/lib/site-urls";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import type {
   ProdutoProcessarErrorResponse,
   ProdutoProcessarResponse,
@@ -68,7 +68,7 @@ function getMargemPercentual(produto: Produto) {
 }
 
 export default function ProdutosPage() {
-  const database = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const { snapshot: painelSession } = usePainelSession();
   const { planoAccess } = usePlanoAccessSnapshot(true);
@@ -143,7 +143,7 @@ export default function ProdutosPage() {
       const from = page * PRODUTOS_PAGE_SIZE;
       const to = from + PRODUTOS_PAGE_SIZE - 1;
 
-      let query = database
+      let query = supabase
         .from("produtos")
         .select(
           [
@@ -191,7 +191,7 @@ export default function ProdutosPage() {
       setProdutosTotal(count ?? (append ? from + rows.length : rows.length));
       setProdutosHasMore((count ?? 0) > to + 1);
     },
-    [database, statusFiltro, buscaAplicada]
+    [supabase, statusFiltro, buscaAplicada]
   );
 
   const bootstrap = useCallback(async () => {

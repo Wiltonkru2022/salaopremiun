@@ -1,5 +1,5 @@
 import { addDays, isAfter } from "date-fns";
-import type { DatabaseClient } from "@/lib/db/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { atualizarStatusEventoWebhook } from "@/lib/webhooks/asaas/registry";
 import type { PlanoSaasRow } from "@/lib/webhooks/asaas/types";
 
@@ -41,7 +41,7 @@ type CardSnapshot = {
 };
 
 export async function aplicarPagamentoConfirmado(params: {
-  databaseAdmin: DatabaseClient;
+  supabaseAdmin: SupabaseClient;
   webhookEventId: string | null;
   cobrancaAtual: CobrancaWebhookRow;
   assinatura: AssinaturaWebhookRow;
@@ -56,7 +56,7 @@ export async function aplicarPagamentoConfirmado(params: {
   eventOrder: number;
 }) {
   const {
-    databaseAdmin,
+    supabaseAdmin,
     webhookEventId,
     cobrancaAtual,
     assinatura,
@@ -108,7 +108,7 @@ export async function aplicarPagamentoConfirmado(params: {
       ? Number(plano.limite_profissionais || 0)
       : Number(assinatura.limite_profissionais || 0);
 
-  const { error: updateAssinaturaError } = await databaseAdmin
+  const { error: updateAssinaturaError } = await supabaseAdmin
     .from("assinaturas")
     .update({
       status: "ativo",
@@ -143,7 +143,7 @@ export async function aplicarPagamentoConfirmado(params: {
 
   if (updateAssinaturaError) {
     await atualizarStatusEventoWebhook(
-      databaseAdmin,
+      supabaseAdmin,
       webhookEventId,
       "erro",
       "Erro ao atualizar assinatura."
@@ -151,7 +151,7 @@ export async function aplicarPagamentoConfirmado(params: {
     throw updateAssinaturaError;
   }
 
-  const { error: updateSalaoError } = await databaseAdmin
+  const { error: updateSalaoError } = await supabaseAdmin
     .from("saloes")
     .update({
       status: "ativo",
@@ -167,7 +167,7 @@ export async function aplicarPagamentoConfirmado(params: {
 
   if (updateSalaoError) {
     await atualizarStatusEventoWebhook(
-      databaseAdmin,
+      supabaseAdmin,
       webhookEventId,
       "erro",
       "Erro ao atualizar salao."
@@ -175,7 +175,7 @@ export async function aplicarPagamentoConfirmado(params: {
     throw updateSalaoError;
   }
 
-  await atualizarStatusEventoWebhook(databaseAdmin, webhookEventId, "processado", null, {
+  await atualizarStatusEventoWebhook(supabaseAdmin, webhookEventId, "processado", null, {
     id_salao: cobrancaAtual.id_salao || assinatura.id_salao,
     id_assinatura: assinatura.id,
     id_cobranca: cobrancaAtual.id,
@@ -187,7 +187,7 @@ export async function aplicarPagamentoConfirmado(params: {
 }
 
 export async function aplicarStatusNaoPago(params: {
-  databaseAdmin: DatabaseClient;
+  supabaseAdmin: SupabaseClient;
   webhookEventId: string | null;
   cobrancaAtual: CobrancaWebhookRow;
   assinatura: AssinaturaWebhookRow;
@@ -197,7 +197,7 @@ export async function aplicarStatusNaoPago(params: {
   isEventoTerminal: boolean;
 }) {
   const {
-    databaseAdmin,
+    supabaseAdmin,
     webhookEventId,
     cobrancaAtual,
     assinatura,
@@ -226,7 +226,7 @@ export async function aplicarStatusNaoPago(params: {
 
   if (event === "PAYMENT_RESTORED") novoStatus = "pendente";
 
-  const { error: updateAssinaturaError } = await databaseAdmin
+  const { error: updateAssinaturaError } = await supabaseAdmin
     .from("assinaturas")
     .update({
       status: novoStatus,
@@ -237,7 +237,7 @@ export async function aplicarStatusNaoPago(params: {
 
   if (updateAssinaturaError) {
     await atualizarStatusEventoWebhook(
-      databaseAdmin,
+      supabaseAdmin,
       webhookEventId,
       "erro",
       "Erro ao atualizar assinatura."
@@ -246,7 +246,7 @@ export async function aplicarStatusNaoPago(params: {
   }
 
   if (!manterAcessoDuranteRetryCartao) {
-    const { error: updateSalaoError } = await databaseAdmin
+    const { error: updateSalaoError } = await supabaseAdmin
       .from("saloes")
       .update({
         status: novoStatus,
@@ -257,7 +257,7 @@ export async function aplicarStatusNaoPago(params: {
 
     if (updateSalaoError) {
       await atualizarStatusEventoWebhook(
-        databaseAdmin,
+        supabaseAdmin,
         webhookEventId,
         "erro",
         "Erro ao atualizar salao."
@@ -266,7 +266,7 @@ export async function aplicarStatusNaoPago(params: {
     }
   }
 
-  await atualizarStatusEventoWebhook(databaseAdmin, webhookEventId, "processado", null, {
+  await atualizarStatusEventoWebhook(supabaseAdmin, webhookEventId, "processado", null, {
     id_salao: cobrancaAtual.id_salao || assinatura.id_salao,
     id_assinatura: assinatura.id,
     id_cobranca: cobrancaAtual.id,

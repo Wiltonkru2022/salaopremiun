@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { format } from "date-fns";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import type { ComandaResumo } from "@/components/agenda/page-types";
 import type {
   Agendamento,
@@ -16,7 +16,7 @@ import type {
 } from "@/types/agenda";
 
 export function useAgendaPageState() {
-  const database = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => createClient(), []);
 
   const [loading, setLoading] = useState(true);
   const [erroTela, setErroTela] = useState("");
@@ -84,7 +84,7 @@ export function useAgendaPageState() {
   );
 
   return {
-    database,
+    supabase,
     loading,
     setLoading,
     erroTela,

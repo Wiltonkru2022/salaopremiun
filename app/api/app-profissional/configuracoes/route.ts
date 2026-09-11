@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
 import { assertCanMutatePlanFeature, PlanAccessError } from "@/lib/plans/access";
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 function cleanText(value: unknown) {
   return String(value ?? "").trim();
@@ -31,8 +31,8 @@ export async function POST(request: Request) {
       action: "app_profissional_salvar_configuracoes",
       actorId: context.idProfissional,
       idSalao: context.idSalao,
-      run: async (database) => {
-        const { error } = await (database as any)
+      run: async (supabase) => {
+        const { error } = await (supabase as any)
           .from("profissionais")
           .update({
             nome: cleanText(body.nome) || context.nome,

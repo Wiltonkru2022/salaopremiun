@@ -1,8 +1,8 @@
 import { redirect } from "next/navigation";
 import { unstable_cache } from "next/cache";
 import { buildLoginRedirectUrl } from "@/lib/auth/login-redirect";
-import { createClient } from "@/lib/db/server";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { buildPermissoesByNivel, sanitizePermissoesDb } from "@/lib/auth/permissions";
 import { SELECT_USUARIOS_PERMISSOES } from "@/lib/db/selects";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
@@ -15,8 +15,8 @@ type PermissoesDbRow = Record<string, boolean | string | null>;
 
 const loadPainelShellContextCached = unstable_cache(
   async (authUserId: string) => {
-    const databaseAdmin = getDatabaseAdmin();
-    const { data: usuario, error: usuarioError } = await databaseAdmin
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data: usuario, error: usuarioError } = await supabaseAdmin
       .from("usuarios")
       .select("id, id_salao, nivel, status")
       .eq("auth_user_id", authUserId)
@@ -35,9 +35,9 @@ const loadPainelShellContextCached = unstable_cache(
     }
 
     const [{ data: permissoes }, { data: salao }, { data: assinatura }, planoAccess] = await Promise.all([
-      databaseAdmin.from("usuarios_permissoes").select(SELECT_USUARIOS_PERMISSOES).eq("id_usuario", usuario.id).eq("id_salao", usuario.id_salao).maybeSingle(),
-      databaseAdmin.from("saloes").select("nome, responsavel, logo_url, plano, status").eq("id", usuario.id_salao).maybeSingle(),
-      databaseAdmin.from("assinaturas").select("status, plano, vencimento_em, trial_fim_em").eq("id_salao", usuario.id_salao).limit(1).maybeSingle(),
+      supabaseAdmin.from("usuarios_permissoes").select(SELECT_USUARIOS_PERMISSOES).eq("id_usuario", usuario.id).eq("id_salao", usuario.id_salao).maybeSingle(),
+      supabaseAdmin.from("saloes").select("nome, responsavel, logo_url, plano, status").eq("id", usuario.id_salao).maybeSingle(),
+      supabaseAdmin.from("assinaturas").select("status, plano, vencimento_em, trial_fim_em").eq("id_salao", usuario.id_salao).limit(1).maybeSingle(),
       getPlanoAccessSnapshot(usuario.id_salao),
     ]);
 
@@ -85,13 +85,13 @@ const loadPainelShellContextCached = unstable_cache(
 
 export const loadPainelShellNotificationsCached = unstable_cache(
   async (idSalao: string, resumoAssinatura: ReturnType<typeof getResumoAssinatura> | null) => {
-    const databaseAdmin = getDatabaseAdmin();
+    const supabaseAdmin = getSupabaseAdmin();
     const [{ data: agendamentosPendentes }, { data: notificacoesOperacionais }] = await Promise.all([
-      (databaseAdmin as any).from("agendamentos")
+      (supabaseAdmin as any).from("agendamentos")
         .select("id, status, data, hora_inicio, origem, cliente_id, codigo_cupom, id_cupom_salao, desconto_cupom_valor, clientes(nome), servicos(nome)")
         .eq("id_salao", idSalao).in("status", ["pendente", "confirmado"]).eq("origem", "app_cliente")
         .order("data", { ascending: true }).order("hora_inicio", { ascending: true }).limit(12),
-      (databaseAdmin as any).from("notification_jobs")
+      (supabaseAdmin as any).from("notification_jobs")
         .select("id, tipo, titulo, mensagem, url, status, enviar_em, created_at")
         .eq("id_salao", idSalao).eq("canal", "salao_painel").in("status", ["pendente", "enviada"])
         .order("created_at", { ascending: false }).limit(8),
@@ -130,8 +130,8 @@ export const loadPainelShellNotificationsCached = unstable_cache(
 );
 
 export async function loadPainelShellData() {
-  const database = await createClient();
-  const { data: { user }, error: userError } = await database.auth.getUser();
+  const supabase = await createClient();
+  const { data: { user }, error: userError } = await supabase.auth.getUser();
   if (userError || !user) redirect(buildLoginRedirectUrl("sessao_expirada"));
 
   const userName = user.user_metadata?.nome || user.email?.split("@")[0] || "Usuario";

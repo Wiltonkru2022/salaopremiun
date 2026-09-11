@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   sendPushToRows,
   type PushSendResult,
@@ -81,7 +81,7 @@ async function isClienteAppPushEnabled(clienteAppContaId?: string | null) {
   const id = sanitizeId(clienteAppContaId);
   if (!id) return false;
 
-  const { data, error } = await (getDatabaseAdmin() as any)
+  const { data, error } = await (getSupabaseAdmin() as any)
     .from("clientes_app_auth")
     .select("notificacoes_ativas, notificacao_app_ativa")
     .eq("id", id)
@@ -106,7 +106,7 @@ async function isProfissionalAppPushEnabled(idProfissional?: string | null) {
   const id = sanitizeId(idProfissional);
   if (!id) return false;
 
-  const { data, error } = await (getDatabaseAdmin() as any)
+  const { data, error } = await (getSupabaseAdmin() as any)
     .from("profissionais")
     .select("notificacoes_ativas, notificacao_app_ativa")
     .eq("id", id)
@@ -159,7 +159,7 @@ async function isNotificationTypeEnabled(params: {
 }
 
 export async function queueNotificationJob(params: QueueNotificationJobParams) {
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const idempotencyKey = sanitizeText(params.idempotencyKey, "");
   if (!idempotencyKey) return { ok: false as const, error: "Chave da notificacao ausente." };
 
@@ -169,7 +169,7 @@ export async function queueNotificationJob(params: QueueNotificationJobParams) {
   });
   if (!enabled) return { ok: true as const, skipped: true as const };
 
-  const { error } = await (database as any)
+  const { error } = await (supabase as any)
     .from("notification_jobs")
     .upsert(
       {
@@ -200,8 +200,8 @@ export async function queueNotificationJob(params: QueueNotificationJobParams) {
 }
 
 async function findSubscriptionsForJob(job: NotificationJobRow) {
-  const database = getDatabaseAdmin();
-  let query = (database as any)
+  const supabase = getSupabaseAdmin();
+  let query = (supabase as any)
     .from("push_subscriptions")
     .select("id, endpoint, p256dh, auth")
     .eq("ativo", true)
@@ -292,7 +292,7 @@ async function markJob(
   status: NotificationStatus,
   extra?: Record<string, unknown>
 ) {
-  await (getDatabaseAdmin() as any)
+  await (getSupabaseAdmin() as any)
     .from("notification_jobs")
     .update({
       status,
@@ -303,9 +303,9 @@ async function markJob(
 }
 
 export async function processPendingNotificationJobs(limit = 80) {
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
-  const { data, error } = await (database as any)
+  const { data, error } = await (supabase as any)
     .from("notification_jobs")
     .select(
       "id, id_salao, id_cliente, id_profissional, cliente_app_conta_id, canal, tipo, titulo, mensagem, url, tag, status, enviar_em, tentativas, idempotency_key"
@@ -333,7 +333,7 @@ export async function processPendingNotificationJobs(limit = 80) {
   let failed = 0;
 
   for (const job of ((data || []) as NotificationJobRow[])) {
-    const lock = await (database as any)
+    const lock = await (supabase as any)
       .from("notification_jobs")
       .update({
         status: "processando",
@@ -474,7 +474,7 @@ function firstRelation<T>(value: T | T[] | null | undefined) {
 }
 
 async function loadAppointmentContext(idAgendamento: string, idSalao: string) {
-  const { data, error } = await (getDatabaseAdmin() as any)
+  const { data, error } = await (getSupabaseAdmin() as any)
     .from("agendamentos")
     .select(
       "id, id_salao, cliente_id, profissional_id, data, hora_inicio, status, clientes(nome), profissionais(nome, nome_exibicao), servicos(nome)"
@@ -490,7 +490,7 @@ async function loadAppointmentContext(idAgendamento: string, idSalao: string) {
 async function cancelPendingAppointmentReminderNotifications(idAgendamento: string) {
   const prefix = `lembrete_30min:${idAgendamento}:`;
 
-  await (getDatabaseAdmin() as any)
+  await (getSupabaseAdmin() as any)
     .from("notification_jobs")
     .update({
       status: "cancelada",
@@ -544,7 +544,7 @@ async function realignReminderJobIfTooEarly(job: NotificationJobRow) {
   const expectedSendAt = addMinutes(start, -minutosAntes);
 
   if (expectedSendAt.getTime() > Date.now()) {
-    await (getDatabaseAdmin() as any)
+    await (getSupabaseAdmin() as any)
       .from("notification_jobs")
       .update({
         status: "pendente",
@@ -564,7 +564,7 @@ async function findClienteAppContaId(params: {
   idCliente?: string | null;
 }) {
   if (!params.idCliente) return null;
-  const { data, error } = await (getDatabaseAdmin() as any)
+  const { data, error } = await (getSupabaseAdmin() as any)
     .from("clientes_auth")
     .select("app_conta_id")
     .eq("id_salao", params.idSalao)
@@ -938,15 +938,15 @@ export async function notifyComandaFinalizada(params: {
   idComanda: string;
   idSalao: string;
 }) {
-  const database = getDatabaseAdmin();
-  const { data: comanda } = await (database as any)
+  const supabase = getSupabaseAdmin();
+  const { data: comanda } = await (supabase as any)
     .from("comandas")
     .select("id, id_salao, total")
     .eq("id", params.idComanda)
     .eq("id_salao", params.idSalao)
     .maybeSingle();
 
-  const { data: agendamentos } = await (database as any)
+  const { data: agendamentos } = await (supabase as any)
     .from("agendamentos")
     .select("id")
     .eq("id_salao", params.idSalao)

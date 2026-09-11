@@ -21,8 +21,15 @@ import {
   removeBlogPrefix,
 } from "@/lib/proxy/host-rules";
 
-function hasPainelAuthCookie(request: NextRequest) {
-  return Boolean(request.cookies.get("sp-painel-auth-token")?.value);
+function hasSupabaseAuthCookies(request: NextRequest) {
+  return request.cookies
+    .getAll()
+    .some(
+      (cookie) =>
+        cookie.name.includes("auth-token") ||
+        cookie.name.includes("access-token") ||
+        cookie.name.includes("refresh-token")
+    );
 }
 
 function isLocalDevHost(host: string) {
@@ -231,38 +238,25 @@ function rewriteToNovoAppProfissional(request: NextRequest) {
 export async function proxy(request: NextRequest) {
   const ctx = buildProxyRouteContext(request);
 
-  // Regra de disponibilidade: middleware nunca consulta banco ou outros
+  if (
+    request.method === "OPTIONS" &&
+    ctx.pathnameNormalizado.startsWith("/api/app-profissional/")
+  ) {
+    return new NextResponse(null, {
+      status: 204,
+      headers: {
+        "Access-Control-Allow-Origin": "https://localhost",
+        "Access-Control-Allow-Methods": "GET,POST,PATCH,DELETE,OPTIONS",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization, X-SP-Native-App",
+        "Access-Control-Max-Age": "86400",
+      },
+    });
+  }
+
+  // Regra de disponibilidade: middleware nunca consulta Supabase ou outros
   // serviços remotos. APIs e layouts protegidos validam a sessão de verdade.
   if (isApiRoute(ctx.pathnameNormalizado) || isArquivoPublico(ctx.pathnameNormalizado)) {
     return NextResponse.next();
-  }
-
-  // Em desenvolvimento todas as superficies compartilham localhost. A
-  // separacao por subdominios continua sendo aplicada normalmente em producao.
-  if (isLocalDevHost(ctx.host)) {
-    if (ctx.rotaAppProfissional) return rewriteToNovoAppProfissional(request);
-
-    if (ctx.rotaAdminMasterProtegida && !hasAdminMasterSessionCookie(request)) {
-      const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = "/admin-master/login";
-      loginUrl.searchParams.set(
-        "next",
-        `${ctx.pathnameNormalizado}${request.nextUrl.search}`
-      );
-      return NextResponse.redirect(loginUrl);
-    }
-
-    if (ctx.rotaPainel && !hasPainelAuthCookie(request)) {
-      const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = "/login";
-      loginUrl.searchParams.set(
-        "returnTo",
-        `${ctx.pathnameNormalizado}${request.nextUrl.search}`
-      );
-      return NextResponse.redirect(loginUrl);
-    }
-
-    return NextResponse.next({ request });
   }
 
   if (!ctx.isBlogHost && isBlogRoute(ctx.pathnameNormalizado)) {
@@ -290,7 +284,7 @@ export async function proxy(request: NextRequest) {
     );
   }
 
-  const hasAuthCookies = hasPainelAuthCookie(request);
+  const hasAuthCookies = hasSupabaseAuthCookies(request);
   if (!hasAuthCookies) {
     const unauthenticatedResponse = handleUnauthenticatedRoute(request, ctx);
     if (unauthenticatedResponse) return unauthenticatedResponse;
@@ -303,7 +297,7 @@ export const config = {
   matcher: [
     {
       source:
-        "/((?!api|app-cliente|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|manifest.webmanifest|.*\\..*).*)",
+        "/((?!app-cliente|_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|manifest.webmanifest|.*\\..*).*)",
       missing: [
         { type: "header", key: "next-router-prefetch" },
         { type: "header", key: "purpose", value: "prefetch" },

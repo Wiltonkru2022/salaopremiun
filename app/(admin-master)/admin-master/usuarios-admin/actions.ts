@@ -7,7 +7,7 @@ import {
 } from "@/lib/admin-master/auth/adminMasterPermissions";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Database } from "@/types/database.generated";
 
 type AdminMasterPermissaoInsert =
@@ -27,7 +27,7 @@ function normalizeEmail(value: string) {
 
 export async function salvarUsuarioAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("usuarios_admin_editar");
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const id = textValue(formData, "id");
   const nome = textValue(formData, "nome");
   const email = normalizeEmail(textValue(formData, "email"));
@@ -47,8 +47,8 @@ export async function salvarUsuarioAdminMaster(formData: FormData) {
   };
 
   const query = id
-    ? database.from("admin_master_usuarios").update(userPayload).eq("id", id).select("id").single()
-    : database.from("admin_master_usuarios").insert(userPayload).select("id").single();
+    ? supabase.from("admin_master_usuarios").update(userPayload).eq("id", id).select("id").single()
+    : supabase.from("admin_master_usuarios").insert(userPayload).select("id").single();
 
   const { data, error } = await query;
 
@@ -74,7 +74,7 @@ export async function salvarUsuarioAdminMaster(formData: FormData) {
     }
   );
 
-  const { error: permissionError } = await database
+  const { error: permissionError } = await supabase
     .from("admin_master_permissoes")
     .upsert(permissionPayload, { onConflict: "id_admin_master_usuario" });
 

@@ -23,7 +23,7 @@ import type {
 const AGENDA_WORKSPACE_STATE_KEY = "salaopremium:painel:agenda:workspace:v1";
 
 type UseAgendaDataParams = {
-  database: ReturnType<typeof import("@/lib/db/client").createClient>;
+  supabase: ReturnType<typeof import("@/lib/supabase/client").createClient>;
   router: { replace: (href: string) => void };
   loadAgendaSeqRef: MutableRefObject<number>;
   idSalao: string;
@@ -49,7 +49,7 @@ type UseAgendaDataParams = {
 };
 
 export function useAgendaData({
-  database,
+  supabase,
   router,
   loadAgendaSeqRef,
   idSalao,
@@ -122,17 +122,17 @@ export function useAgendaData({
 
   const safeGetAuthUser = useCallback(async () => {
     try {
-      const result = await database.auth.getUser();
+      const result = await supabase.auth.getUser();
 
       if (result.error && isAuthLockError(result.error)) {
         await new Promise((resolve) => setTimeout(resolve, 250));
 
-        const retry = await database.auth.getUser();
+        const retry = await supabase.auth.getUser();
         if (!retry.error && retry.data.user) {
           return retry.data.user;
         }
 
-        const sessionRes = await database.auth.getSession();
+        const sessionRes = await supabase.auth.getSession();
         return sessionRes.data.session?.user || null;
       }
 
@@ -145,7 +145,7 @@ export function useAgendaData({
       if (isAuthLockError(error)) {
         try {
           await new Promise((resolve) => setTimeout(resolve, 250));
-          const sessionRes = await database.auth.getSession();
+          const sessionRes = await supabase.auth.getSession();
           return sessionRes.data.session?.user || null;
         } catch {
           return null;
@@ -154,7 +154,7 @@ export function useAgendaData({
 
       throw error;
     }
-  }, [isAuthLockError, database]);
+  }, [isAuthLockError, supabase]);
 
   const sincronizarAgendamento = useCallback(
     async (params: {
@@ -216,7 +216,7 @@ export function useAgendaData({
         },
         () =>
           loadAgendaData({
-            database,
+            supabase,
             idSalao,
             selectedProfissionalId,
             viewMode,
@@ -247,7 +247,7 @@ export function useAgendaData({
     setAgendamentos,
     setBloqueios,
     setErroTela,
-    database,
+    supabase,
     viewMode,
   ]);
 
@@ -266,7 +266,7 @@ export function useAgendaData({
         },
         () =>
           initAgendaPage({
-            database,
+            supabase,
             safeGetAuthUser,
             sessionSnapshot: painelSession,
           })
@@ -353,7 +353,7 @@ export function useAgendaData({
     setProfissionais,
     setSelectedProfissionalId,
     setServicos,
-    database,
+    supabase,
     redirectToHref,
     painelSession,
   ]);

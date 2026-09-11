@@ -1,12 +1,11 @@
 import "server-only";
 
-import { recordNeonEvent } from "@/lib/neon/observability.server";
 import { reconcileOperationalIncidents } from "@/lib/monitoring/operational-reconciler.server";
 import { syncOperationalComponentRegistry } from "@/lib/monitoring/operational-registry.server";
 import { runOperationalProbes } from "@/lib/monitoring/operational-probes.server";
 import { syncOperationalSecurityPosture } from "@/lib/monitoring/security-posture.server";
 import { sendPendingPublicStatusNotifications } from "@/lib/monitoring/status-subscriptions.server";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const CRON_NAME = "operational_health";
 
@@ -16,23 +15,8 @@ async function recordCron(
   payload: Record<string, unknown>,
   errorText?: string | null
 ) {
-  const storedInNeon = await recordNeonEvent({
-    componentKey: "cron.operational_health",
-    eventType: `cron_${status}`,
-    level: status === "erro" ? "error" : "info",
-    message: resumo,
-    metadata: {
-      cronName: CRON_NAME,
-      status,
-      payload,
-      errorText: errorText || null,
-    },
-  });
-
-  if (storedInNeon) return;
-
-  const database = getDatabaseAdmin() as any;
-  await database.from("eventos_cron").insert({
+  const supabase = getSupabaseAdmin() as any;
+  await supabase.from("eventos_cron").insert({
     nome: CRON_NAME,
     status,
     resumo,

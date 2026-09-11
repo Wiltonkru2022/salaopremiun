@@ -1,4 +1,4 @@
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const GOOGLE_TOKEN_URL = "https://oauth2.googleapis.com/token";
 const GOOGLE_EVENTS_URL = "https://www.googleapis.com/calendar/v3/calendars";
@@ -32,8 +32,8 @@ export function isGoogleCalendarConfigured() {
 }
 
 export async function getGoogleCalendarConnection(idSalao: string) {
-  const database = getDatabaseAdmin();
-  const { data, error } = await (database as any)
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await (supabase as any)
     .from("saloes_google_calendar_connections")
     .select("id_salao, google_email, calendar_id, access_token, refresh_token, expires_at, ativo")
     .eq("id_salao", idSalao)
@@ -77,7 +77,7 @@ export async function refreshGoogleCalendarAccessToken(
   }
 
   const expiresAt = new Date(Date.now() + Number(data.expires_in || 3300) * 1000);
-  await (getDatabaseAdmin() as any)
+  await (getSupabaseAdmin() as any)
     .from("saloes_google_calendar_connections")
     .update({
       access_token: data.access_token,

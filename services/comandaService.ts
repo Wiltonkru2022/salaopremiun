@@ -1,4 +1,4 @@
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   adicionarItemComanda,
   editarItemComanda,
@@ -10,7 +10,7 @@ import {
 import { registrarLogSistema } from "@/lib/system-logs";
 import type { ComandaPayload, ItemPayload } from "@/types/comandas";
 
-type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
+type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
 
 type LogComandaParams = {
   gravidade: "info" | "warning" | "error";
@@ -21,7 +21,7 @@ type LogComandaParams = {
 };
 
 export function createComandaService(
-  databaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
+  supabaseAdmin: SupabaseAdminClient = getSupabaseAdmin()
 ) {
   return {
     criarPorAgendamento: (params: {
@@ -29,7 +29,7 @@ export function createComandaService(
       idAgendamento: string;
     }) =>
       processarCriacaoPorAgendamento({
-        databaseAdmin,
+        supabaseAdmin,
         ...params,
       }),
 
@@ -38,7 +38,7 @@ export function createComandaService(
       comanda: ComandaPayload;
     }) =>
       salvarBaseComanda({
-        databaseAdmin,
+        supabaseAdmin,
         ...params,
       }),
 
@@ -49,7 +49,7 @@ export function createComandaService(
       idempotencyKey?: string | null;
     }) =>
       adicionarItemComanda({
-        databaseAdmin,
+        supabaseAdmin,
         ...params,
       }),
 
@@ -59,7 +59,7 @@ export function createComandaService(
       item: ItemPayload;
     }) =>
       editarItemComanda({
-        databaseAdmin,
+        supabaseAdmin,
         ...params,
       }),
 
@@ -69,7 +69,7 @@ export function createComandaService(
       item: ItemPayload;
     }) =>
       removerItemComanda({
-        databaseAdmin,
+        supabaseAdmin,
         ...params,
       }),
 
@@ -78,7 +78,7 @@ export function createComandaService(
       comanda: ComandaPayload;
     }) =>
       enviarComandaParaPagamento({
-        databaseAdmin,
+        supabaseAdmin,
         ...params,
       }),
 

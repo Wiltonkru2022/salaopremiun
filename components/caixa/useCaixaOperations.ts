@@ -142,7 +142,7 @@ export function useCaixaOperations({
   const exigirCaixaAberto = useCallback(() => {
     if (!caixaSchemaReady) {
       setErroTela(
-        "O caixa ainda não está pronto para registrar vendas. Procure o suporte."
+        "Aplique a migration de caixa operacional no Supabase antes de vender."
       );
       return false;
     }

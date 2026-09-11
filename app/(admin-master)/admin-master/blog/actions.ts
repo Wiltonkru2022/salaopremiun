@@ -3,14 +3,14 @@
 import { revalidatePath, revalidateTag } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getBlogDatabase } from "@/lib/blog/database";
+import { getBlogSupabaseAdmin } from "@/lib/blog/supabase";
 import {
-  asLooseDbClient,
-  type LooseDbClient,
-} from "@/lib/db/loose-client";
+  asLooseSupabaseClient,
+  type LooseSupabaseClient,
+} from "@/lib/supabase/loose-client";
 import { enviarNewsletterPostPublicado } from "@/services/blogNewsletterEmail";
 
-type BlogDatabaseClient = LooseDbClient;
+type BlogSupabaseClient = LooseSupabaseClient;
 
 type BlogPostStatus = "rascunho" | "publicado" | "arquivado";
 
@@ -70,8 +70,8 @@ function isUnsafeCategory(category?: { slug?: string | null; nome?: string | nul
   );
 }
 
-async function getDefaultCategoryId(database: BlogDatabaseClient) {
-  const { data: existing, error: existingError } = await database
+async function getDefaultCategoryId(supabase: BlogSupabaseClient) {
+  const { data: existing, error: existingError } = await supabase
     .from("blog_categorias")
     .select("id")
     .eq("slug", "agenda-online")
@@ -80,7 +80,7 @@ async function getDefaultCategoryId(database: BlogDatabaseClient) {
   if (existingError) throw existingError;
   if (existing?.id) return existing.id;
 
-  const { data, error } = await database
+  const { data, error } = await supabase
     .from("blog_categorias")
     .upsert(
       {
@@ -99,15 +99,15 @@ async function getDefaultCategoryId(database: BlogDatabaseClient) {
   return data.id;
 }
 
-async function resolveCategoryId(database: BlogDatabaseClient, value: string) {
+async function resolveCategoryId(supabase: BlogSupabaseClient, value: string) {
   const cleanValue = value.trim();
 
   if (!cleanValue) {
-    return getDefaultCategoryId(database);
+    return getDefaultCategoryId(supabase);
   }
 
   if (isUuid(cleanValue)) {
-    const { data, error } = await database
+    const { data, error } = await supabase
       .from("blog_categorias")
       .select("id, slug, nome")
       .eq("id", cleanValue)
@@ -116,15 +116,15 @@ async function resolveCategoryId(database: BlogDatabaseClient, value: string) {
     if (error) throw error;
     if (data?.id && !isUnsafeCategory(data)) return data.id;
 
-    return getDefaultCategoryId(database);
+    return getDefaultCategoryId(supabase);
   }
 
   if (isUuidLikeCategory(cleanValue)) {
-    return getDefaultCategoryId(database);
+    return getDefaultCategoryId(supabase);
   }
 
   const slug = slugify(cleanValue || "agenda-online");
-  const { data: existing, error: existingError } = await database
+  const { data: existing, error: existingError } = await supabase
     .from("blog_categorias")
     .select("id, slug, nome")
     .eq("slug", slug)
@@ -134,10 +134,10 @@ async function resolveCategoryId(database: BlogDatabaseClient, value: string) {
   if (existing?.id && !isUnsafeCategory(existing)) return existing.id;
 
   if (isUnsafeCategory(existing)) {
-    return getDefaultCategoryId(database);
+    return getDefaultCategoryId(supabase);
   }
 
-  const { data, error } = await database
+  const { data, error } = await supabase
     .from("blog_categorias")
     .upsert(
       {
@@ -180,8 +180,8 @@ export async function createBlogCategory(formData: FormData) {
     throw new Error("Use um nome de categoria em português, não um código interno.");
   }
 
-  const database = asLooseDbClient(getBlogDatabase());
-  const { error } = await database.from("blog_categorias").upsert(
+  const supabase = asLooseSupabaseClient(getBlogSupabaseAdmin());
+  const { error } = await supabase.from("blog_categorias").upsert(
     {
       nome,
       slug,
@@ -239,17 +239,17 @@ export async function createBlogPost(
   const safeDescricao = descricao || "Rascunho em edição.";
   const safeConteudo = conteudo || "<p></p>";
   const now = new Date().toISOString();
-  const database = asLooseDbClient(getBlogDatabase());
+  const supabase = asLooseSupabaseClient(getBlogSupabaseAdmin());
 
   try {
-    const resolvedCategoryId = await resolveCategoryId(database, categoriaId);
+    const resolvedCategoryId = await resolveCategoryId(supabase, categoriaId);
     const { data: existingPost } = id
-      ? await database
+      ? await supabase
           .from("blog_posts")
           .select("status")
           .eq("id", id)
           .maybeSingle<{ status?: string | null }>()
-      : await database
+      : await supabase
           .from("blog_posts")
           .select("status")
           .eq("slug", slug)
@@ -276,10 +276,10 @@ export async function createBlogPost(
     };
 
     const { error } = id
-      ? await database
+      ? await supabase
           .from("blog_posts")
           .upsert({ ...payload, id }, { onConflict: "id" })
-      : await database.from("blog_posts").upsert(payload, { onConflict: "slug" });
+      : await supabase.from("blog_posts").upsert(payload, { onConflict: "slug" });
 
     if (error) {
       return {
@@ -332,8 +332,8 @@ export async function deleteBlogPost(formData: FormData) {
     throw new Error("Post inválido para exclusão.");
   }
 
-  const database = asLooseDbClient(getBlogDatabase());
-  const { error } = await database.from("blog_posts").delete().eq("id", id);
+  const supabase = asLooseSupabaseClient(getBlogSupabaseAdmin());
+  const { error } = await supabase.from("blog_posts").delete().eq("id", id);
 
   if (error) {
     throw new Error(`Não foi possível excluir o post: ${error.message}`);

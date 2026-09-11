@@ -1,4 +1,4 @@
-import Link from "next/link";
+﻿import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
   BarChart3,
@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { canUsePlanFeature } from "@/lib/plans/access";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { auditarCampanhasAction } from "./actions";
 import PaginationLinks from "@/components/ui/PaginationLinks";
 import { PainelPageHeader } from "@/components/painel-ui";
@@ -93,7 +93,7 @@ function throwQueryError(...results: Array<{ error?: { message?: string } | null
 }
 
 async function loadCampanhasData(idSalao: string, page: number, pageSize: number) {
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const hoje = new Date();
   const mesAtual = String(hoje.getMonth() + 1).padStart(2, "0");
   const limiteInativos = new Date();
@@ -107,7 +107,7 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
     clientesResult,
     agendamentosRecentesResult,
   ] = await Promise.all([
-    (database as any)
+    (supabase as any)
       .from("cupons_salao")
       .select(
         "id, codigo, nome, descricao, descricao_interna, mensagem_cliente, tipo_campanha, publico_alvo, publico_tipo, valor_desconto, tipo_desconto, valido_de, valido_ate, ativo, status_campanha, resgate_token, slug, limite_uso_total, limite_uso_cliente, limite_uso_dia, created_at",
@@ -117,20 +117,20 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
       .or("automatico_recuperacao.is.null,automatico_recuperacao.eq.false")
       .order("created_at", { ascending: false })
       .range(from, to),
-    (database as any)
+    (supabase as any)
       .from("clientes")
       .select("id, nome, telefone, whatsapp, data_nascimento")
       .eq("id_salao", idSalao)
       .or("status.eq.ativo,ativo.eq.ativo")
       .not("data_nascimento", "is", null)
       .limit(80),
-    (database as any)
+    (supabase as any)
       .from("clientes")
       .select("id, nome, telefone, whatsapp, created_at")
       .eq("id_salao", idSalao)
       .or("status.eq.ativo,ativo.eq.ativo")
       .limit(160),
-    (database as any)
+    (supabase as any)
       .from("agendamentos")
       .select("cliente_id, data")
       .eq("id_salao", idSalao)
@@ -152,7 +152,7 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
 
   const [vinculosResult, usosResult, eventosResult] = cupomIds.length
     ? await Promise.all([
-        (database as any)
+        (supabase as any)
           .from("cupom_salao_servicos")
           .select(
             "id_cupom, id_servico, tipo_beneficio, valor_beneficio, brinde_descricao, limite_uso_servico, servicos(nome)"
@@ -160,13 +160,13 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
           .eq("id_salao", idSalao)
           .in("id_cupom", cupomIds)
           .limit(pageSize * 40),
-        (database as any)
+        (supabase as any)
           .from("cupom_salao_usos")
           .select("id_cupom, id_comanda, valor_desconto, status, created_at")
           .eq("id_salao", idSalao)
           .in("id_cupom", cupomIds)
           .limit(pageSize * 100),
-        (database as any)
+        (supabase as any)
           .from("campanha_eventos")
           .select("id_cupom, tipo, metadata, created_at")
           .eq("id_salao", idSalao)
@@ -190,19 +190,19 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
     const metricas = await Promise.all(
       cupomIds.map(async (idCupom) => {
         const [cliquesCount, agendamentosCount, resgatesCount] = await Promise.all([
-          (database as any)
+          (supabase as any)
             .from("campanha_eventos")
             .select("id", { count: "exact", head: true })
             .eq("id_salao", idSalao)
             .eq("id_cupom", idCupom)
             .eq("tipo", "clique"),
-          (database as any)
+          (supabase as any)
             .from("campanha_eventos")
             .select("id", { count: "exact", head: true })
             .eq("id_salao", idSalao)
             .eq("id_cupom", idCupom)
             .eq("tipo", "agendamento"),
-          (database as any)
+          (supabase as any)
             .from("cupom_salao_resgates")
             .select("id", { count: "exact", head: true })
             .eq("id_salao", idSalao)
@@ -240,7 +240,7 @@ async function loadCampanhasData(idSalao: string, page: number, pageSize: number
   ).slice(0, pageSize * 100);
   const comandasFechadas = new Set<string>();
   if (comandaIds.length) {
-    const comandasResult = await (database as any)
+    const comandasResult = await (supabase as any)
       .from("comandas")
       .select("id, status")
       .eq("id_salao", idSalao)

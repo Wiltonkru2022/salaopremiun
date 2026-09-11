@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeCpf, normalizeWhatsapp } from "@/lib/client-app/identity";
 import {
   findClienteRowsByCpf,
@@ -15,10 +15,10 @@ export async function detectExistingSalonClientForSignup(params: {
   const whatsapp = normalizeWhatsapp(params.whatsapp);
   if (!cpf && !whatsapp) return { found: false as const };
 
-  const databaseAdmin = getDatabaseAdmin();
+  const supabaseAdmin = getSupabaseAdmin();
 
   if (cpf) {
-    const byCpf = await findClienteRowsByCpf({ databaseAdmin, cpf, limit: 20 });
+    const byCpf = await findClienteRowsByCpf({ supabaseAdmin, cpf, limit: 20 });
     if (!byCpf.error && byCpf.data.length) {
       return {
         found: true as const,
@@ -30,7 +30,7 @@ export async function detectExistingSalonClientForSignup(params: {
 
   if (whatsapp) {
     const byPhone = await findClienteRowsByNormalizedPhone({
-      databaseAdmin,
+      supabaseAdmin,
       telefone: whatsapp,
       limit: 50,
     });

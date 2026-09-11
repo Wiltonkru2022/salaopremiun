@@ -9,7 +9,7 @@ import {
   PlanAccessError,
 } from "@/lib/plans/access";
 import { reportOperationalIncident } from "@/lib/monitoring/operational-incidents";
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   parseProcessarComissoesInput,
   processarComissoesUseCase,
@@ -74,9 +74,9 @@ export async function POST(req: NextRequest) {
         await runAdminOperation({
           action: "api_comissoes_processar_report_incident",
           idSalao,
-          run: async (databaseAdmin) => {
+          run: async (supabaseAdmin) => {
             await reportOperationalIncident({
-              databaseAdmin,
+              supabaseAdmin,
               key: `comissoes:processar:${acao || "desconhecida"}:${idSalao}`,
               module: "comissoes",
               title: "Processamento de comissoes falhou",

@@ -1,5 +1,5 @@
-import { getBlogDatabase } from "@/lib/blog/database";
-import { asLooseDbClient } from "@/lib/db/loose-client";
+import { getBlogSupabaseAdmin } from "@/lib/blog/supabase";
+import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
 
 type BlogCategory = {
   id?: string | null;
@@ -42,8 +42,8 @@ function isUnsafeCategory(category?: BlogCategory | null) {
 }
 
 async function getDefaultCategoryId() {
-  const database = asLooseDbClient(getBlogDatabase());
-  const { data: existing, error: existingError } = await database
+  const supabase = asLooseSupabaseClient(getBlogSupabaseAdmin());
+  const { data: existing, error: existingError } = await supabase
     .from("blog_categorias")
     .select("id")
     .eq("slug", "agenda-online")
@@ -52,7 +52,7 @@ async function getDefaultCategoryId() {
   if (existingError) throw existingError;
   if (existing?.id) return String(existing.id);
 
-  const { data, error } = await database
+  const { data, error } = await supabase
     .from("blog_categorias")
     .upsert(
       {
@@ -72,11 +72,11 @@ async function getDefaultCategoryId() {
 }
 
 async function resolveCategoryId(value: string) {
-  const database = asLooseDbClient(getBlogDatabase());
+  const supabase = asLooseSupabaseClient(getBlogSupabaseAdmin());
   const cleanValue = value.trim();
 
   if (isUuid(cleanValue)) {
-    const { data, error } = await database
+    const { data, error } = await supabase
       .from("blog_categorias")
       .select("id, slug, nome")
       .eq("id", cleanValue)
@@ -93,7 +93,7 @@ async function resolveCategoryId(value: string) {
   }
 
   const slug = slugifyBlogValue(cleanValue || "agenda-online");
-  const { data: existing, error } = await database
+  const { data: existing, error } = await supabase
     .from("blog_categorias")
     .select("id, slug, nome")
     .eq("slug", slug)
@@ -106,7 +106,7 @@ async function resolveCategoryId(value: string) {
 }
 
 export async function publicarPreviewBlogPost(body: Record<string, unknown>) {
-  const database = asLooseDbClient(getBlogDatabase());
+  const supabase = asLooseSupabaseClient(getBlogSupabaseAdmin());
   const title = String(body.title || "").trim();
   const slug = slugifyBlogValue(String(body.slug || title));
   const categoryId = String(body.categoryId || "").trim();
@@ -119,7 +119,7 @@ export async function publicarPreviewBlogPost(body: Record<string, unknown>) {
 
   const now = new Date().toISOString();
   const resolvedCategoryId = await resolveCategoryId(categoryId);
-  const { error } = await database.from("blog_posts").upsert(
+  const { error } = await supabase.from("blog_posts").upsert(
     {
       categoria_id: resolvedCategoryId,
       titulo: title,
@@ -150,9 +150,9 @@ export async function cadastrarNewsletterBlog(params: {
   email: string;
   postSlug?: string | null;
 }) {
-  const database = getBlogDatabase();
-  const blogDatabase = asLooseDbClient(database);
-  const { error } = await blogDatabase.from("newsletter_subscribers").upsert(
+  const supabase = getBlogSupabaseAdmin();
+  const blogSupabase = asLooseSupabaseClient(supabase);
+  const { error } = await blogSupabase.from("newsletter_subscribers").upsert(
     {
       email: params.email,
       origem: "blog",
@@ -169,15 +169,15 @@ export async function registrarVisualizacaoBlog(params: {
   sessionId?: string | null;
   userAgent?: string | null;
 }) {
-  const database = asLooseDbClient(getBlogDatabase());
+  const supabase = asLooseSupabaseClient(getBlogSupabaseAdmin());
 
-  await database.from("blog_views").insert({
+  await supabase.from("blog_views").insert({
     post_id: params.postId,
     session_id: params.sessionId || null,
     user_agent: params.userAgent || null,
   });
 
-  const { data, error } = await database.rpc("increment_blog_post_views", {
+  const { data, error } = await supabase.rpc("increment_blog_post_views", {
     p_post_id: params.postId,
   });
 
@@ -186,8 +186,8 @@ export async function registrarVisualizacaoBlog(params: {
 }
 
 export async function listarAssinantesNewsletterBlog() {
-  const database = asLooseDbClient(getBlogDatabase());
-  const { data, error } = await database
+  const supabase = asLooseSupabaseClient(getBlogSupabaseAdmin());
+  const { data, error } = await supabase
     .from("newsletter_subscribers")
     .select("email")
     .eq("origem", "blog")

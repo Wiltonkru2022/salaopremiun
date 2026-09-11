@@ -6,7 +6,7 @@ import {
 } from "@/lib/plans/catalog-server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getAssinaturaUrl } from "@/lib/site-urls";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   PainelLinkButton,
   PainelPageHeader,
@@ -73,19 +73,19 @@ export default async function CompararPlanosPage({
   const query = searchParams ? await searchParams : undefined;
   const erro = firstParam(query?.erro);
   const { user, usuario } = await getPainelUserContext();
-  const databaseAdmin = getDatabaseAdmin();
+  const supabaseAdmin = getSupabaseAdmin();
 
   let planoAtual = "teste_gratis";
   let jaPossuiAssinatura = false;
 
   if (user && usuario?.id_salao) {
     const [{ data: assinatura }, { data: salao }] = await Promise.all([
-      databaseAdmin
+      supabaseAdmin
         .from("assinaturas")
         .select("id, plano, status")
         .eq("id_salao", usuario.id_salao)
         .maybeSingle(),
-      databaseAdmin
+      supabaseAdmin
         .from("saloes")
         .select("plano, status")
         .eq("id", usuario.id_salao)

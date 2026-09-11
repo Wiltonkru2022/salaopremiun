@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   getClientAppSalonDetail,
   type ClientAppSalonDetail,
@@ -250,11 +250,11 @@ export async function getClientSalonProfile(
   idSalaoOrSlug: string
 ): Promise<ClientSalonProfile> {
   const base = await getClientAppSalonDetail(idSalaoOrSlug);
-  const databaseAdmin = getDatabaseAdmin();
+  const supabaseAdmin = getSupabaseAdmin();
 
   const [extrasResult, configResult, serviceImagesResult, reviewsResult] =
     await Promise.all([
-      (databaseAdmin as any)
+      (supabaseAdmin as any)
         .from("saloes")
         .select(
           "plano, instagram_url, acessibilidade, wifi, cafe, ar_condicionado"
@@ -262,7 +262,7 @@ export async function getClientSalonProfile(
         .eq("id", base.id)
         .limit(1)
         .maybeSingle(),
-      (databaseAdmin as any)
+      (supabaseAdmin as any)
         .from("configuracoes_salao")
         .select(
           "hora_abertura, hora_fechamento, dias_funcionamento, fuso_horario"
@@ -271,7 +271,7 @@ export async function getClientSalonProfile(
         .limit(1)
         .maybeSingle(),
       base.servicos.length
-        ? (databaseAdmin as any)
+        ? (supabaseAdmin as any)
             .from("servicos")
             .select("id, imagem_url")
             .eq("id_salao", base.id)
@@ -281,7 +281,7 @@ export async function getClientSalonProfile(
             )
             .limit(200)
         : Promise.resolve({ data: [] }),
-      (databaseAdmin as any)
+      (supabaseAdmin as any)
         .from("clientes_avaliacoes")
         .select(
           "id, id_agendamento, id_profissional, nota, comentario, created_at, imagens_url, clientes(nome)"
@@ -312,7 +312,7 @@ export async function getClientSalonProfile(
 
   const appointmentProfessionalMap = new Map<string, string>();
   if (unresolvedAppointmentIds.length) {
-    const { data: appointmentRows } = await (databaseAdmin as any)
+    const { data: appointmentRows } = await (supabaseAdmin as any)
       .from("agendamentos")
       .select("id, profissional_id")
       .eq("id_salao", base.id)

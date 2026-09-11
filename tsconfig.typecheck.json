@@ -1,8 +1,5 @@
 {
   "extends": "./tsconfig.json",
-  "compilerOptions": {
-    "noImplicitAny": false
-  },
   "include": [
     "next-env.d.ts",
     "app/**/*.ts",

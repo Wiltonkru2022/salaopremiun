@@ -40,3 +40,6 @@ apps/mobile-shells/**/android/app/google-services.json
 
 .vercel
 .env*.local
+
+.vercel
+.env*

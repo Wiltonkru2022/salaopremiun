@@ -1,5 +1,5 @@
 import { addDays, format, isBefore, subDays } from "date-fns";
-import type { DatabaseClient } from "@/lib/db/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { criarCobranca } from "@/lib/payments/pix-provider";
 import {
   getRenovacaoAutomaticaInfo,
@@ -34,10 +34,10 @@ type CobrancaExistenteRow = {
 export type ResultadoRenovacaoAssinatura = Record<string, unknown>;
 
 async function carregarPlanoAtivo(
-  databaseAdmin: DatabaseClient,
+  supabaseAdmin: SupabaseClient,
   planoCodigo: string
 ) {
-  const { data, error } = await databaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("planos_saas")
     .select(
       `
@@ -60,11 +60,11 @@ async function carregarPlanoAtivo(
 }
 
 async function carregarCobrancaPendente(
-  databaseAdmin: DatabaseClient,
+  supabaseAdmin: SupabaseClient,
   idAssinatura: string,
   hoje: Date
 ) {
-  const { data, error } = await databaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("assinaturas_cobrancas")
     .select("id, status, asaas_payment_id, data_expiracao")
     .eq("id_assinatura", idAssinatura)
@@ -79,13 +79,13 @@ async function carregarCobrancaPendente(
 }
 
 async function registrarCobrancaAutomatica(params: {
-  databaseAdmin: DatabaseClient;
+  supabaseAdmin: SupabaseClient;
   assinatura: AssinaturaCronRow;
   plano: PlanoSaasRow;
   formaPagamento: "PIX" | "BOLETO";
   hoje: Date;
 }) {
-  const { databaseAdmin, assinatura, plano, formaPagamento, hoje } = params;
+  const { supabaseAdmin, assinatura, plano, formaPagamento, hoje } = params;
   const valorPlano = Number(plano.valor_mensal || 0);
 
   if (valorPlano <= 0) {
@@ -120,7 +120,7 @@ async function registrarCobrancaAutomatica(params: {
     statusAsaas
   );
 
-  const { data: cobrancaInserida, error: historicoError } = await databaseAdmin
+  const { data: cobrancaInserida, error: historicoError } = await supabaseAdmin
     .from("assinaturas_cobrancas")
     .insert({
       id_salao: assinatura.id_salao,
@@ -180,7 +180,7 @@ async function registrarCobrancaAutomatica(params: {
     } satisfies ResultadoRenovacaoAssinatura;
   }
 
-  const { error: updateAssinaturaError } = await databaseAdmin
+  const { error: updateAssinaturaError } = await supabaseAdmin
     .from("assinaturas")
     .update({
       asaas_payment_id: cobranca.id,
@@ -210,11 +210,11 @@ async function registrarCobrancaAutomatica(params: {
 }
 
 async function processarRenovacaoAssinatura(params: {
-  databaseAdmin: DatabaseClient;
+  supabaseAdmin: SupabaseClient;
   assinatura: AssinaturaCronRow;
   hoje: Date;
 }) {
-  const { databaseAdmin, assinatura, hoje } = params;
+  const { supabaseAdmin, assinatura, hoje } = params;
   const planoCodigo = String(assinatura.plano || "").toLowerCase();
 
   if (!planoCodigo) {
@@ -228,7 +228,7 @@ async function processarRenovacaoAssinatura(params: {
   let plano: PlanoSaasRow | null = null;
 
   try {
-    plano = await carregarPlanoAtivo(databaseAdmin, planoCodigo);
+    plano = await carregarPlanoAtivo(supabaseAdmin, planoCodigo);
   } catch (error) {
     return {
       id_salao: assinatura.id_salao,
@@ -316,7 +316,7 @@ async function processarRenovacaoAssinatura(params: {
 
   try {
     cobrancaPendente = await carregarCobrancaPendente(
-      databaseAdmin,
+      supabaseAdmin,
       assinatura.id,
       hoje
     );
@@ -342,7 +342,7 @@ async function processarRenovacaoAssinatura(params: {
   }
 
   return registrarCobrancaAutomatica({
-    databaseAdmin,
+    supabaseAdmin,
     assinatura,
     plano,
     formaPagamento,
@@ -351,12 +351,12 @@ async function processarRenovacaoAssinatura(params: {
 }
 
 export async function executarCronRenovacaoAssinaturas(
-  databaseAdmin: DatabaseClient,
+  supabaseAdmin: SupabaseClient,
   hoje = new Date()
 ) {
   const dataLimite = format(addDays(hoje, 3), "yyyy-MM-dd");
 
-  const { data, error } = await databaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("assinaturas")
     .select(
       `
@@ -384,7 +384,7 @@ export async function executarCronRenovacaoAssinaturas(
   for (const assinatura of assinaturas) {
     resultados.push(
       await processarRenovacaoAssinatura({
-        databaseAdmin,
+        supabaseAdmin,
         assinatura,
         hoje,
       })

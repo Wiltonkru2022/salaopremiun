@@ -3,7 +3,7 @@ import "server-only";
 import { classifyOperationalError } from "@/lib/monitoring/error-catalog";
 import { buildOperationalFingerprint, sanitizeOperationalText } from "@/lib/monitoring/fingerprint";
 import { findOperationalComponentForContext } from "@/lib/monitoring/operational-components";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 function sanitizeEvidence(value: unknown, depth = 0): unknown {
   if (value === null || value === undefined) return null;
@@ -79,8 +79,8 @@ export async function observeOperationalFailure(params: {
     deploymentId: deploy.deploymentId,
     commitSha: deploy.commitSha,
   };
-  const database = getDatabaseAdmin() as any;
-  const { data, error } = await database.rpc("fn_operational_observe_incident", {
+  const supabase = getSupabaseAdmin() as any;
+  const { data, error } = await supabase.rpc("fn_operational_observe_incident", {
     p_fingerprint: fingerprint,
     p_chave: `operational:${fingerprint}`,
     p_titulo: rule.name,
@@ -104,7 +104,7 @@ export async function observeOperationalFailure(params: {
   if (error) throw error;
 
   const incident = Array.isArray(data) ? data[0] : data;
-  await database.from("alertas_sistema").upsert(
+  await supabase.from("alertas_sistema").upsert(
     {
       chave: `monitoring:${fingerprint}`,
       tipo: "incidente_operacional",

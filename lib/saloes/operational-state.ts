@@ -1,4 +1,4 @@
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export class SalaoOperationalStateError extends Error {
   constructor(
@@ -12,7 +12,7 @@ export class SalaoOperationalStateError extends Error {
 }
 
 export async function getSalaoOperationalState(idSalao: string) {
-  const admin = getDatabaseAdmin() as any;
+  const admin = getSupabaseAdmin() as any;
   const { data, error } = await admin
     .from("saloes")
     .select("onboarding_concluido, produtos_modulo_ativo, pix_modulo_ativo")

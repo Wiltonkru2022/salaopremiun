@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getAdminMasterAccess } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
@@ -24,8 +24,8 @@ export async function POST(
     );
   }
 
-  const database = getDatabaseAdmin() as any;
-  const { data: current, error: currentError } = await database
+  const supabase = getSupabaseAdmin() as any;
+  const { data: current, error: currentError } = await supabase
     .from("notificacoes_globais")
     .select("id, titulo, status")
     .eq("id", id)
@@ -45,7 +45,7 @@ export async function POST(
     );
   }
 
-  const { error: deleteError } = await database
+  const { error: deleteError } = await supabase
     .from("notificacoes_globais")
     .delete()
     .eq("id", id);
@@ -58,7 +58,7 @@ export async function POST(
     );
   }
 
-  const { error: auditError } = await database
+  const { error: auditError } = await supabase
     .from("admin_master_auditoria")
     .insert({
       id_admin_usuario: access.usuario.id,

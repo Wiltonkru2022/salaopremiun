@@ -1,4 +1,4 @@
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 type ComissaoResumoRow = {
   valor_comissao?: number | string | null;
@@ -39,22 +39,22 @@ export async function buscarResumoInicioProfissional(
     action: "profissional_resumo_inicio",
     actorId: idProfissional,
     idSalao,
-    run: async (databaseAdmin) => {
+    run: async (supabaseAdmin) => {
       const [hojeResult, mesResult, comissoesResult] = await Promise.all([
-        databaseAdmin
+        supabaseAdmin
           .from("agendamentos")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", idSalao)
           .eq("profissional_id", idProfissional)
           .eq("data", hoje),
-        databaseAdmin
+        supabaseAdmin
           .from("agendamentos")
           .select("id", { count: "exact", head: true })
           .eq("id_salao", idSalao)
           .eq("profissional_id", idProfissional)
           .gte("data", inicioMes)
           .lte("data", fimMes),
-        databaseAdmin
+        supabaseAdmin
           .from("comissoes_lancamentos")
           .select("valor_comissao")
           .eq("id_salao", idSalao)

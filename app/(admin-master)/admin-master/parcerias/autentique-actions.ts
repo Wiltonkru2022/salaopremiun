@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { consultarDocumentoAutentique, criarDocumentoAutentique } from "@/lib/parcerias/autentique";
 
 function text(formData: FormData, key: string) {
@@ -12,11 +12,11 @@ function text(formData: FormData, key: string) {
 
 export async function enviarContratoAutentique(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const database = getDatabaseAdmin() as any;
+  const supabase = getSupabaseAdmin() as any;
   const idContrato = text(formData, "id_contrato");
   if (!idContrato) throw new Error("Contrato não informado.");
 
-  const { data: contrato, error } = await database
+  const { data: contrato, error } = await supabase
     .from("parceria_contratos")
     .select("id,numero,status,conteudo_snapshot,signatario_email,envelope_externo_id")
     .eq("id", idContrato)
@@ -36,7 +36,7 @@ export async function enviarContratoAutentique(formData: FormData) {
     signatarioEmail: contrato.signatario_email,
   });
 
-  const { error: updateError } = await database
+  const { error: updateError } = await supabase
     .from("parceria_contratos")
     .update({
       status: "enviado_assinatura",
@@ -67,11 +67,11 @@ export async function enviarContratoAutentique(formData: FormData) {
 
 export async function sincronizarContratoAutentique(formData: FormData) {
   const access = await requireAdminMasterUser("campanhas_editar");
-  const database = getDatabaseAdmin() as any;
+  const supabase = getSupabaseAdmin() as any;
   const idContrato = text(formData, "id_contrato");
   if (!idContrato) throw new Error("Contrato não informado.");
 
-  const { data: contrato, error } = await database
+  const { data: contrato, error } = await supabase
     .from("parceria_contratos")
     .select("id,numero,provedor_assinatura,envelope_externo_id,evidencia_assinatura")
     .eq("id", idContrato)
@@ -85,7 +85,7 @@ export async function sincronizarContratoAutentique(formData: FormData) {
   const remoto = await consultarDocumentoAutentique(contrato.envelope_externo_id);
   const status = remoto.signedAt ? "assinado" : remoto.rejectedAt ? "recusado" : "enviado_assinatura";
 
-  const { error: updateError } = await database
+  const { error: updateError } = await supabase
     .from("parceria_contratos")
     .update({
       status,

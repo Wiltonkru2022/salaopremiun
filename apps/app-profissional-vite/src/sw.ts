@@ -27,7 +27,7 @@ precacheAndRoute(self.__WB_MANIFEST);
 
 // JS e CSS do app são versionados pelo precache do Workbox. Não use CacheFirst
 // nesses arquivos, pois isso pode manter um bundle antigo ativo depois do deploy.
-// Respostas de API, Auth e REST do Neon nunca são persistidas pelo Service Worker.
+// Respostas de API, Auth e REST do Supabase nunca são persistidas pelo Service Worker.
 registerRoute(
   ({ request, url }) =>
     url.origin === self.location.origin &&
@@ -54,8 +54,8 @@ self.addEventListener("activate", (event) => {
       // Remove caches antigos, inclusive o que podia guardar respostas privadas.
       caches.delete("salaopremiun-assets"),
       caches.delete("salaopremiun-static-media-v2"),
-      caches.delete("salaopremiun-database-api"),
-      caches.delete("salaopremium-database-api"),
+      caches.delete("salaopremiun-supabase-api"),
+      caches.delete("salaopremium-supabase-api"),
     ])
   );
 });
@@ -79,8 +79,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(payload.title || fallback.title, {
       body: payload.body || fallback.body,
-      icon: "/app-profissional/icons/icon-192.png",
-      badge: "/app-profissional/icons/icon-192.png",
+      icon: new URL("brand-logo-profissional-v2.png", self.registration.scope).toString(),
+      badge: new URL("brand-logo-profissional-v2.png", self.registration.scope).toString(),
       tag: payload.tag || "salaopremium-profissional-update",
       renotify: payload.renotify === true,
       requireInteraction: payload.requireInteraction === true,

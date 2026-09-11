@@ -21,7 +21,7 @@ export default defineConfig({
         'apps/**',
         'public/**',
         'scripts/**',
-        'database/**',
+        'supabase/**',
       ],
     },
     alias: {

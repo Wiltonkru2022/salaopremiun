@@ -6,7 +6,7 @@ import { revalidatePath } from "next/cache";
 import { requireClienteAppContext } from "@/lib/client-context.server";
 import { joinClienteAppWaitlist } from "@/app/services/cliente-app/appointments";
 import { createClienteAppAppointmentForPerson } from "@/app/services/cliente-app/booking-person";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { captureSystemEvent } from "@/lib/monitoring/server";
 import {
   bookingPersonCookieName,
@@ -140,10 +140,10 @@ export async function toggleClienteSalonFavoriteAction(formData: FormData) {
 
   if (!idSalao) return;
 
-  const databaseAdmin = getDatabaseAdmin();
+  const supabaseAdmin = getSupabaseAdmin();
 
   if (nextFavorite) {
-    await (databaseAdmin as any).from("clientes_app_favoritos").upsert(
+    await (supabaseAdmin as any).from("clientes_app_favoritos").upsert(
       {
         cliente_app_conta_id: session.idConta,
         id_salao: idSalao,
@@ -153,7 +153,7 @@ export async function toggleClienteSalonFavoriteAction(formData: FormData) {
       }
     );
   } else {
-    await (databaseAdmin as any)
+    await (supabaseAdmin as any)
       .from("clientes_app_favoritos")
       .delete()
       .eq("cliente_app_conta_id", session.idConta)

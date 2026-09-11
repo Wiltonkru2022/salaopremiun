@@ -2,7 +2,7 @@ import "server-only";
 
 import { createClienteAppAppointment } from "@/app/services/cliente-app/appointments";
 import { findClienteRowsByNormalizedPhone } from "@/app/services/cliente-app/linking";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeWhatsapp } from "@/lib/client-app/identity";
 
 type BookingParams = Parameters<typeof createClienteAppAppointment>[0];
@@ -26,9 +26,9 @@ async function resolvePessoaAtendida(params: {
     return { ok: false, error: "Informe um WhatsApp válido da pessoa que será atendida." };
   }
 
-  const databaseAdmin = getDatabaseAdmin();
+  const supabaseAdmin = getSupabaseAdmin();
   const found = await findClienteRowsByNormalizedPhone({
-    databaseAdmin,
+    supabaseAdmin,
     telefone: whatsapp,
     idSalao: params.idSalao,
     limit: 10,
@@ -48,7 +48,7 @@ async function resolvePessoaAtendida(params: {
 
   if (found.data.length === 1) {
     const idCliente = String(found.data[0].id || "").trim();
-    const { error } = await (databaseAdmin as any)
+    const { error } = await (supabaseAdmin as any)
       .from("clientes")
       .update({
         nome,
@@ -68,7 +68,7 @@ async function resolvePessoaAtendida(params: {
     return { ok: true, idCliente, nome, whatsapp };
   }
 
-  const { data, error } = await (databaseAdmin as any)
+  const { data, error } = await (supabaseAdmin as any)
     .from("clientes")
     .insert({
       id_salao: params.idSalao,
@@ -123,8 +123,8 @@ export async function createClienteAppAppointmentForPerson(
 
   if (!result.ok || !result.idAgendamento) return result;
 
-  const databaseAdmin = getDatabaseAdmin();
-  const { error } = await (databaseAdmin as any)
+  const supabaseAdmin = getSupabaseAdmin();
+  const { error } = await (supabaseAdmin as any)
     .from("agendamentos")
     .update({
       pessoa_agendada_tipo: "outra_pessoa",

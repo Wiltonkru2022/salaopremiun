@@ -1,21 +1,24 @@
 import { NextResponse } from "next/server";
 import { emitSecurityEvent } from "@/lib/security/security-events";
 import { findSalaoUsuarioByAuthOrEmail } from "@/lib/security/salao-user-lookup";
-import { readPainelClerkSession } from "@/lib/platform/painel-clerk-session.server";
-import { clerkAdminApi } from "@/lib/platform/clerk-admin-api.server";
+import { createClient } from "@/lib/supabase/server";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const session = await readPainelClerkSession();
-  if (!session) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
     return NextResponse.json(
       { ok: false, error: "Sessão inválida." },
       { status: 401 }
     );
   }
 
-  const { data, error } = await clerkAdminApi.getUserById(session.clerkSubject);
+  const { data, error } = await supabase.auth.getUserIdentities();
 
   if (error) {
     return NextResponse.json(
@@ -29,29 +32,32 @@ export async function GET() {
     );
   }
 
-  const identities = data.user?.identities || [];
-  const googleIdentity = identities.find(
+  const googleIdentity = data.identities.find(
     (identity) => identity.provider === "google"
   );
 
   return NextResponse.json({
     ok: true,
     connected: Boolean(googleIdentity),
-    googleEmail: googleIdentity?.identity_data?.email || session.email || null,
-    identitiesCount: identities.length,
+    googleEmail: googleIdentity?.identity_data?.email || user.email || null,
+    identitiesCount: data.identities.length,
   });
 }
 
 export async function DELETE() {
-  const session = await readPainelClerkSession();
-  if (!session) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
     return NextResponse.json(
       { ok: false, error: "Sessão inválida." },
       { status: 401 }
     );
   }
 
-  const { data, error } = await clerkAdminApi.getUserById(session.clerkSubject);
+  const { data, error } = await supabase.auth.getUserIdentities();
 
   if (error) {
     return NextResponse.json(
@@ -65,8 +71,7 @@ export async function DELETE() {
     );
   }
 
-  const identities = data.user?.identities || [];
-  const googleIdentity = identities.find(
+  const googleIdentity = data.identities.find(
     (identity) => identity.provider === "google"
   );
 
@@ -78,7 +83,7 @@ export async function DELETE() {
     });
   }
 
-  if (identities.length < 2) {
+  if (data.identities.length < 2) {
     return NextResponse.json(
       {
         ok: false,
@@ -89,10 +94,8 @@ export async function DELETE() {
     );
   }
 
-  const { error: unlinkError } = await clerkAdminApi.unlinkExternalAccount(
-    session.clerkSubject,
-    googleIdentity.provider
-  );
+  const { error: unlinkError } =
+    await supabase.auth.unlinkIdentity(googleIdentity);
 
   if (unlinkError) {
     return NextResponse.json(
@@ -107,20 +110,20 @@ export async function DELETE() {
   }
 
   const usuario = await findSalaoUsuarioByAuthOrEmail({
-    authUserId: session.clerkSubject,
-    email: String(session.email || "").trim().toLowerCase(),
+    authUserId: user.id,
+    email: String(user.email || "").trim().toLowerCase(),
   });
 
   void emitSecurityEvent({
     evento: "google_login_desconectado",
     tipoUsuario: "salao",
-    userId: usuario?.id || session.clerkSubject,
+    userId: usuario?.id || user.id,
     idSalao: usuario?.id_salao || null,
     risco: "baixo",
     origem: "google-login",
     route: "/api/integracoes/google-login/status",
     detalhes: {
-      email: usuario?.email || session.email || null,
+      email: usuario?.email || user.email || null,
       google_email: googleIdentity.identity_data?.email || null,
     },
   });

@@ -1,0 +1,39 @@
+SALÃO PREMIUM PROFISSIONAL — FLUTTER API CONECTADA
+
+[OK] Flutter/Dart do zero
+[OK] Sem Vite/React/WebView/Capacitor
+[OK] API base: https://app.salaopremiun.com.br
+[OK] Header nativo: br.com.salaopremiun.profissional
+[OK] Login real CPF/senha
+[OK] nativeAccessToken em armazenamento seguro
+[OK] Restauração automática de sessão
+[OK] Logout e expiração de sessão
+[OK] Hoje com dados reais
+[OK] Agenda real
+[OK] Criar/confirmar/reagendar/cancelar agendamento
+[OK] Confirmar Pix
+[OK] Bloquear horário
+[OK] Clientes criar/editar
+[OK] Serviços criar/editar
+[OK] Comandas abrir/adicionar item/enviar ao caixa
+[OK] Cupons GET/POST/PATCH/DELETE
+[OK] WhatsApp de cupom com link exclusivo
+[OK] Comissão real
+[OK] Avaliações reais + exclusão
+[OK] Notificações reais + leitura + contador
+[OK] Perfil real
+[OK] Configurações reais (7 dias + intervalo)
+[OK] Troca de senha real
+[OK] INTERNET permission Android
+[OK] Timeout e erros de rede
+[OK] Dados demo removidos
+
+SUPORTE:
+A tela e FAQ estão presentes, sem envio falso. As rotas de suporte/tickets do ZIP dependem de use-cases externos não enviados e usam autenticação de cookie. Precisam desses contratos para conexão nativa correta.
+
+VALIDAÇÃO DESTA ENTREGA:
+- delimitadores dos arquivos Dart verificados
+- imports relativos verificados
+- todas as rotas usadas pelo cliente conferidas contra o ZIP da API
+- AndroidManifest XML validado
+- Flutter SDK não disponível neste ambiente, então APK não foi compilado aqui

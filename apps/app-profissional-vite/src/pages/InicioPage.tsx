@@ -172,8 +172,8 @@ function AppointmentDetails({ item }: { item: Agendamento }) {
     <div className="space-y-3">
       <div className="rounded-[1.3rem] border border-amber-100 bg-gradient-to-br from-amber-50 to-white p-4">
         <div className="text-[0.65rem] font-black uppercase tracking-[0.2em] text-amber-700">Atendimento</div>
-        <div className="mt-2 text-2xl font-black tracking-[-0.05em] text-zinc-950">{item.clientes?.nome || "Cliente"}</div>
-        <div className="mt-1 text-sm font-bold text-zinc-500">{item.servicos?.nome || "Serviço"}</div>
+        <div className="mt-2 break-words text-2xl font-black tracking-[-0.05em] text-zinc-950">{item.clientes?.nome || "Cliente"}</div>
+        <div className="mt-1 break-words text-sm font-bold text-zinc-500">{item.servicos?.nome || "Serviço"}</div>
       </div>
       <DetailRow label="Horário" value={`${item.data} · ${item.hora_inicio.slice(0, 5)} às ${item.hora_fim.slice(0, 5)}`} />
       <DetailRow label="Status" value={String(item.status || "pendente").replaceAll("_", " ")} />
@@ -189,5 +189,5 @@ function AppointmentDetails({ item }: { item: Agendamento }) {
 }
 
 function DetailRow({ label, value }: { label: string; value: string }) {
-  return <div className="rounded-[1.15rem] border border-zinc-100 bg-zinc-50/80 px-4 py-3.5"><div className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-zinc-400">{label}</div><div className="mt-1 text-sm font-black leading-5 text-zinc-900">{value}</div></div>;
+  return <div className="rounded-[1.15rem] border border-zinc-100 bg-zinc-50/80 px-4 py-3.5"><div className="text-[0.65rem] font-black uppercase tracking-[0.18em] text-zinc-400">{label}</div><div className="mt-1 break-words text-sm font-black leading-5 text-zinc-900">{value}</div></div>;
 }

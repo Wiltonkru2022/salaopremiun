@@ -1,10 +1,10 @@
-import { createClient } from "@/lib/db/server";
+import { createClient } from "../../lib/supabase/server";
 
 export async function getUser() {
-  const database = await createClient();
+  const supabase = await createClient();
   const {
     data: { user },
-  } = await database.auth.getUser();
+  } = await supabase.auth.getUser();
 
   return user;
 }

@@ -1,16 +1,16 @@
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { AdminMasterPlanEditorData } from "@/components/admin-master/AdminMasterPlanEditor";
 
 export async function getAdminMasterPlanEditorData(): Promise<AdminMasterPlanEditorData> {
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const [{ data: planos }, { data: recursos }] = await Promise.all([
-    database
+    supabase
       .from("planos_saas")
       .select(
         "id, codigo, nome, subtitulo, valor_mensal, preco_anual, limite_usuarios, limite_profissionais, trial_dias, ideal_para, cta, destaque, ativo, ordem"
       )
       .order("ordem", { ascending: true }),
-    database
+    supabase
       .from("planos_recursos")
       .select("id_plano, recurso_codigo, habilitado, limite_numero, observacao"),
   ]);

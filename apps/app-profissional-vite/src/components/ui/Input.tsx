@@ -1,12 +1,14 @@
 import { Eye, EyeOff } from "lucide-react";
-import { useState, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
+import { useId, useState, type InputHTMLAttributes, type SelectHTMLAttributes, type TextareaHTMLAttributes } from "react";
 
 export function Field({ label, children }: { label: string; children: React.ReactNode }) {
+  const labelId = useId();
+
   return (
-    <label className="grid gap-1.5">
-      <span className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">{label}</span>
+    <div className="grid gap-1.5" role="group" aria-labelledby={labelId}>
+      <span id={labelId} className="text-xs font-black uppercase tracking-[0.18em] text-zinc-400">{label}</span>
       {children}
-    </label>
+    </div>
   );
 }
 

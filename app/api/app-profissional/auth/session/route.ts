@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { validateProfissionalAppSession } from "@/lib/profissional-context.server";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export async function GET() {
   const validation = await validateProfissionalAppSession().catch(() => ({
@@ -15,8 +15,8 @@ export async function GET() {
     );
   }
 
-  const database = getDatabaseAdmin();
-  const { data: profissional, error } = await database
+  const supabase = getSupabaseAdmin();
+  const { data: profissional, error } = await supabase
     .from("profissionais")
     .select("id, id_salao, nome, nome_exibicao, cpf, telefone, whatsapp, email, cargo, categoria, bio, pix_tipo, pix_chave, sinal_pix_recebedor, nivel_acesso, ativo, intervalo_agenda_minutos, dias_trabalho, pausas")
     .eq("id", validation.context.idProfissional)

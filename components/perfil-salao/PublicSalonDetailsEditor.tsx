@@ -6,8 +6,8 @@ import { CheckCircle2, ChevronRight, Globe, Loader2, Sparkles } from "lucide-rea
 import AppModal from "@/components/ui/AppModal";
 import { Field, TextInput } from "@/components/configuracoes/ui";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
-import { createClient } from "@/lib/db/client";
-import { asLooseDbClient } from "@/lib/db/loose-client";
+import { createClient } from "@/lib/supabase/client";
+import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
 
 type PublicDetailsForm = {
   instagram_url: string;
@@ -133,8 +133,8 @@ export default function PublicSalonDetailsEditor() {
         setLoading(true);
         setError("");
         setMessage("");
-        const database = createClient();
-        const { data, error: queryError } = await database
+        const supabase = createClient();
+        const { data, error: queryError } = await supabase
           .from("saloes")
           .select(
             "instagram_url, estacionamento, acessibilidade, wifi, cafe, ar_condicionado, formas_pagamento_publico"
@@ -184,7 +184,7 @@ export default function PublicSalonDetailsEditor() {
       setSaving(true);
       setError("");
       setMessage("");
-      const database = createClient();
+      const supabase = createClient();
       const payload = {
         instagram_url: normalizeInstagram(form.instagram_url),
         estacionamento: form.estacionamento,
@@ -198,7 +198,7 @@ export default function PublicSalonDetailsEditor() {
         updated_at: new Date().toISOString(),
       };
 
-      const { error: updateError } = await database
+      const { error: updateError } = await supabase
         .from("saloes")
         .update(payload)
         .eq("id", idSalao);
@@ -206,7 +206,7 @@ export default function PublicSalonDetailsEditor() {
       if (updateError) throw updateError;
 
       try {
-        await asLooseDbClient(database).rpc(
+        await asLooseSupabaseClient(supabase).rpc(
           "refresh_client_app_marketplace_cache",
           { p_id_salao: idSalao }
         );

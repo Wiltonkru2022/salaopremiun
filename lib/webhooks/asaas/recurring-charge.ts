@@ -1,4 +1,4 @@
-import type { DatabaseClient } from "@/lib/db/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   getWebhookEventOrder,
   mapAsaasStatusToInternal,
@@ -6,7 +6,7 @@ import {
 } from "@/lib/webhooks/asaas/status";
 
 export async function criarCobrancaWebhookDeAssinaturaRecorrente(params: {
-  databaseAdmin: DatabaseClient;
+  supabaseAdmin: SupabaseClient;
   asaasSubscriptionId: string;
   paymentId: string;
   payment: Record<string, unknown>;
@@ -16,7 +16,7 @@ export async function criarCobrancaWebhookDeAssinaturaRecorrente(params: {
   event: string;
   agoraIso: string;
 }) {
-  const { data: assinatura, error: assinaturaError } = await params.databaseAdmin
+  const { data: assinatura, error: assinaturaError } = await params.supabaseAdmin
     .from("assinaturas")
     .select("id, id_salao, plano, valor, asaas_subscription_id")
     .eq("asaas_subscription_id", params.asaasSubscriptionId)
@@ -26,7 +26,7 @@ export async function criarCobrancaWebhookDeAssinaturaRecorrente(params: {
     return null;
   }
 
-  const { data: existente } = await params.databaseAdmin
+  const { data: existente } = await params.supabaseAdmin
     .from("assinaturas_cobrancas")
     .select(
       "id, id_salao, id_assinatura, id_plano, valor, status, forma_pagamento, asaas_payment_id, data_expiracao, referencia, payment_date, confirmed_date, plano_origem, plano_destino, tipo_movimento, gerada_automaticamente, webhook_event_order, webhook_processed_at, asaas_status, asaas_subscription_id"
@@ -38,7 +38,7 @@ export async function criarCobrancaWebhookDeAssinaturaRecorrente(params: {
 
   const planoCodigo = String(assinatura.plano || "").trim() || null;
   const { data: plano } = planoCodigo
-    ? await params.databaseAdmin
+    ? await params.supabaseAdmin
         .from("planos_saas")
         .select("id, codigo, nome")
         .eq("codigo", planoCodigo)
@@ -61,7 +61,7 @@ export async function criarCobrancaWebhookDeAssinaturaRecorrente(params: {
     toMiddayIso(String(params.payment.confirmedDate || "")) ||
     null;
 
-  const { data: inserted, error: insertError } = await params.databaseAdmin
+  const { data: inserted, error: insertError } = await params.supabaseAdmin
     .from("assinaturas_cobrancas")
     .insert({
       id_salao: assinatura.id_salao,

@@ -1,4 +1,4 @@
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 export type ClienteProfissional = {
   id: string;
@@ -23,7 +23,7 @@ export async function listarClientesDoSalao(
   return runAdminOperation({
     action: "profissional_listar_clientes_salao",
     idSalao,
-    run: async (database) => {
+    run: async (supabase) => {
       const buscaLimpa = String(options.busca || "").trim();
       const buscaDigits = buscaLimpa.replace(/\D/g, "");
       const limit = options.limit ?? 10;
@@ -31,7 +31,7 @@ export async function listarClientesDoSalao(
       const from = page * limit;
       const to = from + limit - 1;
 
-      let query = database
+      let query = supabase
         .from("clientes")
         .select("id, nome, telefone, whatsapp, email, status, ativo")
         .eq("id_salao", idSalao)

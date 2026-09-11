@@ -1,5 +1,5 @@
 import OpenAI from "openai";
-import { createClient } from "@/lib/db/server";
+import { createClient } from "@/lib/supabase/server";
 import { requireProfissionalServerContext } from "@/lib/profissional-context.server";
 import {
   buscarOuCriarConversaSuporte,
@@ -71,12 +71,12 @@ function getOpenAI() {
 }
 
 async function profissionalTemAcessoComanda(params: {
-  database: Awaited<ReturnType<typeof createClient>>;
+  supabase: Awaited<ReturnType<typeof createClient>>;
   idSalao: string;
   idProfissional: string;
   idComanda: string;
 }) {
-  const { data, error } = await params.database
+  const { data, error } = await params.supabase
     .from("comanda_itens")
     .select("id")
     .eq("id_salao", params.idSalao)
@@ -93,12 +93,12 @@ async function profissionalTemAcessoComanda(params: {
 }
 
 async function profissionalTemAcessoCliente(params: {
-  database: Awaited<ReturnType<typeof createClient>>;
+  supabase: Awaited<ReturnType<typeof createClient>>;
   idSalao: string;
   idProfissional: string;
   idCliente: string;
 }) {
-  const { data, error } = await params.database
+  const { data, error } = await params.supabase
     .from("agendamentos")
     .select("id")
     .eq("id_salao", params.idSalao)
@@ -292,7 +292,7 @@ export function createAppProfissionalSuporteService() {
       idProfissional: string;
       contexto: AppProfissionalSuporteContexto;
     }) {
-      const database = await createClient();
+      const supabase = await createClient();
       const [
         profissionalResult,
         agendaHojeResult,
@@ -301,7 +301,7 @@ export function createAppProfissionalSuporteService() {
         vendasAnoResult,
         statusAgendamentosResult,
       ] = await Promise.all([
-        database
+        supabase
           .from("profissionais")
           .select(
             "id, nome, nome_exibicao, categoria, cargo, dias_trabalho, pausas, ativo"
@@ -309,7 +309,7 @@ export function createAppProfissionalSuporteService() {
           .eq("id", params.idProfissional)
           .eq("id_salao", params.idSalao)
           .maybeSingle(),
-        database
+        supabase
           .from("agendamentos")
           .select(
             "id, data, hora_inicio, hora_fim, status, cliente_id, servico_id, id_comanda"
@@ -319,25 +319,25 @@ export function createAppProfissionalSuporteService() {
           .eq("data", hojeISO())
           .order("hora_inicio", { ascending: true })
           .limit(10),
-        database
+        supabase
           .from("comandas")
           .select("total, status, fechada_em")
           .eq("id_salao", params.idSalao)
           .gte("fechada_em", `${inicioSemanaISO()}T00:00:00`)
           .eq("status", "fechada"),
-        database
+        supabase
           .from("comandas")
           .select("total, status, fechada_em")
           .eq("id_salao", params.idSalao)
           .gte("fechada_em", `${inicioMesISO()}T00:00:00`)
           .eq("status", "fechada"),
-        database
+        supabase
           .from("comandas")
           .select("total, status, fechada_em")
           .eq("id_salao", params.idSalao)
           .gte("fechada_em", `${inicioAnoISO()}T00:00:00`)
           .eq("status", "fechada"),
-        database
+        supabase
           .from("agendamentos")
           .select("status")
           .eq("id_salao", params.idSalao)
@@ -351,13 +351,13 @@ export function createAppProfissionalSuporteService() {
 
       if (params.contexto.idComanda) {
         const podeVerComanda = await profissionalTemAcessoComanda({
-          database,
+          supabase,
           idSalao: params.idSalao,
           idProfissional: params.idProfissional,
           idComanda: params.contexto.idComanda,
         });
         if (podeVerComanda) {
-          const { data } = await database
+          const { data } = await supabase
             .from("comandas")
             .select("id, numero, status, subtotal, desconto, acrescimo, total, id_cliente")
             .eq("id", params.contexto.idComanda)
@@ -366,7 +366,7 @@ export function createAppProfissionalSuporteService() {
           comandaAtual = buildSafeComandaContext(data ?? null);
         }
         if (comandaAtual?.id_cliente) {
-          const { data: cliente } = await database
+          const { data: cliente } = await supabase
             .from("clientes")
             .select("id, nome")
             .eq("id", comandaAtual.id_cliente)
@@ -378,7 +378,7 @@ export function createAppProfissionalSuporteService() {
       }
 
       if (params.contexto.idAgendamento) {
-        const { data } = await database
+        const { data } = await supabase
           .from("agendamentos")
           .select(
             "id, data, hora_inicio, hora_fim, status, cliente_id, servico_id, id_comanda, observacoes, duracao_minutos"
@@ -392,13 +392,13 @@ export function createAppProfissionalSuporteService() {
 
       if (params.contexto.idCliente && !clienteAtual) {
         const podeVerCliente = await profissionalTemAcessoCliente({
-          database,
+          supabase,
           idSalao: params.idSalao,
           idProfissional: params.idProfissional,
           idCliente: params.contexto.idCliente,
         });
         if (podeVerCliente) {
-          const { data } = await database
+          const { data } = await supabase
             .from("clientes")
             .select("id, nome")
             .eq("id", params.contexto.idCliente)

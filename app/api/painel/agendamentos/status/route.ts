@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { requireSalaoPermission } from "@/lib/auth/require-salao-permission";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { cancelarAgendamentoComComanda } from "@/lib/agenda/cancelarAgendamentoComComanda";
 import {
   notifyAppointmentCanceled,
@@ -58,8 +58,8 @@ export async function POST(request: Request) {
       status === "cancelado" ? "agenda_excluir" : "agenda_editar"
     );
 
-    const database = getDatabaseAdmin();
-    const { data: appointment, error: loadError } = await (database as any)
+    const supabase = getSupabaseAdmin();
+    const { data: appointment, error: loadError } = await (supabase as any)
       .from("agendamentos")
       .select(
         "id, status, sinal_status, cliente_id, profissional_id, servico_id, data, hora_inicio, hora_fim, id_comanda"
@@ -82,7 +82,7 @@ export async function POST(request: Request) {
       }
 
       await cancelarAgendamentoComComanda({
-        database: database as any,
+        supabase: supabase as any,
         idSalao: usuario.id_salao,
         idAgendamento,
       });
@@ -102,7 +102,7 @@ export async function POST(request: Request) {
           ? await buscarServicoPorId(usuario.id_salao, String(appointment.servico_id))
           : null;
         await notifyWaitlistAboutReleasedSlot({
-          databaseAdmin: database,
+          supabaseAdmin: supabase,
           releasedSlot: {
             idSalao: usuario.id_salao,
             idServico: appointment.servico_id || null,
@@ -134,7 +134,7 @@ export async function POST(request: Request) {
       }
     }
 
-    const { error: updateError } = await (database as any)
+    const { error: updateError } = await (supabase as any)
       .from("agendamentos")
       .update(patch)
       .eq("id", idAgendamento)

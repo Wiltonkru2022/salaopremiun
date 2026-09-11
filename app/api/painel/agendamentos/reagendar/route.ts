@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { requireSalaoPermission } from "@/lib/auth/require-salao-permission";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { notifyAppointmentRescheduled } from "@/lib/notification-jobs";
 import {
   buscarConfiguracaoAgendaProfissional,
@@ -61,8 +61,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const database = getDatabaseAdmin();
-    const { data: current, error: loadError } = await (database as any)
+    const supabase = getSupabaseAdmin();
+    const { data: current, error: loadError } = await (supabase as any)
       .from("agendamentos")
       .select("id, data, hora_inicio, hora_fim, profissional_id, status")
       .eq("id", idAgendamento)
@@ -96,14 +96,14 @@ export async function POST(request: Request) {
     }
 
     const [agendamentosResult, bloqueiosResult] = await Promise.all([
-      (database as any)
+      (supabase as any)
         .from("agendamentos")
         .select("id, hora_inicio, hora_fim, status")
         .eq("id_salao", usuario.id_salao)
         .eq("profissional_id", idProfissional)
         .eq("data", data)
         .neq("id", idAgendamento),
-      (database as any)
+      (supabase as any)
         .from("agenda_bloqueios")
         .select("id, hora_inicio, hora_fim")
         .eq("id_salao", usuario.id_salao)
@@ -158,7 +158,7 @@ export async function POST(request: Request) {
       patch.cliente_cancelou_em = null;
     }
 
-    const { error: updateError } = await (database as any)
+    const { error: updateError } = await (supabase as any)
       .from("agendamentos")
       .update(patch)
       .eq("id", idAgendamento)

@@ -124,10 +124,7 @@ export async function sendMetaWhatsAppTemplateMessage(
   const phoneNumberId = getMetaWhatsAppPhoneNumberId();
   const accessToken = getMetaWhatsAppAccessToken();
   const url = `${buildMetaWhatsAppApiBaseUrl()}/${phoneNumberId}/messages`;
-  const components: Array<{
-    type: string;
-    parameters: Array<{ type: string; text: string }>;
-  }> = [];
+  const components = [];
   const headerParameters = (params.headerParameters || [])
     .map(templateTextParameter)
     .filter((parameter) => parameter.text);

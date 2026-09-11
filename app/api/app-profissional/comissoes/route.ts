@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 function validDate(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -26,8 +26,8 @@ export async function GET(request: Request) {
       action: "app_profissional_pwa_comissoes",
       actorId: session.idProfissional,
       idSalao: session.idSalao,
-      run: async (database) => {
-        let query = (database as any)
+      run: async (supabase) => {
+        let query = (supabase as any)
           .from("comissoes_lancamentos")
           .select("id, id_profissional, descricao, valor_base, valor_comissao, percentual, percentual_aplicado, status, competencia, competencia_data, pago_em, criado_em")
           .eq("id_salao", session.idSalao)

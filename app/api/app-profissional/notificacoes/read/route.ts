@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { validateProfissionalAppSession } from "@/lib/profissional-context.server";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export async function POST(request: Request) {
   try {
@@ -16,8 +16,8 @@ export async function POST(request: Request) {
     }
 
     const context = validation.context;
-    const database = getDatabaseAdmin() as any;
-    const { data: notification, error: loadError } = await database
+    const supabase = getSupabaseAdmin() as any;
+    const { data: notification, error: loadError } = await supabase
       .from("notification_jobs")
       .select("id, metadata")
       .eq("id", id)
@@ -32,7 +32,7 @@ export async function POST(request: Request) {
     }
 
     const now = new Date().toISOString();
-    const { error: updateError } = await database
+    const { error: updateError } = await supabase
       .from("notification_jobs")
       .update({
         metadata: { ...(notification.metadata || {}), profissional_lida_em: now },

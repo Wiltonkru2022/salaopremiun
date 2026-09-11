@@ -3,8 +3,7 @@ import {
   assertPublicRateLimit,
   getPublicRateLimitIdentity,
 } from "@/lib/security/public-rate-limit";
-import { getDatabaseAdmin } from "@/lib/db/admin";
-import { clerkAdminApi } from "@/lib/platform/clerk-admin-api.server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -53,8 +52,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const database = getDatabaseAdmin();
-  const { data: usuario, error } = await database
+  const supabase = getSupabaseAdmin();
+  const { data: usuario, error } = await supabase
     .from("usuarios")
     .select("id, email, auth_user_id, status")
     .eq("email", email)
@@ -85,7 +84,7 @@ export async function POST(request: NextRequest) {
   }
 
   const { data: authUser, error: authError } =
-    await clerkAdminApi.getUserById(usuario.auth_user_id);
+    await supabase.auth.admin.getUserById(usuario.auth_user_id);
 
   if (authError || !authUser?.user) {
     return NextResponse.json(

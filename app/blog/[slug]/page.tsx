@@ -7,9 +7,8 @@ import { BlogFooter, BlogHeader } from "@/components/blog/BlogChrome";
 import BlogPostEngagement from "@/components/blog/BlogPostEngagement";
 import { isVideoMedia } from "@/lib/blog/media";
 import { DOMINIO_BLOG } from "@/lib/proxy/domain-config";
-import { getCadastroUrl } from "@/lib/site-urls";
 
-const CADASTRO_SALAO_URL = getCadastroUrl();
+const CADASTRO_SALAO_URL = "https://cadastro.salaopremiun.com.br/cadastro-salao";
 import { getBlogPost, getPublishedBlogPosts } from "@/lib/blog/service";
 
 type Props = {

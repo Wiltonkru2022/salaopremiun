@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireAdminTenantActor } from "@/lib/auth/tenant-guard";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { expireWhatsappPixRecargas } from "@/lib/whatsapp-creditos/expire-pix";
 
 export const dynamic = "force-dynamic";
@@ -8,7 +8,7 @@ export const dynamic = "force-dynamic";
 export async function GET() {
   try {
     const actor = await requireAdminTenantActor();
-    const database = getDatabaseAdmin() as any;
+    const supabase = getSupabaseAdmin() as any;
 
     // Ao completar 24 horas, o backend consulta o estado real no Asaas.
     // Se ainda estiver em aberto, remove a cobranca no provedor antes de
@@ -16,7 +16,7 @@ export async function GET() {
     await expireWhatsappPixRecargas({ idSalao: actor.idSalao, limit: 5 });
 
     const [recargasResult, walletResult] = await Promise.all([
-      database
+      supabase
         .from("whatsapp_creditos_recargas")
         .select(
           "id, status, valor_centavos, pago_em, creditado_em, erro_texto, criado_em, atualizado_em, expira_em"
@@ -25,7 +25,7 @@ export async function GET() {
         .in("status", ["pendente", "processando", "pago", "falhou"])
         .order("criado_em", { ascending: false })
         .limit(5),
-      database
+      supabase
         .from("whatsapp_creditos_saloes")
         .select("saldo_centavos, ultima_recarga_em")
         .eq("id_salao", actor.idSalao)

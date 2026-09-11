@@ -205,13 +205,13 @@ export default function CaixaSessaoPanel({
         <div className="flex items-start gap-3">
           <AlertTriangle className="mt-0.5 shrink-0" size={20} />
           <div>
-            <div className="font-bold">Caixa operacional ainda não configurado</div>
+            <div className="font-bold">Caixa operacional aguardando Supabase</div>
             <p className="mt-1 text-sm leading-6">
               {schemaError ||
                 "Aplique a migration de caixa operacional para liberar abertura, fechamento, sangria, suprimento e vale profissional."}
             </p>
             <p className="mt-2 text-xs font-semibold">
-              Arquivo: database/migrations/202604150001_caixa_operacional.sql
+              Arquivo: supabase/migrations/202604150001_caixa_operacional.sql
             </p>
           </div>
         </div>

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CheckCircle2, ClipboardCheck, Gift, RefreshCcw, SlidersHorizontal } from "lucide-react";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Json } from "@/types/database.generated";
 import {
   avaliarTrialExtraSalaoAdminMaster,
@@ -172,13 +172,13 @@ function TrialRuleForm({ rule }: { rule?: TrialRule }) {
 
 export default async function AdminMasterChecklistsPage() {
   await requireAdminMasterUser("produto_ver");
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
 
   const [{ data: checklistData }, { data: trialRulesData }, { data: scoresData }, { data: historyData }] = await Promise.all([
-    (database as any).from("checklist_itens").select("id, codigo, nome, descricao, ativo, ordem, peso, categoria, regra_json").order("ordem", { ascending: true }),
-    database.from("trial_extensoes_regras").select("id, nome, score_minimo, dias_extra, ativo, criado_em").order("score_minimo", { ascending: true }),
-    database.from("score_onboarding_salao").select("id, id_salao, score_total, dias_com_acesso, modulos_usados, detalhes_json, atualizado_em").order("atualizado_em", { ascending: false }).limit(12),
-    database.from("trial_extensoes_automaticas").select("id, id_salao, trial_original_fim, trial_novo_fim, score_atingido, motivo, criado_em").order("criado_em", { ascending: false }).limit(10),
+    (supabase as any).from("checklist_itens").select("id, codigo, nome, descricao, ativo, ordem, peso, categoria, regra_json").order("ordem", { ascending: true }),
+    supabase.from("trial_extensoes_regras").select("id, nome, score_minimo, dias_extra, ativo, criado_em").order("score_minimo", { ascending: true }),
+    supabase.from("score_onboarding_salao").select("id, id_salao, score_total, dias_com_acesso, modulos_usados, detalhes_json, atualizado_em").order("atualizado_em", { ascending: false }).limit(12),
+    supabase.from("trial_extensoes_automaticas").select("id, id_salao, trial_original_fim, trial_novo_fim, score_atingido, motivo, criado_em").order("criado_em", { ascending: false }).limit(10),
   ]);
 
   const checklist = (checklistData || []) as ChecklistItem[];
@@ -188,7 +188,7 @@ export default async function AdminMasterChecklistsPage() {
   const salonIds = Array.from(new Set([...scores.map((item) => item.id_salao), ...history.map((item) => item.id_salao)]));
 
   const { data: saloesData } = salonIds.length
-    ? await database.from("saloes").select("id, nome, email, plano, trial_fim_em").in("id", salonIds)
+    ? await supabase.from("saloes").select("id, nome, email, plano, trial_fim_em").in("id", salonIds)
     : { data: [] };
 
   const saloes = new Map(((saloesData || []) as SalonRow[]).map((salao) => [salao.id, salao]));

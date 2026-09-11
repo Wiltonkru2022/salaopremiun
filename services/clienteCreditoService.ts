@@ -1,6 +1,6 @@
 import { registrarLogSistema } from "@/lib/system-logs";
-import { getDatabaseAdmin } from "@/lib/db/admin";
-import { asLooseDbClient } from "@/lib/db/loose-client";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
 
 type CreditoRow = {
   saldo_anterior?: number | string | null;
@@ -23,9 +23,9 @@ export async function registrarCreditoManualCliente(params: {
   valor: number;
   observacao: string;
 }) {
-  const databaseAdmin = getDatabaseAdmin();
-  const databaseRpc = asLooseDbClient(databaseAdmin);
-  const { data: rpcData, error: rpcError } = await databaseRpc.rpc<
+  const supabaseAdmin = getSupabaseAdmin();
+  const supabaseRpc = asLooseSupabaseClient(supabaseAdmin);
+  const { data: rpcData, error: rpcError } = await supabaseRpc.rpc<
     CreditoRow | CreditoRow[] | null
   >(
     "fn_cliente_registrar_credito_manual",
@@ -51,7 +51,7 @@ export async function registrarCreditoManualCliente(params: {
     throw rpcError;
   }
 
-  const { data: cliente, error: clienteError } = await databaseAdmin
+  const { data: cliente, error: clienteError } = await supabaseAdmin
     .from("clientes")
     .select("id, cashback")
     .eq("id_salao", params.idSalao)
@@ -67,7 +67,7 @@ export async function registrarCreditoManualCliente(params: {
 
   const saldoAnterior = Number(cliente.cashback || 0);
   const saldoAtual = Math.round((saldoAnterior + params.valor) * 100) / 100;
-  const { error: updateError } = await databaseAdmin
+  const { error: updateError } = await supabaseAdmin
     .from("clientes")
     .update({
       cashback: saldoAtual,

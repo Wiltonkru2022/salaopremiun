@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { useMemo, useState } from "react";
 import { addMinutes, durationLabel, monthLabel, parseISODate, toISODate } from "../../lib/date";
-import { resolvePublicMediaUrl } from "../../lib/media";
+import { supabase } from "../../lib/supabase";
 import type { Agendamento, Cliente, Profissional, ProfissionalResumo, Servico } from "../../types/database";
 import { Button } from "../ui/Button";
 import { Card } from "../ui/Card";
@@ -155,7 +155,8 @@ export function Calendar({
   }
   function openComprovante(item: Agendamento) {
     if (!item.sinal_comprovante_path) return;
-    window.open(resolvePublicMediaUrl(item.sinal_comprovante_path), "_blank", "noopener,noreferrer");
+    const { data } = supabase.storage.from("agendamento-comprovantes").getPublicUrl(item.sinal_comprovante_path);
+    window.open(data.publicUrl, "_blank", "noopener,noreferrer");
   }
   function openReschedule(item: Agendamento) {
     setActionError(null); setRescheduleItem(item); setRescheduleDate(item.data || selectedDate); setRescheduleHour(item.hora_inicio.slice(0, 5));
@@ -282,9 +283,9 @@ export function Calendar({
 
       <Modal title="Novo agendamento" subtitle="Escolha cliente, serviço e horário." open={newOpen} onClose={() => !newSubmitting && setNewOpen(false)}>
         <div className="space-y-4">
-          {canChooseProfessional ? <Field label="Profissional"><SearchPicker value={newProfissional} onChange={setNewProfissional} options={profissionalOptions} placeholder="Selecione o profissional" hideInputWhenSelected /></Field> : null}
-          <Field label="Cliente"><SearchPicker value={newCliente} onChange={setNewCliente} options={clienteOptions} placeholder="Selecione a cliente" hideInputWhenSelected /></Field>
-          <Field label="Serviço"><SearchPicker value={newServico} onChange={setNewServico} options={servicoOptions} placeholder="Selecione o serviço" hideInputWhenSelected /></Field>
+          {canChooseProfessional ? <SearchPicker label="Profissional" value={newProfissional} onChange={(value) => { setNewProfissional(value); setNewServico(""); }} options={profissionalOptions} placeholder="Selecione o profissional" /> : null}
+          <SearchPicker label="Cliente" value={newCliente} onChange={setNewCliente} options={clienteOptions} placeholder="Selecione a cliente" />
+          <SearchPicker label="Serviço" value={newServico} onChange={setNewServico} options={servicoOptions} placeholder="Selecione o serviço" />
           <Field label="Horário"><Input type="time" value={newHora} onChange={(event) => setNewHora(event.target.value)} /></Field>
           {newError ? <div role="alert" className="rounded-2xl border border-red-200 bg-red-50 px-3 py-3 text-sm font-bold text-red-700">{newError}</div> : null}
           <ModalActionBar><Button loading={newSubmitting} onClick={async () => { if (!onCreate) return; if (!newCliente || !newServico || !newHora || (canChooseProfessional && !newProfissional)) { setNewError("Preencha todos os campos."); return; } setNewSubmitting(true); setNewError(null); try { await onCreate({ clienteId: newCliente, servicoId: newServico, data: selectedDate, horaInicio: newHora, profissionalId: canChooseProfessional ? newProfissional : profissionalAtual.id }); setNewOpen(false); setNewCliente(""); setNewServico(""); setNewProfissional(""); } catch (error) { setNewError(error instanceof Error ? error.message : "Não foi possível criar o agendamento."); } finally { setNewSubmitting(false); } }}>Salvar agendamento</Button></ModalActionBar>
@@ -304,7 +305,7 @@ export function Calendar({
             </div>
           </div>
 
-          {canChooseProfessional ? <Field label="Profissional"><SearchPicker value={blockProfissional} onChange={setBlockProfissional} options={profissionalOptions} placeholder="Selecione o profissional" hideInputWhenSelected /></Field> : null}
+          {canChooseProfessional ? <SearchPicker label="Profissional" value={blockProfissional} onChange={setBlockProfissional} options={profissionalOptions} placeholder="Selecione o profissional" /> : null}
 
           <Field label="Motivo"><Input value={blockReason} onChange={(event) => setBlockReason(event.target.value)} placeholder="Ex.: almoço, folga, compromisso" /></Field>
 

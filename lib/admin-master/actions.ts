@@ -1,4 +1,4 @@
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   captureSystemEvent,
   registrarAcaoAutomaticaSistema,
@@ -80,11 +80,11 @@ type AdminMasterAlertRow = {
 };
 
 async function loadAlertTicketLink(params: {
-  database: ReturnType<typeof getDatabaseAdmin>;
+  supabase: ReturnType<typeof getSupabaseAdmin>;
   alerta: AdminMasterAlertRow;
 }) {
   if (params.alerta.id_ticket) {
-    const { data: ticketExistente } = await params.database
+    const { data: ticketExistente } = await params.supabase
       .from("tickets")
       .select("id, numero, status")
       .eq("id", params.alerta.id_ticket)
@@ -100,7 +100,7 @@ async function loadAlertTicketLink(params: {
     }
   }
 
-  const { data: eventoExistente } = await params.database
+  const { data: eventoExistente } = await params.supabase
     .from("ticket_eventos")
     .select("id_ticket, tickets(id, numero, status)")
     .in("evento", ["alerta_vinculado", "alerta_vinculado_automaticamente"])
@@ -136,7 +136,7 @@ async function loadAlertTicketLink(params: {
         ? params.alerta.payload_json
         : {};
 
-    await params.database
+    await params.supabase
       .from("alertas_sistema")
       .update({
         id_ticket: ticketFromEvento.id,
@@ -164,11 +164,11 @@ async function criarTicketPorAlertaBase(params: {
   assumir?: boolean | null;
   automatico?: boolean | null;
 }) {
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
   const automatico = Boolean(params.automatico);
 
-  const { data: alerta, error: alertaError } = await database
+  const { data: alerta, error: alertaError } = await supabase
     .from("alertas_sistema")
     .select(
       "id, id_salao, tipo, gravidade, origem_modulo, titulo, descricao, payload_json, id_ticket"
@@ -186,7 +186,7 @@ async function criarTicketPorAlertaBase(params: {
 
   const alertaRow = alerta as AdminMasterAlertRow;
   const existingTicket = await loadAlertTicketLink({
-    database,
+    supabase,
     alerta: alertaRow,
   });
 
@@ -218,7 +218,7 @@ async function criarTicketPorAlertaBase(params: {
   const responsavelAdmin =
     automatico || params.assumir === false ? null : params.idAdmin || null;
 
-  const { data: ticketData, error: ticketError } = await database
+  const { data: ticketData, error: ticketError } = await supabase
     .from("tickets")
     .insert({
       id_salao: alertaRow.id_salao || null,
@@ -254,7 +254,7 @@ async function criarTicketPorAlertaBase(params: {
     status?: string | null;
   };
 
-  await database.from("ticket_mensagens").insert({
+  await supabase.from("ticket_mensagens").insert({
     id_ticket: ticket.id,
     autor_tipo: "admin",
     id_admin_usuario: automatico ? null : params.idAdmin || null,
@@ -263,7 +263,7 @@ async function criarTicketPorAlertaBase(params: {
     interna: true,
   });
 
-  await database.from("ticket_eventos").insert({
+  await supabase.from("ticket_eventos").insert({
     id_ticket: ticket.id,
     evento: automatico
       ? "alerta_vinculado_automaticamente"
@@ -285,7 +285,7 @@ async function criarTicketPorAlertaBase(params: {
       ? alertaRow.payload_json
       : {};
 
-  await database
+  await supabase
     .from("alertas_sistema")
     .update({
       id_ticket: ticket.id,
@@ -368,8 +368,8 @@ export async function registrarAdminMasterAuditoria(params: {
   descricao?: string | null;
   payload?: Record<string, unknown>;
 }) {
-  const database = getDatabaseAdmin();
-  await database.rpc("fn_admin_master_registrar_auditoria", {
+  const supabase = getSupabaseAdmin();
+  await supabase.rpc("fn_admin_master_registrar_auditoria", {
     p_id_admin_usuario: params.idAdmin,
     p_acao: params.acao,
     p_entidade: params.entidade,
@@ -403,15 +403,15 @@ export async function bloquearSalaoAdminMaster(params: {
   idAdmin: string;
   motivo: string;
 }) {
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
 
-  await database
+  await supabase
     .from("saloes")
     .update({ status: "bloqueado", updated_at: now })
     .eq("id", params.idSalao);
 
-  await database.from("saloes_bloqueios").insert({
+  await supabase.from("saloes_bloqueios").insert({
     id_salao: params.idSalao,
     tipo_bloqueio: "manual",
     motivo: params.motivo,
@@ -433,15 +433,15 @@ export async function desbloquearSalaoAdminMaster(params: {
   idAdmin: string;
   motivo: string;
 }) {
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
 
-  await database
+  await supabase
     .from("saloes")
     .update({ status: "ativo", updated_at: now })
     .eq("id", params.idSalao);
 
-  await database
+  await supabase
     .from("saloes_bloqueios")
     .update({ finalizado_em: now })
     .eq("id_salao", params.idSalao)
@@ -462,8 +462,8 @@ export async function trocarPlanoSalaoAdminMaster(params: {
   planoCodigo: string;
   motivo: string;
 }) {
-  const database = getDatabaseAdmin();
-  const { data: plano, error: planoError } = await database
+  const supabase = getSupabaseAdmin();
+  const { data: plano, error: planoError } = await supabase
     .from("planos_saas")
     .select("codigo, valor_mensal, limite_usuarios, limite_profissionais")
     .eq("codigo", params.planoCodigo)
@@ -483,13 +483,13 @@ export async function trocarPlanoSalaoAdminMaster(params: {
   const now = new Date().toISOString();
   const status = statusForPlano(planoRow.codigo);
 
-  const { data: assinaturaAtual } = await database
+  const { data: assinaturaAtual } = await supabase
     .from("assinaturas")
     .select("id, vencimento_em")
     .eq("id_salao", params.idSalao)
     .maybeSingle();
 
-  await database
+  await supabase
     .from("saloes")
     .update({
       plano: planoRow.codigo,
@@ -515,7 +515,7 @@ export async function trocarPlanoSalaoAdminMaster(params: {
   };
 
   if (assinaturaAtual?.id) {
-    await database
+    await supabase
       .from("assinaturas")
       .update({
         status,
@@ -531,7 +531,7 @@ export async function trocarPlanoSalaoAdminMaster(params: {
       })
       .eq("id", assinaturaAtual.id);
   } else {
-    await database.from("assinaturas").insert({
+    await supabase.from("assinaturas").insert({
       ...assinaturaPayload,
       created_at: now,
     });
@@ -555,7 +555,7 @@ export async function ajustarVencimentoSalaoAdminMaster(params: {
   vencimentoEm: string;
   motivo: string;
 }) {
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
   const hoje = new Date();
   hoje.setHours(0, 0, 0, 0);
@@ -563,7 +563,7 @@ export async function ajustarVencimentoSalaoAdminMaster(params: {
   const vencimentoFuturo =
     !Number.isNaN(vencimento.getTime()) && vencimento.getTime() >= hoje.getTime();
 
-  const { data: assinaturaAtual } = await database
+  const { data: assinaturaAtual } = await supabase
     .from("assinaturas")
     .select("id, plano, status")
     .eq("id_salao", params.idSalao)
@@ -572,7 +572,7 @@ export async function ajustarVencimentoSalaoAdminMaster(params: {
   const deveAtivar = vencimentoFuturo && planoAtual && planoAtual !== "teste_gratis";
 
   if (assinaturaAtual?.id) {
-    await database
+    await supabase
       .from("assinaturas")
       .update({
         vencimento_em: params.vencimentoEm,
@@ -581,7 +581,7 @@ export async function ajustarVencimentoSalaoAdminMaster(params: {
       })
       .eq("id", assinaturaAtual.id);
   } else {
-    await database.from("assinaturas").insert({
+    await supabase.from("assinaturas").insert({
       id_salao: params.idSalao,
       plano: "basico",
       status: vencimentoFuturo ? "ativo" : "vencida",
@@ -593,7 +593,7 @@ export async function ajustarVencimentoSalaoAdminMaster(params: {
   }
 
   if (deveAtivar) {
-    await database
+    await supabase
       .from("saloes")
       .update({ status: "ativo", updated_at: now })
       .eq("id", params.idSalao);
@@ -620,9 +620,9 @@ export async function criarNotaSalaoAdminMaster(params: {
   titulo: string;
   nota: string;
 }) {
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
 
-  await database.from("admin_master_anotacoes_salao").insert({
+  await supabase.from("admin_master_anotacoes_salao").insert({
     id_salao: params.idSalao,
     id_admin_usuario: params.idAdmin,
     titulo: params.titulo,
@@ -644,12 +644,12 @@ export async function resolverAlertaAdminMaster(params: {
   idAdmin: string;
   motivo?: string | null;
 }) {
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
   const motivo =
     normalizeText(params.motivo) || "Resolvido manualmente pelo AdminMaster.";
 
-  const { data: alerta, error: alertaError } = await database
+  const { data: alerta, error: alertaError } = await supabase
     .from("alertas_sistema")
     .select("id, id_salao, tipo, titulo, resolvido, id_ticket, payload_json")
     .eq("id", params.idAlerta)
@@ -678,7 +678,7 @@ export async function resolverAlertaAdminMaster(params: {
       ? alertaRow.payload_json
       : {};
 
-  const { error: updateError } = await database
+  const { error: updateError } = await supabase
     .from("alertas_sistema")
     .update({
       resolvido: true,
@@ -699,7 +699,7 @@ export async function resolverAlertaAdminMaster(params: {
   }
 
   if (alertaRow.id_ticket) {
-    await database.from("ticket_eventos").insert({
+    await supabase.from("ticket_eventos").insert({
       id_ticket: alertaRow.id_ticket,
       evento: "alerta_resolvido",
       descricao: motivo,
@@ -762,10 +762,10 @@ export async function criarTicketPorCheckoutLockAdminMaster(params: {
   mensagem?: string | null;
   assumir?: boolean | null;
 }) {
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
 
-  const { data: lock, error: lockError } = await database
+  const { data: lock, error: lockError } = await supabase
     .from("assinatura_checkout_locks")
     .select(
       "id, id_salao, plano_codigo, billing_type, valor, idempotency_key, status, id_cobranca, asaas_payment_id, erro_texto, response_json, payload_json, created_at, updated_at"
@@ -805,7 +805,7 @@ export async function criarTicketPorCheckoutLockAdminMaster(params: {
   const ticketPayloadId = payloadAtual.ticket_id;
 
   if (typeof ticketPayloadId === "string" && ticketPayloadId) {
-    const { data: ticketExistente } = await database
+    const { data: ticketExistente } = await supabase
       .from("tickets")
       .select("id, numero, status")
       .eq("id", ticketPayloadId)
@@ -821,7 +821,7 @@ export async function criarTicketPorCheckoutLockAdminMaster(params: {
     }
   }
 
-  const { data: eventoExistente } = await database
+  const { data: eventoExistente } = await supabase
     .from("ticket_eventos")
     .select("id_ticket, tickets(id, numero, status)")
     .eq("evento", "checkout_reconciliacao_vinculada")
@@ -865,7 +865,7 @@ export async function criarTicketPorCheckoutLockAdminMaster(params: {
       .filter(Boolean)
       .join("\n");
 
-  const { data: ticketData, error: ticketError } = await database
+  const { data: ticketData, error: ticketError } = await supabase
     .from("tickets")
     .insert({
       id_salao: lockRow.id_salao || null,
@@ -901,7 +901,7 @@ export async function criarTicketPorCheckoutLockAdminMaster(params: {
     status?: string | null;
   };
 
-  await database.from("ticket_mensagens").insert({
+  await supabase.from("ticket_mensagens").insert({
     id_ticket: ticket.id,
     autor_tipo: "admin",
     autor_nome: "AdminMaster",
@@ -910,7 +910,7 @@ export async function criarTicketPorCheckoutLockAdminMaster(params: {
     interna: true,
   });
 
-  await database.from("ticket_eventos").insert({
+  await supabase.from("ticket_eventos").insert({
     id_ticket: ticket.id,
     evento: "checkout_reconciliacao_vinculada",
     descricao: "Ticket criado para reconciliar checkout de assinatura.",
@@ -929,7 +929,7 @@ export async function criarTicketPorCheckoutLockAdminMaster(params: {
     } as Json,
   });
 
-  await database
+  await supabase
     .from("assinatura_checkout_locks")
     .update({
       payload_json: {
@@ -974,7 +974,7 @@ export async function criarTicketSalaoAdminMaster(params: {
   prioridade?: string | null;
   categoria?: string | null;
 }) {
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
   const assunto = normalizeText(params.assunto);
   const mensagem = normalizeText(params.mensagem);
@@ -989,7 +989,7 @@ export async function criarTicketSalaoAdminMaster(params: {
     origem: "saloes",
   });
 
-  const { data: ticketData, error: ticketError } = await database
+  const { data: ticketData, error: ticketError } = await supabase
     .from("tickets")
     .insert({
       id_salao: params.idSalao,
@@ -1023,7 +1023,7 @@ export async function criarTicketSalaoAdminMaster(params: {
     status?: string | null;
   };
 
-  await database.from("ticket_mensagens").insert({
+  await supabase.from("ticket_mensagens").insert({
     id_ticket: ticket.id,
     autor_tipo: "admin",
     id_admin_usuario: params.idAdmin,
@@ -1032,7 +1032,7 @@ export async function criarTicketSalaoAdminMaster(params: {
     interna: true,
   });
 
-  await database.from("ticket_eventos").insert({
+  await supabase.from("ticket_eventos").insert({
     id_ticket: ticket.id,
     evento: "ticket_aberto_admin_master",
     descricao: "Ticket aberto manualmente pelo detalhe do salao no AdminMaster.",

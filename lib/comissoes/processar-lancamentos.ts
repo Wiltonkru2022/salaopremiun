@@ -1,4 +1,4 @@
-import type { DatabaseClient } from "@/lib/db/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 export type ProcessarComissoesAcao = "marcar_pago" | "cancelar";
 
@@ -38,12 +38,12 @@ export function resolveComissoesHttpStatus(error: unknown) {
 }
 
 export async function processarLancamentosComissao(params: {
-  databaseAdmin: DatabaseClient;
+  supabaseAdmin: SupabaseClient;
   idSalao: string;
   ids: string[];
   acao: ProcessarComissoesAcao;
 }) {
-  const { data, error } = await params.databaseAdmin.rpc(
+  const { data, error } = await params.supabaseAdmin.rpc(
     "fn_processar_comissoes_lancamentos",
     {
       p_id_salao: params.idSalao,

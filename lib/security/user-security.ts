@@ -1,4 +1,4 @@
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type SecurityTipoUsuario = "cliente" | "salao" | "profissional";
 
@@ -165,8 +165,8 @@ async function getSecurityRowByUserId(
   tipoUsuario: SecurityTipoUsuario,
   userId: string
 ) {
-  const databaseAdmin = getDatabaseAdmin();
-  const { data, error } = await databaseAdmin
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data, error } = await supabaseAdmin
     .from("user_security_status")
     .select(
       "user_id, tipo_usuario, status, motivo, risco_atual, bloqueado_ate, verificacao_necessaria, criado_em, atualizado_em"
@@ -183,8 +183,8 @@ async function getSecurityRowByUserId(
 }
 
 async function getSalaoSecurityRow(idSalao: string) {
-  const databaseAdmin = getDatabaseAdmin();
-  const { data, error } = await databaseAdmin
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data, error } = await supabaseAdmin
     .from("saloes")
     .select("id, status_seguranca, motivo_seguranca, bloqueado_ate, status")
     .eq("id", idSalao)

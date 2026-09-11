@@ -1,11 +1,13 @@
 import { RefreshCw } from "lucide-react";
-import { lazy, Suspense, useEffect, useMemo, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Capacitor } from "@capacitor/core";
 import { ptBR } from "../../../core/i18n/pt-BR";
 import { AppShell, type View } from "./components/layout/AppShell";
 import { isNativeProfessionalApp } from "./components/PushPermissionButton";
 import { Button } from "./components/ui/Button";
 import { Card } from "./components/ui/Card";
 import { ProfessionalPartnerAdPopup } from "./components/ProfessionalPartnerAdPopup";
+import { LogoReveal } from "./components/LogoReveal";
 import { useAuth } from "./contexts/AuthContext";
 import { useProfissionalData } from "./hooks/useProfissionalData";
 import { toISODate } from "./lib/date";
@@ -90,9 +92,10 @@ function RouteFallback() {
   );
 }
 
-export function App() {
+function AppContent() {
   const { profissional, loading: authLoading } = useAuth();
   const [view, setView] = useState<View>("inicio");
+  const viewHistory = useRef<View[]>([]);
   const [selectedDate, setSelectedDate] = useState(toISODate(new Date()));
   const data = useProfissionalData(
     profissional?.id,
@@ -103,6 +106,18 @@ export function App() {
   );
   const unreadNotifications = data.notificacoes.filter((item) => !item.lida).length;
   const refreshData = data.refresh;
+
+  const navigateTo = useCallback((nextView: View) => {
+    setView((currentView) => {
+      if (currentView !== nextView) viewHistory.current.push(currentView);
+      return nextView;
+    });
+  }, []);
+
+  const navigateFromNativeUrl = useCallback((url: string) => {
+    navigateTo(url.includes("/agenda") ? "agenda" : "notificacoes");
+    void refreshData();
+  }, [navigateTo, refreshData]);
 
   useEffect(() => {
     if (!profissional || !isNativeProfessionalApp()) return;
@@ -116,8 +131,7 @@ export function App() {
 
       void PushNotifications.addListener("pushNotificationActionPerformed", (event) => {
         const url = String(event.notification.data?.url || "");
-        setView(url.includes("/agenda") ? "agenda" : "notificacoes");
-        void refreshData();
+        navigateFromNativeUrl(url);
       }).then((handle) => {
         if (active) {
           actionHandle = handle;
@@ -142,7 +156,40 @@ export function App() {
       if (actionHandle) void actionHandle.remove().catch(() => undefined);
       if (receivedHandle) void receivedHandle.remove().catch(() => undefined);
     };
-  }, [refreshData, profissional]);
+  }, [navigateFromNativeUrl, profissional]);
+
+  useEffect(() => {
+    if (!profissional || !Capacitor.isNativePlatform()) return;
+
+    let active = true;
+    let handle: { remove: () => Promise<void> } | null = null;
+
+    const onNavigate = (event: Event) => {
+      const url = String((event as CustomEvent<{ url?: string }>).detail?.url || "");
+      if (url) navigateFromNativeUrl(url);
+    };
+    window.addEventListener("sp:professional:navigate", onNavigate);
+
+    void import("@capacitor/app").then(({ App: NativeApp }) => {
+      void NativeApp.addListener("backButton", () => {
+        const previous = viewHistory.current.pop();
+        if (previous) {
+          setView(previous);
+          return;
+        }
+        void NativeApp.exitApp();
+      }).then((nextHandle) => {
+        if (active) handle = nextHandle;
+        else void nextHandle.remove().catch(() => undefined);
+      });
+    }).catch(() => undefined);
+
+    return () => {
+      active = false;
+      window.removeEventListener("sp:professional:navigate", onNavigate);
+      if (handle) void handle.remove().catch(() => undefined);
+    };
+  }, [navigateFromNativeUrl, profissional]);
 
   const subtitle = useMemo(() => {
     if (view === "agenda") {
@@ -186,7 +233,7 @@ export function App() {
   return (
     <AppShell
       view={view}
-      setView={setView}
+      setView={navigateTo}
       title={titles[view]}
       subtitle={subtitle || ""}
       unreadNotifications={unreadNotifications}
@@ -231,7 +278,7 @@ export function App() {
             clientes={data.clientes}
             servicos={data.servicos}
             comandas={data.comandas}
-            goTo={setView}
+            goTo={navigateTo}
           />
         ) : null}
         {view === "agenda" ? (
@@ -258,6 +305,7 @@ export function App() {
         {view === "servicos" ? (
           <ServicosPage
             servicos={data.servicos}
+            profissionalId={profissional.id}
             onSave={data.actions.salvarServico}
             onEdit={data.actions.editarServico}
           />
@@ -293,5 +341,14 @@ export function App() {
         {view === "privacidade" ? <PrivacidadePage /> : null}
       </Suspense>
     </AppShell>
+  );
+}
+
+export function App() {
+  return (
+    <>
+      <LogoReveal />
+      <AppContent />
+    </>
   );
 }

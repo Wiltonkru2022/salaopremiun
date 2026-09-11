@@ -1,5 +1,6 @@
-﻿import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { getCacheSavedAt, readCache, writeCache } from "../lib/cache";
+import { supabase } from "../lib/supabase";
 import {
   trackProfessionalDuration,
   trackProfessionalProductivity,
@@ -224,13 +225,40 @@ export function useProfissionalData(
   useEffect(() => {
     if (!profissionalId) return;
 
-    const syncAgenda = () => {
-      if (document.visibilityState === "hidden" || !navigator.onLine) return;
-      void refresh();
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleAgendaRefresh = () => {
+      if (document.visibilityState === "hidden") return;
+      if (refreshTimer) clearTimeout(refreshTimer);
+      refreshTimer = setTimeout(() => void refresh(), 1800);
     };
+    const channel = supabase.channel(
+      `salaopremium-agenda-${profissionalId}-${podeVerAgendaTodos ? "todos" : "proprio"}`
+    );
 
-    const intervalId = window.setInterval(syncAgenda, 15_000);
-    return () => window.clearInterval(intervalId);
+    if (podeVerAgendaTodos) {
+      channel.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "agendamentos" },
+        scheduleAgendaRefresh
+      );
+    } else {
+      channel.on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "agendamentos",
+          filter: `profissional_id=eq.${profissionalId}`,
+        },
+        scheduleAgendaRefresh
+      );
+    }
+    channel.subscribe();
+
+    return () => {
+      if (refreshTimer) clearTimeout(refreshTimer);
+      void supabase.removeChannel(channel);
+    };
   }, [profissionalId, podeVerAgendaTodos, refresh]);
 
   useEffect(() => {
@@ -427,13 +455,16 @@ export function useProfissionalData(
       payload: Pick<Servico, "nome" | "preco" | "duracao_minutos" | "descricao">
     ) {
       if (!profissionalId) return;
-      await protectedMutation("editar_servico", {
+      const result = await protectedMutation<{ ok: true; updated?: boolean }>("editar_servico", {
         servicoId: id,
         nome: payload.nome,
         preco: payload.preco,
         duracaoMinutos: payload.duracao_minutos,
         descricao: payload.descricao || null,
       });
+      if (result.updated === false) {
+        throw new Error("O serviço não foi alterado no banco. Atualize a tela e tente novamente.");
+      }
       await refresh();
     }
 

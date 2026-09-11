@@ -13,7 +13,7 @@ import {
   upsertGoogleCalendarEvent,
 } from "@/lib/google-calendar/oauth";
 import { getSalonTimeZone } from "@/lib/salon-timezone.server";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { localTimeToUtc } from "@/lib/timezones";
 
 const payloadSchema = z.object({
@@ -149,8 +149,8 @@ export async function POST(req: NextRequest) {
     }
 
     const period = getPeriod(body.viewMode, body.data);
-    const database = getDatabaseAdmin();
-    const { data, error } = await (database as any)
+    const supabase = getSupabaseAdmin();
+    const { data, error } = await (supabase as any)
       .from("agendamentos")
       .select(
         "id, data, hora_inicio, hora_fim, observacoes, status, google_calendar_event_id, clientes(nome, whatsapp), profissionais(nome, nome_exibicao), servicos(nome, preco)"
@@ -205,7 +205,7 @@ export async function POST(req: NextRequest) {
         event: buildGoogleEvent(row, timeZone),
       });
 
-      const { error: updateError } = await (database as any)
+      const { error: updateError } = await (supabase as any)
         .from("agendamentos")
         .update({
           google_calendar_event_id: eventId,

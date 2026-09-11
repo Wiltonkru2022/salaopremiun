@@ -37,38 +37,46 @@ function run(command, args, extraEnv = {}) {
 }
 
 const nodeBin = process.execPath;
-const npmExecPath = String(process.env.npm_execpath || "").trim();
+const npmBin = process.platform === "win32" ? "npm.cmd" : "npm";
 const nextBin = "./node_modules/next/dist/bin/next";
 const typecheckScript = "./scripts/run-typecheck.mjs";
 const prepareClientHeroScript = "./scripts/prepare-client-hero-video.mjs";
 const professionalAppDir = "apps/app-profissional-vite";
 
-async function runNpm(args) {
-  // Quando este script e iniciado por `npm run`, o npm disponibiliza o caminho
-  // do seu CLI em npm_execpath. Executa-lo pelo mesmo Node evita o `spawn EINVAL`
-  // de arquivos .cmd no Windows sem habilitar shell:true.
-  if (npmExecPath) {
-    await run(nodeBin, [npmExecPath, ...args]);
-    return;
-  }
+const supabasePublicKey = String(
+  process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY ||
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ||
+    ""
+).trim();
 
-  if (process.platform === "win32") {
-    await run(process.env.ComSpec || "cmd.exe", ["/d", "/s", "/c", "npm", ...args]);
-    return;
-  }
-
-  await run("npm", args);
-}
+// O Next e o Vite podem compartilhar a publishable key do Supabase. Mantemos
+// VITE_SUPABASE_ANON_KEY como alias durante a migracao para nao quebrar bundles
+// antigos, mas o valor preferido e VITE_SUPABASE_PUBLISHABLE_KEY.
+const professionalAppEnv = {
+  VITE_SUPABASE_URL: String(
+    process.env.VITE_SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || ""
+  ).trim(),
+  VITE_SUPABASE_PUBLISHABLE_KEY: supabasePublicKey,
+  VITE_SUPABASE_ANON_KEY: supabasePublicKey,
+};
 
 // Reconstrua o vídeo estático do hero antes do Next build. O arquivo final fica
 // em public/ e é servido diretamente pelo app cliente.
 await run(nodeBin, [prepareClientHeroScript]);
 
 // O app profissional e um Vite/PWA independente servido a partir de
-// public/app-profissional. Dados e autenticacao passam pelas APIs do produto;
-// o bundle nao recebe credenciais de banco.
+// public/app-profissional. Sempre gere esse bundle antes do Next build para
+// impedir que a Vercel publique fontes novos com assets antigos ja commitados.
 if (process.env.SKIP_PROFESSIONAL_BUILD !== "1") {
-  await runNpm([
+  if (!professionalAppEnv.VITE_SUPABASE_URL || !supabasePublicKey) {
+    throw new Error(
+      "Build do app profissional exige NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY (ou os aliases VITE_SUPABASE_* / *_ANON_KEY)."
+    );
+  }
+
+  await run(npmBin, [
     "ci",
     "--prefix",
     professionalAppDir,
@@ -76,7 +84,11 @@ if (process.env.SKIP_PROFESSIONAL_BUILD !== "1") {
     "--no-audit",
     "--no-fund",
   ]);
-  await runNpm(["--prefix", professionalAppDir, "run", "build"]);
+  await run(
+    npmBin,
+    ["--prefix", professionalAppDir, "run", "build"],
+    professionalAppEnv
+  );
 }
 
 if (process.env.SKIP_PREBUILD_TYPECHECK !== "1") {

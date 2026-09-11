@@ -46,14 +46,14 @@ import {
   buildSalaoPublicUrl,
   normalizeSalaoSlug,
 } from "@/lib/saloes/public-link";
-import { createClient } from "@/lib/db/client";
-import { asLooseDbClient } from "@/lib/db/loose-client";
+import { createClient } from "@/lib/supabase/client";
+import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
 
 import type { PasswordForm, ModalKey, TotpFactor, MfaSnapshot, TotpSetupState, PortfolioFoto, GoogleCalendarConnectionState, GoogleLoginConnectionState, SalaoProfileRow } from "./perfil-salao-support";
 import { EMPTY_PASSWORD, EMPTY_MFA_SNAPSHOT, formatAddress, formatDateTime, formatPaymentMethods, serializePaymentMethods, parseCoordinate, buscarCoordenadasEndereco, DisplayItem, SidebarAction } from "./perfil-salao-support";
 
 export default function PerfilSalaoPage() {
-  const database = createClient();
+  const supabase = createClient();
   const router = useRouter();
   const searchParams = useSearchParams();
   const { snapshot: painelSession } = usePainelSession();
@@ -180,15 +180,25 @@ export default function PerfilSalaoPage() {
     try {
       setLoadingMfa(true);
 
-      const snapshot = await callMfaApi();
-      const fator = snapshot.factorActive
-        ? ({ id: "clerk-totp", factor_type: "totp", status: "verified" } as TotpFactor)
-        : null;
+      const [
+        { data: factorData, error: factorError },
+        { data: aalData },
+        snapshot,
+      ] = await Promise.all([
+        supabase.auth.mfa.listFactors(),
+        supabase.auth.mfa.getAuthenticatorAssuranceLevel(),
+        callMfaApi(),
+      ]);
+
+      if (factorError) throw factorError;
+
+      const fator = (factorData?.totp?.[0] ?? null) as TotpFactor | null;
       setTotpFactor(fator);
       setMfaSnapshot({
         factorActive: Boolean(snapshot.factorActive),
         currentLevel:
-          (snapshot.currentLevel as "aal1" | "aal2" | null | undefined) ?? null,
+          (aalData?.currentLevel as "aal1" | "aal2" | null | undefined) ??
+          null,
         backupCodesRemaining: Number(snapshot.backupCodesRemaining || 0),
         backupCodesLockedUntil:
           String(snapshot.backupCodesLockedUntil || "") || null,
@@ -206,7 +216,7 @@ export default function PerfilSalaoPage() {
     } finally {
       setLoadingMfa(false);
     }
-  }, [callMfaApi]);
+  }, [callMfaApi, supabase]);
 
   const carregarPortfolio = useCallback(async () => {
     try {
@@ -324,7 +334,7 @@ export default function PerfilSalaoPage() {
 
       setIdSalao(painelSession.idSalao);
 
-      const { data, error } = await database
+      const { data, error } = await supabase
         .from("saloes")
         .select(
           "id, nome, responsavel, email, telefone, cpf_cnpj, endereco, numero, bairro, cidade, estado, cep, logo_url, plano, status, descricao_publica, foto_capa_url, latitude, longitude, estacionamento, formas_pagamento_publico, app_cliente_publicado, app_cliente_pausado, app_cliente_pausa_mensagem, app_cliente_slug"
@@ -402,7 +412,7 @@ export default function PerfilSalaoPage() {
     carregarGoogleLogin,
     carregarMfa,
     carregarPortfolio,
-    database,
+    supabase,
     painelSession,
   ]);
 
@@ -438,6 +448,16 @@ export default function PerfilSalaoPage() {
   }, [googleCalendarStatus, googleLoginStatus, loading]);
 
   async function fecharModalAutenticador() {
+    if (totpSetup?.factorId && !autenticadorAtivo) {
+      try {
+        await supabase.auth.mfa.unenroll({
+          factorId: totpSetup.factorId,
+        });
+      } catch (error) {
+        console.warn("Não foi possível limpar enrolamento pendente:", error);
+      }
+    }
+
     setTotpSetup(null);
     setSetupCode("");
     setManageCode("");
@@ -518,7 +538,7 @@ export default function PerfilSalaoPage() {
         // Navegadores privados podem bloquear storage; o logout ainda continua.
       }
 
-      await database.auth.signOut({ scope: "local" });
+      await supabase.auth.signOut({ scope: "local" });
       router.replace("/salao-excluido");
     } catch (error) {
       setErro(
@@ -583,7 +603,7 @@ export default function PerfilSalaoPage() {
         updated_at: new Date().toISOString(),
       };
 
-      const { error } = await database
+      const { error } = await supabase
         .from("saloes")
         .update(payload)
         .eq("id", idSalao);
@@ -591,7 +611,7 @@ export default function PerfilSalaoPage() {
       if (error) throw error;
 
       try {
-        await asLooseDbClient(database).rpc("refresh_client_app_marketplace_cache", {
+        await asLooseSupabaseClient(supabase).rpc("refresh_client_app_marketplace_cache", {
           p_id_salao: idSalao,
         });
       } catch {
@@ -880,7 +900,34 @@ export default function PerfilSalaoPage() {
       setErro("");
       setMsg("");
 
-      window.location.assign("/conta?returnTo=/perfil-salao");
+      const callbackUrl = new URL("/auth/callback", window.location.origin);
+      callbackUrl.searchParams.set(
+        "next",
+        "/perfil-salao?google_login=connected"
+      );
+
+      const { data, error } = await supabase.auth.linkIdentity({
+        provider: "google",
+        options: {
+          redirectTo: callbackUrl.toString(),
+          queryParams: {
+            access_type: "offline",
+            prompt: "select_account",
+          },
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      if (data?.url) {
+        window.location.assign(data.url);
+        return;
+      }
+
+      setMsg("Login com Google já está vinculado nesta conta.");
+      await carregarGoogleLogin();
     } catch (error) {
       setErro(
         error instanceof Error
@@ -950,9 +997,30 @@ export default function PerfilSalaoPage() {
       throw new Error("Nenhum autenticador ativo foi encontrado.");
     }
 
-    void code;
-    window.location.assign("/conta?returnTo=/perfil-salao");
-    throw new Error("Confirme o autenticador na área de segurança da sua conta.");
+    const { data: challengeData, error: challengeError } =
+      await supabase.auth.mfa.challenge({
+        factorId,
+      });
+
+    if (challengeError) {
+      throw challengeError;
+    }
+
+    const challengeId = (challengeData as { id?: string } | null)?.id || "";
+
+    if (!challengeId) {
+      throw new Error("Não foi possível iniciar a verificacao do autenticador.");
+    }
+
+    const { error: verifyError } = await supabase.auth.mfa.verify({
+      factorId,
+      challengeId,
+      code: code.trim(),
+    });
+
+    if (verifyError) {
+      throw verifyError;
+    }
   }
 
   async function validarSegundoFatorParaSenha() {
@@ -1004,7 +1072,16 @@ export default function PerfilSalaoPage() {
       const podeSeguir = await validarSegundoFatorParaSenha();
       if (!podeSeguir) return;
 
-      window.location.assign("/conta?returnTo=/perfil-salao");
+      const { error } = await supabase.auth.updateUser({
+        password: passwordForm.novaSenha,
+      });
+
+      if (error) throw error;
+
+      setPasswordForm(EMPTY_PASSWORD);
+      setMsg("Senha da conta administradora atualizada com sucesso.");
+      setActiveModal(null);
+      await carregarMfa();
     } catch (error: unknown) {
       setErro(error instanceof Error ? error.message : "Erro ao trocar senha.");
     } finally {
@@ -1019,7 +1096,28 @@ export default function PerfilSalaoPage() {
       setMsg("");
       setRevealedBackupCodes([]);
 
-      window.location.assign("/conta?returnTo=/perfil-salao");
+      const { data, error } = await supabase.auth.mfa.enroll({
+        factorType: "totp",
+        friendlyName: `Administrador ${perfilForm.nome || "Salão Premium"}`,
+      });
+
+      if (error) throw error;
+
+      const payload = data as {
+        id?: string;
+        totp?: { qr_code?: string; secret?: string };
+      } | null;
+
+      if (!payload?.id || !payload.totp?.qr_code || !payload.totp?.secret) {
+        throw new Error("Não foi possível preparar o autenticador.");
+      }
+
+      setTotpSetup({
+        factorId: payload.id,
+        qrCode: payload.totp.qr_code,
+        secret: payload.totp.secret,
+      });
+      setSetupCode("");
     } catch (error: unknown) {
       setErro(
         error instanceof Error
@@ -1125,7 +1223,7 @@ export default function PerfilSalaoPage() {
         method: "aal2",
       });
 
-      await database.auth.signOut({ scope: "local" });
+      await supabase.auth.signOut({ scope: "local" });
       router.push("/login?motivo=autenticador_desativado");
     } catch (error: unknown) {
       setErro(
@@ -1155,7 +1253,7 @@ export default function PerfilSalaoPage() {
         backupCode: disableBackupCode.trim(),
       });
 
-      await database.auth.signOut({ scope: "local" });
+      await supabase.auth.signOut({ scope: "local" });
       router.push("/login?motivo=autenticador_desativado");
     } catch (error: unknown) {
       setErro(
@@ -2258,7 +2356,7 @@ export default function PerfilSalaoPage() {
         open={activeModal === "senha"}
         onClose={() => setActiveModal(null)}
         title="Trocar senha da conta"
-        description="A senha da conta administradora é atualizada na área segura da conta."
+        description="A senha da conta administradora e atualizada no Supabase Auth."
         eyebrow="Seguranca"
         maxWidthClassName="max-w-xl"
         footer={

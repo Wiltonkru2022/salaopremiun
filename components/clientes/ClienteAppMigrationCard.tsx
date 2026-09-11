@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 
 type MigrationStatus = {
   loading: boolean;
@@ -12,7 +12,7 @@ type MigrationStatus = {
 };
 
 export default function ClienteAppMigrationCard({ clienteId }: { clienteId: string }) {
-  const database = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => createClient(), []);
   const [status, setStatus] = useState<MigrationStatus>({
     loading: true,
     connected: false,
@@ -32,13 +32,13 @@ export default function ClienteAppMigrationCard({ clienteId }: { clienteId: stri
       try {
         setStatus((prev) => ({ ...prev, loading: true, error: null }));
         const [clienteResult, authResult] = await Promise.all([
-          database
+          supabase
             .from("clientes")
             .select("cpf, data_nascimento")
             .eq("id", clienteId)
             .limit(1)
             .maybeSingle(),
-          database
+          supabase
             .from("clientes_auth")
             .select("app_conta_id, app_ativo")
             .eq("id_cliente", clienteId)
@@ -76,7 +76,7 @@ export default function ClienteAppMigrationCard({ clienteId }: { clienteId: stri
     return () => {
       cancelled = true;
     };
-  }, [clienteId, database]);
+  }, [clienteId, supabase]);
 
   const label = status.loading
     ? "Verificando status..."

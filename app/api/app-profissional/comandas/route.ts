@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 function validDate(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -36,12 +36,12 @@ export async function GET(request: Request) {
       action: "app_profissional_pwa_comandas",
       actorId: session.idProfissional,
       idSalao: session.idSalao,
-      run: async (database) => {
+      run: async (supabase) => {
         const startIso = `${range.start}T00:00:00.000Z`;
         const endIso = `${range.end}T23:59:59.999Z`;
 
         const [commandResult, ownItemsResult, clientsResult] = await Promise.all([
-          (database as any)
+          (supabase as any)
             .from("comandas")
             .select("id, numero, id_cliente, status, observacoes, subtotal, desconto, total, aberta_em, fechada_em")
             .eq("id_salao", session.idSalao)
@@ -51,7 +51,7 @@ export async function GET(request: Request) {
             .limit(500),
           session.podeVerAgendaTodos
             ? Promise.resolve({ data: [], error: null })
-            : (database as any)
+            : (supabase as any)
                 .from("comanda_itens")
                 .select("id_comanda")
                 .eq("id_salao", session.idSalao)
@@ -60,7 +60,7 @@ export async function GET(request: Request) {
                 .gte("created_at", startIso)
                 .lte("created_at", endIso)
                 .limit(1000),
-          (database as any)
+          (supabase as any)
             .from("clientes")
             .select("id, nome")
             .eq("id_salao", session.idSalao)
@@ -87,7 +87,7 @@ export async function GET(request: Request) {
 
         let items: Array<Record<string, any>> = [];
         if (commandIds.length) {
-          const itemsResult = await (database as any)
+          const itemsResult = await (supabase as any)
             .from("comanda_itens")
             .select("id, id_comanda, id_servico, tipo_item, tipo, descricao, quantidade, valor_unitario, valor_total, id_profissional, ativo")
             .eq("id_salao", session.idSalao)

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import MigrationCampaignList, { type MigrationClientRow } from "@/components/client-app/admin/MigrationCampaignList";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const metadata = { title: "Migração do App Cliente" };
 
@@ -25,8 +25,8 @@ export default async function ClienteMigrationCampaignPage({
   const params = searchParams ? await searchParams : undefined;
   const clienteFiltro = String(params?.cliente || "").trim();
 
-  const database = getDatabaseAdmin();
-  const { data: rows, error } = await database
+  const supabase = getSupabaseAdmin();
+  const { data: rows, error } = await supabase
     .from("clientes")
     .select("id, nome, whatsapp, telefone, email, cpf, data_nascimento, status, ativo")
     .eq("id_salao", usuario.id_salao)
@@ -48,7 +48,7 @@ export default async function ClienteMigrationCampaignPage({
 
   const ids = candidates.map((row) => row.id);
   const { data: authRows } = ids.length
-    ? await database
+    ? await supabase
         .from("clientes_auth")
         .select("id_cliente, app_conta_id, app_ativo")
         .eq("id_salao", usuario.id_salao)

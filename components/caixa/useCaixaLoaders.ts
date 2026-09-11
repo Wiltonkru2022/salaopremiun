@@ -33,16 +33,16 @@ import {
   type CaixaSessao,
 } from "@/lib/caixa/sessaoCaixa";
 import { monitorClientOperation } from "@/lib/monitoring/client";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import { getErrorMessage } from "@/components/caixa/useCaixaApi";
 
-type CaixaDatabaseClient = ReturnType<typeof createClient>;
+type CaixaSupabaseClient = ReturnType<typeof createClient>;
 type StateSetter<T> = Dispatch<SetStateAction<T>>;
 
 type CaixaRouter = { replace: (href: string) => void };
 
 type UseCaixaLoadersParams = {
-  database: CaixaDatabaseClient;
+  supabase: CaixaSupabaseClient;
   router: CaixaRouter;
   idSalao: string;
   requestedComandaId: string | null;
@@ -78,7 +78,7 @@ type UseCaixaLoadersParams = {
 type AplicarDetalheComandaOptions = { silent?: boolean; canApply?: () => boolean };
 
 export function useCaixaLoaders({
-  database, router, idSalao, requestedComandaId, setLoading, setErroTela, setMsg,
+  supabase, router, idSalao, requestedComandaId, setLoading, setErroTela, setMsg,
   setIdSalao, setPermissoes, setAcessoCarregado, setConfigCaixa, setCaixaSchemaReady,
   setCaixaSchemaError, setSessaoCaixa, setUltimaSessaoFechadaCaixa, setMovimentacoesCaixa,
   setAba, setComandasFila, setAgendamentosFila, setComandasFechadas, setComandasCanceladas,
@@ -101,7 +101,7 @@ export function useCaixaLoaders({
           module: "caixa", action: "carregar_detalhe_comanda", screen: "caixa", entity: "comanda", entityId: idComanda,
           successMessage: "Detalhe da comanda carregado com sucesso.", errorMessage: "Falha ao carregar detalhe da comanda.",
         },
-        () => carregarComandaDetalhe(database, idComanda)
+        () => carregarComandaDetalhe(supabase, idComanda)
       );
       if (options.canApply && !options.canApply()) return;
       setComandaSelecionada(detalhe.comandaSelecionada);
@@ -112,70 +112,70 @@ export function useCaixaLoaders({
     } finally {
       if (!options.silent) setComandaCarregandoId((current) => current === idComanda ? null : current);
     }
-  }, [database, setComandaSelecionada, setComandaCarregandoId, setItens, setPagamentos, setDescontoInput, setAcrescimoInput]);
+  }, [supabase, setComandaSelecionada, setComandaCarregandoId, setItens, setPagamentos, setDescontoInput, setAcrescimoInput]);
 
   const carregarAcesso = useCallback(async () => {
-    const acesso = await carregarAcessoCaixa(database, painelSession);
+    const acesso = await carregarAcessoCaixa(supabase, painelSession);
     if (acesso.precisaLogin) { router.replace("/login"); return null; }
     setPermissoes(acesso.permissoes);
     setAcessoCarregado(true);
     if (!acesso.permissoes.caixa_ver) { router.replace("/dashboard"); return null; }
     return acesso;
-  }, [router, database, setPermissoes, setAcessoCarregado, painelSession]);
+  }, [router, supabase, setPermissoes, setAcessoCarregado, painelSession]);
 
   const carregarConfiguracoesCaixa = useCallback(async (salaoIdParam?: string) => {
     const salaoId = salaoIdParam || idSalao;
     if (!salaoId) return;
-    const config = await carregarConfiguracoesCaixaOtimizada(database, salaoId);
+    const config = await carregarConfiguracoesCaixaOtimizada(supabase, salaoId);
     setConfigCaixa(config);
-  }, [idSalao, database, setConfigCaixa]);
+  }, [idSalao, supabase, setConfigCaixa]);
 
   const carregarSessaoOperacional = useCallback(async (salaoIdParam?: string) => {
     const salaoId = salaoIdParam || idSalao;
     if (!salaoId) return;
-    const resultado = await carregarSessaoCaixa(database, salaoId);
+    const resultado = await carregarSessaoCaixa(supabase, salaoId);
     setCaixaSchemaReady(resultado.schemaReady);
     setCaixaSchemaError(resultado.error || "");
     setSessaoCaixa(resultado.sessao);
     setUltimaSessaoFechadaCaixa(resultado.ultimaSessaoFechada);
     setMovimentacoesCaixa(resultado.movimentacoes);
-  }, [idSalao, database, setCaixaSchemaReady, setCaixaSchemaError, setSessaoCaixa, setUltimaSessaoFechadaCaixa, setMovimentacoesCaixa]);
+  }, [idSalao, supabase, setCaixaSchemaReady, setCaixaSchemaError, setSessaoCaixa, setUltimaSessaoFechadaCaixa, setMovimentacoesCaixa]);
 
   const carregarCatalogos = useCallback(async (salaoIdParam?: string) => {
     const salaoId = salaoIdParam || idSalao;
     if (!salaoId) return;
-    const catalogos = await carregarCatalogosCaixaOtimizado(database, salaoId);
+    const catalogos = await carregarCatalogosCaixaOtimizado(supabase, salaoId);
     setServicosCatalogo(catalogos.servicosCatalogo);
     setProdutosCatalogo(catalogos.produtosCatalogo);
     setExtrasCatalogo(catalogos.extrasCatalogo);
     setProfissionaisCatalogo(catalogos.profissionaisCatalogo);
-  }, [idSalao, database, setServicosCatalogo, setProdutosCatalogo, setExtrasCatalogo, setProfissionaisCatalogo]);
+  }, [idSalao, supabase, setServicosCatalogo, setProdutosCatalogo, setExtrasCatalogo, setProfissionaisCatalogo]);
 
   const carregarTudo = useCallback(async (salaoIdParam?: string) => {
     const salaoId = salaoIdParam || idSalao;
     if (!salaoId) return;
-    const listas = await carregarListasCaixa(database, salaoId);
+    const listas = await carregarListasCaixa(supabase, salaoId);
     setComandasFila(listas.comandasFila);
     setAgendamentosFila(listas.agendamentosFila);
     setComandasFechadas(listas.comandasFechadas);
     setComandasCanceladas(listas.comandasCanceladas);
-  }, [idSalao, database, setComandasFila, setAgendamentosFila, setComandasFechadas, setComandasCanceladas]);
+  }, [idSalao, supabase, setComandasFila, setAgendamentosFila, setComandasFechadas, setComandasCanceladas]);
 
   const carregarFilaOperacional = useCallback(async (salaoIdParam?: string) => {
     const salaoId = salaoIdParam || idSalao;
     if (!salaoId) return;
-    const listas = await carregarFilaOperacionalCaixa(database, salaoId);
+    const listas = await carregarFilaOperacionalCaixa(supabase, salaoId);
     setComandasFila(listas.comandasFila);
     setAgendamentosFila(listas.agendamentosFila);
-  }, [idSalao, database, setComandasFila, setAgendamentosFila]);
+  }, [idSalao, supabase, setComandasFila, setAgendamentosFila]);
 
   const carregarHistorico = useCallback(async (salaoIdParam?: string) => {
     const salaoId = salaoIdParam || idSalao;
     if (!salaoId) return;
-    const listas = await carregarHistoricoCaixa(database, salaoId);
+    const listas = await carregarHistoricoCaixa(supabase, salaoId);
     setComandasFechadas(listas.comandasFechadas);
     setComandasCanceladas(listas.comandasCanceladas);
-  }, [idSalao, database, setComandasCanceladas, setComandasFechadas]);
+  }, [idSalao, supabase, setComandasCanceladas, setComandasFechadas]);
 
   const init = useCallback(async () => {
     try {

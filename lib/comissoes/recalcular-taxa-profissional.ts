@@ -2,7 +2,7 @@ import {
   AuthzError,
   requireSalaoPermission,
 } from "@/lib/auth/require-salao-permission";
-import type { DatabaseClient } from "@/lib/db/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 type ConfigRow = {
   repassa_taxa_cliente?: boolean | null;
@@ -110,11 +110,11 @@ export async function validarPermissaoRecalculoComissao(idSalao: string) {
 }
 
 export async function recalcularTaxaProfissional(params: {
-  databaseAdmin: DatabaseClient;
+  supabaseAdmin: SupabaseClient;
   idSalao: string;
   idComanda: string;
 }) {
-  const { databaseAdmin, idSalao, idComanda } = params;
+  const { supabaseAdmin, idSalao, idComanda } = params;
 
   const [
     { data: config, error: configError },
@@ -122,26 +122,26 @@ export async function recalcularTaxaProfissional(params: {
     { data: itens, error: itensError },
     { data: comissoes, error: comissoesError },
   ] = await Promise.all([
-    databaseAdmin
+    supabaseAdmin
       .from("configuracoes_salao")
       .select("repassa_taxa_cliente, desconta_taxa_profissional")
       .eq("id_salao", idSalao)
       .maybeSingle(),
 
-    databaseAdmin
+    supabaseAdmin
       .from("comanda_pagamentos")
       .select("taxa_maquininha_valor")
       .eq("id_salao", idSalao)
       .eq("id_comanda", idComanda),
 
-    databaseAdmin
+    supabaseAdmin
       .from("comanda_itens")
       .select("id, base_calculo_aplicada, desconta_taxa_maquininha_aplicada")
       .eq("id_salao", idSalao)
       .eq("id_comanda", idComanda)
       .eq("ativo", true),
 
-    databaseAdmin
+    supabaseAdmin
       .from("comissoes_lancamentos")
       .select("competencia, competencia_data, criado_em, descricao, id, id_agendamento, id_assistente, id_comanda, id_comanda_item, id_profissional, id_salao, observacoes, origem_percentual, pago_em, percentual, percentual_aplicado, status, tipo_destinatario, tipo_profissional, updated_at, valor_base, valor_comissao, valor_comissao_assistente")
       .eq("id_salao", idSalao)
@@ -241,7 +241,7 @@ export async function recalcularTaxaProfissional(params: {
         0
       );
 
-      const { error: updateError } = await databaseAdmin
+      const { error: updateError } = await supabaseAdmin
         .from("comissoes_lancamentos")
         .update({
           valor_comissao: valorFinalComissao,

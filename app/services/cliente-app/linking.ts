@@ -1,4 +1,4 @@
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   normalizeClienteEmail,
   normalizeCpf,
@@ -73,7 +73,7 @@ function uniqueClienteRows(rows: ClienteManualLinkRow[]) {
 }
 
 export async function findClienteRowsByCpf(params: {
-  databaseAdmin: any;
+  supabaseAdmin: any;
   cpf: string;
   idSalao?: string | null;
   limit?: number;
@@ -81,7 +81,7 @@ export async function findClienteRowsByCpf(params: {
   const cpf = normalizeCpf(params.cpf);
   if (!cpf) return { data: [] as ClienteManualLinkRow[], error: null as unknown };
 
-  let query = params.databaseAdmin
+  let query = params.supabaseAdmin
     .from("clientes")
     .select("id, id_salao, telefone, whatsapp, cpf, data_nascimento")
     .eq("cpf", cpf);
@@ -94,7 +94,7 @@ export async function findClienteRowsByCpf(params: {
 }
 
 export async function findClienteRowsByNormalizedPhone(params: {
-  databaseAdmin: any;
+  supabaseAdmin: any;
   telefone: string;
   idSalao?: string | null;
   limit?: number;
@@ -102,7 +102,7 @@ export async function findClienteRowsByNormalizedPhone(params: {
   const telefone = normalizeClienteAppPhone(params.telefone);
   if (!telefone) return { data: [] as ClienteManualLinkRow[], error: null as unknown };
 
-  let query = params.databaseAdmin
+  let query = params.supabaseAdmin
     .from("clientes")
     .select("id, id_salao, telefone, whatsapp, cpf, data_nascimento")
     .or(`telefone.eq.${telefone},whatsapp.eq.${telefone}`);
@@ -119,7 +119,7 @@ export async function findClienteRowsByNormalizedPhone(params: {
   );
   if (exactRows.length) return { data: exactRows, error: null as unknown };
 
-  let fallback = params.databaseAdmin
+  let fallback = params.supabaseAdmin
     .from("clientes")
     .select("id, id_salao, telefone, whatsapp, cpf, data_nascimento")
     .or("telefone.not.is.null,whatsapp.not.is.null");
@@ -140,7 +140,7 @@ export async function findClienteRowsByNormalizedPhone(params: {
 }
 
 async function upsertClienteAuthLink(params: {
-  databaseAdmin: any;
+  supabaseAdmin: any;
   account: ClienteAppLinkAccount;
   idSalao: string;
   idCliente: string;
@@ -152,7 +152,7 @@ async function upsertClienteAuthLink(params: {
   const cpf = normalizeCpf(params.account.cpf);
   const now = new Date().toISOString();
 
-  const clienteUpdate = await params.databaseAdmin
+  const clienteUpdate = await params.supabaseAdmin
     .from("clientes")
     .update({
       nome: String(params.account.nome || "").trim() || "Cliente SalãoPremium",
@@ -169,7 +169,7 @@ async function upsertClienteAuthLink(params: {
     .eq("id_salao", params.idSalao);
   if (clienteUpdate.error) return false;
 
-  const { data: existing } = await params.databaseAdmin
+  const { data: existing } = await params.supabaseAdmin
     .from("clientes_auth")
     .select("id")
     .eq("id_salao", params.idSalao)
@@ -177,7 +177,7 @@ async function upsertClienteAuthLink(params: {
     .limit(1);
 
   if (existing?.[0]?.id) {
-    const { error } = await params.databaseAdmin
+    const { error } = await params.supabaseAdmin
       .from("clientes_auth")
       .update({
         app_conta_id: params.account.id,
@@ -190,7 +190,7 @@ async function upsertClienteAuthLink(params: {
     return !error;
   }
 
-  const { error } = await params.databaseAdmin.from("clientes_auth").insert({
+  const { error } = await params.supabaseAdmin.from("clientes_auth").insert({
     id_salao: params.idSalao,
     id_cliente: params.idCliente,
     app_conta_id: params.account.id,
@@ -210,8 +210,8 @@ export async function syncClienteAppLinksByIdentity(params: {
   return runAdminOperation({
     action: "cliente_app_sync_links_by_identity",
     actorId: idConta,
-    run: async (databaseAdmin): Promise<ClienteAppLinkSummary> => {
-      const { data: accountRow, error } = await (databaseAdmin as any)
+    run: async (supabaseAdmin): Promise<ClienteAppLinkSummary> => {
+      const { data: accountRow, error } = await (supabaseAdmin as any)
         .from("clientes_app_auth")
         .select("id, nome, email, telefone, whatsapp, cpf, data_nascimento, senha_hash, ativo")
         .eq("id", idConta)
@@ -224,7 +224,7 @@ export async function syncClienteAppLinksByIdentity(params: {
       const whatsapp = normalizeClienteAppPhone(account.whatsapp || account.telefone);
 
       if (cpf) {
-        const byCpf = await findClienteRowsByCpf({ databaseAdmin, cpf });
+        const byCpf = await findClienteRowsByCpf({ supabaseAdmin, cpf });
         if (byCpf.error) return { matched: 0, linked: 0 };
 
         if (byCpf.data.length) {
@@ -232,7 +232,7 @@ export async function syncClienteAppLinksByIdentity(params: {
           for (const row of byCpf.data) {
             if (
               await upsertClienteAuthLink({
-                databaseAdmin,
+                supabaseAdmin,
                 account,
                 idSalao: String(row.id_salao),
                 idCliente: String(row.id),
@@ -246,7 +246,7 @@ export async function syncClienteAppLinksByIdentity(params: {
         // cujo CPF esteja vazio ou seja o mesmo CPF da conta para evitar mistura de pessoas.
         if (whatsapp) {
           const byPhone = await findClienteRowsByNormalizedPhone({
-            databaseAdmin,
+            supabaseAdmin,
             telefone: whatsapp,
           });
           if (byPhone.error) return { matched: 0, linked: 0 };
@@ -260,7 +260,7 @@ export async function syncClienteAppLinksByIdentity(params: {
           for (const row of safeRows) {
             if (
               await upsertClienteAuthLink({
-                databaseAdmin,
+                supabaseAdmin,
                 account,
                 idSalao: String(row.id_salao),
                 idCliente: String(row.id),
@@ -278,7 +278,7 @@ export async function syncClienteAppLinksByIdentity(params: {
       // para UMA única ficha, pois não há um identificador forte para desempatar.
       if (!whatsapp) return { matched: 0, linked: 0 };
       const found = await findClienteRowsByNormalizedPhone({
-        databaseAdmin,
+        supabaseAdmin,
         telefone: whatsapp,
       });
       if (found.error || found.data.length !== 1) {
@@ -287,7 +287,7 @@ export async function syncClienteAppLinksByIdentity(params: {
 
       const row = found.data[0];
       const linked = await upsertClienteAuthLink({
-        databaseAdmin,
+        supabaseAdmin,
         account,
         idSalao: String(row.id_salao),
         idCliente: String(row.id),

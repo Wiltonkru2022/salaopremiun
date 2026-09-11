@@ -31,7 +31,7 @@ A classificação e retenção devem considerar finalidade, necessidade e acesso
 
 ### Painel
 
-Neon Auth + `usuarios` + `id_salao` + permissões.
+Supabase Auth + `usuarios` + `id_salao` + permissões.
 
 ### App Cliente
 
@@ -66,7 +66,7 @@ A antiga UI de editor de imagens, assets e endpoint Pexels foram removidos. A mi
 
 ## Critério de aceite
 
-- `npm run audit:admin-database-access` passa;
+- `npm run audit:service-role` passa;
 - `npm run audit:api-guards` passa;
 - teste multi-tenant bloqueia cruzamento;
 - logs não contêm segredo/senha;

@@ -1,4 +1,4 @@
-import type { DatabaseClient } from "@/lib/db/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 
 type RecargaWhatsappRow = {
   id: string;
@@ -64,7 +64,7 @@ function getPagamentoConfirmadoEm(payment: Record<string, unknown>, agoraIso: st
 }
 
 export async function processarWebhookRecargaWhatsapp(params: {
-  databaseAdmin: DatabaseClient;
+  supabaseAdmin: SupabaseClient;
   paymentId: string;
   payment: Record<string, unknown>;
   paymentStatus: string | null;
@@ -82,7 +82,7 @@ export async function processarWebhookRecargaWhatsapp(params: {
     };
   }
 
-  const { data: recarga, error: recargaError } = await params.databaseAdmin
+  const { data: recarga, error: recargaError } = await params.supabaseAdmin
     .from("whatsapp_creditos_recargas")
     .select("id, id_salao, status, valor_centavos")
     .eq("id", recargaId)
@@ -111,7 +111,7 @@ export async function processarWebhookRecargaWhatsapp(params: {
 
   if (!pagamentoConfirmado) {
     const proximoStatus = mapRecargaStatus(params.paymentStatus, params.event);
-    const { error: updateError } = await params.databaseAdmin
+    const { error: updateError } = await params.supabaseAdmin
       .from("whatsapp_creditos_recargas")
       .update({
         status: proximoStatus,
@@ -142,7 +142,7 @@ export async function processarWebhookRecargaWhatsapp(params: {
     };
   }
 
-  const { error: processingError } = await params.databaseAdmin
+  const { error: processingError } = await params.supabaseAdmin
     .from("whatsapp_creditos_recargas")
     .update({
       status: "processando",
@@ -160,7 +160,7 @@ export async function processarWebhookRecargaWhatsapp(params: {
   const valorCentavos = Math.max(Number(recargaRow.valor_centavos || 0), 0);
 
   try {
-    const rpcResult = await params.databaseAdmin.rpc(
+    const rpcResult = await params.supabaseAdmin.rpc(
       "fn_whatsapp_creditos_registrar_recarga",
       {
         p_id_salao: recargaRow.id_salao,
@@ -172,7 +172,7 @@ export async function processarWebhookRecargaWhatsapp(params: {
 
     if (rpcResult.error) throw rpcResult.error;
 
-    const { error: extraError } = await params.databaseAdmin
+    const { error: extraError } = await params.supabaseAdmin
       .from("saloes_recursos_extras")
       .upsert(
         {
@@ -190,7 +190,7 @@ export async function processarWebhookRecargaWhatsapp(params: {
     if (extraError) throw extraError;
 
     const creditadoEm = new Date().toISOString();
-    const { error: paidError } = await params.databaseAdmin
+    const { error: paidError } = await params.supabaseAdmin
       .from("whatsapp_creditos_recargas")
       .update({
         status: "pago",
@@ -215,7 +215,7 @@ export async function processarWebhookRecargaWhatsapp(params: {
         ? cause.message
         : "Falha ao liberar os creditos da recarga WhatsApp.";
 
-    await params.databaseAdmin
+    await params.supabaseAdmin
       .from("whatsapp_creditos_recargas")
       .update({
         status: "falhou",

@@ -7,7 +7,7 @@ import {
   buildWebhookMirrorKey,
   formatWebhookDate,
 } from "@/lib/admin-master/webhooks-sync";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 function prettyJson(value: unknown) {
   return JSON.stringify(value || {}, null, 2);
@@ -48,18 +48,18 @@ export default async function AdminMasterWebhookDetailPage({
     notFound();
   }
 
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const mirrorKey = buildWebhookMirrorKey(sourceId);
 
   const [{ data: webhook }, { data: espelho }] = await Promise.all([
-    database
+    supabase
       .from("asaas_webhook_eventos")
       .select(
         "id, evento, payment_id, payment_status, status_processamento, tentativas, erro_mensagem, payload, primeiro_recebido_em, ultimo_recebido_em, processado_em, id_salao, id_assinatura, id_cobranca, event_order, decisao"
       )
       .eq("id", sourceId)
       .maybeSingle(),
-    database
+    supabase
       .from("eventos_webhook")
       .select(
         "id, status, payload_json, resposta_json, erro_texto, tentativas, recebido_em, processado_em"

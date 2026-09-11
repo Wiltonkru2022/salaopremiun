@@ -5,7 +5,9 @@ const config: CapacitorConfig = {
   appName: "Salão Premiun Profissional",
   webDir: "www",
   server: {
-    url: "https://app.salaopremiun.com.br/app-profissional/",
+    // Os arquivos compilados do Vite ficam dentro do APK. Nunca apontar esta
+    // configuração para o site, pois isso transforma o aplicativo em navegador.
+    androidScheme: "https",
     cleartext: false
   },
   android: {

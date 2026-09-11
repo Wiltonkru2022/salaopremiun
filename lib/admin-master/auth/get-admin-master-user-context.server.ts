@@ -1,6 +1,6 @@
 import "server-only";
 import { unstable_cache } from "next/cache";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type AdminMasterUserContext = {
   id: string;
@@ -8,8 +8,8 @@ export type AdminMasterUserContext = {
 
 const getCachedAdminMasterUserContext = unstable_cache(
   async (authUserId: string): Promise<AdminMasterUserContext> => {
-    const database = getDatabaseAdmin();
-    const { data, error } = await database
+    const supabaseAdmin = getSupabaseAdmin();
+    const { data, error } = await supabaseAdmin
       .from("admin_master_usuarios")
       .select("id")
       .eq("auth_user_id", authUserId)

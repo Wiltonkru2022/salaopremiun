@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Json } from "@/types/database.generated";
 
 type DeletedSalonRow = {
@@ -46,8 +46,8 @@ function formText(formData: FormData, key: string) {
 }
 
 async function carregarSalaoExcluido(id: string) {
-  const database = getDatabaseAdmin();
-  const { data, error } = await (database as any)
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await (supabase as any)
     .from("reativar_salao")
     .select(DELETED_SALON_COLUMNS)
     .eq("id", id)
@@ -73,7 +73,7 @@ export async function restaurarSalaoExcluidoAdminMaster(formData: FormData) {
     throw new Error("Informe o registro que será restaurado.");
   }
 
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const row = await carregarSalaoExcluido(id);
   const metadata = metadataObject(row.metadata);
   const now = new Date().toISOString();
@@ -82,7 +82,7 @@ export async function restaurarSalaoExcluidoAdminMaster(formData: FormData) {
   let salaExistente = false;
 
   if (row.id_salao_original) {
-    const { data: existente } = await (database as any)
+    const { data: existente } = await (supabase as any)
       .from("saloes")
       .select("id")
       .eq("id", row.id_salao_original)
@@ -120,7 +120,7 @@ export async function restaurarSalaoExcluidoAdminMaster(formData: FormData) {
       insertPayload.id = row.id_salao_original;
     }
 
-    const { data: restaurado, error: insertError } = await (database as any)
+    const { data: restaurado, error: insertError } = await (supabase as any)
       .from("saloes")
       .insert(insertPayload)
       .select("id")
@@ -144,7 +144,7 @@ export async function restaurarSalaoExcluidoAdminMaster(formData: FormData) {
     restauracao_motivo: motivo || null,
   } satisfies Record<string, Json>;
 
-  const { error: updateError } = await (database as any)
+  const { error: updateError } = await (supabase as any)
     .from("reativar_salao")
     .update({ metadata: updatedMetadata })
     .eq("id", id);
@@ -181,7 +181,7 @@ export async function manterSalaoExcluidoAdminMaster(formData: FormData) {
     throw new Error("Informe o registro que será mantido como excluído.");
   }
 
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const row = await carregarSalaoExcluido(id);
   const metadata = metadataObject(row.metadata);
   const now = new Date().toISOString();
@@ -194,7 +194,7 @@ export async function manterSalaoExcluidoAdminMaster(formData: FormData) {
     mantido_excluido_motivo: motivo || null,
   } satisfies Record<string, Json>;
 
-  const { error } = await (database as any)
+  const { error } = await (supabase as any)
     .from("reativar_salao")
     .update({ metadata: updatedMetadata })
     .eq("id", id);

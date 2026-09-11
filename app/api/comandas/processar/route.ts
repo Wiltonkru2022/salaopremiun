@@ -16,7 +16,7 @@ import {
   assertProdutosModuloAtivo,
   SalaoOperationalStateError,
 } from "@/lib/saloes/operational-state";
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 import {
   parseProcessarComandaInput,
   processarComandaUseCase,
@@ -99,9 +99,9 @@ export async function POST(req: NextRequest) {
         await runAdminOperation({
           action: "api_comandas_processar_report_incident",
           idSalao,
-          run: async (databaseAdmin) => {
+          run: async (supabaseAdmin) => {
             await reportOperationalIncident({
-              databaseAdmin,
+              supabaseAdmin,
               key: `comandas:processar:${acao || "desconhecida"}:${idSalao}`,
               module: "comandas",
               title: "Processamento de comanda falhou",

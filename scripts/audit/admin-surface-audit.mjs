@@ -12,9 +12,9 @@ const CODE_EXTENSIONS = new Set([
   ".cjs",
 ]);
 const SEARCH_TERMS = [
-  "getDatabaseAdmin(",
-  "NEON_ADMIN_DATABASE_URL",
-  "admin_database_access",
+  "getSupabaseAdmin(",
+  "SUPABASE_SERVICE_ROLE_KEY",
+  "service_role",
   "runAdminOperation(",
 ];
 
@@ -91,11 +91,11 @@ for (const item of report) {
   console.log(item.file);
   for (const hit of item.hits) {
     console.log(`  [L${hit.line}] ${hit.term} :: ${hit.excerpt}`);
-    if (hit.term === "getDatabaseAdmin(") directAdminCount += 1;
+    if (hit.term === "getSupabaseAdmin(") directAdminCount += 1;
     if (hit.term === "runAdminOperation(") runAdminCount += 1;
     if (
-      hit.term === "NEON_ADMIN_DATABASE_URL" ||
-      hit.term === "admin_database_access"
+      hit.term === "SUPABASE_SERVICE_ROLE_KEY" ||
+      hit.term === "service_role"
     ) {
       envKeyCount += 1;
     }
@@ -104,13 +104,13 @@ for (const item of report) {
 }
 
 console.log("Resumo:");
-console.log(` - usos diretos de getDatabaseAdmin(): ${directAdminCount}`);
+console.log(` - usos diretos de getSupabaseAdmin(): ${directAdminCount}`);
 console.log(` - usos de runAdminOperation(): ${runAdminCount}`);
 console.log(` - referencias a service role/chave: ${envKeyCount}`);
 console.log("");
 
 if (directAdminCount > 0) {
   console.error(
-    "Atencao: ainda existem usos diretos de getDatabaseAdmin(). Avalie migrar para runAdminOperation()."
+    "Atencao: ainda existem usos diretos de getSupabaseAdmin(). Avalie migrar para runAdminOperation()."
   );
 }

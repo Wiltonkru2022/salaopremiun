@@ -1,4 +1,4 @@
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 export type ComandaResumo = {
   id: string;
@@ -34,13 +34,13 @@ export async function listarComandasProfissional(
     action: "profissional_listar_comandas",
     actorId: idProfissional,
     idSalao,
-    run: async (database) => {
+    run: async (supabase) => {
       const limit = options.limit ?? 10;
       const page = Math.max(0, options.page ?? 0);
       const from = page * limit;
       const to = from + limit - 1;
 
-      const { data: agendamentos, error: agendamentosError } = await database
+      const { data: agendamentos, error: agendamentosError } = await supabase
         .from("agendamentos")
         .select("id_comanda")
         .eq("id_salao", idSalao)
@@ -67,7 +67,7 @@ export async function listarComandasProfissional(
         return [];
       }
 
-      const { data: comandas, error: comandasError } = await database
+      const { data: comandas, error: comandasError } = await supabase
         .from("comandas")
         .select("id, numero, status, total, id_cliente")
         .eq("id_salao", idSalao)
@@ -89,7 +89,7 @@ export async function listarComandasProfissional(
       let clientesMap = new Map<string, string>();
 
       if (clienteIds.length) {
-        const { data: clientes, error: clientesError } = await database
+        const { data: clientes, error: clientesError } = await supabase
           .from("clientes")
           .select("id, nome")
           .eq("id_salao", idSalao)

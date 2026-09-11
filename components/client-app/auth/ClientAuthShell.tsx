@@ -25,7 +25,7 @@ export default function ClientAuthShell({
             <div className="flex min-w-0 items-center justify-center gap-2.5">
               <span className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-zinc-950 shadow-sm">
                 <img
-                  src="/favicon-preview.png"
+                  src="/brand-logo-v2.png"
                   alt=""
                   className="h-full w-full object-cover"
                 />

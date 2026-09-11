@@ -4,8 +4,7 @@ import {
   requireSalaoPermission,
 } from "@/lib/auth/require-salao-permission";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
-import { getDatabaseAdmin } from "@/lib/db/admin";
-import { clerkAdminApi } from "@/lib/platform/clerk-admin-api.server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 
@@ -14,7 +13,7 @@ type ExcluirSalaoPayload = {
   motivo?: string;
 };
 
-type DatabaseRpcError = {
+type SupabaseRpcError = {
   code?: string;
   message?: string;
   details?: string | null;
@@ -53,9 +52,9 @@ export async function POST(request: Request) {
       { allowedNiveis: ["admin"] }
     );
 
-    const databaseAdmin = getDatabaseAdmin();
+    const supabaseAdmin = getSupabaseAdmin();
     const { data: painelAuthUsers, error: painelAuthUsersError } =
-      await databaseAdmin
+      await supabaseAdmin
         .from("usuarios")
         .select("auth_user_id, email")
         .eq("id_salao", membership.usuario.id_salao)
@@ -84,7 +83,7 @@ export async function POST(request: Request) {
       )
     );
 
-    const { data, error } = await (databaseAdmin as any).rpc(
+    const { data, error } = await (supabaseAdmin as any).rpc(
       "excluir_salao_definitivo",
       {
         p_id_salao: membership.usuario.id_salao,
@@ -95,7 +94,7 @@ export async function POST(request: Request) {
     );
 
     if (error) {
-      const rpcError = error as DatabaseRpcError;
+      const rpcError = error as SupabaseRpcError;
       const debugId = crypto.randomUUID();
       console.error("Erro ao excluir salao definitivamente:", {
         debugId,
@@ -115,7 +114,7 @@ export async function POST(request: Request) {
           debugId,
           debug: {
             code: rpcError.code || null,
-            message: "Não foi possível excluir os dados do salão.",
+            message: rpcError.message || "Erro sem mensagem do Supabase.",
             details: rpcError.details || null,
             hint: rpcError.hint || null,
           },
@@ -126,7 +125,7 @@ export async function POST(request: Request) {
 
     const authDeleteResults = await Promise.all(
       authUsersToDelete.map(async (authUserId) => {
-        const result = await clerkAdminApi.deleteUser(authUserId);
+        const result = await supabaseAdmin.auth.admin.deleteUser(authUserId);
         return {
           authUserId,
           ok: !result.error,

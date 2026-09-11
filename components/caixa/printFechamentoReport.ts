@@ -1,4 +1,4 @@
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import type { CaixaSessao } from "@/lib/caixa/sessaoCaixa";
 
 type FechamentoReportParams = {
@@ -217,10 +217,10 @@ export async function imprimirRelatorioFechamentoCaixa(
 ) {
   if (typeof window === "undefined") return;
 
-  const database = createClient();
+  const supabase = createClient();
   const { idSalao, sessao, valorFechamento, observacoes } = params;
 
-  const { data: movimentos, error: movimentosError } = await database
+  const { data: movimentos, error: movimentosError } = await supabase
     .from("caixa_movimentacoes")
     .select("id, id_comanda, forma_pagamento, valor, created_at, tipo, descricao")
     .eq("id_salao", idSalao)
@@ -254,7 +254,7 @@ export async function imprimirRelatorioFechamentoCaixa(
 
   let comandas: ComandaResumo[] = [];
   if (comandasIds.length) {
-    const { data: comandasData, error: comandasError } = await database
+    const { data: comandasData, error: comandasError } = await supabase
       .from("comandas")
       .select("id, numero, total, fechada_em, clientes(nome)")
       .in("id", comandasIds);

@@ -1,5 +1,5 @@
 import type { AdminSectionData, AdminTableRow } from "@/lib/admin-master/data";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 function formatDate(value?: string | null) {
   if (!value) return "Sem limite";
@@ -26,8 +26,8 @@ function partnerName(value: unknown) {
 }
 
 export async function getAdvertisingCampaignsSection(): Promise<AdminSectionData> {
-  const database = getDatabaseAdmin() as any;
-  const { data, error } = await database
+  const supabase = getSupabaseAdmin() as any;
+  const { data, error } = await supabase
     .from("parceria_campanhas")
     .select(
       "id,id_parceiro,nome,descricao,status,publico,locais_exibicao,destino_url,inicio_em,fim_em,origem,prioridade,criado_em,parceiros_comerciais(razao_social,nome_fantasia),parceria_criativos(id,ativo)"
@@ -109,7 +109,7 @@ export async function getAdvertisingCampaignsSection(): Promise<AdminSectionData
         tone: "blue",
       },
       {
-        label: "Carga no Neon",
+        label: "Carga no Supabase",
         value: "Baixa",
         detail: "Uma consulta limitada traz campanha, anunciante e contagem de criativos para esta visão administrativa.",
         tone: "green",

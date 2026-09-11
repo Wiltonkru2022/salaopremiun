@@ -1,12 +1,12 @@
 import { processarLancamentosComissao } from "@/lib/comissoes/processar-lancamentos";
 import { registrarLogSistema } from "@/lib/system-logs";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
-type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
+type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
 export type ProcessarComissoesAcao = "marcar_pago" | "cancelar";
 
 export function createComissaoService(
-  databaseAdmin: DatabaseAdminClient = getDatabaseAdmin()
+  supabaseAdmin: SupabaseAdminClient = getSupabaseAdmin()
 ) {
   return {
     processarLancamentos(params: {
@@ -15,7 +15,7 @@ export function createComissaoService(
       acao: ProcessarComissoesAcao;
     }) {
       return processarLancamentosComissao({
-        databaseAdmin,
+        supabaseAdmin,
         idSalao: params.idSalao,
         ids: params.ids,
         acao: params.acao,

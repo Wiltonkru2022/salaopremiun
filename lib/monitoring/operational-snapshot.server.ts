@@ -10,7 +10,7 @@ import {
   type OperationalCriticality,
   type OperationalState,
 } from "@/lib/monitoring/operational-components";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type OperationalSnapshotComponent = {
   componentKey: string;
@@ -83,7 +83,7 @@ function isDisabledEvidence(value: unknown) {
 }
 
 export async function getOperationalHealthSnapshot() {
-  const database = getDatabaseAdmin() as any;
+  const supabase = getSupabaseAdmin() as any;
   const registry = listOperationalComponents();
   const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
   const since30d = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
@@ -103,47 +103,47 @@ export async function getOperationalHealthSnapshot() {
     securityFindingsRes,
     securityOpenCountRes,
   ] = await Promise.all([
-    database
+    supabase
       .from("operational_components")
       .select("component_key, nome, categoria, criticidade, responsavel, visibilidade_publica, monitorado, estado_atual, motivo_estado, ultima_verificacao_em, ultimo_sucesso_em, ultima_falha_em, freshness_ttl_segundos, deployment_id, commit_sha, registry_version")
       .eq("habilitado", true),
-    database
+    supabase
       .from("health_checks_sistema")
       .select("component_key, status, score, atualizado_em, freshness_ttl_segundos, sucessos_consecutivos, falhas_consecutivas, motivo_status, latency_ms, evidence_json, deployment_id, commit_sha")
       .order("atualizado_em", { ascending: false }),
-    database
+    supabase
       .from("operational_component_dependencies")
       .select("component_key, depends_on_component_key, critica"),
-    database
+    supabase
       .from("incidentes_sistema")
       .select("id", { count: "exact", head: true })
       .in("status", ["detectado", "aberto", "investigando", "recorrente"]),
-    database
+    supabase
       .from("incidentes_sistema")
       .select("id", { count: "exact", head: true })
       .eq("status", "recuperando"),
-    database
+    supabase
       .from("incidentes_sistema")
       .select("id", { count: "exact", head: true })
       .eq("status", "resolvido")
       .eq("resolution_mode", "automatic")
       .gte("resolvido_em", startToday.toISOString()),
-    database
+    supabase
       .from("incidentes_sistema")
       .select("id, titulo, status, severidade, component_key, sintoma, causa_provavel, confianca, responsavel, acao_sugerida, primeira_ocorrencia_em, ultima_ocorrencia_em, total_ocorrencias, healthy_probe_count, required_healthy_probes, resolution_mode, visibilidade_publica")
       .in("status", ["detectado", "aberto", "investigando", "recuperando", "recorrente"])
       .order("ultima_ocorrencia_em", { ascending: false })
       .limit(50),
-    database.rpc("fn_operational_event_stats", { p_since: since24h }),
-    database.rpc("fn_operational_resolution_stats", { p_since: since30d }),
-    database
+    supabase.rpc("fn_operational_event_stats", { p_since: since24h }),
+    supabase.rpc("fn_operational_resolution_stats", { p_since: since30d }),
+    supabase
       .from("operational_security_findings")
       .select("finding_key, source, source_rule, title, severity, classification, entity_name, detail, reviewed, first_seen_at, last_seen_at")
       .is("resolved_at", null)
       .neq("classification", "configuracao_intencional")
       .order("last_seen_at", { ascending: false })
       .limit(40),
-    database
+    supabase
       .from("operational_security_findings")
       .select("finding_key", { count: "exact", head: true })
       .is("resolved_at", null)

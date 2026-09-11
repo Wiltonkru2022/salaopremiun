@@ -1,7 +1,7 @@
 import "server-only";
 
 import { htmlEscape, sendBrevoEmail } from "@/lib/email/brevo";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export type TrialAlertType = "3d" | "1d" | "today" | "expired" | "manual";
 
@@ -174,15 +174,15 @@ function buildTrialEmailHtml(params: {
 }
 
 async function loadTrialContext(idSalao: string) {
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const [{ data: salao, error: salaoError }, { data: assinatura, error: assinaturaError }] =
     await Promise.all([
-      (database as any)
+      (supabase as any)
         .from("saloes")
         .select("id, nome, nome_fantasia, responsavel, email, trial_fim_em")
         .eq("id", idSalao)
         .maybeSingle(),
-      (database as any)
+      (supabase as any)
         .from("assinaturas")
         .select(
           "id_salao, trial_fim_em, email_trial_3d_sent_at, email_trial_1d_sent_at, email_trial_today_sent_at, email_trial_expired_sent_at"
@@ -248,7 +248,7 @@ export async function sendTrialAlertNow(params: SendTrialAlertParams) {
   const sentAt = new Date().toISOString();
   const marker = markerForType(type);
   if (params.markSent && marker) {
-    const { error } = await (getDatabaseAdmin() as any)
+    const { error } = await (getSupabaseAdmin() as any)
       .from("assinaturas")
       .update({ [marker]: sentAt, updated_at: sentAt })
       .eq("id_salao", params.idSalao);
@@ -275,7 +275,7 @@ function choosePendingAlert(row: TrialSubscriptionRow): TrialAlertType | null {
 }
 
 export async function processTrialAlerts(limit = 80) {
-  const { data, error } = await (getDatabaseAdmin() as any)
+  const { data, error } = await (getSupabaseAdmin() as any)
     .from("assinaturas")
     .select(
       "id_salao, trial_fim_em, email_trial_3d_sent_at, email_trial_1d_sent_at, email_trial_today_sent_at, email_trial_expired_sent_at"
@@ -318,7 +318,7 @@ export async function processTrialAlerts(limit = 80) {
 
   return {
     ok: errors.length === 0,
-    provider: "vercel-database" as const,
+    provider: "vercel-supabase" as const,
     scanned: rows.length,
     sent,
     skipped,
@@ -334,11 +334,11 @@ export async function extendTrial(params: ExtendTrialParams) {
   const base = Math.max(Date.now(), currentEnd.getTime());
   const newEnd = new Date(base + days * DAY_MS).toISOString();
   const now = new Date().toISOString();
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
 
   const [{ error: assinaturaError }, { error: salaoError }, { error: assinaturaSalaoError }] =
     await Promise.all([
-      (database as any)
+      (supabase as any)
         .from("assinaturas")
         .update({
           trial_ativo: "true",
@@ -350,7 +350,7 @@ export async function extendTrial(params: ExtendTrialParams) {
           updated_at: now,
         })
         .eq("id_salao", params.idSalao),
-      (database as any)
+      (supabase as any)
         .from("saloes")
         .update({
           trial_ativo: true,
@@ -358,7 +358,7 @@ export async function extendTrial(params: ExtendTrialParams) {
           updated_at: now,
         })
         .eq("id", params.idSalao),
-      (database as any)
+      (supabase as any)
         .from("assinaturas_saloes")
         .update({
           trial_ativo: true,
@@ -376,7 +376,7 @@ export async function extendTrial(params: ExtendTrialParams) {
     String(params.reason || "").trim() ||
     `Trial prorrogado manualmente por ${days} dia(s).`;
 
-  const { error: historyError } = await (database as any)
+  const { error: historyError } = await (supabase as any)
     .from("trial_extensoes_automaticas")
     .insert({
       id_salao: params.idSalao,
@@ -394,7 +394,7 @@ export async function extendTrial(params: ExtendTrialParams) {
 
   return {
     ok: true,
-    provider: "database" as const,
+    provider: "supabase" as const,
     days,
     previousTrialEndsAt: context.trialFimEm,
     trialEndsAt: newEnd,

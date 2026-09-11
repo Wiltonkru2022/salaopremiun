@@ -1,4 +1,4 @@
-import type { DatabaseClient } from "@/lib/db/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   type AssinaturaWebhookContextRow,
   type CobrancaWebhookResolvedRow,
@@ -31,7 +31,7 @@ const NON_PAID_STATUS_EVENTS = new Set([
 ]);
 
 type ProcessarWebhookAsaasParams = {
-  databaseAdmin: DatabaseClient;
+  supabaseAdmin: SupabaseClient;
   webhookEventId: string | null;
   webhookPayload: Record<string, unknown>;
   event: string;
@@ -133,7 +133,7 @@ function avaliarEventoCobranca({
 }
 
 async function atualizarCobrancaWebhook(params: {
-  databaseAdmin: DatabaseClient;
+  supabaseAdmin: SupabaseClient;
   cobrancaAtual: CobrancaWebhookResolvedRow;
   webhookPayload: Record<string, unknown>;
   event: string;
@@ -145,7 +145,7 @@ async function atualizarCobrancaWebhook(params: {
   avaliacao: AvaliacaoEventoCobranca;
 }) {
   const {
-    databaseAdmin,
+    supabaseAdmin,
     cobrancaAtual,
     webhookPayload,
     event,
@@ -157,7 +157,7 @@ async function atualizarCobrancaWebhook(params: {
     avaliacao,
   } = params;
 
-  const { error } = await databaseAdmin
+  const { error } = await supabaseAdmin
     .from("assinaturas_cobrancas")
     .update({
       status: avaliacao.statusCobrancaInterno,
@@ -189,7 +189,7 @@ export async function processarWebhookAsaasResolvido(
 
   if (avaliacao.ignored) {
     await atualizarStatusEventoWebhook(
-      params.databaseAdmin,
+      params.supabaseAdmin,
       params.webhookEventId,
       "processado",
       null,
@@ -212,7 +212,7 @@ export async function processarWebhookAsaasResolvido(
 
   try {
     await atualizarCobrancaWebhook({
-      databaseAdmin: params.databaseAdmin,
+      supabaseAdmin: params.supabaseAdmin,
       cobrancaAtual: params.cobrancaAtual,
       webhookPayload: params.webhookPayload,
       event: params.event,
@@ -225,7 +225,7 @@ export async function processarWebhookAsaasResolvido(
     });
   } catch (error) {
     await atualizarStatusEventoWebhook(
-      params.databaseAdmin,
+      params.supabaseAdmin,
       params.webhookEventId,
       "erro",
       error instanceof Error ? error.message : "Erro ao atualizar cobranca."
@@ -235,7 +235,7 @@ export async function processarWebhookAsaasResolvido(
 
   if (avaliacao.isEventoPago) {
     const result = await aplicarPagamentoConfirmado({
-      databaseAdmin: params.databaseAdmin,
+      supabaseAdmin: params.supabaseAdmin,
       webhookEventId: params.webhookEventId,
       cobrancaAtual: params.cobrancaAtual,
       assinatura: params.assinatura,
@@ -258,7 +258,7 @@ export async function processarWebhookAsaasResolvido(
     avaliacao.isEventoTerminal
   ) {
     const result = await aplicarStatusNaoPago({
-      databaseAdmin: params.databaseAdmin,
+      supabaseAdmin: params.supabaseAdmin,
       webhookEventId: params.webhookEventId,
       cobrancaAtual: params.cobrancaAtual,
       assinatura: params.assinatura,
@@ -272,7 +272,7 @@ export async function processarWebhookAsaasResolvido(
   }
 
   await atualizarStatusEventoWebhook(
-    params.databaseAdmin,
+    params.supabaseAdmin,
     params.webhookEventId,
     "processado",
     null,

@@ -1,3 +1,5 @@
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
+import { captureSystemEvent } from "@/lib/monitoring/server";
 import type { Json } from "@/types/database.generated";
 
 type LogSeverity = "info" | "warning" | "error";
@@ -30,14 +32,12 @@ async function registrarFalhaObservabilidade(params: {
   mensagem: string;
   detalhes: Record<string, unknown>;
 }) {
-  if (typeof window !== "undefined") return;
-  const { getDatabaseAdmin } = await import("@/lib/db/admin");
   const errorMessage =
     params.erro instanceof Error ? params.erro.message : String(params.erro);
 
   try {
-    const database = getDatabaseAdmin();
-    await database.from("eventos_sistema").insert({
+    const supabase = getSupabaseAdmin();
+    await supabase.from("eventos_sistema").insert({
       modulo: "system_logs",
       tipo_evento: "log_persist_failed",
       severidade: "error",
@@ -59,43 +59,21 @@ async function registrarFalhaObservabilidade(params: {
 }
 
 export async function registrarLogSistema(params: RegistrarLogParams) {
-  if (typeof window !== "undefined") return;
   try {
-    const [{ recordNeonEvent }, { getDatabaseAdmin }, { captureSystemEvent }] =
-      await Promise.all([
-        import("@/lib/neon/observability.server"),
-        import("@/lib/db/admin"),
-        import("@/lib/monitoring/server"),
-      ]);
     const details = sanitizeDetails(params.detalhes);
     const gravidade = normalizeText(params.gravidade) || "info";
     const modulo = normalizeText(params.modulo) || "sistema";
     const mensagem = normalizeText(params.mensagem) || "Evento do sistema";
 
-    const persistedInNeon = await recordNeonEvent({
-      tenantId: params.idSalao || null,
-      componentKey: modulo,
-      eventType: "system_log",
-      level: gravidade,
-      message: mensagem,
-      metadata: {
-        ...details,
-        idUsuario: params.idUsuario || null,
-        source: "lib/system-logs",
-      },
+    const supabase = getSupabaseAdmin();
+    await supabase.from("logs_sistema").insert({
+      gravidade,
+      modulo,
+      id_salao: params.idSalao || null,
+      id_usuario: params.idUsuario || null,
+      mensagem,
+      detalhes_json: details as Json,
     });
-
-    if (!persistedInNeon) {
-      const database = getDatabaseAdmin();
-      await database.from("logs_sistema").insert({
-        gravidade,
-        modulo,
-        id_salao: params.idSalao || null,
-        id_usuario: params.idUsuario || null,
-        mensagem,
-        detalhes_json: details as Json,
-      });
-    }
 
     const shouldMirrorToEventosSistema =
       gravidade === "warning" ||

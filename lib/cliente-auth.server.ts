@@ -1,10 +1,7 @@
-import "server-only";
-
-import crypto from "node:crypto";
 import bcrypt from "bcryptjs";
-import { cookies } from "next/headers";
-import type { NextRequest, NextResponse } from "next/server";
+import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
+import crypto from "node:crypto";
 import { getAppRootDomain } from "@/lib/security/app-hosts";
 
 export type ClienteAppSession = {
@@ -18,133 +15,115 @@ export type ClienteAppSession = {
   tipo: "cliente";
 };
 
+const COOKIE_NAME = "sp_cliente_session";
+const LOGOUT_MARKER_COOKIE_NAME = "sp_cliente_logout";
+const SESSION_TTL_SECONDS = 60 * 60 * 24 * 180;
+const RESTORE_TOKEN_TTL_SECONDS = 60 * 60 * 12;
+const ENC_ALGORITHM = "aes-256-gcm";
+const IV_LENGTH = 12;
+
 type SessionEnvelope = {
-  v: 1;
   session: ClienteAppSession;
   exp: number;
 };
 
-const SESSION_COOKIE = "sp_cliente_session";
-const LOGOUT_COOKIE = "sp_cliente_logout";
-const SESSION_TTL_SECONDS = 60 * 60 * 24 * 180;
-const RESTORE_TOKEN_TTL_SECONDS = 60 * 60 * 12;
-const TOKEN_PREFIX = "spc1";
-
 function getSessionSecret() {
-  const secret = String(process.env.CLIENTE_SESSION_SECRET || "").trim();
-
-  if (secret.length < 32) {
+  const secret = process.env.CLIENTE_SESSION_SECRET || process.env.PROFISSIONAL_SESSION_SECRET;
+  if (!secret) {
     throw new Error(
-      "CLIENTE_SESSION_SECRET não configurada ou muito curta. Use pelo menos 32 caracteres."
+      "CLIENTE_SESSION_SECRET nao configurada (ou fallback PROFISSIONAL_SESSION_SECRET ausente)."
     );
   }
-
   return secret;
 }
 
-function sign(value: string) {
-  return crypto
-    .createHmac("sha256", getSessionSecret())
-    .update(value)
-    .digest("base64url");
+async function getCookieDomain() {
+  if (process.env.NODE_ENV !== "production") return undefined;
+  const requestHeaders = await headers();
+  const host = String(requestHeaders.get("host") || "").split(":")[0].toLowerCase();
+  if (host === "localhost" || host === "127.0.0.1" || host === "::1") return undefined;
+  return `.${getAppRootDomain()}`;
 }
 
-function safeEqual(a: string, b: string) {
+async function shouldUseSecureCookies() {
+  if (process.env.NODE_ENV !== "production") return false;
+  const requestHeaders = await headers();
+  const host = String(requestHeaders.get("host") || "").split(":")[0].toLowerCase();
+  const protocol = String(requestHeaders.get("x-forwarded-proto") || "").toLowerCase();
+  return !(host === "localhost" || host === "127.0.0.1" || host === "::1" || protocol === "http");
+}
+
+function deriveKey() {
+  return crypto.createHash("sha256").update(getSessionSecret()).digest();
+}
+
+function encryptEnvelope(envelope: SessionEnvelope) {
+  const iv = crypto.randomBytes(IV_LENGTH);
+  const cipher = crypto.createCipheriv(ENC_ALGORITHM, deriveKey(), iv);
+  const encrypted = Buffer.concat([
+    cipher.update(Buffer.from(JSON.stringify(envelope), "utf8")),
+    cipher.final(),
+  ]);
+  const tag = cipher.getAuthTag();
+  return [iv.toString("base64url"), tag.toString("base64url"), encrypted.toString("base64url")].join(".");
+}
+
+function decryptEnvelope(token: string): SessionEnvelope | null {
+  const [ivEncoded, tagEncoded, encryptedEncoded] = token.split(".");
+  if (!ivEncoded || !tagEncoded || !encryptedEncoded) return null;
+
   try {
-    const left = Buffer.from(a);
-    const right = Buffer.from(b);
-    return left.length === right.length && crypto.timingSafeEqual(left, right);
-  } catch {
-    return false;
-  }
-}
-
-function encodeEnvelope(envelope: SessionEnvelope) {
-  const payload = Buffer.from(JSON.stringify(envelope), "utf8").toString(
-    "base64url"
-  );
-  const unsigned = `${TOKEN_PREFIX}.${payload}`;
-  return `${unsigned}.${sign(unsigned)}`;
-}
-
-function decodeEnvelope(token: string): SessionEnvelope | null {
-  const [prefix, payload, signature] = String(token || "").split(".");
-
-  if (prefix !== TOKEN_PREFIX || !payload || !signature) return null;
-
-  const unsigned = `${prefix}.${payload}`;
-  if (!safeEqual(signature, sign(unsigned))) return null;
-
-  try {
-    const parsed = JSON.parse(
-      Buffer.from(payload, "base64url").toString("utf8")
-    ) as SessionEnvelope;
-
-    if (
-      parsed?.v !== 1 ||
-      !parsed.session?.idConta ||
-      parsed.session.tipo !== "cliente" ||
-      !Number.isFinite(Number(parsed.session.authVersion)) ||
-      Number(parsed.session.authVersion) < 1 ||
-      !parsed.exp ||
-      parsed.exp <= Math.floor(Date.now() / 1000)
-    ) {
-      return null;
-    }
-
+    const decipher = crypto.createDecipheriv(
+      ENC_ALGORITHM,
+      deriveKey(),
+      Buffer.from(ivEncoded, "base64url")
+    );
+    decipher.setAuthTag(Buffer.from(tagEncoded, "base64url"));
+    const decrypted = Buffer.concat([
+      decipher.update(Buffer.from(encryptedEncoded, "base64url")),
+      decipher.final(),
+    ]);
+    const parsed = JSON.parse(decrypted.toString("utf8")) as SessionEnvelope;
+    if (!parsed?.session?.idConta || !parsed?.exp) return null;
+    if (parsed.exp < Math.floor(Date.now() / 1000)) return null;
     return parsed;
   } catch {
     return null;
   }
 }
 
-function createTokenWithTtl(session: ClienteAppSession, ttlSeconds: number) {
-  const authVersion = Number(session.authVersion);
-
-  if (!session.idConta || !Number.isFinite(authVersion) || authVersion < 1) {
-    throw new Error("Sessão de cliente inválida.");
-  }
-
-  return encodeEnvelope({
-    v: 1,
+function serializeSessionWithTtl(session: ClienteAppSession, ttlSeconds: number) {
+  return encryptEnvelope({
     session: {
       ...session,
-      authVersion,
+      authVersion: Number(session.authVersion || 1),
       issuedAt: session.issuedAt || Date.now(),
-      tipo: "cliente",
     },
     exp: Math.floor(Date.now() / 1000) + ttlSeconds,
   });
 }
 
-export function createClienteSessionToken(session: ClienteAppSession) {
-  return createTokenWithTtl(session, SESSION_TTL_SECONDS);
+function serializeSession(session: ClienteAppSession) {
+  return serializeSessionWithTtl(session, SESSION_TTL_SECONDS);
 }
 
-export function parseClienteSessionToken(
-  token: string
-): ClienteAppSession | null {
-  const envelope = decodeEnvelope(token);
-  if (!envelope) return null;
-
-  return {
-    ...envelope.session,
-    authVersion: Number(envelope.session.authVersion),
-    tipo: "cliente",
-  };
+function parseSession(token: string): ClienteAppSession | null {
+  const envelope = decryptEnvelope(token);
+  return envelope?.session || null;
 }
 
 export function createClienteSessionRestoreToken(session: ClienteAppSession) {
-  return createTokenWithTtl(
+  return serializeSessionWithTtl(
     { ...session, issuedAt: Date.now() },
     RESTORE_TOKEN_TTL_SECONDS
   );
 }
 
 export function parseClienteSessionRestoreToken(token: string) {
-  return parseClienteSessionToken(token);
+  return parseSession(token);
 }
 
+// Mantidos somente para o login legado durante a janela de migração.
 export async function hashClientePassword(password: string) {
   return bcrypt.hash(password, 10);
 }
@@ -153,95 +132,37 @@ export async function verifyClientePassword(password: string, hash: string) {
   return bcrypt.compare(password, hash);
 }
 
-function isLocalHost(hostname: string) {
-  return hostname === "localhost" || hostname === "127.0.0.1" || hostname === "::1";
-}
-
-function responseCookieOptions(request: NextRequest) {
-  const local = isLocalHost(request.nextUrl.hostname);
-  const base = {
+export async function createClienteSession(session: ClienteAppSession) {
+  const cookieStore = await cookies();
+  const token = serializeSession(session);
+  const secure = await shouldUseSecureCookies();
+  const baseOptions = {
     httpOnly: true,
-    sameSite: "lax" as const,
-    secure: !local && request.nextUrl.protocol === "https:",
+    secure,
+    sameSite: "lax",
     path: "/",
-  };
-
-  if (process.env.NODE_ENV === "production" && !local) {
-    return { ...base, domain: `.${getAppRootDomain()}` };
-  }
-
-  return base;
-}
-
-export function setClienteSessionOnResponse(
-  request: NextRequest,
-  response: NextResponse,
-  session: ClienteAppSession
-) {
-  const options = responseCookieOptions(request);
-
-  response.cookies.set(LOGOUT_COOKIE, "", {
-    ...options,
-    maxAge: 0,
-    expires: new Date(0),
-  });
-
-  response.cookies.set(SESSION_COOKIE, createClienteSessionToken(session), {
-    ...options,
     maxAge: SESSION_TTL_SECONDS,
-  });
+  } as const;
 
-  return response;
-}
+  cookieStore.set(LOGOUT_MARKER_COOKIE_NAME, "", { ...baseOptions, maxAge: 0 });
+  cookieStore.set(COOKIE_NAME, token, baseOptions);
 
-export function clearClienteSessionOnResponse(
-  request: NextRequest,
-  response: NextResponse,
-  explicitLogout = true
-) {
-  const options = responseCookieOptions(request);
-
-  response.cookies.set(SESSION_COOKIE, "", {
-    ...options,
-    maxAge: 0,
-    expires: new Date(0),
-  });
-
-  if (explicitLogout) {
-    response.cookies.set(LOGOUT_COOKIE, String(Date.now()), {
-      ...options,
-      maxAge: SESSION_TTL_SECONDS,
-    });
-  } else {
-    response.cookies.set(LOGOUT_COOKIE, "", {
-      ...options,
-      maxAge: 0,
-      expires: new Date(0),
-    });
+  const cookieDomain = await getCookieDomain();
+  if (cookieDomain) {
+    cookieStore.set(LOGOUT_MARKER_COOKIE_NAME, "", { ...baseOptions, domain: cookieDomain, maxAge: 0 });
+    cookieStore.set(COOKIE_NAME, token, { ...baseOptions, domain: cookieDomain });
   }
-
-  return response;
 }
 
 export async function getClienteSessionFromCookie(): Promise<ClienteAppSession | null> {
-  const store = await cookies();
+  const cookieStore = await cookies();
+  if (cookieStore.get(LOGOUT_MARKER_COOKIE_NAME)?.value) return null;
 
-  for (const item of store.getAll(SESSION_COOKIE)) {
-    const session = parseClienteSessionToken(item.value);
-    if (session) return session;
+  for (const raw of cookieStore.getAll(COOKIE_NAME).map((cookie) => cookie.value).filter(Boolean)) {
+    const session = parseSession(raw);
+    if (session?.idConta) return session;
   }
-
   return null;
-}
-
-export async function hasClienteLogoutMarker() {
-  const store = await cookies();
-
-  for (const item of store.getAll(SESSION_COOKIE)) {
-    if (parseClienteSessionToken(item.value)) return false;
-  }
-
-  return Boolean(store.get(LOGOUT_COOKIE)?.value);
 }
 
 export async function requireClienteSession() {
@@ -250,57 +171,35 @@ export async function requireClienteSession() {
   return session;
 }
 
-/* Compatibilidade com fluxos antigos ainda existentes fora da tela de login. */
-export async function createClienteSession(session: ClienteAppSession) {
-  const store = await cookies();
-
-  store.set(LOGOUT_COOKIE, "", {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 0,
-    expires: new Date(0),
-  });
-
-  store.set(SESSION_COOKIE, createClienteSessionToken(session), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: SESSION_TTL_SECONDS,
-  });
-}
-
-export async function clearClienteSessionOnly() {
-  const store = await cookies();
-  store.set(SESSION_COOKIE, "", {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
-    maxAge: 0,
-    expires: new Date(0),
-  });
-}
-
 export async function clearClienteSession() {
-  const store = await cookies();
-
-  store.set(SESSION_COOKIE, "", {
+  const cookieStore = await cookies();
+  const secure = await shouldUseSecureCookies();
+  const baseOptions = {
     httpOnly: true,
+    secure,
     sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
     path: "/",
     maxAge: 0,
-    expires: new Date(0),
-  });
+  } as const;
 
-  store.set(LOGOUT_COOKIE, String(Date.now()), {
-    httpOnly: true,
-    sameSite: "lax",
-    secure: process.env.NODE_ENV === "production",
-    path: "/",
+  cookieStore.set(LOGOUT_MARKER_COOKIE_NAME, String(Date.now()), {
+    ...baseOptions,
     maxAge: SESSION_TTL_SECONDS,
   });
+  cookieStore.set(COOKIE_NAME, "", baseOptions);
+
+  const cookieDomain = await getCookieDomain();
+  if (cookieDomain) {
+    cookieStore.set(LOGOUT_MARKER_COOKIE_NAME, String(Date.now()), {
+      ...baseOptions,
+      domain: cookieDomain,
+      maxAge: SESSION_TTL_SECONDS,
+    });
+    cookieStore.set(COOKIE_NAME, "", { ...baseOptions, domain: cookieDomain });
+  }
+}
+
+export async function hasClienteLogoutMarker() {
+  const cookieStore = await cookies();
+  return Boolean(cookieStore.get(LOGOUT_MARKER_COOKIE_NAME)?.value);
 }

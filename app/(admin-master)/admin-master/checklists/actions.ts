@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Json } from "@/types/database.generated";
 
 function textValue(formData: FormData, key: string) {
@@ -32,7 +32,7 @@ function jsonValue(formData: FormData, key: string): Json {
 
 export async function salvarChecklistItemAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("planos_editar");
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const id = textValue(formData, "id");
   const codigo = textValue(formData, "codigo");
   const nome = textValue(formData, "nome");
@@ -54,13 +54,13 @@ export async function salvarChecklistItemAdminMaster(formData: FormData) {
   };
 
   const query = id
-    ? (database as any)
+    ? (supabase as any)
         .from("checklist_itens")
         .update(payload)
         .eq("id", id)
         .select("id")
         .single()
-    : (database as any)
+    : (supabase as any)
         .from("checklist_itens")
         .insert(payload)
         .select("id")
@@ -87,7 +87,7 @@ export async function salvarChecklistItemAdminMaster(formData: FormData) {
 
 export async function salvarRegraTrialAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("planos_editar");
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const id = textValue(formData, "id");
   const nome = textValue(formData, "nome");
 
@@ -103,13 +103,13 @@ export async function salvarRegraTrialAdminMaster(formData: FormData) {
   };
 
   const query = id
-    ? database
+    ? supabase
         .from("trial_extensoes_regras")
         .update(payload)
         .eq("id", id)
         .select("id")
         .single()
-    : database
+    : supabase
         .from("trial_extensoes_regras")
         .insert(payload)
         .select("id")
@@ -142,8 +142,8 @@ export async function recalcularScoreSalaoAdminMaster(formData: FormData) {
     throw new Error("Informe o salão para recalcular o score.");
   }
 
-  const database = getDatabaseAdmin();
-  const { data, error } = await database.rpc(
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.rpc(
     "fn_admin_master_calcular_score_onboarding",
     { p_id_salao: idSalao }
   );
@@ -172,8 +172,8 @@ export async function avaliarTrialExtraSalaoAdminMaster(formData: FormData) {
     throw new Error("Informe o salão para avaliar o trial extra.");
   }
 
-  const database = getDatabaseAdmin();
-  const { data, error } = await database.rpc(
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await supabase.rpc(
     "fn_admin_master_avaliar_extensao_trial",
     { p_id_salao: idSalao }
   );

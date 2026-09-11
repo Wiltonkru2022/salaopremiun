@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { requireProfissionalAppContext } from "@/lib/profissional-context.server";
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 function validDate(value: string) {
   return /^\d{4}-\d{2}-\d{2}$/.test(value);
@@ -26,8 +26,8 @@ export async function GET(request: Request) {
       action: "app_profissional_pwa_avaliacoes",
       actorId: session.idProfissional,
       idSalao: session.idSalao,
-      run: async (database) => {
-        let appointmentQuery = (database as any)
+      run: async (supabase) => {
+        let appointmentQuery = (supabase as any)
           .from("agendamentos")
           .select("id, profissional_id, cliente_id, servico_id")
           .eq("id_salao", session.idSalao)
@@ -55,7 +55,7 @@ export async function GET(request: Request) {
         );
 
         const [evaluationResult, clientsResult, servicesResult, professionalsResult] = await Promise.all([
-          (database as any)
+          (supabase as any)
             .from("clientes_avaliacoes")
             .select("id, id_cliente, id_agendamento, nota, comentario, created_at")
             .eq("id_salao", session.idSalao)
@@ -63,13 +63,13 @@ export async function GET(request: Request) {
             .order("created_at", { ascending: false })
             .limit(500),
           clientIds.length
-            ? (database as any).from("clientes").select("id, nome").eq("id_salao", session.idSalao).in("id", clientIds)
+            ? (supabase as any).from("clientes").select("id, nome").eq("id_salao", session.idSalao).in("id", clientIds)
             : Promise.resolve({ data: [], error: null }),
           serviceIds.length
-            ? (database as any).from("servicos").select("id, nome").eq("id_salao", session.idSalao).in("id", serviceIds)
+            ? (supabase as any).from("servicos").select("id, nome").eq("id_salao", session.idSalao).in("id", serviceIds)
             : Promise.resolve({ data: [], error: null }),
           professionalIds.length
-            ? (database as any).from("profissionais").select("id, nome, nome_exibicao").eq("id_salao", session.idSalao).in("id", professionalIds)
+            ? (supabase as any).from("profissionais").select("id, nome, nome_exibicao").eq("id_salao", session.idSalao).in("id", professionalIds)
             : Promise.resolve({ data: [], error: null }),
         ]);
 

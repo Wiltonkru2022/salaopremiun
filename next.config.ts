@@ -1,6 +1,12 @@
 import type { NextConfig } from "next";
 
-const cloudinaryHostname = "res.cloudinary.com";
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+const supabaseHostname = supabaseUrl ? new URL(supabaseUrl).hostname : undefined;
+const blogSupabaseUrl =
+  process.env.BLOG_SUPABASE_URL || "https://qwabnqbzbhtxicwizxmv.supabase.co";
+const blogSupabaseHostname = blogSupabaseUrl
+  ? new URL(blogSupabaseUrl).hostname
+  : undefined;
 const appRootDomain = process.env.APP_ROOT_DOMAIN || "salaopremiun.com.br";
 const loginHost = process.env.APP_LOGIN_HOST || `login.${appRootDomain}`;
 const isDevelopment = process.env.NODE_ENV !== "production";
@@ -34,12 +40,15 @@ function buildCsp() {
     );
   }
 
-  const clerkSources = ["https://*.clerk.accounts.dev", "https://*.clerk.com"];
   const connectSrc = [
     "'self'",
     ...managedHosts.map((host) => `https://${host}`),
-    `https://${cloudinaryHostname}`,
-    ...clerkSources,
+    ...(supabaseHostname
+      ? [`https://${supabaseHostname}`, `wss://${supabaseHostname}`]
+      : []),
+    ...(blogSupabaseHostname
+      ? [`https://${blogSupabaseHostname}`, `wss://${blogSupabaseHostname}`]
+      : []),
     "https://viacep.com.br",
     "https://vitals.vercel-insights.com",
     "https://*.vercel-insights.com",
@@ -56,8 +65,8 @@ function buildCsp() {
     "'self'",
     "data:",
     "blob:",
-    `https://${cloudinaryHostname}`,
-    ...clerkSources,
+    ...(supabaseHostname ? [`https://${supabaseHostname}`] : []),
+    ...(blogSupabaseHostname ? [`https://${blogSupabaseHostname}`] : []),
     "https://*.googleusercontent.com",
     "https://*.gstatic.com",
     "https://images.unsplash.com",
@@ -66,7 +75,6 @@ function buildCsp() {
   const frameAncestors = ["'self'"];
   const frameSrc = [
     "'self'",
-    ...clerkSources,
     "https://www.google.com",
     "https://maps.google.com",
   ];
@@ -74,13 +82,8 @@ function buildCsp() {
     "'self'",
     "data:",
     "blob:",
-    `https://${cloudinaryHostname}`,
-  ];
-  const scriptSrc = [
-    "'self'",
-    "'unsafe-inline'",
-    ...(isDevelopment ? ["'unsafe-eval'"] : []),
-    ...clerkSources,
+    ...(supabaseHostname ? [`https://${supabaseHostname}`] : []),
+    ...(blogSupabaseHostname ? [`https://${blogSupabaseHostname}`] : []),
   ];
   return [
     "default-src 'self'",
@@ -88,7 +91,7 @@ function buildCsp() {
     `form-action ${formAction.join(" ")}`,
     `frame-ancestors ${frameAncestors.join(" ")}`,
     "object-src 'none'",
-    `script-src ${scriptSrc.join(" ")}`,
+    `script-src 'self' 'unsafe-inline'${isDevelopment ? " 'unsafe-eval'" : ""}`,
     "style-src 'self' 'unsafe-inline'",
     `img-src ${imgSrc.join(" ")}`,
     "font-src 'self' data:",
@@ -104,19 +107,47 @@ function buildCsp() {
 }
 
 const securityHeaders = [
-  { key: "Content-Security-Policy", value: buildCsp() },
-  { key: "X-DNS-Prefetch-Control", value: "on" },
-  { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
-  { key: "X-Frame-Options", value: "SAMEORIGIN" },
-  { key: "X-Content-Type-Options", value: "nosniff" },
-  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+  {
+    key: "Content-Security-Policy",
+    value: buildCsp(),
+  },
+  {
+    key: "X-DNS-Prefetch-Control",
+    value: "on",
+  },
+  {
+    key: "Strict-Transport-Security",
+    value: "max-age=63072000; includeSubDomains; preload",
+  },
+  {
+    key: "X-Frame-Options",
+    value: "SAMEORIGIN",
+  },
+  {
+    key: "X-Content-Type-Options",
+    value: "nosniff",
+  },
+  {
+    key: "Referrer-Policy",
+    value: "strict-origin-when-cross-origin",
+  },
   {
     key: "Permissions-Policy",
-    value: "camera=(), microphone=(), geolocation=(self), payment=(), browsing-topics=()",
+    value:
+      "camera=(), microphone=(), geolocation=(self), payment=(), browsing-topics=()",
   },
-  { key: "X-Permitted-Cross-Domain-Policies", value: "none" },
-  { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-  { key: "Cross-Origin-Resource-Policy", value: "same-site" },
+  {
+    key: "X-Permitted-Cross-Domain-Policies",
+    value: "none",
+  },
+  {
+    key: "Cross-Origin-Opener-Policy",
+    value: "same-origin",
+  },
+  {
+    key: "Cross-Origin-Resource-Policy",
+    value: "same-site",
+  },
 ];
 
 const nextConfig: NextConfig = {
@@ -124,9 +155,17 @@ const nextConfig: NextConfig = {
   reactStrictMode: true,
   compress: true,
   productionBrowserSourceMaps: false,
-  compiler: { removeConsole: true },
-  experimental: { serverActions: { bodySizeLimit: "25mb" } },
-  typescript: { ignoreBuildErrors: true },
+  compiler: {
+    removeConsole: true,
+  },
+  experimental: {
+    serverActions: {
+      bodySizeLimit: "25mb",
+    },
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
   allowedDevOrigins: [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
@@ -135,52 +174,92 @@ const nextConfig: NextConfig = {
   images: {
     formats: ["image/avif", "image/webp"],
     remotePatterns: [
-      { protocol: "https", hostname: cloudinaryHostname, pathname: "/**" },
-      { protocol: "https", hostname: "images.unsplash.com", pathname: "/**" },
-      { protocol: "https", hostname: "images.pexels.com", pathname: "/**" },
+      ...(supabaseHostname
+        ? [
+            {
+              protocol: "https" as const,
+              hostname: supabaseHostname,
+              pathname: "/storage/v1/object/public/**",
+            },
+          ]
+        : []),
+      ...(blogSupabaseHostname
+        ? [
+            {
+              protocol: "https" as const,
+              hostname: blogSupabaseHostname,
+              pathname: "/storage/v1/object/public/**",
+            },
+          ]
+        : []),
+      {
+        protocol: "https",
+        hostname: "images.unsplash.com",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "images.pexels.com",
+        pathname: "/**",
+      },
     ],
-  },
-  async redirects() {
-    return [
-      {
-        source: "/login-clerk",
-        destination: "/login",
-        permanent: false,
-      },
-      {
-        source: "/admin-master/clerk-login",
-        destination: "/admin-master/login",
-        permanent: false,
-      },
-      {
-        source: "/conta-clerk",
-        destination: "/conta",
-        permanent: false,
-      },
-    ];
   },
   async headers() {
     return [
-      { source: "/:path*", headers: securityHeaders },
+      {
+        source: "/:path*",
+        headers: securityHeaders,
+      },
       {
         source: "/api/:path*",
-        headers: [...securityHeaders, { key: "Cache-Control", value: "no-store, max-age=0" }],
+        headers: [
+          ...securityHeaders,
+          {
+            key: "Cache-Control",
+            value: "no-store, max-age=0",
+          },
+        ],
+      },
+      {
+        source: "/api/app-profissional/:path*",
+        headers: [
+          ...securityHeaders,
+          { key: "Cache-Control", value: "no-store, max-age=0" },
+          { key: "Access-Control-Allow-Origin", value: "https://localhost" },
+          { key: "Access-Control-Allow-Methods", value: "GET,POST,PATCH,DELETE,OPTIONS" },
+          { key: "Access-Control-Allow-Headers", value: "Content-Type, Authorization, X-SP-Native-App" },
+          { key: "Cross-Origin-Resource-Policy", value: "cross-origin" },
+        ],
       },
       {
         source: "/app-profissional/:path*",
-        headers: [...securityHeaders, { key: "X-Robots-Tag", value: "noindex, nofollow" }],
+        headers: [
+          ...securityHeaders,
+          {
+            key: "X-Robots-Tag",
+            value: "noindex, nofollow",
+          },
+        ],
       },
       {
         source: "/admin-master/:path*",
-        headers: [...securityHeaders, { key: "X-Robots-Tag", value: "noindex, nofollow" }],
+        headers: [
+          ...securityHeaders,
+          {
+            key: "X-Robots-Tag",
+            value: "noindex, nofollow",
+          },
+        ],
       },
       {
         source: "/login/:path*",
-        headers: [...securityHeaders, { key: "X-Robots-Tag", value: "noindex, nofollow" }],
-      },
-      {
-        source: "/login-clerk/:path*",
-        headers: [...securityHeaders, { key: "X-Robots-Tag", value: "noindex, nofollow" }],
+        headers: [
+          ...securityHeaders,
+          {
+            key: "X-Robots-Tag",
+            value: "noindex, nofollow",
+          },
+        ],
       },
     ];
   },

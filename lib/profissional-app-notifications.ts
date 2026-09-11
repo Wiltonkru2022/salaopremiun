@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { ProfissionalAppNotification } from "@/lib/profissional-app-notification-contracts";
 import type { ProfissionalServerContext } from "@/lib/profissional-context.server";
 
@@ -47,8 +47,8 @@ async function fetchPasswordNotifications(
   idSalao: string,
   idProfissional: string
 ): Promise<ProfissionalAppNotification[]> {
-  const databaseAdmin = getDatabaseAdmin();
-  const { data: tickets, error: ticketsError } = await databaseAdmin
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data: tickets, error: ticketsError } = await supabaseAdmin
     .from("tickets")
     .select("id, numero, origem_contexto")
     .eq("id_salao", idSalao)
@@ -77,7 +77,7 @@ async function fetchPasswordNotifications(
     ownedTickets.map((ticket) => [ticket.id, Number(ticket.numero || 0)])
   );
 
-  const { data: eventos, error: eventosError } = await databaseAdmin
+  const { data: eventos, error: eventosError } = await supabaseAdmin
     .from("ticket_eventos")
     .select("id, id_ticket, evento, descricao, payload_json, criado_em")
     .in("id_ticket", ownedTickets.map((ticket) => ticket.id))
@@ -117,8 +117,8 @@ async function fetchJobNotifications(
   idSalao: string,
   idProfissional: string
 ): Promise<ProfissionalAppNotification[]> {
-  const databaseAdmin = getDatabaseAdmin();
-  const { data, error } = await (databaseAdmin as any)
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data, error } = await (supabaseAdmin as any)
     .from("notification_jobs")
     .select("id, tipo, titulo, mensagem, status, url, enviar_em, created_at, metadata")
     .eq("id_salao", idSalao)

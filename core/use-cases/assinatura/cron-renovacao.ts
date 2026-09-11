@@ -1,4 +1,4 @@
-import type { DatabaseClient } from "@/lib/db/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   AssinaturaCronServiceError,
   type AssinaturaCronService,
@@ -18,16 +18,16 @@ export async function executarCronRenovacaoAssinaturasUseCase(params: {
   authorizationHeader: string | null;
   service: AssinaturaCronService;
 }) {
-  let databaseAdmin: DatabaseClient | null = null;
+  let supabaseAdmin: SupabaseClient | null = null;
 
   try {
     if (!params.service.validarCron(params.authorizationHeader)) {
       throw new AssinaturaCronUseCaseError("Nao autorizado.", 401);
     }
 
-    databaseAdmin = params.service.criarDatabaseAdmin();
+    supabaseAdmin = params.service.criarSupabaseAdmin();
     const { total, resultados } = await params.service.executarRenovacao(
-      databaseAdmin
+      supabaseAdmin
     );
 
     return {
@@ -40,7 +40,7 @@ export async function executarCronRenovacaoAssinaturasUseCase(params: {
     };
   } catch (error) {
     await params.service.reportarFalhaCron({
-      databaseAdmin,
+      supabaseAdmin,
       error,
     });
 

@@ -1,4 +1,4 @@
-import type { DatabaseClient } from "@/lib/db/types";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   AsaasWebhookServiceError,
   type AsaasWebhookBody,
@@ -21,7 +21,7 @@ export async function processarWebhookAsaasUseCase(params: {
   body: AsaasWebhookBody;
   service: AsaasWebhookService;
 }) {
-  let databaseAdmin: DatabaseClient | null = null;
+  let supabaseAdmin: SupabaseClient | null = null;
   let webhookEventId: string | null = null;
   let webhookPayload: AsaasWebhookBody | null = null;
   let event = "";
@@ -29,7 +29,7 @@ export async function processarWebhookAsaasUseCase(params: {
   let paymentStatus: string | null = null;
 
   try {
-    databaseAdmin = params.service.criarDatabaseAdmin();
+    supabaseAdmin = params.service.criarSupabaseAdmin();
 
     if (!params.service.validarTokenWebhook(params.headers)) {
       throw new AsaasWebhookUseCaseError("Webhook nao autorizado.", 401);
@@ -63,7 +63,7 @@ export async function processarWebhookAsaasUseCase(params: {
 
     try {
       webhookRegistro = await params.service.registrarEvento({
-        databaseAdmin,
+        supabaseAdmin,
         fingerprint: webhookFingerprint,
         body,
         event,
@@ -76,7 +76,7 @@ export async function processarWebhookAsaasUseCase(params: {
           ? webhookRegistroError.message
           : "Erro ao registrar evento do webhook.";
       await params.service.registrarFalhaFallback({
-        databaseAdmin,
+        supabaseAdmin,
         webhookPayload: body,
         event,
         paymentId,
@@ -108,7 +108,7 @@ export async function processarWebhookAsaasUseCase(params: {
 
     if (externalReference?.startsWith("whatsapp_package:")) {
       const result = await params.service.processarPacoteWhatsapp({
-        databaseAdmin,
+        supabaseAdmin,
         paymentId,
         payment,
         paymentStatus,
@@ -118,7 +118,7 @@ export async function processarWebhookAsaasUseCase(params: {
       });
 
       await params.service.atualizarStatusEvento(
-        databaseAdmin,
+        supabaseAdmin,
         webhookEventId,
         "processado"
       );
@@ -131,7 +131,7 @@ export async function processarWebhookAsaasUseCase(params: {
 
     if (externalReference?.startsWith("whatsapp_credit_topup:")) {
       const result = await params.service.processarRecargaWhatsapp({
-        databaseAdmin,
+        supabaseAdmin,
         paymentId,
         payment,
         paymentStatus,
@@ -141,7 +141,7 @@ export async function processarWebhookAsaasUseCase(params: {
       });
 
       await params.service.atualizarStatusEvento(
-        databaseAdmin,
+        supabaseAdmin,
         webhookEventId,
         "processado"
       );
@@ -156,7 +156,7 @@ export async function processarWebhookAsaasUseCase(params: {
 
     try {
       resolved = await params.service.resolverContexto({
-        databaseAdmin,
+        supabaseAdmin,
         paymentId,
         payment,
         body,
@@ -171,7 +171,7 @@ export async function processarWebhookAsaasUseCase(params: {
           ? contextError.message
           : "Erro ao resolver contexto do webhook.";
       await params.service.atualizarStatusEvento(
-        databaseAdmin,
+        supabaseAdmin,
         webhookEventId,
         "erro",
         contextErrorMessage
@@ -183,7 +183,7 @@ export async function processarWebhookAsaasUseCase(params: {
 
     if (!cobrancaAtual) {
       await params.service.atualizarStatusEvento(
-        databaseAdmin,
+        supabaseAdmin,
         webhookEventId,
         "erro",
         "charge_not_found"
@@ -200,7 +200,7 @@ export async function processarWebhookAsaasUseCase(params: {
 
     if (!assinatura) {
       await params.service.atualizarStatusEvento(
-        databaseAdmin,
+        supabaseAdmin,
         webhookEventId,
         "erro",
         "Erro ao buscar assinatura."
@@ -209,7 +209,7 @@ export async function processarWebhookAsaasUseCase(params: {
     }
 
     const result = await params.service.processarResolvido({
-      databaseAdmin,
+      supabaseAdmin,
       webhookEventId,
       webhookPayload: body,
       event,
@@ -230,10 +230,10 @@ export async function processarWebhookAsaasUseCase(params: {
       body: result,
     };
   } catch (error) {
-    if (databaseAdmin) {
+    if (supabaseAdmin) {
       if (!webhookEventId && webhookPayload && paymentId) {
         await params.service.registrarFalhaFallback({
-          databaseAdmin,
+          supabaseAdmin,
           webhookPayload,
           event,
           paymentId,
@@ -243,7 +243,7 @@ export async function processarWebhookAsaasUseCase(params: {
       }
 
       await params.service.atualizarStatusEvento(
-        databaseAdmin,
+        supabaseAdmin,
         webhookEventId,
         "erro",
         error instanceof Error ? error.message : "Erro webhook"

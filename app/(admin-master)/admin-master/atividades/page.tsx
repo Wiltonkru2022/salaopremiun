@@ -4,7 +4,7 @@ import AdminMasterDataTableClient from "@/components/admin-master/AdminMasterDat
 import AdminMasterPageHeader, { AdminMasterMetricCard } from "@/components/admin-master/AdminMasterPageHeader";
 import PaginationLinks from "@/components/ui/PaginationLinks";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export const dynamic = "force-dynamic";
 const PAGE_SIZE = 25;
@@ -84,9 +84,9 @@ export default async function AdminMasterAtividadesPage({ searchParams }: { sear
   const page = Math.max(0, Number(params.pagina || 1) - 1);
   const from = page * PAGE_SIZE;
   const to = from + PAGE_SIZE - 1;
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
 
-  let auditQuery = database
+  let auditQuery = supabase
     .from("admin_master_auditoria")
     .select("id, id_admin_usuario, acao, entidade, entidade_id, descricao, payload_json, criado_em", { count: "exact" });
 
@@ -101,7 +101,7 @@ export default async function AdminMasterAtividadesPage({ searchParams }: { sear
 
   const [auditResult, adminsResult] = await Promise.all([
     auditQuery.order("criado_em", { ascending: false }).range(from, to),
-    database.from("admin_master_usuarios").select("id, nome, email, status").order("nome", { ascending: true }).limit(100),
+    supabase.from("admin_master_usuarios").select("id, nome, email, status").order("nome", { ascending: true }).limit(100),
   ]);
 
   if (auditResult.error) throw new Error(auditResult.error.message || "Erro ao carregar auditoria.");

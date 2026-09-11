@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { requireAdminMasterUser } from "@/lib/admin-master/auth/requireAdminMasterUser";
 import { registrarAdminMasterAuditoria } from "@/lib/admin-master/actions";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import type { Json } from "@/types/database.generated";
 
 function textValue(formData: FormData, key: string) {
@@ -25,7 +25,7 @@ function parseJsonValue(raw: string): Json {
 
 export async function salvarConfiguracaoGlobalAdminMaster(formData: FormData) {
   const access = await requireAdminMasterUser("operacao_reprocessar");
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const id = textValue(formData, "id");
   const chave = textValue(formData, "chave");
 
@@ -37,12 +37,12 @@ export async function salvarConfiguracaoGlobalAdminMaster(formData: FormData) {
   const now = new Date().toISOString();
 
   const { data: atual } = id
-    ? await database
+    ? await supabase
         .from("configuracoes_globais")
         .select("id, chave, valor_json")
         .eq("id", id)
         .maybeSingle()
-    : await database
+    : await supabase
         .from("configuracoes_globais")
         .select("id, chave, valor_json")
         .eq("chave", chave)
@@ -57,13 +57,13 @@ export async function salvarConfiguracaoGlobalAdminMaster(formData: FormData) {
   };
 
   const query = atual?.id
-    ? database
+    ? supabase
         .from("configuracoes_globais")
         .update(payload)
         .eq("id", String(atual.id))
         .select("id")
         .single()
-    : database.from("configuracoes_globais").insert(payload).select("id").single();
+    : supabase.from("configuracoes_globais").insert(payload).select("id").single();
 
   const { data, error } = await query;
 
@@ -71,7 +71,7 @@ export async function salvarConfiguracaoGlobalAdminMaster(formData: FormData) {
     throw new Error(error?.message || "Não foi possível salvar a configuração global.");
   }
 
-  await database.from("configuracoes_globais_historico").insert({
+  await supabase.from("configuracoes_globais_historico").insert({
     chave,
     valor_anterior_json: (atual?.valor_json ?? null) as Json | null,
     valor_novo_json: valorJson,

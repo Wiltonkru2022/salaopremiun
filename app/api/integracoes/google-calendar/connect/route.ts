@@ -3,7 +3,6 @@ import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { getGoogleCalendarEnv, isGoogleCalendarConfigured } from "@/lib/google-calendar/oauth";
 import { createGoogleCalendarState } from "@/lib/google-calendar/state";
 import { canUsePlanFeature } from "@/lib/plans/access";
-import { getLoginUrl, getPainelUrl } from "@/lib/site-urls";
 
 export const dynamic = "force-dynamic";
 
@@ -11,19 +10,19 @@ export async function GET() {
   const { user, usuario } = await getPainelUserContext();
 
   if (!user || !usuario?.id_salao) {
-    return NextResponse.redirect(getLoginUrl("/login"));
+    return NextResponse.redirect("https://login.salaopremiun.com.br/login");
   }
 
   if (!isGoogleCalendarConfigured()) {
     return NextResponse.redirect(
-      getPainelUrl("/perfil-salao?google_calendar=env")
+      "https://painel.salaopremiun.com.br/perfil-salao?google_calendar=env"
     );
   }
 
   const feature = await canUsePlanFeature(usuario.id_salao, "google_calendar");
   if (!feature.allowed) {
     return NextResponse.redirect(
-      getPainelUrl("/meu-plano?motivo=recurso_google_calendar_bloqueado")
+      "https://painel.salaopremiun.com.br/meu-plano?motivo=recurso_google_calendar_bloqueado"
     );
   }
 

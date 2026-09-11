@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
-import { clerkAdminApi } from "@/lib/platform/clerk-admin-api.server";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   buildMfaRecoveryMessage,
   buildMfaRecoverySubject,
@@ -11,6 +11,7 @@ import { createSuporteTicketService } from "@/services/suporteTicketService";
 
 export async function POST() {
   try {
+    const supabaseAdmin = getSupabaseAdmin();
     const service = createSuporteTicketService();
     const { user, usuario } = await getPainelUserContext({ allowAdminAal1: true });
 
@@ -22,7 +23,7 @@ export async function POST() {
     }
 
     const { data: factorsData, error: factorError } =
-      await clerkAdminApi.mfa.listFactors({
+      await supabaseAdmin.auth.admin.mfa.listFactors({
         userId: user.id,
       });
 

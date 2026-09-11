@@ -3,7 +3,7 @@ import {
   redirectToAdminMasterLogin,
   type ProxyRouteContext,
 } from "@/lib/proxy/host-rules";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 function getAdminMasterOwnerEmails() {
   return String(process.env.ADMIN_MASTER_OWNER_EMAILS || "")
@@ -23,9 +23,9 @@ export async function hasAdminMasterAccess(params: {
   }
 
   try {
-    const databaseAdmin = getDatabaseAdmin();
+    const supabaseAdmin = getSupabaseAdmin();
 
-    const { data: byAuthUserId, error: byAuthUserIdError } = await databaseAdmin
+    const { data: byAuthUserId, error: byAuthUserIdError } = await supabaseAdmin
       .from("admin_master_usuarios")
       .select("id, status")
       .eq("auth_user_id", params.authUserId)
@@ -41,7 +41,7 @@ export async function hasAdminMasterAccess(params: {
       return false;
     }
 
-    const { data: byEmail, error: byEmailError } = await databaseAdmin
+    const { data: byEmail, error: byEmailError } = await supabaseAdmin
       .from("admin_master_usuarios")
       .select("id, status")
       .eq("email", normalizedEmail)

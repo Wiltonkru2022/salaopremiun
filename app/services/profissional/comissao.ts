@@ -1,4 +1,4 @@
-import { runAdminOperation } from "@/lib/db/admin-ops";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
 
 type ComissaoLancamentoRow = {
   id: string;
@@ -76,11 +76,11 @@ export async function buscarResumoComissaoProfissional(
     action: "profissional_comissao_resumo",
     actorId: idProfissional,
     idSalao,
-    run: async (databaseAdmin) => {
+    run: async (supabaseAdmin) => {
       const select =
         "id, competencia_data, descricao, percentual_aplicado, valor_base, valor_comissao, valor_comissao_assistente, tipo_destinatario, status, pago_em";
 
-      let result = await databaseAdmin
+      let result = await supabaseAdmin
         .from("comissoes_lancamentos")
         .select(select)
         .eq("id_salao", idSalao)
@@ -99,7 +99,7 @@ export async function buscarResumoComissaoProfissional(
           message.includes("competencia_data") ||
           message.includes("does not exist")
         ) {
-          result = await databaseAdmin
+          result = await supabaseAdmin
             .from("comissoes_lancamentos")
             .select(select)
             .eq("id_salao", idSalao)

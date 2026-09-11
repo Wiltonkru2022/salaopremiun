@@ -9,7 +9,7 @@ import {
   PainelPageHeader,
 } from "@/components/painel-ui";
 import PaginationControls from "@/components/ui/PaginationControls";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 
 type ProdutoEstoque = {
   id: string;
@@ -40,7 +40,7 @@ type Permissoes = Record<string, boolean>;
 const ESTOQUE_PAGE_SIZE = 10;
 
 export default function EstoquePage() {
-  const database = createClient();
+  const supabase = createClient();
   const router = useRouter();
   const { snapshot: painelSession } = usePainelSession();
 
@@ -106,7 +106,7 @@ export default function EstoquePage() {
       const termoBusca = busca.trim();
       const from = paginaAtual * ESTOQUE_PAGE_SIZE;
       const to = from + ESTOQUE_PAGE_SIZE - 1;
-      let produtosQuery = database
+      let produtosQuery = supabase
         .from("produtos")
         .select(`
           id,
@@ -144,7 +144,7 @@ export default function EstoquePage() {
 
       if (produtosError) throw produtosError;
 
-      const { data: alertasRows, error: alertasError } = await database
+      const { data: alertasRows, error: alertasError } = await supabase
         .from("produtos_alertas")
         .select("id, id_produto, tipo, mensagem, resolvido")
         .eq("id_salao", acesso.idSalao)
@@ -165,7 +165,7 @@ export default function EstoquePage() {
         setLoading(false);
       }
     }
-  }, [acessoCarregado, busca, carregarAcesso, paginaAtual, database]);
+  }, [acessoCarregado, busca, carregarAcesso, paginaAtual, supabase]);
 
   useEffect(() => {
     void bootstrap();

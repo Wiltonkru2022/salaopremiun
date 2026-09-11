@@ -1,6 +1,6 @@
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 
-type CaixaDatabaseClient = ReturnType<typeof createClient>;
+type CaixaSupabaseClient = ReturnType<typeof createClient>;
 
 export type CaixaSessaoStatus = "aberto" | "fechado";
 export type CaixaFechamentoTipo = "confere" | "sobra" | "quebra";
@@ -75,10 +75,10 @@ function isMissingOperationalSchema(error: unknown) {
 }
 
 export async function carregarSessaoCaixa(
-  database: CaixaDatabaseClient,
+  supabase: CaixaSupabaseClient,
   idSalao: string
 ): Promise<CaixaSessaoLoadResult> {
-  const { data: sessao, error } = await database
+  const { data: sessao, error } = await supabase
     .from("caixa_sessoes")
     .select(CAIXA_SESSAO_SELECT)
     .eq("id_salao", idSalao)
@@ -95,7 +95,7 @@ export async function carregarSessaoCaixa(
         ultimaSessaoFechada: null,
         movimentacoes: [],
         error:
-          "A migration de caixa operacional ainda nao foi aplicada no Neon.",
+          "A migration de caixa operacional ainda nao foi aplicada no Supabase.",
       };
     }
 
@@ -103,10 +103,10 @@ export async function carregarSessaoCaixa(
   }
 
   if (!sessao?.id) {
-    return carregarUltimaSessaoFechada(database, idSalao);
+    return carregarUltimaSessaoFechada(supabase, idSalao);
   }
 
-  const { data: movimentacoes, error: movimentacoesError } = await database
+  const { data: movimentacoes, error: movimentacoesError } = await supabase
     .from("caixa_movimentacoes")
     .select("created_at, descricao, forma_pagamento, id, id_comanda, id_profissional, id_salao, id_sessao, id_usuario, idempotency_key, tipo, valor")
     .eq("id_salao", idSalao)
@@ -122,7 +122,7 @@ export async function carregarSessaoCaixa(
         ultimaSessaoFechada: null,
         movimentacoes: [],
         error:
-          "A migration de caixa operacional ainda nao foi aplicada no Neon.",
+          "A migration de caixa operacional ainda nao foi aplicada no Supabase.",
       };
     }
 
@@ -138,10 +138,10 @@ export async function carregarSessaoCaixa(
 }
 
 async function carregarUltimaSessaoFechada(
-  database: CaixaDatabaseClient,
+  supabase: CaixaSupabaseClient,
   idSalao: string
 ) {
-  const { data, error } = await database
+  const { data, error } = await supabase
     .from("caixa_sessoes")
     .select(CAIXA_SESSAO_SELECT)
     .eq("id_salao", idSalao)
@@ -158,7 +158,7 @@ async function carregarUltimaSessaoFechada(
         ultimaSessaoFechada: null,
         movimentacoes: [],
         error:
-          "A migration de caixa operacional ainda nao foi aplicada no Neon.",
+          "A migration de caixa operacional ainda nao foi aplicada no Supabase.",
       };
     }
 
@@ -174,19 +174,19 @@ async function carregarUltimaSessaoFechada(
 }
 
 export async function abrirSessaoCaixa({
-  database,
+  supabase,
   idSalao,
   idUsuario,
   valorAbertura,
   observacoes,
 }: {
-  database: CaixaDatabaseClient;
+  supabase: CaixaSupabaseClient;
   idSalao: string;
   idUsuario?: string | null;
   valorAbertura: number;
   observacoes?: string | null;
 }) {
-  const { data, error } = await database
+  const { data, error } = await supabase
     .from("caixa_sessoes")
     .insert({
       id_salao: idSalao,
@@ -203,19 +203,19 @@ export async function abrirSessaoCaixa({
 }
 
 export async function fecharSessaoCaixa({
-  database,
+  supabase,
   idSessao,
   idUsuario,
   valorFechamento,
   observacoes,
 }: {
-  database: CaixaDatabaseClient;
+  supabase: CaixaSupabaseClient;
   idSessao: string;
   idUsuario?: string | null;
   valorFechamento: number;
   observacoes?: string | null;
 }) {
-  const { data, error } = await database
+  const { data, error } = await supabase
     .from("caixa_sessoes")
     .update({
       id_usuario_fechamento: idUsuario || null,
@@ -235,7 +235,7 @@ export async function fecharSessaoCaixa({
 }
 
 export async function lancarMovimentacaoCaixa({
-  database,
+  supabase,
   idSalao,
   idSessao,
   idUsuario,
@@ -246,7 +246,7 @@ export async function lancarMovimentacaoCaixa({
   idComanda,
   formaPagamento,
 }: {
-  database: CaixaDatabaseClient;
+  supabase: CaixaSupabaseClient;
   idSalao: string;
   idSessao: string;
   idUsuario?: string | null;
@@ -261,7 +261,7 @@ export async function lancarMovimentacaoCaixa({
     throw new Error("Selecione o profissional para lancar o vale.");
   }
 
-  const { data: movimento, error } = await database
+  const { data: movimento, error } = await supabase
     .from("caixa_movimentacoes")
     .insert({
       id_salao: idSalao,
@@ -284,7 +284,7 @@ export async function lancarMovimentacaoCaixa({
       throw new Error("Profissional obrigatorio para lancar vale.");
     }
 
-    const { error: valeError } = await database
+    const { error: valeError } = await supabase
       .from("profissionais_vales")
       .insert({
         id_salao: idSalao,
@@ -299,7 +299,7 @@ export async function lancarMovimentacaoCaixa({
 
     if (valeError) {
       if (movimento?.id) {
-        await database
+        await supabase
           .from("caixa_movimentacoes")
           .delete()
           .eq("id", movimento.id)

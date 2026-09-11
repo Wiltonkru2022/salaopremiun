@@ -1,5 +1,5 @@
 import "server-only";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { canUsePlanFeature, isSalaoStatusOperational } from "@/lib/plans/access";
 import { normalizeSalaoSlug } from "@/lib/saloes/public-link";
 
@@ -139,8 +139,8 @@ function mapSalonRow(row: EligibleSalonRow): ClientAppEligibleSalon {
 }
 
 function buildBaseSalonQuery() {
-  const databaseAdmin = getDatabaseAdmin();
-  return databaseAdmin
+  const supabaseAdmin = getSupabaseAdmin();
+  return supabaseAdmin
     .from("saloes")
     .select(
       [
@@ -253,8 +253,8 @@ export async function listEligibleSalonIdsByEmail(email: string) {
   const normalized = String(email || "").trim().toLowerCase();
   if (!normalized) return [];
 
-  const databaseAdmin = getDatabaseAdmin();
-  const { data, error } = await databaseAdmin
+  const supabaseAdmin = getSupabaseAdmin();
+  const { data, error } = await supabaseAdmin
     .from("clientes_auth")
     .select("id_salao, email, app_ativo")
     .eq("app_ativo", true)
@@ -266,7 +266,7 @@ export async function listEligibleSalonIdsByEmail(email: string) {
   }
 
   const ids = Array.from(
-    new Set<string>(
+    new Set(
       data
         .map((item) => String(item.id_salao || "").trim())
         .filter(Boolean)

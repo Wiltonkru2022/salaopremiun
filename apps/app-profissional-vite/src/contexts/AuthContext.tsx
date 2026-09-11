@@ -1,5 +1,6 @@
 ﻿import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import { clearOtherProfessionalCaches, clearProfessionalCache } from "../lib/cache";
+import { saveNativeProfessionalSession } from "../lib/native-api";
 import type { Profissional } from "../types/database";
 
 type AuthContextValue = {
@@ -50,6 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const payload = (await response.json().catch(() => ({}))) as {
       error: string;
       profissional: Profissional;
+      nativeAccessToken?: string;
     };
     if (!response.ok || !payload.profissional) {
       if (response.status === 429) {
@@ -65,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     clearOtherProfessionalCaches(payload.profissional.id);
+    await saveNativeProfessionalSession(payload.nativeAccessToken);
     setProfissional(payload.profissional);
   }
 
@@ -75,6 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         credentials: "same-origin",
       });
     } finally {
+      await saveNativeProfessionalSession("");
       clearProfessionalCache();
       setProfissional(null);
     }

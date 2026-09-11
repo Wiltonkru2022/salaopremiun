@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { sendManualMarketingWhatsApp } from "@/services/marketingWhatsAppService";
 
 type AutomaticEvent =
@@ -68,8 +68,8 @@ async function isAutomationEnabled(
   idSalao: string,
   event: AutomaticPreferenceEvent
 ) {
-  const database = getDatabaseAdmin();
-  const { data, error } = await (database as any)
+  const supabase = getSupabaseAdmin();
+  const { data, error } = await (supabase as any)
     .from("whatsapp_automacoes_saloes")
     .select(event)
     .eq("id_salao", idSalao)
@@ -86,8 +86,8 @@ async function isAutomationEnabled(
 }
 
 async function loadAppointmentContext(idSalao: string, idAgendamento: string) {
-  const database = getDatabaseAdmin();
-  const appointmentResult = await (database as any)
+  const supabase = getSupabaseAdmin();
+  const appointmentResult = await (supabase as any)
     .from("agendamentos")
     .select(
       "id, id_salao, cliente_id, pessoa_atendida_cliente_id, pessoa_agendada_tipo, pessoa_agendada_nome, pessoa_agendada_whatsapp, profissional_id, servico_id, data, hora_inicio, sinal_valor"
@@ -104,19 +104,19 @@ async function loadAppointmentContext(idSalao: string, idAgendamento: string) {
     appointment.pessoa_atendida_cliente_id || appointment.cliente_id || ""
   );
   const [clienteResult, profissionalResult, servicoResult] = await Promise.all([
-    (database as any)
+    (supabase as any)
       .from("clientes")
       .select("id, nome, nome_social, whatsapp, telefone")
       .eq("id", targetClientId)
       .eq("id_salao", idSalao)
       .maybeSingle(),
-    (database as any)
+    (supabase as any)
       .from("profissionais")
       .select("id, nome, nome_social, nome_exibicao")
       .eq("id", appointment.profissional_id)
       .eq("id_salao", idSalao)
       .maybeSingle(),
-    (database as any)
+    (supabase as any)
       .from("servicos")
       .select("id, nome")
       .eq("id", appointment.servico_id)
@@ -157,8 +157,8 @@ async function loadAppointmentContext(idSalao: string, idAgendamento: string) {
 }
 
 async function loadComandaContext(idSalao: string, idComanda: string) {
-  const database = getDatabaseAdmin();
-  const { data: comanda, error } = await (database as any)
+  const supabase = getSupabaseAdmin();
+  const { data: comanda, error } = await (supabase as any)
     .from("comandas")
     .select("id, numero, id_cliente, id_agendamento_principal, total, fechada_em")
     .eq("id", idComanda)
@@ -167,7 +167,7 @@ async function loadComandaContext(idSalao: string, idComanda: string) {
   if (error) throw new Error(error.message);
   if (!comanda?.id || !comanda.id_cliente) throw new Error("Comanda sem cliente para aviso WhatsApp.");
 
-  const { data: cliente, error: clienteError } = await (database as any)
+  const { data: cliente, error: clienteError } = await (supabase as any)
     .from("clientes")
     .select("nome, nome_social, whatsapp, telefone")
     .eq("id", comanda.id_cliente)
@@ -316,9 +316,9 @@ function permanentFailure(message: string) {
 }
 
 export async function processPendingAutomaticWhatsAppEvents(limit = 25) {
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
-  const { data, error } = await (database as any)
+  const { data, error } = await (supabase as any)
     .from("whatsapp_automatic_jobs")
     .select("id, id_salao, id_agendamento, id_comanda, evento, idempotency_key, tentativas")
     .eq("status", "pendente")
@@ -338,7 +338,7 @@ export async function processPendingAutomaticWhatsAppEvents(limit = 25) {
   let failed = 0;
 
   for (const job of (data || []) as AutomaticJobRow[]) {
-    const lock = await (database as any)
+    const lock = await (supabase as any)
       .from("whatsapp_automatic_jobs")
       .update({
         status: "processando",
@@ -364,7 +364,7 @@ export async function processPendingAutomaticWhatsAppEvents(limit = 25) {
         });
       }
 
-      await (database as any)
+      await (supabase as any)
         .from("whatsapp_automatic_jobs")
         .update({
           status: "enviado",
@@ -379,7 +379,7 @@ export async function processPendingAutomaticWhatsAppEvents(limit = 25) {
       const message = cause instanceof Error ? cause.message : "Erro no envio automatico WhatsApp.";
       const attempts = Number(job.tentativas || 0) + 1;
       const retry = attempts < 3 && !permanentFailure(message);
-      await (database as any)
+      await (supabase as any)
         .from("whatsapp_automatic_jobs")
         .update({
           status: retry ? "pendente" : "falhou",
@@ -398,10 +398,10 @@ export async function processPendingAutomaticWhatsAppEvents(limit = 25) {
 }
 
 export async function processDueWhatsAppReminders(limit = 20) {
-  const database = getDatabaseAdmin();
+  const supabase = getSupabaseAdmin();
   const now = new Date().toISOString();
   const since = new Date(Date.now() - 60 * 60_000).toISOString();
-  const { data, error } = await (database as any)
+  const { data, error } = await (supabase as any)
     .from("notification_jobs")
     .select("id_salao, idempotency_key, enviar_em")
     .eq("tipo", "lembrete_30min_cliente")

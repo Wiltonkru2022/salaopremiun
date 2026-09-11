@@ -15,7 +15,7 @@ import AppModal from "@/components/ui/AppModal";
 import ConfirmActionModal from "@/components/ui/ConfirmActionModal";
 import PaginationControls from "@/components/ui/PaginationControls";
 import { getErrorMessage } from "@/lib/get-error-message";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import type {
   ServicoProcessarErrorResponse,
   ServicoProcessarResponse,
@@ -70,7 +70,7 @@ function formatMinutes(value?: number | null) {
 }
 
 export default function ServicosPage() {
-  const database = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => createClient(), []);
   const router = useRouter();
   const { snapshot: painelSession } = usePainelSession();
 
@@ -145,7 +145,7 @@ export default function ServicosPage() {
       const from = page * SERVICOS_PAGE_SIZE;
       const to = from + SERVICOS_PAGE_SIZE - 1;
 
-      let query = database
+      let query = supabase
         .from("servicos")
         .select(
           [
@@ -194,7 +194,7 @@ export default function ServicosPage() {
       setServicosTotal(count ?? 0);
       setServicosHasMore((count ?? 0) > to + 1);
     },
-    [buscaAplicada, statusFiltro, database]
+    [buscaAplicada, statusFiltro, supabase]
   );
 
   const bootstrap = useCallback(async () => {

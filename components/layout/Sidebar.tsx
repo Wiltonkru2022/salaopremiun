@@ -82,7 +82,7 @@ export default function Sidebar({
           <div className="flex min-h-[61px] items-center justify-between gap-2 border-b border-zinc-200 px-4 py-2.5">
             <div className="flex min-w-0 items-center gap-2.5">
               <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-zinc-950 text-white ring-1 ring-zinc-900/10">
-                <img src="/favicon-preview.png" alt="Salão Premium" className="h-full w-full object-cover" />
+                <img src="/brand-logo-v2.png" alt="Salão Premium" className="h-full w-full object-cover" />
               </div>
               <div className="min-w-0">
                 <div className="truncate text-[10px] font-semibold uppercase tracking-[0.18em] text-zinc-400">Sistema</div>

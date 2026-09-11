@@ -1,6 +1,6 @@
 import "server-only";
 
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 
 export async function cleanupPrincipalSecurityAttempts(params?: {
   retentionDays?: number;
@@ -9,7 +9,7 @@ export async function cleanupPrincipalSecurityAttempts(params?: {
   const cutoff = new Date(
     Date.now() - retentionDays * 24 * 60 * 60 * 1000
   ).toISOString();
-  const result = await getDatabaseAdmin()
+  const result = await getSupabaseAdmin()
     .from("security_login_attempts")
     .delete({ count: "exact" })
     .lt("criado_em", cutoff);

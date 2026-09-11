@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { PainelListLoading, PainelPageHeader } from "@/components/painel-ui";
 import PaginationControls from "@/components/ui/PaginationControls";
 import { usePainelSession } from "@/components/layout/PainelSessionProvider";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 import {
   CalendarDays,
@@ -49,7 +49,7 @@ import { openPainelWorkspaceWindow } from "@/lib/painel/workspace-windows";
 import { VENDAS_PAGE_SIZE, escapeHtml, getFirstJoined, formatDocumentLabel, buildSalaoEndereco, mergeComandaDetalhe } from "./vendas-workspace-support";
 
 export default function VendasPage() {
-  const database = createClient();
+  const supabase = createClient();
   const router = useRouter();
   const { snapshot: painelSession } = usePainelSession();
 
@@ -186,7 +186,7 @@ export default function VendasPage() {
         return;
       }
 
-      const { data: salaoData, error: salaoError } = await database
+      const { data: salaoData, error: salaoError } = await supabase
         .from("saloes")
         .select("id, nome, cpf_cnpj, telefone, endereco, numero, bairro, cidade, estado, cep, complemento, logo_url")
         .eq("id", painelSession.idSalao)
@@ -198,7 +198,7 @@ export default function VendasPage() {
         setSalaoInfo((salaoData as SalaoInfo) || null);
       }
 
-      const { data: configData, error: configError } = await database
+      const { data: configData, error: configError } = await supabase
         .from("configuracoes_salao")
         .select("permitir_reabrir_venda")
         .eq("id_salao", painelSession.idSalao)
@@ -210,7 +210,7 @@ export default function VendasPage() {
         setPermitirReabrirVenda(configData?.permitir_reabrir_venda !== false);
       }
 
-      const { data: clientesData, error: clientesError } = await database
+      const { data: clientesData, error: clientesError } = await supabase
         .from("clientes")
         .select("id, nome")
         .eq("id_salao", painelSession.idSalao)
@@ -247,7 +247,7 @@ export default function VendasPage() {
 
     setErroTela("");
 
-    let queryComandas = database
+    let queryComandas = supabase
       .from("comandas")
       .select(`
         id,
@@ -269,7 +269,7 @@ export default function VendasPage() {
       .order("fechada_em", { ascending: false })
       .range(from, to);
 
-    let queryBusca = database
+    let queryBusca = supabase
       .from("vw_vendas_busca")
       .select("aberta_em, acrescimo, cancelada_em, cliente_nome, desconto, fechada_em, formas_pagamento, id, id_cliente, id_salao, itens_descricoes, numero, profissionais_nomes, status, subtotal, total")
       .eq("id_salao", salaoId)

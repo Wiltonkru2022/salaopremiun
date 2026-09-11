@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { getPainelUserContext } from "@/lib/auth/get-painel-user-context";
 import { requireSalaoPermission } from "@/lib/auth/require-salao-permission";
-import { runAdminOperation } from "@/lib/db/admin-ops";
-import { asLooseDbClient } from "@/lib/db/loose-client";
+import { runAdminOperation } from "@/lib/supabase/admin-ops";
+import { asLooseSupabaseClient } from "@/lib/supabase/loose-client";
 import {
   DEFAULT_SALON_NOTIFICATION_SETTINGS,
   mapSettingsToDbPayload,
@@ -68,8 +68,8 @@ export async function salvarConfiguracoesNotificacoesAction(formData: FormData) 
       action: "salvar_configuracoes_notificacoes",
       actorId: usuario.id,
       idSalao: usuario.id_salao,
-      run: async (database) => {
-        const db = asLooseDbClient(database);
+      run: async (supabase) => {
+        const db = asLooseSupabaseClient(supabase);
         const { error } = await db
           .from("configuracoes_notificacoes")
           .upsert(

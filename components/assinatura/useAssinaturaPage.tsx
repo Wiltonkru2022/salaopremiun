@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 import { useSearchParams } from "next/navigation";
-import { createClient } from "@/lib/db/client";
+import { createClient } from "@/lib/supabase/client";
 import { getResumoAssinatura } from "@/lib/assinatura-utils";
 import { useAssinaturaAccess } from "./useAssinaturaAccess";
 import { useAssinaturaCheckout } from "./useAssinaturaCheckout";
@@ -28,7 +28,7 @@ import {
 } from "./plan-utils";
 
 export function useAssinaturaPage() {
-  const database = useMemo(() => createClient(), []);
+  const supabase = useMemo(() => createClient(), []);
   const searchParams = useSearchParams();
 
   const [loading, setLoading] = useState(true);
@@ -59,7 +59,7 @@ export function useAssinaturaPage() {
     acessoCarregado,
     nivel,
     carregarAcesso,
-  } = useAssinaturaAccess({ database });
+  } = useAssinaturaAccess({ supabase });
 
   const podeGerenciar = nivel === "admin";
   const planoUrl = searchParams.get("plano");
@@ -108,7 +108,7 @@ export function useAssinaturaPage() {
     carregarCheckoutAtual,
     carregarStatusAssinatura,
   } = useAssinaturaStatus({
-    database,
+    supabase,
     planoEscolhidoManualmenteRef,
     planoSelecionadoRef,
     setPlanoSelecionado: selecionarPlano,
@@ -194,7 +194,7 @@ export function useAssinaturaPage() {
     iniciarTrial,
     copiarPix,
   } = useAssinaturaCheckout({
-    database,
+    supabase,
     salao,
     checkout,
     planoSelecionado,

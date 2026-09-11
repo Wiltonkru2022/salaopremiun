@@ -1,18 +1,12 @@
 import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import { normalizeExternalDestination } from "@/lib/parcerias/urls";
-import { assertPublicRateLimit, getPublicRateLimitIdentity } from "@/lib/security/public-rate-limit";
 
 export const dynamic = "force-dynamic";
 
 function normalize(value?: string | null) {
   return String(value || "").trim().toLowerCase();
-}
-
-function asList<T = any>(value: T | T[] | null | undefined): T[] {
-  if (Array.isArray(value)) return value;
-  return value && typeof value === "object" ? [value] : [];
 }
 
 function hashScore(seed: string, id: string) {
@@ -29,19 +23,20 @@ function campaignLabel(origem: string, categoria?: string | null) {
 }
 
 function asCampaign(campanha: any, local: string) {
-  const parceiros = asList(campanha.parceiros_comerciais);
-  const parceiro = parceiros[0] || null;
+  const parceiro = Array.isArray(campanha.parceiros_comerciais)
+    ? campanha.parceiros_comerciais[0]
+    : campanha.parceiros_comerciais;
 
-  const criativos = asList(campanha.parceria_criativos)
-    .filter((item: any) => item?.ativo !== false)
-    .sort((a: any, b: any) => Number(a?.ordem || 0) - Number(b?.ordem || 0));
+  const criativos = (campanha.parceria_criativos || [])
+    .filter((item: any) => item.ativo !== false)
+    .sort((a: any, b: any) => Number(a.ordem || 0) - Number(b.ordem || 0));
   const criativo = criativos[0] || null;
 
   const arteLocal =
-    asList(campanha.parceria_criativos_locais).find(
+    (campanha.parceria_criativos_locais || []).find(
       (item: any) =>
-        item?.ativo !== false &&
-        String(item?.local_exibicao || "") === String(local || "")
+        item.ativo !== false &&
+        String(item.local_exibicao || "") === String(local || "")
     ) || null;
 
   const origem = campanha.origem || "parceiro";
@@ -76,11 +71,6 @@ function asCampaign(campanha: any, local: string) {
 }
 
 export async function GET(request: NextRequest) {
-  assertPublicRateLimit({
-    key: getPublicRateLimitIdentity(request, "parcerias-ativos-lista"),
-    limit: 180,
-    windowMs: 5 * 60 * 1000,
-  });
   const idSalao = request.nextUrl.searchParams.get("idSalao");
   const publico = request.nextUrl.searchParams.get("publico") || "salao";
   const local = request.nextUrl.searchParams.get("local") || "dashboard";
@@ -96,15 +86,15 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ campanha: null, campanhas: [] }, { status: 200 });
   }
 
-  const database = getDatabaseAdmin() as any;
+  const supabase = getSupabaseAdmin() as any;
   const now = new Date().toISOString();
   const today = now.slice(0, 10);
 
   const [{ data: salao }, { data: campanhas }] = await Promise.all([
     idSalao
-      ? database.from("saloes").select("cidade,estado").eq("id", idSalao).maybeSingle()
+      ? supabase.from("saloes").select("cidade,estado").eq("id", idSalao).maybeSingle()
       : Promise.resolve({ data: null }),
-    database
+    supabase
       .from("parceria_campanhas")
       .select(
         "id,nome,descricao,destino_url,cupom_codigo,publico,locais_exibicao,regioes,inicio_em,fim_em,status,prioridade,peso_rotacao,limite_frequencia_dia,limite_impressoes_dia,exclusiva,origem,categoria_interna,parceiros_comerciais(nome_fantasia,razao_social),parceria_criativos(id,titulo,subtitulo,imagem_url,alt_text,cta_texto,destino_url,formato,ordem,ativo),parceria_criativos_locais(id,local_exibicao,imagem_url,formato,ativo)"
@@ -135,7 +125,7 @@ export async function GET(request: NextRequest) {
   if (!elegiveis.length) return NextResponse.json({ campanha: null, campanhas: [] });
 
   const ids = elegiveis.map((c: any) => c.id);
-  const { data: metricas } = await database
+  const { data: metricas } = await supabase
     .from("parceria_metricas_diarias")
     .select("id_campanha,impressoes")
     .in("id_campanha", ids)
@@ -216,13 +206,8 @@ export async function POST(request: NextRequest) {
     ) {
       return NextResponse.json({ ok: false }, { status: 400 });
     }
-    assertPublicRateLimit({
-      key: getPublicRateLimitIdentity(request, `parcerias-metrica:${idCampanha}`),
-      limit: 90,
-      windowMs: 5 * 60 * 1000,
-    });
-    const database = getDatabaseAdmin() as any;
-    const { error } = await database.rpc("registrar_parceria_metrica", {
+    const supabase = getSupabaseAdmin() as any;
+    const { error } = await supabase.rpc("registrar_parceria_metrica", {
       p_id_campanha: idCampanha,
       p_local_exibicao: local.slice(0, 60),
       p_tipo: tipo,

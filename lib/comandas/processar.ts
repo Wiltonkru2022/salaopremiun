@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { getDatabaseAdmin } from "@/lib/db/admin";
+import { getSupabaseAdmin } from "@/lib/supabase/admin";
 import {
   buscarVinculoProfissionalServico,
   resolverRegraComissaoServico,
@@ -14,7 +14,7 @@ import type {
   ItemPayload,
 } from "@/types/comandas";
 
-type DatabaseAdminClient = ReturnType<typeof getDatabaseAdmin>;
+type SupabaseAdminClient = ReturnType<typeof getSupabaseAdmin>;
 
 export type ResolvedItemPayload = {
   tipoItem: string;
@@ -156,11 +156,11 @@ export function criarChaveItemAgendamento(resolved: ResolvedItemPayload) {
 }
 
 async function buscarItensComboServico(params: {
-  databaseAdmin: DatabaseAdminClient;
+  supabaseAdmin: SupabaseAdminClient;
   idSalao: string;
   idServicoCombo: string;
 }) {
-  const { data, error } = await params.databaseAdmin
+  const { data, error } = await params.supabaseAdmin
     .from("servicos_combo_itens")
     .select(
       `
@@ -197,11 +197,11 @@ async function buscarItensComboServico(params: {
 }
 
 async function expandirItensCombo(params: {
-  databaseAdmin: DatabaseAdminClient;
+  supabaseAdmin: SupabaseAdminClient;
   idSalao: string;
   resolved: ResolvedItemPayload;
 }) {
-  const { resolved, databaseAdmin, idSalao } = params;
+  const { resolved, supabaseAdmin, idSalao } = params;
   const ratearComboEmServicosFilhos = true;
 
   if (!ratearComboEmServicosFilhos || !resolved.ehCombo || !resolved.idServico) {
@@ -209,7 +209,7 @@ async function expandirItensCombo(params: {
   }
 
   const itensCombo = await buscarItensComboServico({
-    databaseAdmin,
+    supabaseAdmin,
     idSalao,
     idServicoCombo: resolved.idServico,
   });
@@ -247,7 +247,7 @@ async function expandirItensCombo(params: {
       }
 
       const { data: profissional, error: profissionalError } = resolved.idProfissional
-        ? await databaseAdmin
+        ? await supabaseAdmin
             .from("profissionais")
             .select("id, nome, comissao_percentual, tipo_profissional")
             .eq("id", resolved.idProfissional)
@@ -262,7 +262,7 @@ async function expandirItensCombo(params: {
       const vinculo =
         resolved.idProfissional && servico.id
           ? await buscarVinculoProfissionalServico({
-              database: databaseAdmin,
+              supabase: supabaseAdmin,
               idSalao,
               idProfissional: resolved.idProfissional,
               idServico: servico.id,
@@ -298,7 +298,7 @@ async function expandirItensCombo(params: {
 }
 
 async function inserirItensResolvidosNaComanda(params: {
-  databaseAdmin: DatabaseAdminClient;
+  supabaseAdmin: SupabaseAdminClient;
   idSalao: string;
   idComanda: string;
   resolvedItems: ResolvedItemPayload[];
@@ -320,7 +320,7 @@ async function inserirItensResolvidosNaComanda(params: {
           ])
         : params.idempotencyKey;
 
-    let { data: itemResult, error: addItemError } = await params.databaseAdmin.rpc(
+    let { data: itemResult, error: addItemError } = await params.supabaseAdmin.rpc(
       "fn_adicionar_item_comanda_idempotente",
       {
         p_id_salao: params.idSalao,
@@ -351,7 +351,7 @@ async function inserirItensResolvidosNaComanda(params: {
       addItemError &&
       isMissingRpcFunction(addItemError, "fn_adicionar_item_comanda_idempotente")
     ) {
-      const fallback = await params.databaseAdmin.rpc("fn_adicionar_item_comanda", {
+      const fallback = await params.supabaseAdmin.rpc("fn_adicionar_item_comanda", {
         p_id_salao: params.idSalao,
         p_id_comanda: params.idComanda,
         p_tipo_item: resolved.tipoItem,
@@ -425,13 +425,13 @@ export function isMissingRpcFunction(error: unknown, functionName: string) {
 }
 
 export async function processarCriacaoPorAgendamento(params: {
-  databaseAdmin: DatabaseAdminClient;
+  supabaseAdmin: SupabaseAdminClient;
   idSalao: string;
   idAgendamento: string;
 }) {
-  const { databaseAdmin, idSalao, idAgendamento } = params;
+  const { supabaseAdmin, idSalao, idAgendamento } = params;
 
-  const { data: agendamentoBase, error: agendamentoError } = await databaseAdmin
+  const { data: agendamentoBase, error: agendamentoError } = await supabaseAdmin
     .from("agendamentos")
     .select("id, id_salao")
     .eq("id", idAgendamento)
@@ -442,7 +442,7 @@ export async function processarCriacaoPorAgendamento(params: {
     throw new Error("Agendamento não encontrado para este salão.");
   }
 
-  const { data, error } = await databaseAdmin.rpc(
+  const { data, error } = await supabaseAdmin.rpc(
     "fn_criar_comanda_por_agendamento",
     {
       p_id_agendamento: idAgendamento,
@@ -453,7 +453,7 @@ export async function processarCriacaoPorAgendamento(params: {
     throw error;
   }
 
-  const { data: detalhesAgendamento, error: detalhesAgendamentoError } = await (databaseAdmin as any)
+  const { data: detalhesAgendamento, error: detalhesAgendamentoError } = await (supabaseAdmin as any)
     .from("agendamentos")
     .select("id, profissional_id, servico_id, observacoes, sinal_status, sinal_valor")
     .eq("id", idAgendamento)
@@ -466,7 +466,7 @@ export async function processarCriacaoPorAgendamento(params: {
 
   if (detalhesAgendamento?.id && detalhesAgendamento.servico_id) {
     const resolved = await resolverItemPayload({
-      databaseAdmin,
+      supabaseAdmin,
       idSalao,
       item: {
         tipo_item: "servico",
@@ -481,7 +481,7 @@ export async function processarCriacaoPorAgendamento(params: {
     });
 
     if (resolved.ehCombo && data) {
-      const { error: deleteError } = await databaseAdmin
+      const { error: deleteError } = await supabaseAdmin
         .from("comanda_itens")
         .delete()
         .eq("id_salao", idSalao)
@@ -493,13 +493,13 @@ export async function processarCriacaoPorAgendamento(params: {
       }
 
       const expanded = await expandirItensCombo({
-        databaseAdmin,
+        supabaseAdmin,
         idSalao,
         resolved,
       });
 
       await inserirItensResolvidosNaComanda({
-        databaseAdmin,
+        supabaseAdmin,
         idSalao,
         idComanda: data,
         resolvedItems: expanded,
@@ -520,7 +520,7 @@ export async function processarCriacaoPorAgendamento(params: {
   ) {
     const idempotencyKey = `sinal-agendamento-${idAgendamento}`;
     const { data: pagamentoExistente, error: pagamentoExistenteError } =
-      await (databaseAdmin as any)
+      await (supabaseAdmin as any)
         .from("comanda_pagamentos")
         .select("id")
         .eq("id_salao", idSalao)
@@ -533,7 +533,7 @@ export async function processarCriacaoPorAgendamento(params: {
     }
 
     if (!pagamentoExistente?.id) {
-      const { error: pagamentoError } = await (databaseAdmin as any)
+      const { error: pagamentoError } = await (supabaseAdmin as any)
         .from("comanda_pagamentos")
         .insert({
           id_salao: idSalao,
@@ -560,18 +560,18 @@ export async function processarCriacaoPorAgendamento(params: {
 }
 
 export async function salvarBaseComanda(params: {
-  databaseAdmin: DatabaseAdminClient;
+  supabaseAdmin: SupabaseAdminClient;
   idSalao: string;
   comanda: ComandaPayload;
 }) {
-  const { databaseAdmin, idSalao, comanda } = params;
+  const { supabaseAdmin, idSalao, comanda } = params;
   const numero = sanitizeInt(comanda.numero);
 
   if (!numero) {
     throw new Error("Numero da comanda obrigatorio.");
   }
 
-  const { data, error } = await databaseAdmin.rpc("fn_salvar_comanda_base", {
+  const { data, error } = await supabaseAdmin.rpc("fn_salvar_comanda_base", {
     p_id_salao: idSalao,
     p_id_comanda: sanitizeUuid(comanda.idComanda) as unknown as string,
     p_numero: numero,
@@ -594,31 +594,31 @@ export async function salvarBaseComanda(params: {
 }
 
 export async function adicionarItemComanda(params: {
-  databaseAdmin: DatabaseAdminClient;
+  supabaseAdmin: SupabaseAdminClient;
   idSalao: string;
   comanda: ComandaPayload;
   item: ItemPayload;
   idempotencyKey?: string | null;
 }) {
-  const { databaseAdmin, idSalao, comanda, item, idempotencyKey } = params;
+  const { supabaseAdmin, idSalao, comanda, item, idempotencyKey } = params;
   const idComanda = await garantirComandaBase({
-    databaseAdmin,
+    supabaseAdmin,
     idSalao,
     comanda,
   });
   const resolved = await resolverItemPayload({
-    databaseAdmin,
+    supabaseAdmin,
     idSalao,
     item,
   });
   const expanded = await expandirItensCombo({
-    databaseAdmin,
+    supabaseAdmin,
     idSalao,
     resolved,
   });
   const itemIdempotencyKey = idempotencyKey || criarChaveItemAgendamento(resolved);
   const insertResult = await inserirItensResolvidosNaComanda({
-    databaseAdmin,
+    supabaseAdmin,
     idSalao,
     idComanda,
     resolvedItems: expanded,
@@ -636,12 +636,12 @@ export async function adicionarItemComanda(params: {
 }
 
 export async function editarItemComanda(params: {
-  databaseAdmin: DatabaseAdminClient;
+  supabaseAdmin: SupabaseAdminClient;
   idSalao: string;
   comanda: ComandaPayload;
   item: ItemPayload;
 }) {
-  const { databaseAdmin, idSalao, comanda, item } = params;
+  const { supabaseAdmin, idSalao, comanda, item } = params;
   const idComanda = sanitizeUuid(comanda.idComanda);
   const idItem = sanitizeUuid(item.idItem);
 
@@ -654,12 +654,12 @@ export async function editarItemComanda(params: {
   }
 
   const resolved = await resolverItemPayload({
-    databaseAdmin,
+    supabaseAdmin,
     idSalao,
     item,
   });
 
-  const { error } = await databaseAdmin.rpc("fn_atualizar_item_comanda", {
+  const { error } = await supabaseAdmin.rpc("fn_atualizar_item_comanda", {
     p_id_salao: idSalao,
     p_id_comanda: idComanda,
     p_id_item: idItem,
@@ -696,12 +696,12 @@ export async function editarItemComanda(params: {
 }
 
 export async function removerItemComanda(params: {
-  databaseAdmin: DatabaseAdminClient;
+  supabaseAdmin: SupabaseAdminClient;
   idSalao: string;
   comanda: ComandaPayload;
   item: ItemPayload;
 }) {
-  const { databaseAdmin, idSalao, comanda, item } = params;
+  const { supabaseAdmin, idSalao, comanda, item } = params;
   const idComanda = sanitizeUuid(comanda.idComanda);
   const idItem = sanitizeUuid(item.idItem);
 
@@ -709,7 +709,7 @@ export async function removerItemComanda(params: {
     throw new Error("Comanda e item são obrigatórios para remover.");
   }
 
-  const { error } = await databaseAdmin.rpc("fn_remover_item_comanda", {
+  const { error } = await supabaseAdmin.rpc("fn_remover_item_comanda", {
     p_id_salao: idSalao,
     p_id_comanda: idComanda,
     p_id_item: idItem,
@@ -728,18 +728,18 @@ export async function removerItemComanda(params: {
 }
 
 export async function enviarComandaParaPagamento(params: {
-  databaseAdmin: DatabaseAdminClient;
+  supabaseAdmin: SupabaseAdminClient;
   idSalao: string;
   comanda: ComandaPayload;
 }) {
-  const { databaseAdmin, idSalao, comanda } = params;
+  const { supabaseAdmin, idSalao, comanda } = params;
   const idComanda = sanitizeUuid(comanda.idComanda);
 
   if (!idComanda) {
     throw new Error("Comanda obrigatoria para enviar ao pagamento.");
   }
 
-  const { data: itens, error: itensError } = await databaseAdmin
+  const { data: itens, error: itensError } = await supabaseAdmin
     .from("comanda_itens")
     .select("id, valor_total")
     .eq("id_salao", idSalao)
@@ -761,7 +761,7 @@ export async function enviarComandaParaPagamento(params: {
     );
   }
 
-  const { error } = await databaseAdmin.rpc(
+  const { error } = await supabaseAdmin.rpc(
     "fn_enviar_comanda_para_pagamento",
     {
       p_id_salao: idSalao,
@@ -784,11 +784,11 @@ export async function enviarComandaParaPagamento(params: {
 }
 
 export async function garantirComandaBase(params: {
-  databaseAdmin: DatabaseAdminClient;
+  supabaseAdmin: SupabaseAdminClient;
   idSalao: string;
   comanda: ComandaPayload;
 }) {
-  const { databaseAdmin, idSalao, comanda } = params;
+  const { supabaseAdmin, idSalao, comanda } = params;
   const numero = sanitizeInt(comanda.numero);
   let idComanda = sanitizeUuid(comanda.idComanda);
 
@@ -800,7 +800,7 @@ export async function garantirComandaBase(params: {
     throw new Error("Numero da comanda obrigatorio para criar a comanda.");
   }
 
-  const { data: novoId, error } = await databaseAdmin.rpc(
+  const { data: novoId, error } = await supabaseAdmin.rpc(
     "fn_salvar_comanda_base",
     {
       p_id_salao: idSalao,
@@ -823,11 +823,11 @@ export async function garantirComandaBase(params: {
 }
 
 export async function resolverItemPayload(params: {
-  databaseAdmin: DatabaseAdminClient;
+  supabaseAdmin: SupabaseAdminClient;
   idSalao: string;
   item: ItemPayload;
 }) {
-  const { databaseAdmin, idSalao, item } = params;
+  const { supabaseAdmin, idSalao, item } = params;
 
   const tipoItem = String(item.tipo_item || "").trim().toLowerCase();
   const quantidade = Math.max(Number(item.quantidade || 1), 1);
@@ -853,7 +853,7 @@ export async function resolverItemPayload(params: {
       { data: servico, error: servicoError },
       { data: profissional, error: profissionalError },
     ] = await Promise.all([
-      databaseAdmin
+      supabaseAdmin
         .from("servicos")
         .select(
           "id, nome, preco, preco_padrao, custo_produto, comissao_percentual, comissao_percentual_padrao, comissao_assistente_percentual, base_calculo, desconta_taxa_maquininha, eh_combo, combo_resumo"
@@ -862,7 +862,7 @@ export async function resolverItemPayload(params: {
         .eq("id_salao", idSalao)
         .maybeSingle(),
       idProfissional
-        ? databaseAdmin
+        ? supabaseAdmin
             .from("profissionais")
             .select("id, nome, comissao_percentual, tipo_profissional")
             .eq("id", idProfissional)
@@ -889,7 +889,7 @@ export async function resolverItemPayload(params: {
 
     if (idAssistente && idProfissional) {
       const { data: vinculoAssistente, error: vinculoAssistenteError } =
-        await databaseAdmin
+        await supabaseAdmin
           .from("profissional_assistentes")
           .select("id")
           .eq("id_salao", idSalao)
@@ -906,7 +906,7 @@ export async function resolverItemPayload(params: {
     const vinculo =
       idProfissional && idServico
         ? await buscarVinculoProfissionalServico({
-            database: databaseAdmin,
+            supabase: supabaseAdmin,
             idSalao,
             idProfissional,
             idServico,
@@ -945,14 +945,14 @@ export async function resolverItemPayload(params: {
       { data: produto, error: produtoError },
       { data: profissional, error: profissionalError },
     ] = await Promise.all([
-      databaseAdmin
+      supabaseAdmin
         .from("produtos")
         .select("id, nome, custo_real, comissao_revenda_percentual")
         .eq("id", idProduto)
         .eq("id_salao", idSalao)
         .maybeSingle(),
       idProfissional
-        ? databaseAdmin
+        ? supabaseAdmin
             .from("profissionais")
             .select("id, nome, comissao_produto_percentual, tipo_profissional")
             .eq("id", idProfissional)
@@ -1015,7 +1015,7 @@ export async function resolverItemPayload(params: {
   };
 
   if (tipoItem === "servico" && resolved.idServico) {
-    const { data: servicoInfoRaw } = await databaseAdmin
+    const { data: servicoInfoRaw } = await supabaseAdmin
       .from("servicos")
       .select("eh_combo, combo_resumo")
       .eq("id", resolved.idServico)
